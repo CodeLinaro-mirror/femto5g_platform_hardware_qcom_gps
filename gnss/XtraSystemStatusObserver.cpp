@@ -69,18 +69,9 @@ bool XtraSystemStatusObserver::updateLockStatus(uint32_t lock) {
     return ( send(LOC_IPC_XTRA, ss.str()) );
 }
 
-bool XtraSystemStatusObserver::updateConnectionStatus(bool connected, int32_t type) {
+bool XtraSystemStatusObserver::updateConnections(uint64_t allConnections) {
     mIsConnectivityStatusKnown = true;
-
-    if (connected) {
-        mConnections.insert(type);
-    } else {
-        if (-1 == type) { // -1 for disconnecting all connections
-            mConnections.clear();
-        } else {
-            mConnections.erase(type);
-        }
-    }
+    mConnections = allConnections;
 
     if (!mReqStatusReceived) {
         return true;
@@ -88,8 +79,7 @@ bool XtraSystemStatusObserver::updateConnectionStatus(bool connected, int32_t ty
 
     stringstream ss;
     ss <<  "connection";
-    ss << " " << (connected ? "1" : "0");
-    ss << " " << type;
+    ss << " " << mConnections;
     return ( send(LOC_IPC_XTRA, ss.str()) );
 }
 
@@ -119,13 +109,6 @@ bool XtraSystemStatusObserver::updateMccMnc(const string& mccmnc) {
     return ( send(LOC_IPC_XTRA, ss.str()) );
 }
 
-
-static inline ostream& operator<<(ostream& os, CONNECTIONS& data) {
-    for (auto elem : data) {
-        os << elem << ' ';
-    }
-    return os;
-}
 
 inline bool XtraSystemStatusObserver::onStatusRequested(int32_t xtraStatusUpdated) {
     mReqStatusReceived = true;
@@ -236,8 +219,7 @@ void XtraSystemStatusObserver::notify(const list<IDataItemCore*>& dlist)
                     {
                         NetworkInfoDataItemBase* networkInfo =
                                 static_cast<NetworkInfoDataItemBase*>(each);
-                        mXtraSysStatObj->updateConnectionStatus(networkInfo->mConnected,
-                                networkInfo->mType);
+                        mXtraSysStatObj->updateConnections(networkInfo->getAllTypes());
                     }
                     break;
 
