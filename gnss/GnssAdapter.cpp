@@ -4679,20 +4679,21 @@ GnssAdapter::requestNiNotify(const GnssNiNotification& notify, const void* data,
 }
 
 void
-GnssAdapter::reportGnssMeasurementDataEvent(const GnssMeasurementsNotification& measurements,
+GnssAdapter::reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurements,
                                             int msInWeek)
 {
     LOC_LOGD("%s]: msInWeek=%d", __func__, msInWeek);
 
     struct MsgReportGnssMeasurementData : public LocMsg {
         GnssAdapter& mAdapter;
+        GnssMeasurements mGnssMeasurements;
         GnssMeasurementsNotification mMeasurementsNotify;
         inline MsgReportGnssMeasurementData(GnssAdapter& adapter,
-                                            const GnssMeasurementsNotification& measurements,
+                                            const GnssMeasurements& gnssMeasurements,
                                             int msInWeek) :
                 LocMsg(),
                 mAdapter(adapter),
-                mMeasurementsNotify(measurements) {
+                mMeasurementsNotify(gnssMeasurements.gnssMeasNotification) {
             if (-1 != msInWeek) {
                 mAdapter.getAgcInformation(mMeasurementsNotify, msInWeek);
             }
@@ -4702,7 +4703,8 @@ GnssAdapter::reportGnssMeasurementDataEvent(const GnssMeasurementsNotification& 
         }
     };
 
-    sendMsg(new MsgReportGnssMeasurementData(*this, measurements, msInWeek));
+    sendMsg(new MsgReportGnssMeasurementData(*this, gnssMeasurements, msInWeek));
+    mEngHubProxy->gnssReportSvMeasurement(gnssMeasurements.gnssSvMeasurementSet);
 }
 
 void
@@ -4740,39 +4742,6 @@ GnssAdapter::reportDGnssDataUsable(const GnssSvMeasurementSet &svMeasurementSet)
             mCdfwInterface->reportUsable(mQDgnssListenerHDL, mDGnssDataUsage);
         }
     }
-}
-
-void
-GnssAdapter::reportSvMeasurementEvent(GnssSvMeasurementSet &svMeasurementSet)
-{
-    LOC_LOGD("%s]: ", __func__);
-
-    struct MsgReportSvMeasurement : public LocMsg {
-        GnssAdapter& mAdapter;
-        GnssSvMeasurementSet mSvMeasurementSet;
-
-        inline MsgReportSvMeasurement(GnssAdapter& adapter,
-                                      GnssSvMeasurementSet &svMeasurementSet) :
-            LocMsg(),
-            mAdapter(adapter),
-            mSvMeasurementSet(svMeasurementSet) {}
-        inline virtual void proc() const {
-            // save the association of GPS timestamp and qtimer tick cnt
-            mAdapter.mElapsedRealTimeCal.saveGpsTimeAndQtimerPairInMeasReport(mSvMeasurementSet);
-            if (mAdapter.mDGnssNeedReport) {
-                mAdapter.reportDGnssDataUsable(mSvMeasurementSet);
-            }
-        }
-        inline virtual void log() const {
-            LOC_LOGd("MsgReportSvMeasurement");
-        }
-    };
-
-    // some position engine requires the QMI order of PVT report and SV measurement
-    // report to be preserved. So, send out both SV measurement report and PVT report
-    // directly to engine hub
-    mEngHubProxy->gnssReportSvMeasurement(svMeasurementSet);
-    sendMsg(new MsgReportSvMeasurement(*this, svMeasurementSet));
 }
 
 void
