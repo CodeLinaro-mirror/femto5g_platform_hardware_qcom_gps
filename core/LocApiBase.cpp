@@ -469,14 +469,6 @@ void LocApiBase::reportSv(GnssSvNotification& svNotify)
         );
 }
 
-void LocApiBase::reportSvMeasurement(GnssSvMeasurementSet &svMeasurementSet)
-{
-    // loop through adapters, and deliver to all adapters.
-    TO_ALL_LOCADAPTERS(
-        mLocAdapters[i]->reportSvMeasurementEvent(svMeasurementSet)
-    );
-}
-
 void LocApiBase::reportSvPolynomial(GnssSvPolynomial &svPolynomial)
 {
     // loop through adapters, and deliver to all adapters.
@@ -577,11 +569,10 @@ void* LocApiBase :: getSibling()
 LocApiProxyBase* LocApiBase :: getLocApiProxy()
     DEFAULT_IMPL(NULL)
 
-void LocApiBase::reportGnssMeasurementData(GnssMeasurementsNotification& measurements,
-                                           int msInWeek)
+void LocApiBase::reportGnssMeasurements(GnssMeasurements& gnssMeasurements, int msInWeek)
 {
     // loop through adapters, and deliver to all adapters.
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportGnssMeasurementDataEvent(measurements, msInWeek));
+    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportGnssMeasurementsEvent(gnssMeasurements, msInWeek));
 }
 
 void LocApiBase::reportGnssSvIdConfig(const GnssSvIdConfig& config)
