@@ -261,6 +261,11 @@ class GnssAdapter : public LocAdapterBase {
     bool mDGnssNeedReport;
     bool mDGnssDataUsage;
     void reportDGnssDataUsable(const GnssSvMeasurementSet &svMeasurementSet);
+    /* ==== NFW =========================================================================== */
+    IsInEmergencySession mIsE911Session;
+    inline void initNfw(const NfwCbInfo& cbInfo) {
+        mIsE911Session = (IsInEmergencySession)cbInfo.isInEmergencySession;
+    }
 
     /* ==== ODCPI ========================================================================== */
     OdcpiRequestCbMap mOdcpiRequestCbMap;
@@ -541,6 +546,12 @@ public:
     void saveGnssEnergyConsumedCallback(GnssEnergyConsumedCallback energyConsumedCb);
     void reportLocationSystemInfo(const LocationSystemInfo & locationSystemInfo);
     void updatePowerState(PowerStateType powerState);
+    inline bool getE911State(void) {
+        if (NULL != mIsE911Session) {
+            return mIsE911Session();
+        }
+        return false;
+    }
 
     /*======== GNSSDEBUG ================================================================*/
     bool getDebugReport(GnssDebugReport& report);
