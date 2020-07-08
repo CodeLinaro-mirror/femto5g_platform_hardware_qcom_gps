@@ -51,6 +51,7 @@
 #define LOC_GPS_NI_RESPONSE_IGNORE 4
 #define ODCPI_EXPECTED_INJECTION_TIME_MS 10000
 #define DELETE_AIDING_DATA_EXPECTED_TIME_MS 5000
+#define IS_SS5_HW_ENABLED (1)
 
 class GnssAdapter;
 
@@ -382,6 +383,8 @@ public:
     void configLeverArm(uint32_t sessionId, const LeverArmConfigInfo& configInfo);
     void configRobustLocation(uint32_t sessionId, bool enable, bool enableForE911);
     void configMinGpsWeek(uint32_t sessionId, uint16_t minGpsWeek);
+    inline bool isSS5HWEnabled()
+    { return ((mContext != NULL) && (IS_SS5_HW_ENABLED == mContext->mGps_conf.GNSS_DEPLOYMENT)); }
 
     /* ==== NI ============================================================================= */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */

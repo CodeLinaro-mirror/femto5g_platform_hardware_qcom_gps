@@ -109,6 +109,7 @@ static void antennaInfoClose();
 static uint32_t configEngineRunState(PositioningEngineMask engType, LocEngineRunState engState);
 static uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes);
 static uint32_t setOptInStatus(bool userConsent);
+static bool isSS5HWEnabled();
 
 static const GnssInterface gGnssInterface = {
     sizeof(GnssInterface),
@@ -171,6 +172,7 @@ static const GnssInterface gGnssInterface = {
     configEngineRunState,
     configOutputNmeaTypes,
     setOptInStatus,
+    isSS5HWEnabled,
 };
 
 #ifndef DEBUG_X86
@@ -547,6 +549,13 @@ static void antennaInfoClose() {
     if (NULL != gGnssAdapter) {
         return gGnssAdapter->antennaInfoCloseCommand();
     }
+}
+
+static bool isSS5HWEnabled() {
+    if (NULL != gGnssAdapter) {
+        return gGnssAdapter->isSS5HWEnabled();
+    }
+    return false;
 }
 
 static uint32_t configRobustLocation(bool enable, bool enableForE911){

@@ -114,6 +114,7 @@ struct GnssInterface {
                                      LocEngineRunState engState);
     uint32_t (*configOutputNmeaTypes)(GnssNmeaTypesMask enabledNmeaTypes);
     uint32_t (*setOptInStatus)(bool userConsent);
+    bool (*isSS5HWEnabled)();
 };
 
 struct BatchingInterface {
