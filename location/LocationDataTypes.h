@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1963,5 +1963,23 @@ typedef struct {
     locationSystemInfoCallback locationSystemInfoCb; // optional
     engineLocationsInfoCallback engineLocationsInfoCb;     // optional
 } LocationCallbacks;
+
+typedef struct {
+    uint64_t meQtimer1;
+    uint64_t meQtimer2;
+    uint64_t meQtimer3;
+    uint64_t peQtimer1;
+    uint64_t peQtimer2;
+    uint64_t peQtimer3;
+    uint64_t smQtimer1;
+    uint64_t smQtimer2;
+    uint64_t smQtimer3;
+    uint64_t locMwQtimer;
+    uint64_t hlosQtimer1;
+    uint64_t hlosQtimer2;
+    uint64_t hlosQtimer3;
+    uint64_t hlosQtimer4;
+    uint64_t hlosQtimer5;
+} GnssLatencyInfo;
 
 #endif /* LOCATIONDATATYPES_H */

@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -74,6 +74,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Agps.h>
 #include <SystemStatus.h>
 #include <XtraSystemStatusObserver.h>
+#include <loc_misc_utils.h>
 
 #define MAX_URL_LEN 256
 #define NMEA_SENTENCE_MAX_LENGTH 200
@@ -206,6 +207,23 @@ struct CdfwInterface {
     void (*reportUsable)(QDgnssListenerHDL handle, bool usable);
 };
 
+class GnssReportLoggerUtil {
+public:
+    typedef void (*LogGnssLatency)(const GnssLatencyInfo& gnssLatencyMeasInfo);
+
+    GnssReportLoggerUtil() : mLogLatency(nullptr) {
+        const char* libname = "liblocdiagiface.so";
+        void* libHandle = nullptr;
+        mLogLatency = (LogGnssLatency)dlGetSymFromLib(libHandle, libname, "LogGnssLatency");
+    }
+
+    bool isLogEnabled();
+    void log(const GnssLatencyInfo& gnssLatencyMeasInfo);
+
+private:
+    LogGnssLatency mLogLatency;
+};
+
 class GnssAdapter : public LocAdapterBase {
 
     /* ==== Engine Hub ===================================================================== */
@@ -272,6 +290,8 @@ class GnssAdapter : public LocAdapterBase {
     BlockCPIInfo mBlockCPIInfo;
     bool mDreIntEnabled;
     bool mPpeEnabled;
+    GnssLatencyInfo mGnssLatencyInfo;
+    GnssReportLoggerUtil mLogger;
 
     /* === Misc callback from QMI LOC API ============================================== */
     GnssEnergyConsumedCallback mGnssEnergyConsumedCb;
@@ -290,6 +310,7 @@ class GnssAdapter : public LocAdapterBase {
     inline void initOdcpi(const OdcpiRequestCallback& callback);
     inline void injectOdcpi(const Location& location);
     inline void setNmeaReportRateConfig();
+    void logLatencyInfo();
 
 public:
 
@@ -497,6 +518,7 @@ public:
     virtual bool reportKlobucharIonoModelEvent(GnssKlobucharIonoModel& ionoModel);
     virtual bool reportGnssAdditionalSystemInfoEvent(
             GnssAdditionalSystemInfo& additionalSystemInfo);
+    virtual void reportLatencyInfoEvent(const GnssLatencyInfo& gnssLatencyInfo);
 
     /* ======== UTILITIES ================================================================= */
     bool needReportForAllClients(const UlpLocation& ulpLocation,
