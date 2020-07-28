@@ -38,6 +38,7 @@
 #define GEOFENCE_SESSION_ID 0xFFFFFFFF
 #define CONFIG_SESSION_ID 0xFFFFFFFF
 
+
 // LocationAPIControlClient
 LocationAPIControlClient::LocationAPIControlClient() :
     mEnabled(false)
@@ -310,14 +311,16 @@ void LocationAPIClientBase::locAPISetCallbacks(LocationCallbacks& locationCallba
     pthread_mutex_unlock(&mMutex);
 }
 
-LocationAPIClientBase::~LocationAPIClientBase()
+void LocationAPIClientBase::destroy()
 {
+    LOC_LOGD("LocationAPIClientBase::destroy()");
+
     pthread_mutex_lock(&mMutex);
 
     mGeofenceBreachCallback = nullptr;
 
     if (mLocationAPI) {
-        mLocationAPI->destroy();
+        mLocationAPI->destroy([this]() {onLocationApiDestroyCompleteCb();});
         mLocationAPI = nullptr;
     }
 
@@ -326,8 +329,17 @@ LocationAPIClientBase::~LocationAPIClientBase()
     }
 
     pthread_mutex_unlock(&mMutex);
+}
 
+LocationAPIClientBase::~LocationAPIClientBase()
+{
     pthread_mutex_destroy(&mMutex);
+}
+
+void LocationAPIClientBase::onLocationApiDestroyCompleteCb()
+{
+    LOC_LOGD("LocationAPIClientBase::onLocationApiDestroyCompleteCb()");
+    delete this;
 }
 
 uint32_t LocationAPIClientBase::locAPIStartTracking(TrackingOptions& options)
