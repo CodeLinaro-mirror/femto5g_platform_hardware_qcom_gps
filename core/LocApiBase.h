@@ -72,6 +72,11 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocationAPI.h>
 #include <MsgTask.h>
 #include <log_util.h>
+#ifdef NO_UNORDERED_SET_OR_MAP
+    #include <map>
+#else
+    #include <unordered_map>
+#endif
 
 namespace loc_core {
 
@@ -228,6 +233,10 @@ public:
     void reportGnssAdditionalSystemInfo(GnssAdditionalSystemInfo& additionalSystemInfo);
     void reportGnssConfig(uint32_t sessionId, const GnssConfig& gnssConfig);
     void reportLatencyInfo(GnssLatencyInfo& gnssLatencyInfo);
+    void reportQwesCapabilities
+    (
+        const std::unordered_map<LocationQwesFeatureType, bool> &featureMap
+    );
 
     // downward calls
     // All below functions are to be defined by adapter specific modules:

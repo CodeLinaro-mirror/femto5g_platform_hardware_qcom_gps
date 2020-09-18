@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -26,6 +26,43 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #ifndef __LOC_CONTEXT_BASE__
 #define __LOC_CONTEXT_BASE__
 
@@ -35,6 +72,11 @@
 #include <LocApiBase.h>
 #include <LBSProxyBase.h>
 #include <loc_cfg.h>
+#ifdef NO_UNORDERED_SET_OR_MAP
+    #include <map>
+#else
+    #include <unordered_map>
+#endif
 
 /* GPS.conf support */
 /* NOTE: the implementaiton of the parser casts number
@@ -155,6 +197,7 @@ public:
     static uint8_t sFeaturesSupported[MAX_FEATURE_LENGTH];
     static bool sGnssMeasurementSupported;
     static GnssNMEARptRate sNmeaReportRate;
+    static LocationCapabilitiesMask sQwesFeatureMask;
 
     void readConfig();
     static uint32_t getCarrierCapabilities();
@@ -186,6 +229,118 @@ public:
         Check if gnss measurement is supported
     */
     static bool gnssConstellationConfig();
+
+    /*
+        set QWES feature status info
+    */
+    static inline void setQwesFeatureStatus(
+            const std::unordered_map<LocationQwesFeatureType, bool> &featureMap) {
+       std::unordered_map<LocationQwesFeatureType, bool>::const_iterator itr;
+       static LocationQwesFeatureType locQwesFeatType[LOCATION_QWES_FEATURE_TYPE_MAX];
+       for (itr = featureMap.begin(); itr != featureMap.end(); ++itr) {
+           LOC_LOGi("Feature : %d isValid: %d", itr->first, itr->second);
+           locQwesFeatType[itr->first] = itr->second;
+           switch (itr->first) {
+               case LOCATION_QWES_FEATURE_TYPE_CARRIER_PHASE:
+                   if (itr->second) {
+                       sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_CARRIER_PHASE_BIT;
+                   } else {
+                       sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_CARRIER_PHASE_BIT;
+                   }
+               break;
+               case LOCATION_QWES_FEATURE_TYPE_SV_POLYNOMIAL:
+                   if (itr->second) {
+                       sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT;
+                   } else {
+                       sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT;
+                   }
+               break;
+               case LOCATION_QWES_FEATURE_TYPE_GNSS_SINGLE_FREQUENCY:
+                   if (itr->second) {
+                       sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_GNSS_SINGLE_FREQUENCY;
+                   } else {
+                       sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_GNSS_SINGLE_FREQUENCY;
+                   }
+               break;
+               case LOCATION_QWES_FEATURE_TYPE_SV_EPH:
+                   if (itr->second) {
+                       sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
+                   } else {
+                       sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
+                   }
+               break;
+               case LOCATION_QWES_FEATURE_TYPE_GNSS_MULTI_FREQUENCY:
+                   if (itr->second) {
+                       sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_GNSS_MULTI_FREQUENCY;
+                   } else {
+                       sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_GNSS_MULTI_FREQUENCY;
+                   }
+               break;
+               case LOCATION_QWES_FEATURE_TYPE_PPE:
+                   if (itr->second) {
+                       sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_PPE;
+                   } else {
+                       sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_PPE;
+                   }
+               break;
+               case LOCATION_QWES_FEATURE_TYPE_QDR2:
+                   if (itr->second) {
+                       sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_QDR2;
+                   } else {
+                       sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_QDR2;
+                   }
+               break;
+               case LOCATION_QWES_FEATURE_TYPE_QDR3:
+                   if (itr->second) {
+                       sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_QDR3;
+                   } else {
+                       sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_QDR3;
+                   }
+               break;
+               case LOCATION_QWES_FEATURE_TYPE_VPE:
+                   if (itr->second) {
+                       sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_VPE;
+                   } else {
+                       sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_VPE;
+                   }
+               break;
+           }
+       }
+
+       // Set CV2X basic when time freq and tunc is set
+       // CV2X_BASIC  = LOCATION_QWES_FEATURE_TYPE_TIME_FREQUENCY &
+       //       LOCATION_QWES_FEATURE_TYPE_TIME_UNCERTAINTY
+
+       // Set CV2X premium when time freq and tunc is set
+       // CV2X_PREMIUM = CV2X_BASIC & LOCATION_QWES_FEATURE_TYPE_QDR3 &
+       //       LOCATION_QWES_FEATURE_TYPE_CLOCK_ESTIMATE
+
+       bool cv2xBasicEnabled = (1 == locQwesFeatType[LOCATION_QWES_FEATURE_TYPE_TIME_FREQUENCY]) &&
+            (1 == locQwesFeatType[LOCATION_QWES_FEATURE_TYPE_TIME_UNCERTAINTY]);
+       bool cv2xPremiumEnabled = cv2xBasicEnabled &&
+            (1 == locQwesFeatType[LOCATION_QWES_FEATURE_TYPE_QDR3]) &&
+            (1 == locQwesFeatType[LOCATION_QWES_FEATURE_TYPE_CLOCK_ESTIMATE]);
+
+       LOC_LOGd("CV2X_BASIC:%d, CV2X_PREMIUM:%d", cv2xBasicEnabled, cv2xPremiumEnabled);
+       if (cv2xBasicEnabled) {
+            sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_CV2X_LOCATION_BASIC;
+       } else {
+            sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_CV2X_LOCATION_BASIC;
+       }
+       if (cv2xPremiumEnabled) {
+            sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_CV2X_LOCATION_PREMIUM;
+       } else {
+            sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_CV2X_LOCATION_PREMIUM;
+       }
+    }
+
+    /*
+        get QWES feature status info
+    */
+    static inline LocationCapabilitiesMask getQwesFeatureStatus() {
+        return (ContextBase::sQwesFeatureMask);
+    }
+
 
 };
 
