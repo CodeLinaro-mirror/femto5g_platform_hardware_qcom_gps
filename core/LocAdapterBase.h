@@ -197,6 +197,8 @@ public:
     virtual bool reportKlobucharIonoModelEvent(GnssKlobucharIonoModel& ionoModel);
     virtual bool reportGnssAdditionalSystemInfoEvent(
             GnssAdditionalSystemInfo& additionalSystemInfo);
+    virtual bool reportQwesCapabilities(
+            const std::unordered_map<LocationQwesFeatureType, bool> &featureMap);
 };
 
 } // namespace loc_core

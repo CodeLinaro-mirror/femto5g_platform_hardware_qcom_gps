@@ -463,6 +463,10 @@ public:
     virtual bool reportKlobucharIonoModelEvent(GnssKlobucharIonoModel& ionoModel);
     virtual bool reportGnssAdditionalSystemInfoEvent(
             GnssAdditionalSystemInfo& additionalSystemInfo);
+    virtual bool reportQwesCapabilities
+    (
+        const std::unordered_map<LocationQwesFeatureType, bool> &featureMap
+    );
 
     /* ======== UTILITIES ================================================================= */
     bool needReportForAllClients(const UlpLocation& ulpLocation,
