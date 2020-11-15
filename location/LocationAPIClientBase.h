@@ -246,6 +246,8 @@ public:
             GnssMeasurementsNotification /*gnssMeasurementsNotification*/) {}
     inline virtual void onGnssNHzMeasurementsCb(
             GnssMeasurementsNotification /*gnssMeasurementsNotification*/) {}
+    inline virtual void onGnssRequestTimeCb() {}
+
     inline virtual void onTrackingCb(Location /*location*/) {}
     inline virtual void onGnssSvCb(GnssSvNotification /*gnssSvNotification*/) {}
     inline virtual void onStartTrackingCb(LocationError /*error*/) {}

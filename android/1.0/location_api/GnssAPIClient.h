@@ -86,6 +86,7 @@ public:
     void onGnssNiCb(uint32_t id, GnssNiNotification gnssNiNotification) final;
     void onGnssSvCb(GnssSvNotification gnssSvNotification) final;
     void onGnssNmeaCb(GnssNmeaNotification gnssNmeaNotification) final;
+    void onGnssRequestTimeCb() final;
 
     void onStartTrackingCb(LocationError error) final;
     void onStopTrackingCb(LocationError error) final;
