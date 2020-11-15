@@ -641,6 +641,7 @@ public:
     void reportPdnTypeFromWds(int pdnType, AGpsExtType agpsType, std::string apnName,
             AGpsBearerType bearerType);
     void reportXtraMpDisabledEvent();
+    virtual bool requestTime();
 
     /* ======== UTILITIES ================================================================= */
     bool needReportForAllClients(const UlpLocation& ulpLocation,
@@ -698,6 +699,7 @@ public:
 
     void updateSystemPowerState(PowerStateType systemPowerState);
     void reportSvPolynomial(const GnssSvPolynomial &svPolynomial);
+    void requestTimeInternal();
 
     std::vector<double> parseDoublesString(char* dString);
     void reportGnssAntennaInformation(AntennaInfoCallback* cb);
