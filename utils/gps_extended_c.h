@@ -868,12 +868,6 @@ typedef struct {
     bool altitudeAssumed;
 } GpsLocationExtended;
 
-enum loc_sess_status {
-    LOC_SESS_SUCCESS,
-    LOC_SESS_INTERMEDIATE,
-    LOC_SESS_FAILURE
-};
-
 // struct that contains complete position info from engine
 typedef struct {
     UlpLocation location;
@@ -1524,6 +1518,10 @@ typedef uint64_t GpsSvMeasHeaderFlags;
 #define GNSS_SV_MEAS_HEADER_HAS_BDS_NAVIC_INTER_SYSTEM_BIAS   0x20000000
 #define GNSS_SV_MEAS_HEADER_HAS_NAVIC_SYSTEM_TIME             0x40000000
 #define GNSS_SV_MEAS_HEADER_HAS_NAVIC_SYSTEM_TIME_EXT         0x80000000
+#define GNSS_SV_MEAS_HEADER_HAS_GPSL1L2C_TIME_BIAS            0x100000000
+#define GNSS_SV_MEAS_HEADER_HAS_GLOG1G2_TIME_BIAS             0x200000000
+#define GNSS_SV_MEAS_HEADER_HAS_BDSB1IB1C_TIME_BIAS           0x400000000
+#define GNSS_SV_MEAS_HEADER_HAS_GALE1E5B_TIME_BIAS            0x800000000
 
 typedef struct
 {
@@ -1550,6 +1548,10 @@ typedef struct
     Gnss_InterSystemBiasStructType              gpsL1L5TimeBias;
     Gnss_InterSystemBiasStructType              galE1E5aTimeBias;
     Gnss_InterSystemBiasStructType              bdsB1iB2aTimeBias;
+    Gnss_InterSystemBiasStructType              gpsL1L2cTimeBias;
+    Gnss_InterSystemBiasStructType              gloG1G2TimeBias;
+    Gnss_InterSystemBiasStructType              bdsB1iB1cTimeBias;
+    Gnss_InterSystemBiasStructType              galE1E5bTimeBias;
 
     GnssSystemTimeStructType                    gpsSystemTime;
     GnssSystemTimeStructType                    galSystemTime;
@@ -2252,12 +2254,24 @@ struct OdcpiRequestInfo {
 /* Callback to send ODCPI request to framework */
 typedef std::function<void(const OdcpiRequestInfo& request)> OdcpiRequestCallback;
 
+/* ODCPI callback priorities*/
+enum OdcpiPrioritytype {
+    ODCPI_HANDLER_PRIORITY_LOW,
+    ODCPI_HANDLER_PRIORITY_HIGH
+};
+
 /*
  * Callback with AGNSS(IpV4) status information.
  *
  * @param status Will be of type AGnssExtStatusIpV4.
  */
 typedef void (*AgnssStatusIpV4Cb)(AGnssExtStatusIpV4 status);
+
+typedef bool(*IsInEmergencySession)(void);
+
+typedef struct {
+    void* isInEmergencySession;
+} NfwCbInfo;
 
 /*
  * Callback with AGNSS(IpV6) status information.

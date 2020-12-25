@@ -233,10 +233,16 @@ class GnssAdapter : public LocAdapterBase {
     bool mDGnssNeedReport;
     bool mDGnssDataUsage;
     void reportDGnssDataUsable(GnssSvMeasurementSet &svMeasurementSet);
+    /* ==== NFW =========================================================================== */
+    IsInEmergencySession mIsE911Session;
+    inline void initNfw(const NfwCbInfo& cbInfo) {
+        mIsE911Session = (IsInEmergencySession)cbInfo.isInEmergencySession;
+    }
 
     /* ==== ODCPI ========================================================================== */
     OdcpiRequestCallback mOdcpiRequestCb;
     bool mOdcpiRequestActive;
+    OdcpiPrioritytype mCallbackPriority;
     OdcpiTimer mOdcpiTimer;
     OdcpiRequestInfo mOdcpiRequest;
     void odcpiTimerExpire();
@@ -265,12 +271,13 @@ class GnssAdapter : public LocAdapterBase {
                                 const GpsLocationExtended& locationExtended,
                                 const LocPosTechMask techMask);
     static void convertLocationInfo(GnssLocationInfoNotification& out,
-                                    const GpsLocationExtended& locationExtended);
+                                    const GpsLocationExtended& locationExtended,
+                                    loc_sess_status status);
     static uint16_t getNumSvUsed(uint64_t svUsedIdsMask,
                                  int totalSvCntInThisConstellation);
 
     /* ======== UTILITIES ================================================================== */
-    inline void initOdcpi(const OdcpiRequestCallback& callback);
+    inline void initOdcpi(const OdcpiRequestCallback& callback, OdcpiPrioritytype priority);
     inline void injectOdcpi(const Location& location);
     inline void setNmeaReportRateConfig();
     void logLatencyInfo();
@@ -430,7 +437,7 @@ public:
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
-    void initOdcpiCommand(const OdcpiRequestCallback& callback);
+    void initOdcpiCommand(const OdcpiRequestCallback& callback, OdcpiPrioritytype priority);
     void injectOdcpiCommand(const Location& location);
     /* ======== RESPONSES ================================================================== */
     void reportResponse(LocationError err, uint32_t sessionId);
@@ -481,6 +488,10 @@ public:
     virtual bool reportGnssAdditionalSystemInfoEvent(
             GnssAdditionalSystemInfo& additionalSystemInfo);
     virtual void reportLatencyInfoEvent(const GnssLatencyInfo& gnssLatencyInfo);
+    virtual bool reportQwesCapabilities
+    (
+        const std::unordered_map<LocationQwesFeatureType, bool> &featureMap
+    );
 
     /* ======== UTILITIES ================================================================= */
     bool needReport(const UlpLocation& ulpLocation,
@@ -506,6 +517,12 @@ public:
     void saveGnssEnergyConsumedCallback(GnssEnergyConsumedCallback energyConsumedCb);
     void reportLocationSystemInfo(const LocationSystemInfo & locationSystemInfo);
     void updatePowerState(PowerStateType powerState);
+    inline bool getE911State(void) {
+        if (NULL != mIsE911Session) {
+            return mIsE911Session();
+        }
+        return false;
+    }
 
     /*======== GNSSDEBUG ================================================================*/
     bool getDebugReport(GnssDebugReport& report);

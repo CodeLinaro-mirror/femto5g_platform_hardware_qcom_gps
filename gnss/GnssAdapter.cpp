@@ -113,6 +113,7 @@ GnssAdapter::GnssAdapter() :
     mOdcpiRequestActive(false),
     mOdcpiTimer(this),
     mOdcpiRequest(),
+    mCallbackPriority(OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_LOW),
     mSystemStatus(SystemStatus::getInstance(mMsgTask)),
     mServerUrl(":"),
     mXtraObserver(mSystemStatus->getOsObserver(), mMsgTask),
@@ -121,7 +122,8 @@ GnssAdapter::GnssAdapter() :
     mLocSystemInfo{},
     mGnssMbSvIdUsedInPosition{},
     mGnssMbSvIdUsedInPosAvail(false),
-    mPowerState(POWER_STATE_UNKNOWN)
+    mPowerState(POWER_STATE_UNKNOWN),
+    mIsE911Session(NULL)
 {
     LOC_LOGD("%s]: Constructor %p", __func__, this);
     mLocPositionMode.mode = LOC_POSITION_MODE_INVALID;
@@ -329,7 +331,8 @@ uint16_t GnssAdapter::getNumSvUsed(uint64_t svUsedIdsMask,
 
 void
 GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
-                                 const GpsLocationExtended& locationExtended)
+                                 const GpsLocationExtended& locationExtended,
+                                 enum loc_sess_status status)
 {
     out.size = sizeof(GnssLocationInfoNotification);
     if (GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL & locationExtended.flags) {
@@ -640,6 +643,9 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
         out.flags |= GNSS_LOCATION_INFO_ALTITUDE_ASSUMED_BIT;
         out.altitudeAssumed = locationExtended.altitudeAssumed;
     }
+
+    out.flags |= GNSS_LOCATION_INFO_SESSION_STATUS_BIT;
+    out.sessionStatus = status;
 }
 
 inline uint32_t
@@ -2398,20 +2404,22 @@ GnssAdapter::stopClientSessions(LocationAPI* client)
 
 }
 
+bool isInEmergencySession() {
+    return false;
+}
+
 void
 GnssAdapter::updateClientsEventMask()
 {
     // need to register for leap second info
     // for proper nmea generation
-    LOC_API_ADAPTER_EVENT_MASK_T mask = LOC_API_ADAPTER_BIT_LOC_SYSTEM_INFO;
+    LOC_API_ADAPTER_EVENT_MASK_T mask = LOC_API_ADAPTER_BIT_LOC_SYSTEM_INFO |
+            LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO;
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
         if (it->second.trackingCb != nullptr ||
             it->second.gnssLocationInfoCb != nullptr ||
             it->second.engineLocationsInfoCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_PARSED_POSITION_REPORT;
-        }
-        if (it->second.gnssNiCb != nullptr) {
-            mask |= LOC_API_ADAPTER_BIT_NI_NOTIFY_VERIFY_REQUEST;
         }
         if (it->second.gnssSvCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_SATELLITE_REPORT;
@@ -2441,7 +2449,6 @@ GnssAdapter::updateClientsEventMask()
         mask |= LOC_API_ADAPTER_BIT_GNSS_SV_POLYNOMIAL_REPORT;
         mask |= LOC_API_ADAPTER_BIT_PARSED_UNPROPAGATED_POSITION_REPORT;
         mask |= LOC_API_ADAPTER_BIT_GNSS_SV_EPHEMERIS_REPORT;
-        mask |= LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO;
 
         // Nhz measurement bit is set based on callback from loc eng hub
         // for Nhz engines.
@@ -2460,6 +2467,15 @@ GnssAdapter::updateClientsEventMask()
     if (nullptr != mOdcpiRequestCb) {
         mask |= LOC_API_ADAPTER_BIT_REQUEST_WIFI;
     }
+
+    // always register for NI NOTIFY VERIFY to handle internally in HAL
+    mask |= LOC_API_ADAPTER_BIT_NI_NOTIFY_VERIFY_REQUEST;
+    // and register callback
+
+    NfwCbInfo cbInfo = {};
+    cbInfo.isInEmergencySession = (void*)isInEmergencySession;
+
+    initNfw(cbInfo);
 
     // Enable the latency report
     if (mask & LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT) {
@@ -2639,18 +2655,8 @@ GnssAdapter::getCapabilities()
     if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_AGPM_V02)) {
         mask |= LOCATION_CAPABILITIES_AGPM_BIT;
     }
-    if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_LOCATION_PRIVACY)) {
-        mask |= LOCATION_CAPABILITIES_PRIVACY_BIT;
-    }
-    if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_MEASUREMENTS_CORRECTION)) {
-        mask |= LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT;
-    }
-    if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_ROBUST_LOCATION)) {
-        mask |= LOCATION_CAPABILITIES_CONFORMITY_INDEX_BIT;
-    }
-    if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_EDGNSS)) {
-        mask |= LOCATION_CAPABILITIES_EDGNSS_BIT;
-    }
+    //Get QWES feature status mask
+    mask |= ContextBase::getQwesFeatureStatus();
     return mask;
 }
 
@@ -3786,7 +3792,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
         }
 
         GnssLocationInfoNotification locationInfo = {};
-        convertLocationInfo(locationInfo, locationExtended);
+        convertLocationInfo(locationInfo, locationExtended, status);
         convertLocation(locationInfo.location, ulpLocation, locationExtended, techMask);
         logLatencyInfo();
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
@@ -3889,7 +3895,8 @@ GnssAdapter::reportEnginePositions(unsigned int count,
         }
 
         if (needReportEnginePositions) {
-            convertLocationInfo(locationInfo[i], engLocation->locationExtended);
+            convertLocationInfo(locationInfo[i], engLocation->locationExtended,
+                                engLocation->sessionStatus);
             convertLocation(locationInfo[i].location,
                             engLocation->location,
                             engLocation->locationExtended,
@@ -4205,21 +4212,36 @@ GnssAdapter::requestNiNotifyEvent(const GnssNiNotification &notify, const void* 
 
     struct MsgReportNiNotify : public LocMsg {
         GnssAdapter& mAdapter;
+        LocApiBase& mApi;
         const GnssNiNotification mNotify;
         const void* mData;
         inline MsgReportNiNotify(GnssAdapter& adapter,
+                                 LocApiBase& api,
                                  const GnssNiNotification& notify,
                                  const void* data) :
             LocMsg(),
             mAdapter(adapter),
+            mApi(api),
             mNotify(notify),
             mData(data) {}
         inline virtual void proc() const {
-            mAdapter.requestNiNotify(mNotify, mData);
+            if (GNSS_NI_TYPE_EMERGENCY_SUPL == mNotify.type ||
+                GNSS_NI_TYPE_CONTROL_PLANE == mNotify.type) {
+                if (mAdapter.getE911State() ||
+                    ((GNSS_CONFIG_SUPL_EMERGENCY_SERVICES_NO == ContextBase::mGps_conf.SUPL_ES) &&
+                     (GNSS_NI_TYPE_EMERGENCY_SUPL == mNotify.type))) {
+                    mApi.informNiResponse(GNSS_NI_RESPONSE_ACCEPT, mData);
+                }
+                else {
+                    mApi.informNiResponse(GNSS_NI_RESPONSE_DENY, mData);
+                }
+            } else {
+                mAdapter.requestNiNotify(mNotify, mData);
+            }
         }
     };
 
-    sendMsg(new MsgReportNiNotify(*this, notify, data));
+    sendMsg(new MsgReportNiNotify(*this, *mLocApi, notify, data));
 
     return true;
 }
@@ -4552,8 +4574,12 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
         // the request is being stopped, but allow timer to expire first
         // before stopping the timer just in case more ODCPI requests come
         // to avoid spamming more odcpi requests to the framework
-        } else {
+        } else if (ODCPI_REQUEST_TYPE_STOP == request.type) {
+            LOC_LOGd("request: type %d, isEmergency %d", request.type, request.isEmergencyMode);
+            mOdcpiRequestCb(request);
             mOdcpiRequestActive = false;
+        } else {
+            LOC_LOGE("Invalid ODCPI request type..");
         }
     } else {
         LOC_LOGw("ODCPI request not supported");
@@ -4582,31 +4608,63 @@ bool GnssAdapter::reportGnssAdditionalSystemInfoEvent(
     return true;
 }
 
-void GnssAdapter::initOdcpiCommand(const OdcpiRequestCallback& callback)
+bool GnssAdapter::reportQwesCapabilities(
+        const std::unordered_map<LocationQwesFeatureType, bool> &featureMap)
+{
+    struct MsgReportQwesFeatureStatus : public LocMsg {
+        GnssAdapter& mAdapter;
+        const std::unordered_map<LocationQwesFeatureType, bool> mFeatureMap;
+        inline MsgReportQwesFeatureStatus(GnssAdapter& adapter,
+                const std::unordered_map<LocationQwesFeatureType, bool> &featureMap) :
+            LocMsg(),
+            mAdapter(adapter),
+            mFeatureMap(std::move(featureMap)) {}
+        inline virtual void proc() const {
+            LOC_LOGi("ReportQwesFeatureStatus before caps %" PRIx64 " ",
+                mAdapter.getCapabilities());
+            ContextBase::setQwesFeatureStatus(mFeatureMap);
+            LOC_LOGi("ReportQwesFeatureStatus After caps %" PRIx64 " ",
+                mAdapter.getCapabilities());
+            mAdapter.broadcastCapabilities(mAdapter.getCapabilities());
+        }
+    };
+
+    sendMsg(new MsgReportQwesFeatureStatus(*this, featureMap));
+    return true;
+}
+
+void GnssAdapter::initOdcpiCommand(const OdcpiRequestCallback& callback,
+            OdcpiPrioritytype priority)
 {
     struct MsgInitOdcpi : public LocMsg {
         GnssAdapter& mAdapter;
         OdcpiRequestCallback mOdcpiCb;
+        OdcpiPrioritytype mPriority;
         inline MsgInitOdcpi(GnssAdapter& adapter,
-                const OdcpiRequestCallback& callback) :
+                const OdcpiRequestCallback& callback,
+                OdcpiPrioritytype priority) :
                 LocMsg(),
                 mAdapter(adapter),
-                mOdcpiCb(callback) {}
+                mOdcpiCb(callback), mPriority(priority){}
         inline virtual void proc() const {
-            mAdapter.initOdcpi(mOdcpiCb);
+            mAdapter.initOdcpi(mOdcpiCb, mPriority);
         }
     };
 
-    sendMsg(new MsgInitOdcpi(*this, callback));
+    sendMsg(new MsgInitOdcpi(*this, callback, priority));
 }
 
-void GnssAdapter::initOdcpi(const OdcpiRequestCallback& callback)
+void GnssAdapter::initOdcpi(const OdcpiRequestCallback& callback,
+            OdcpiPrioritytype priority)
 {
-    mOdcpiRequestCb = callback;
-
-    /* Register for WIFI request */
-    updateEvtMask(LOC_API_ADAPTER_BIT_REQUEST_WIFI,
-            LOC_REGISTRATION_MASK_ENABLED);
+    LOC_LOGd("In priority: %d, Curr priority: %d", priority, mCallbackPriority);
+    if (priority >= mCallbackPriority) {
+        mOdcpiRequestCb = callback;
+        mCallbackPriority = priority;
+        /* Register for WIFI request */
+        updateEvtMask(LOC_API_ADAPTER_BIT_REQUEST_WIFI,
+                LOC_REGISTRATION_MASK_ENABLED);
+    }
 }
 
 void GnssAdapter::injectOdcpiCommand(const Location& location)
@@ -4767,9 +4825,19 @@ void GnssAdapter::initAgps(const AgpsCbInfo& cbInfo) {
 
         mAgpsManager.createAgpsStateMachines();
 
+        LOC_API_ADAPTER_EVENT_MASK_T mask;
+        // always register for NI NOTIFY VERIFY to handle internally in HAL
+        mask = LOC_API_ADAPTER_BIT_NI_NOTIFY_VERIFY_REQUEST |
+               LOC_API_ADAPTER_BIT_LOCATION_SERVER_REQUEST;
+        // and register callback
+
+        NfwCbInfo cbInfo = {};
+        cbInfo.isInEmergencySession = (void*)isInEmergencySession;
+
+        initNfw(cbInfo);
+
         /* Register for AGPS event mask */
-        updateEvtMask(LOC_API_ADAPTER_BIT_LOCATION_SERVER_REQUEST,
-                LOC_REGISTRATION_MASK_ENABLED);
+        updateEvtMask(mask, LOC_REGISTRATION_MASK_ENABLED);
     }
 }
 
@@ -6049,14 +6117,20 @@ GnssAdapter::initEngHubProxy() {
                 mNHzNeeded = nHzNeeded;
                 checkAndRestartSPESession();
             }
-       };
+        };
+
+        GnssAdapterUpdateQwesFeatureStatusCb updateQwesFeatureStatusCb =
+            [this] (const std::unordered_map<LocationQwesFeatureType, bool> &featureMap) {
+            reportQwesCapabilities(featureMap);
+        };
 
         getEngHubProxyFn* getter = (getEngHubProxyFn*) dlsym(handle, "getEngHubProxy");
         if(getter != nullptr) {
             EngineHubProxyBase* hubProxy = (*getter) (mMsgTask, mSystemStatus->getOsObserver(),
-                                                      reportPositionEventCb,
-                                                      reportSvEventCb, reqAidingDataCb,
-                                                      updateNHzRequirementCb);
+                      reportPositionEventCb,
+                      reportSvEventCb, reqAidingDataCb,
+                      updateNHzRequirementCb,
+                      updateQwesFeatureStatusCb);
             if (hubProxy != nullptr) {
                 mEngHubProxy = hubProxy;
                 engHubLoadSuccessful = true;
