@@ -4202,7 +4202,8 @@ GnssAdapter::reportData(GnssDataNotification& dataNotify)
 }
 
 bool
-GnssAdapter::requestNiNotifyEvent(const GnssNiNotification &notify, const void* data)
+GnssAdapter::requestNiNotifyEvent(const GnssNiNotification &notify, const void* data,
+                                  const LocInEmergency emergencyState)
 {
     LOC_LOGI("%s]: notif_type: %d, timeout: %d, default_resp: %d"
              "requestor_id: %s (encoding: %d) text: %s text (encoding: %d) extras: %s",
@@ -4215,33 +4216,57 @@ GnssAdapter::requestNiNotifyEvent(const GnssNiNotification &notify, const void* 
         LocApiBase& mApi;
         const GnssNiNotification mNotify;
         const void* mData;
+        const LocInEmergency mEmergencyState;
         inline MsgReportNiNotify(GnssAdapter& adapter,
                                  LocApiBase& api,
                                  const GnssNiNotification& notify,
-                                 const void* data) :
+                                 const void* data,
+                                 const LocInEmergency emergencyState) :
             LocMsg(),
             mAdapter(adapter),
             mApi(api),
             mNotify(notify),
-            mData(data) {}
+            mData(data),
+            mEmergencyState(emergencyState) {}
         inline virtual void proc() const {
-            if (GNSS_NI_TYPE_EMERGENCY_SUPL == mNotify.type ||
-                GNSS_NI_TYPE_CONTROL_PLANE == mNotify.type) {
-                if (mAdapter.getE911State() ||
-                    ((GNSS_CONFIG_SUPL_EMERGENCY_SERVICES_NO == ContextBase::mGps_conf.SUPL_ES) &&
-                     (GNSS_NI_TYPE_EMERGENCY_SUPL == mNotify.type))) {
+            bool bIsInEmergency = false;
+            bool bInformNiAccept = false;
+
+            bIsInEmergency = ((LOC_IN_EMERGENCY_UNKNOWN == mEmergencyState) &&
+                    mAdapter.getE911State()) ||                // older modems
+                    (LOC_IN_EMERGENCY_SET == mEmergencyState); // newer modems
+
+            if (GNSS_NI_TYPE_EMERGENCY_SUPL == mNotify.type) {
+                bInformNiAccept = bIsInEmergency ||
+                        (GNSS_CONFIG_SUPL_EMERGENCY_SERVICES_NO == ContextBase::mGps_conf.SUPL_ES);
+
+                if (bInformNiAccept) {
+                    mAdapter.requestNiNotify(mNotify, mData, bInformNiAccept);
+                } else {
+                    mApi.informNiResponse(GNSS_NI_RESPONSE_DENY, mData);
+                }
+            } else if (GNSS_NI_TYPE_CONTROL_PLANE == mNotify.type) {
+                if (bIsInEmergency && (1 == ContextBase::mGps_conf.CP_MTLR_ES)) {
                     mApi.informNiResponse(GNSS_NI_RESPONSE_ACCEPT, mData);
                 }
                 else {
-                    mApi.informNiResponse(GNSS_NI_RESPONSE_DENY, mData);
+                    mAdapter.requestNiNotify(mNotify, mData, false);
                 }
+            } else if (GNSS_NI_TYPE_SUPL == mNotify.type && !bIsInEmergency &&
+                       !(GNSS_NI_OPTIONS_PRIVACY_OVERRIDE_BIT & mNotify.options) &&
+                       (GNSS_CONFIG_GPS_LOCK_NI & ContextBase::mGps_conf.GPS_LOCK) &&
+                       1 == ContextBase::mGps_conf.NI_SUPL_DENY_ON_NFW_LOCKED) {
+                // If 'Q' Lock behavior OR 'P' Lock behavior and GNSS is Locked
+                // If an NI SUPL Request that does not have Privacy Override option comes when
+                // NFW is locked and config item NI_SUPL_DENY_ON_NFW_LOCKED = 1, then deny it
+                mApi.informNiResponse(GNSS_NI_RESPONSE_DENY, mData);
             } else {
-                mAdapter.requestNiNotify(mNotify, mData);
+                mAdapter.requestNiNotify(mNotify, mData, false);
             }
         }
     };
 
-    sendMsg(new MsgReportNiNotify(*this, *mLocApi, notify, data));
+    sendMsg(new MsgReportNiNotify(*this, *mLocApi, notify, data, emergencyState));
 
     return true;
 }
@@ -4364,7 +4389,8 @@ static void* niThreadProc(void *args)
 }
 
 bool
-GnssAdapter::requestNiNotify(const GnssNiNotification& notify, const void* data)
+GnssAdapter::requestNiNotify(const GnssNiNotification& notify, const void* data,
+                             const bool bInformNiAccept)
 {
     NiSession* pSession = NULL;
     gnssNiCallback gnssNiCb = nullptr;
@@ -4376,6 +4402,20 @@ GnssAdapter::requestNiNotify(const GnssNiNotification& notify, const void* data)
         }
     }
     if (nullptr == gnssNiCb) {
+        if (GNSS_NI_TYPE_EMERGENCY_SUPL == notify.type) {
+            if (bInformNiAccept) {
+                mLocApi->informNiResponse(GNSS_NI_RESPONSE_ACCEPT, data);
+                NiData& niData = getNiData();
+                // ignore any SUPL NI non-Es session if a SUPL NI ES is accepted
+                if (NULL != niData.session.rawRequest) {
+                    pthread_mutex_lock(&niData.session.tLock);
+                    niData.session.resp = GNSS_NI_RESPONSE_IGNORE;
+                    niData.session.respRecvd = true;
+                    pthread_cond_signal(&niData.session.tCond);
+                    pthread_mutex_unlock(&niData.session.tLock);
+                }
+            }
+        }
         EXIT_LOG(%s, "no clients with gnssNiCb.");
         return false;
     }
