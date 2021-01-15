@@ -233,6 +233,11 @@ class GnssAdapter : public LocAdapterBase {
     bool mDGnssNeedReport;
     bool mDGnssDataUsage;
     void reportDGnssDataUsable(GnssSvMeasurementSet &svMeasurementSet);
+    /* ==== NFW =========================================================================== */
+    IsInEmergencySession mIsE911Session;
+    inline void initNfw(const NfwCbInfo& cbInfo) {
+        mIsE911Session = (IsInEmergencySession)cbInfo.isInEmergencySession;
+    }
 
     /* ==== ODCPI ========================================================================== */
     OdcpiRequestCallback mOdcpiRequestCb;
@@ -463,7 +468,8 @@ public:
     virtual void reportSvEvent(const GnssSvNotification& svNotify,
                                bool fromEngineHub=false);
     virtual void reportNmeaEvent(const char* nmea, size_t length);
-    virtual bool requestNiNotifyEvent(const GnssNiNotification& notify, const void* data);
+    virtual bool requestNiNotifyEvent(const GnssNiNotification& notify, const void* data,
+                                      const LocInEmergency emergencyState);
     virtual void reportGnssMeasurementDataEvent(const GnssMeasurementsNotification& measurements,
                                                 int msInWeek);
     virtual void reportSvMeasurementEvent(GnssSvMeasurementSet &svMeasurementSet);
@@ -502,7 +508,8 @@ public:
     void reportSv(GnssSvNotification& svNotify);
     void reportNmea(const char* nmea, size_t length);
     void reportData(GnssDataNotification& dataNotify);
-    bool requestNiNotify(const GnssNiNotification& notify, const void* data);
+    bool requestNiNotify(const GnssNiNotification& notify, const void* data,
+                         const bool bInformNiAccept);
     void reportGnssMeasurementData(const GnssMeasurementsNotification& measurements);
     void reportGnssSvIdConfig(const GnssSvIdConfig& config);
     void reportGnssSvTypeConfig(const GnssSvTypeConfig& config);
@@ -512,6 +519,12 @@ public:
     void saveGnssEnergyConsumedCallback(GnssEnergyConsumedCallback energyConsumedCb);
     void reportLocationSystemInfo(const LocationSystemInfo & locationSystemInfo);
     void updatePowerState(PowerStateType powerState);
+    inline bool getE911State(void) {
+        if (NULL != mIsE911Session) {
+            return mIsE911Session();
+        }
+        return false;
+    }
 
     /*======== GNSSDEBUG ================================================================*/
     bool getDebugReport(GnssDebugReport& report);

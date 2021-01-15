@@ -140,7 +140,7 @@ public:
         return ContextBase::isFeatureSupported(featureVal);
     }
 
-    uint32_t generateSessionId();
+    static uint32_t generateSessionId();
 
     inline bool isAdapterMaster() {
         return mIsMaster;
@@ -181,7 +181,8 @@ public:
     virtual bool requestATL(int connHandle, LocAGpsType agps_type,
                             LocApnTypeMask apn_type_mask);
     virtual bool releaseATL(int connHandle);
-    virtual bool requestNiNotifyEvent(const GnssNiNotification &notify, const void* data);
+    virtual bool requestNiNotifyEvent(const GnssNiNotification &notify, const void* data,
+                                      const LocInEmergency emergencyState);
     inline virtual bool isInSession() { return false; }
     ContextBase* getContext() const { return mContext; }
     virtual void reportGnssMeasurementDataEvent(const GnssMeasurementsNotification& measurements,

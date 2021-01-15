@@ -31,12 +31,14 @@
 
 #include <stdbool.h>
 #include <ctype.h>
+#include <loc_pla.h>
 #include <MsgTask.h>
 #include <LocApiBase.h>
 #include <LBSProxyBase.h>
 #include <loc_cfg.h>
 #ifdef NO_UNORDERED_SET_OR_MAP
     #include <map>
+    #define unordered_map map
 #else
     #include <unordered_map>
 #endif
@@ -79,6 +81,8 @@ typedef struct loc_gps_cfg_s
     uint32_t       POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED;
     uint32_t       GNSS_DEPLOYMENT;
     uint32_t       CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED;
+    uint32_t       CP_MTLR_ES;
+    uint32_t       NI_SUPL_DENY_ON_NFW_LOCKED;
 } loc_gps_cfg_s_type;
 
 /* NOTE: the implementaiton of the parser casts number
