@@ -139,7 +139,9 @@ typedef enum {
     LOC_SUPPORTED_FEATURE_NAVIC, /**<  Support the NavIC constellation */
     LOC_SUPPORTED_FEATURE_MEASUREMENTS_CORRECTION, /**<  Support measurements correction */
     LOC_SUPPORTED_FEATURE_ROBUST_LOCATION, /**<  Support Robust Location feature */
-    LOC_SUPPORTED_FEATURE_EDGNSS /**< Support precise location dgnss */
+    LOC_SUPPORTED_FEATURE_EDGNSS, /**< Support precise location dgnss */
+    LOC_SUPPORTED_FEATURE_MULTIBAND_CONFIG, /**<  Support the multiband GNSS config. feature  */
+    LOC_SUPPORTED_FEATURE_QMI_AGNSS_CONFIG_DISABLED, /**<  Support the AGNSS config. for DSDA  */
 } loc_supported_feature_enum;
 
 typedef struct {
@@ -482,6 +484,7 @@ typedef uint32_t GnssAdditionalSystemInfoMask;
 #define GAL_SV_PRN_MAX      336
 #define NAVIC_SV_PRN_MIN    401
 #define NAVIC_SV_PRN_MAX    414
+#define GLO_SV_PRN_SLOT_UNKNOWN 255
 
 /* Checking svIdOneBase can be set to the corresponding bit in mask */
 #define svFitsMask(mask, svIdOneBase)                 \
@@ -489,6 +492,8 @@ typedef uint32_t GnssAdditionalSystemInfoMask;
 /* Setting svIdOneBase specific bit in the mask if the bit offset fits */
 #define setSvMask(mask, svIdOneBase)                  \
     if (svFitsMask(mask, svIdOneBase)) mask |= (1ULL << ((svIdOneBase) - 1))
+
+#define isGloSlotUnknown(val) ((val) == GLO_SV_PRN_SLOT_UNKNOWN)
 
 typedef enum {
     LOC_RELIABILITY_NOT_SET = 0,
@@ -2224,6 +2229,7 @@ struct AGnssExtStatusIpV4 {
      * 32-bit IPv4 address.
      */
     uint32_t            ipV4Addr;
+    LocSubId            subId;
 };
 
 /*
