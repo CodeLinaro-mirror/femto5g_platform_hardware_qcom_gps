@@ -12,3 +12,8 @@ PRODUCT_PACKAGES += liblocation_api
 PRODUCT_PACKAGES += libgps.utils
 PRODUCT_PACKAGES += libbatching
 PRODUCT_PACKAGES += libgeofencing
+
+ifeq ($(strip $(TARGET_BOARD_AUTO)),true)
+PRODUCT_PACKAGES += libgnssauto_power
+endif #TARGET_BOARD_AUTO
+
