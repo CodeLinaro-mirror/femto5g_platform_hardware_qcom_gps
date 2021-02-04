@@ -245,7 +245,7 @@ protected:
 
     /* ==== CLIENT ========================================================================= */
     virtual void updateClientsEventMask();
-    virtual void stopClientSessions(LocationAPI* client);
+    virtual void stopClientSessions(LocationAPI* client, bool eraseSession = true);
 
 public:
 
