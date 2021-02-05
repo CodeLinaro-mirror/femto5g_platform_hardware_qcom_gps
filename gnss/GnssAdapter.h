@@ -232,6 +232,7 @@ class GnssAdapter : public LocAdapterBase {
 
     /* === Misc ===================================================================== */
     BlockCPIInfo mBlockCPIInfo;
+    bool mDreIntEnabled;
 
     /* === Misc callback from QMI LOC API ============================================== */
     GnssEnergyConsumedCallback mGnssEnergyConsumedCb;
