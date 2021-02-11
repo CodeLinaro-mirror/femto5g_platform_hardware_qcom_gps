@@ -73,6 +73,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Agps.h>
 #include <SystemStatus.h>
 #include <XtraSystemStatusObserver.h>
+#include <loc_misc_utils.h>
 
 #define MAX_URL_LEN 256
 #define NMEA_SENTENCE_MAX_LENGTH 200
