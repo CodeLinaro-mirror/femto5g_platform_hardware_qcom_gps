@@ -35,15 +35,72 @@
 #include <loc_pla.h>
 
 #define GLONASS_SV_ID_OFFSET 64
+#define QZSS_SV_ID_OFFSET    (-192)
 #define MAX_SATELLITES_IN_USE 12
 
 // GNSS system id according to NMEA spec
 #define SYSTEM_ID_GPS          1
 #define SYSTEM_ID_GLONASS      2
 #define SYSTEM_ID_GALILEO      3
-// Extended systems
 #define SYSTEM_ID_BEIDOU       4
 #define SYSTEM_ID_QZSS         5
+#define SYSTEM_ID_NAVIC        6
+
+//GNSS signal id according to NMEA spec
+#define SIGNAL_ID_ALL_SIGNALS  0
+#define SIGNAL_ID_GPS_L1CA     1
+#define SIGNAL_ID_GPS_L1P      2
+#define SIGNAL_ID_GPS_L1M      3
+#define SIGNAL_ID_GPS_L2P      4
+#define SIGNAL_ID_GPS_L2CM     5
+#define SIGNAL_ID_GPS_L2CL     6
+#define SIGNAL_ID_GPS_L5I      7
+#define SIGNAL_ID_GPS_L5Q      8
+
+
+#define SIGNAL_ID_GLO_G1CA     1
+#define SIGNAL_ID_GLO_G1P      2
+#define SIGNAL_ID_GLO_G2CA     3
+#define SIGNAL_ID_GLO_G2P      4
+
+
+#define SIGNAL_ID_GAL_E5A      1
+#define SIGNAL_ID_GAL_E5B      2
+#define SIGNAL_ID_GAL_E5AB     3
+#define SIGNAL_ID_GAL_E6A      4
+#define SIGNAL_ID_GAL_E6BC     5
+#define SIGNAL_ID_GAL_L1A      6
+#define SIGNAL_ID_GAL_L1BC     7
+
+#define SIGNAL_ID_BDS_B1I      1
+#define SIGNAL_ID_BDS_B1Q      2
+#define SIGNAL_ID_BDS_B1C      3
+#define SIGNAL_ID_BDS_B1A      4
+#define SIGNAL_ID_BDS_B2A      5
+#define SIGNAL_ID_BDS_B2B      6
+#define SIGNAL_ID_BDS_B2AB     7
+#define SIGNAL_ID_BDS_B3I      8
+#define SIGNAL_ID_BDS_B3Q      9
+#define SIGNAL_ID_BDS_B3A      0xA
+#define SIGNAL_ID_BDS_B2I      0xB
+#define SIGNAL_ID_BDS_B2Q      0xC
+
+#define SIGNAL_ID_QZSS_L1CA    1
+#define SIGNAL_ID_QZSS_L1CD    2
+#define SIGNAL_ID_QZSS_L1CP    3
+#define SIGNAL_ID_QZSS_LIS     4
+#define SIGNAL_ID_QZSS_L2CM    5
+#define SIGNAL_ID_QZSS_L2CL    6
+#define SIGNAL_ID_QZSS_L5I     7
+#define SIGNAL_ID_QZSS_L5Q     8
+#define SIGNAL_ID_QZSS_L6D     9
+#define SIGNAL_ID_QZSS_L6E     0xA
+
+#define SIGNAL_ID_NAVIC_L5SPS  1
+#define SIGNAL_ID_NAVIC_SSPS   2
+#define SIGNAL_ID_NAVIC_L5RS   3
+#define SIGNAL_ID_NAVIC_SRS    4
+#define SIGNAL_ID_NAVIC_L1SPS  5
 
 typedef struct loc_nmea_sv_meta_s
 {
@@ -104,7 +161,7 @@ static loc_nmea_sv_meta* loc_nmea_sv_meta_init(loc_nmea_sv_meta& sv_meta,
             sv_meta.talker[1] = 'P';
             sv_meta.mask = sv_cache_info.gps_used_mask;
             sv_meta.svCount = sv_cache_info.gps_count;
-            sv_meta.signalId = 1;
+            sv_meta.signalId = SIGNAL_ID_GPS_L1CA;
             sv_meta.systemId = SYSTEM_ID_GPS;
             break;
         case GNSS_SV_TYPE_GLONASS:
@@ -114,7 +171,7 @@ static loc_nmea_sv_meta* loc_nmea_sv_meta_init(loc_nmea_sv_meta& sv_meta,
             sv_meta.svCount = sv_cache_info.glo_count;
             // GLONASS SV ids are from 65-96
             sv_meta.svIdOffset = GLONASS_SV_ID_OFFSET;
-            sv_meta.signalId = 1;
+            sv_meta.signalId = SIGNAL_ID_GLO_G1CA;
             sv_meta.systemId = SYSTEM_ID_GLONASS;
             break;
         case GNSS_SV_TYPE_GALILEO:
@@ -122,25 +179,26 @@ static loc_nmea_sv_meta* loc_nmea_sv_meta_init(loc_nmea_sv_meta& sv_meta,
             sv_meta.talker[1] = 'A';
             sv_meta.mask = sv_cache_info.gal_used_mask;
             sv_meta.svCount = sv_cache_info.gal_count;
-            sv_meta.signalId = 7;
+            sv_meta.signalId = SIGNAL_ID_GAL_L1BC;
             sv_meta.systemId = SYSTEM_ID_GALILEO;
             break;
         case GNSS_SV_TYPE_QZSS:
-            sv_meta.talker[0] = 'P';
+            sv_meta.talker[0] = 'G';
             sv_meta.talker[1] = 'Q';
             sv_meta.mask = sv_cache_info.qzss_used_mask;
             sv_meta.svCount = sv_cache_info.qzss_count;
-            // QZSS SV ids are from 193-197. So keep svIdOffset 0
-            sv_meta.signalId = 0;
+            // QZSS SV ids are from 193-197.
+            sv_meta.svIdOffset = QZSS_SV_ID_OFFSET;
+            sv_meta.signalId = SIGNAL_ID_QZSS_L1CA;
             sv_meta.systemId = SYSTEM_ID_QZSS;
             break;
         case GNSS_SV_TYPE_BEIDOU:
-            sv_meta.talker[0] = 'P';
-            sv_meta.talker[1] = 'Q';
+            sv_meta.talker[0] = 'G';
+            sv_meta.talker[1] = 'B';
             sv_meta.mask = sv_cache_info.bds_used_mask;
             sv_meta.svCount = sv_cache_info.bds_count;
             // BDS SV ids are from 201-235. So keep svIdOffset 0
-            sv_meta.signalId = 0;
+            sv_meta.signalId = SIGNAL_ID_BDS_B1I;
             sv_meta.systemId = SYSTEM_ID_BEIDOU;
             break;
         default:
@@ -375,7 +433,7 @@ static void loc_nmea_generate_GSV(const GnssSvNotification &svNotify,
     if (svCount <= 0)
     {
         // no svs in view, so just send a blank $--GSV sentence
-        snprintf(sentence, lengthRemaining, "$%sGSV,1,1,0,%d", talker, sv_meta_p->signalId);
+        snprintf(sentence, lengthRemaining, "$%sGSV,1,1,0,%X", talker, sv_meta_p->signalId);
         length = loc_nmea_put_checksum(sentence, bufSize);
         nmeaArraystr.push_back(sentence);
         return;
@@ -438,7 +496,7 @@ static void loc_nmea_generate_GSV(const GnssSvNotification &svNotify,
         }
 
         // append signalId
-        length = snprintf(pMarker, lengthRemaining,",%d",sv_meta_p->signalId);
+        length = snprintf(pMarker, lengthRemaining,",%X",sv_meta_p->signalId);
         pMarker += length;
         lengthRemaining -= length;
 
@@ -559,7 +617,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         }
 
         // --------------------------
-        // ---$PQGSA/$GNGSA (QZSS)---
+        // ---$GQGSA/$GNGSA (QZSS)---
         // --------------------------
 
         count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
@@ -572,7 +630,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         }
 
         // ----------------------------
-        // ---$PQGSA/$GNGSA (BEIDOU)---
+        // ---$GBGSA/$GNGSA (BEIDOU)---
         // ----------------------------
         count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
                         loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_BEIDOU, false),
@@ -951,11 +1009,11 @@ void loc_nmea_generate_pos(const UlpLocation &location,
     }
     //Send blank NMEA reports for non-final fixes
     else {
-        strlcpy(sentence, "$GPGSA,A,1,,,,,,,,,,,,,,,", sizeof(sentence));
+        strlcpy(sentence, "$GPGSA,A,1,,,,,,,,,,,,,,,,", sizeof(sentence));
         length = loc_nmea_put_checksum(sentence, sizeof(sentence));
         nmeaArraystr.push_back(sentence);
 
-        strlcpy(sentence, "$GNGSA,A,1,,,,,,,,,,,,,,,", sizeof(sentence));
+        strlcpy(sentence, "$GNGSA,A,1,,,,,,,,,,,,,,,,", sizeof(sentence));
         length = loc_nmea_put_checksum(sentence, sizeof(sentence));
         nmeaArraystr.push_back(sentence);
 
@@ -1096,14 +1154,14 @@ void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
             nmeaArraystr);
 
     // -------------------------
-    // ------$PQGSV (QZSS)------
+    // ------$GQGSV (QZSS)------
     // -------------------------
 
     loc_nmea_generate_GSV(svNotify, sentence, sizeof(sentence),
             loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_QZSS, false), nmeaArraystr);
 
     // ---------------------------
-    // ------$PQGSV (BEIDOU)------
+    // ------$GBGSV (BEIDOU)------
     // ---------------------------
 
     loc_nmea_generate_GSV(svNotify, sentence, sizeof(sentence),
