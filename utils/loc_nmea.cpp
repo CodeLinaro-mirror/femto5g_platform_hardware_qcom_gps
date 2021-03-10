@@ -790,11 +790,17 @@ static void loc_nmea_generate_GSV(const GnssSvNotification &svNotify,
             if (sv_meta_p->svType == svNotify.gnssSvs[svNumber - 1].type &&
                     sv_meta_p->signalId == convert_signalType_to_signalId(signalType))
             {
-                length = snprintf(pMarker, lengthRemaining, ",%02d,%02d,%03d,",
+                if (GNSS_SV_TYPE_GLONASS == svNotify.gnssSvs[svNumber - 1].type &&
+                    GLO_SV_PRN_SLOT_UNKNOWN == svNotify.gnssSvs[svNumber - 1].svId) {
+                    length = snprintf(pMarker, lengthRemaining, ",,%02d,%03d,",
+                        (int)(0.5 + svNotify.gnssSvs[svNumber - 1].elevation), //float to int
+                        (int)(0.5 + svNotify.gnssSvs[svNumber - 1].azimuth)); //float to int
+                } else {
+                    length = snprintf(pMarker, lengthRemaining, ",%02d,%02d,%03d,",
                         svNotify.gnssSvs[svNumber - 1].svId - svIdOffset,
                         (int)(0.5 + svNotify.gnssSvs[svNumber - 1].elevation), //float to int
                         (int)(0.5 + svNotify.gnssSvs[svNumber - 1].azimuth)); //float to int
-
+                }
                 if (length < 0 || length >= lengthRemaining)
                 {
                     LOC_LOGE("NMEA Error in string formatting");
