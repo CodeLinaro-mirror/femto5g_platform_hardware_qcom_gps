@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -3939,16 +3939,8 @@ GnssAdapter::reportEnginePositions(unsigned int count,
 }
 
 void
-GnssAdapter::reportSvEvent(const GnssSvNotification& svNotify,
-                           bool fromEngineHub)
+GnssAdapter::reportSvEvent(const GnssSvNotification& svNotify)
 {
-    if (!fromEngineHub) {
-        mEngHubProxy->gnssReportSv(svNotify);
-        if (true == initEngHubProxy()){
-            return;
-        }
-    }
-
     struct MsgReportSv : public LocMsg {
         GnssAdapter& mAdapter;
         const GnssSvNotification mSvNotify;
@@ -3971,6 +3963,7 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify)
     int numSv = svNotify.count;
     uint16_t gnssSvId = 0;
     uint64_t svUsedIdMask = 0;
+
     for (int i=0; i < numSv; i++) {
         svUsedIdMask = 0;
         gnssSvId = svNotify.gnssSvs[i].svId;
@@ -4122,6 +4115,9 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify)
     }
 
     mGnssSvIdUsedInPosAvail = false;
+
+    // report to engine hub to deliver to registered plugin
+    mEngHubProxy->gnssReportSv(svNotify);
 }
 
 void
@@ -5815,9 +5811,21 @@ GnssAdapter::configLeverArm(uint32_t sessionId,
                             const LeverArmConfigInfo& configInfo) {
 
     LocationError err = LOCATION_ERROR_NOT_SUPPORTED;
-    if (true == mEngHubProxy->configLeverArm(configInfo)) {
+    // save the lever ARM config info for translating SPE positions from
+    // GNSS antenna based to VRP based
+    if (configInfo.leverArmValidMask & LEVER_ARM_TYPE_GNSS_TO_VRP_BIT) {
+        mLocConfigInfo.leverArmConfigInfo.leverArmValidMask |=
+                LEVER_ARM_TYPE_GNSS_TO_VRP_BIT;
+        mLocConfigInfo.leverArmConfigInfo.gnssToVRP = configInfo.gnssToVRP;
         err = LOCATION_ERROR_SUCCESS;
     }
+
+    if (configInfo.leverArmValidMask & LEVER_ARM_TYPE_DR_IMU_TO_GNSS_BIT) {
+        if (mDreIntEnabled && mEngHubProxy->configLeverArm(configInfo)) {
+        err = LOCATION_ERROR_SUCCESS;
+    }
+    }
+
     reportResponse(err, sessionId);
 }
 
@@ -5841,13 +5849,6 @@ GnssAdapter::configLeverArmCommand(const LeverArmConfigInfo& configInfo) {
             mSessionId(sessionId),
             mConfigInfo(configInfo) {}
         inline virtual void proc() const {
-            // save the lever ARM config info for translating position from GNSS antenna based
-            // to VRP based
-            if (mConfigInfo.leverArmValidMask & LEVER_ARM_TYPE_GNSS_TO_VRP_BIT) {
-                mAdapter.mLocConfigInfo.leverArmConfigInfo.leverArmValidMask |=
-                        LEVER_ARM_TYPE_GNSS_TO_VRP_BIT;
-                mAdapter.mLocConfigInfo.leverArmConfigInfo.gnssToVRP = mConfigInfo.gnssToVRP;
-            }
             mAdapter.configLeverArm(mSessionId, mConfigInfo);
         }
     };
@@ -6169,12 +6170,6 @@ GnssAdapter::initEngHubProxy() {
                     reportEnginePositionsEvent(count, locationArr);
             };
 
-        // callback function for engine hub to report back sv event
-        GnssAdapterReportSvEventCb reportSvEventCb =
-            [this](const GnssSvNotification& svNotify, bool fromEngineHub) {
-                   reportSvEvent(svNotify, fromEngineHub);
-            };
-
         // callback function for engine hub to request for complete aiding data
         GnssAdapterReqAidingDataCb reqAidingDataCb =
             [this] (const GnssAidingDataSvMask& svDataMask) {
@@ -6207,10 +6202,8 @@ GnssAdapter::initEngHubProxy() {
         getEngHubProxyFn* getter = (getEngHubProxyFn*) dlsym(handle, "getEngHubProxy");
         if(getter != nullptr) {
             EngineHubProxyBase* hubProxy = (*getter) (mMsgTask, mSystemStatus->getOsObserver(),
-                      reportPositionEventCb,
-                      reportSvEventCb, reqAidingDataCb,
-                      updateNHzRequirementCb,
-                      updateQwesFeatureStatusCb);
+                      reportPositionEventCb, reqAidingDataCb,
+                      updateNHzRequirementCb, updateQwesFeatureStatusCb);
             if (hubProxy != nullptr) {
                 mEngHubProxy = hubProxy;
                 engHubLoadSuccessful = true;
