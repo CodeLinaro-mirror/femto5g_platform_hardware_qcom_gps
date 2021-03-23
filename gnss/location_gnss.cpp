@@ -69,7 +69,7 @@ static void getDebugReport(GnssDebugReport& report);
 static void updateConnectionStatus(bool connected, int8_t type);
 static void getGnssEnergyConsumed(GnssEnergyConsumedCallback energyConsumedCb);
 
-static void odcpiInit(const OdcpiRequestCallback& callback);
+static void odcpiInit(const OdcpiRequestCallback& callback, OdcpiPrioritytype priority);
 static void odcpiInject(const Location& location);
 
 static void blockCPI(double latitude, double longitude, float accuracy,
@@ -321,10 +321,10 @@ static void updateConnectionStatus(bool connected, int8_t type) {
     }
 }
 
-static void odcpiInit(const OdcpiRequestCallback& callback)
+static void odcpiInit(const OdcpiRequestCallback& callback, OdcpiPrioritytype priority)
 {
     if (NULL != gGnssAdapter) {
-        gGnssAdapter->initOdcpiCommand(callback);
+        gGnssAdapter->initOdcpiCommand(callback, priority);
     }
 }
 

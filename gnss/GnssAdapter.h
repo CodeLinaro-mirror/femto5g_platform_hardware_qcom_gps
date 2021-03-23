@@ -165,6 +165,7 @@ class GnssAdapter : public LocAdapterBase {
     /* ==== ODCPI ========================================================================== */
     OdcpiRequestCallback mOdcpiRequestCb;
     bool mOdcpiRequestActive;
+    OdcpiPrioritytype mCallbackPriority;
     OdcpiTimer mOdcpiTimer;
     OdcpiRequestInfo mOdcpiRequest;
     void odcpiTimerExpire();
@@ -194,7 +195,7 @@ class GnssAdapter : public LocAdapterBase {
                                  int totalSvCntInThisConstellation);
 
     /* ======== UTILITIES ================================================================== */
-    inline void initOdcpi(const OdcpiRequestCallback& callback);
+    inline void initOdcpi(const OdcpiRequestCallback& callback, OdcpiPrioritytype priority);
     inline void injectOdcpi(const Location& location);
 
 public:
@@ -318,7 +319,7 @@ public:
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
-    void initOdcpiCommand(const OdcpiRequestCallback& callback);
+    void initOdcpiCommand(const OdcpiRequestCallback& callback, OdcpiPrioritytype priority);
     void injectOdcpiCommand(const Location& location);
     /* ======== RESPONSES ================================================================== */
     void reportResponse(LocationError err, uint32_t sessionId);
