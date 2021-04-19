@@ -475,7 +475,11 @@ typedef enum {
     GNSS_MEASUREMENTS_DATA_MULTIPATH_INDICATOR_BIT          = (1<<15),
     GNSS_MEASUREMENTS_DATA_SIGNAL_TO_NOISE_RATIO_BIT        = (1<<16),
     GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT       = (1<<17),
-    GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT             = (1<<18),
+    GNSS_MEASUREMENTS_DATA_GLO_FREQUENCY_BIT                = (1<<18),
+    GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT             = (1<<19),
+    GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT    = (1<<20),
+    GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT                     = (1<<21),
+    GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT         = (1<<22),
 } GnssMeasurementsDataFlagsBits;
 
 typedef uint32_t GnssMeasurementsStateMask;
@@ -1233,6 +1237,9 @@ typedef struct {
     double agcLevelDb;
     int16_t gloFrequency;
     GnssSignalTypeMask gnssSignalType;
+    double basebandCarrierToNoiseDbHz;
+    double fullInterSignalBiasNs;
+    double fullInterSignalBiasUncertaintyNs;
 } GnssMeasurementsData;
 
 typedef struct {
