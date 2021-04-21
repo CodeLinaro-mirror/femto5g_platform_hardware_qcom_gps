@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -388,6 +388,12 @@ public:
     */
     virtual uint32_t configOutputNmeaTypes(
             GnssNmeaTypesMask enabledNmeaTypes) = 0;
+
+    virtual void odcpiInit(const odcpiRequestCallback& callback,
+                           OdcpiPrioritytype priority) {}
+
+    virtual void odcpiInject(const ::Location& location) {}
+
 };
 
 #endif /* ILOCATIONAPI_H */

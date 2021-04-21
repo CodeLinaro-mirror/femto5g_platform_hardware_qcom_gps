@@ -495,6 +495,14 @@ public:
         match command with response.
     */
     virtual uint32_t setOptInStatus(bool userConsent);
+
+    virtual void odcpiInit(const odcpiRequestCallback& callback,
+                           OdcpiPrioritytype priority) override;
+
+    virtual void odcpiInject(const ::Location& location) override;
+
+    void odcpiDeinit(OdcpiPrioritytype priority);
+
 };
 
 #endif /* LOCATIONAPI_H */

@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -971,4 +971,44 @@ uint32_t LocationControlAPI::setOptInStatus(bool userConsent) {
         LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
     }
     return sessionId;
+}
+
+void LocationControlAPI::odcpiInit(const odcpiRequestCallback& callback,
+                                   OdcpiPrioritytype priority) {
+    pthread_mutex_lock(&gDataMutex);
+
+    if (gData.gnssInterface != NULL) {
+        gData.gnssInterface->odcpiInit(callback, priority);
+    }
+    else {
+        LOC_LOGe("No gnss interface available for Location Control API");
+    }
+
+    pthread_mutex_unlock(&gDataMutex);
+}
+
+void LocationControlAPI::odcpiInject(const ::Location& location) {
+    pthread_mutex_lock(&gDataMutex);
+
+    if (gData.gnssInterface != NULL) {
+        gData.gnssInterface->odcpiInject(location);
+    }
+    else {
+        LOC_LOGe("No gnss interface available for Location Control API");
+    }
+
+    pthread_mutex_unlock(&gDataMutex);
+}
+
+void LocationControlAPI::odcpiDeinit(OdcpiPrioritytype priority) {
+    pthread_mutex_lock(&gDataMutex);
+
+    if (gData.gnssInterface != NULL) {
+        gData.gnssInterface->odcpiDeinit(priority);
+    }
+    else {
+        LOC_LOGe("No gnss interface available for Location Control API");
+    }
+
+    pthread_mutex_unlock(&gDataMutex);
 }

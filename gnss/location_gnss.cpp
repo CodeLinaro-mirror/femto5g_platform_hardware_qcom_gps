@@ -72,8 +72,9 @@ static uint32_t setConstrainedTunc (bool enable, float tuncConstraint,
                                     uint32_t energyBudget);
 static uint32_t setPositionAssistedClockEstimator(bool enable);
 
-static void odcpiInit(const OdcpiRequestCallback& callback, OdcpiPrioritytype priority);
+static void odcpiInit(const odcpiRequestCallback& callback, OdcpiPrioritytype priority);
 static void odcpiInject(const Location& location);
+static void odcpiDeinit(OdcpiPrioritytype priority);
 
 static void blockCPI(double latitude, double longitude, float accuracy,
                      int blockDurationMsec, double latLonDiffThreshold);
@@ -119,6 +120,7 @@ static const GnssInterface gGnssInterface = {
     updateConnectionStatus,
     odcpiInit,
     odcpiInject,
+    odcpiDeinit,
     blockCPI,
     getGnssEnergyConsumed,
     injectLocationExt,
@@ -345,17 +347,24 @@ static void updateConnectionStatus(bool connected, int8_t type) {
     }
 }
 
-static void odcpiInit(const OdcpiRequestCallback& callback, OdcpiPrioritytype priority)
+static void odcpiInit(const odcpiRequestCallback& callback, OdcpiPrioritytype priority)
 {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->initOdcpiCommand(callback, priority);
     }
 }
 
-static void odcpiInject(const Location& location)
-{
+static void odcpiInject(const Location& location) {
+
     if (NULL != gGnssAdapter) {
         gGnssAdapter->injectOdcpiCommand(location);
+    }
+}
+
+static void odcpiDeinit(OdcpiPrioritytype priority) {
+
+    if (NULL != gGnssAdapter) {
+        gGnssAdapter->deinitOdcpiCommand(priority);
     }
 }
 

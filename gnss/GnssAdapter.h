@@ -48,6 +48,8 @@
 
 class GnssAdapter;
 
+typedef std::map<OdcpiPrioritytype, odcpiRequestCallback> OdcpiRequestCbMap;
+
 class OdcpiTimer : public LocTimer {
 public:
     OdcpiTimer(GnssAdapter* adapter) :
@@ -215,12 +217,12 @@ class GnssAdapter : public LocAdapterBase {
     void reportDGnssDataUsable(GnssSvMeasurementSet &svMeasurementSet);
 
     /* ==== ODCPI ========================================================================== */
-    OdcpiRequestCallback mOdcpiRequestCb;
+    OdcpiRequestCbMap mOdcpiRequestCbMap;
     bool mOdcpiRequestActive;
-    OdcpiPrioritytype mCallbackPriority;
     OdcpiTimer mOdcpiTimer;
     OdcpiRequestInfo mOdcpiRequest;
     void odcpiTimerExpire();
+    void handleOdcpiRequestCb(const OdcpiRequestInfo& request);
 
     /* === SystemStatus ===================================================================== */
     SystemStatus* mSystemStatus;
@@ -250,7 +252,8 @@ class GnssAdapter : public LocAdapterBase {
                                  int totalSvCntInThisConstellation);
 
     /* ======== UTILITIES ================================================================== */
-    inline void initOdcpi(const OdcpiRequestCallback& callback, OdcpiPrioritytype priority);
+    inline void initOdcpi(const odcpiRequestCallback& callback, OdcpiPrioritytype priority);
+    inline void deinitOdcpi(OdcpiPrioritytype priority);
     inline void injectOdcpi(const Location& location);
     inline void setNmeaReportRateConfig();
 
@@ -400,8 +403,9 @@ public:
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
-    void initOdcpiCommand(const OdcpiRequestCallback& callback, OdcpiPrioritytype priority);
+    void initOdcpiCommand(const odcpiRequestCallback& callback, OdcpiPrioritytype priority);
     void injectOdcpiCommand(const Location& location);
+    void deinitOdcpiCommand(OdcpiPrioritytype priority);
     /* ======== RESPONSES ================================================================== */
     void reportResponse(LocationError err, uint32_t sessionId);
     void reportResponse(size_t count, LocationError* errs, uint32_t* ids);

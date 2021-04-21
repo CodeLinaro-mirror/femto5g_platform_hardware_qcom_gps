@@ -1840,4 +1840,28 @@ typedef struct {
     engineLocationsInfoCallback engineLocationsInfoCb;     // optional
 } LocationCallbacks;
 
+/* ODCPI Request Info */
+enum OdcpiRequestType {
+    ODCPI_REQUEST_TYPE_START,
+    ODCPI_REQUEST_TYPE_STOP
+};
+
+struct OdcpiRequestInfo {
+    uint32_t size;
+    OdcpiRequestType type;
+    uint32_t tbfMillis;
+    bool isEmergencyMode;
+};
+
+/* Callback to send ODCPI request to framework */
+typedef std::function<void(const OdcpiRequestInfo& request)> odcpiRequestCallback;
+
+/* ODCPI callback priorities*/
+enum OdcpiPrioritytype {
+    ODCPI_HANDLER_PRIORITY_LOW,
+    ODCPI_HANDLER_PRIORITY_DEFAULT = ODCPI_HANDLER_PRIORITY_LOW,
+    ODCPI_HANDLER_PRIORITY_MED,
+    ODCPI_HANDLER_PRIORITY_HIGH
+};
+
 #endif /* LOCATIONDATATYPES_H */
