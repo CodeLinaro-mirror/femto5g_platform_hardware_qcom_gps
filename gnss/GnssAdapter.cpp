@@ -983,12 +983,19 @@ GnssAdapter::setConfig()
         mLocApi->setPositionAssistedClockEstimatorMode(
                 mLocConfigInfo.paceConfigInfo.enable);
 
-        // we do not support control robust location from gps.conf
-        if (mLocConfigInfo.robustLocationConfigInfo.isValid == true) {
-            mLocApi->configRobustLocation(
-                    mLocConfigInfo.robustLocationConfigInfo.enable,
-                    mLocConfigInfo.robustLocationConfigInfo.enableFor911);
+        // load robust location configuration from config file on first boot-up,
+        // e.g.: adapter.mLocConfigInfo.robustLocationConfigInfo.isValid is false
+        if (mLocConfigInfo.robustLocationConfigInfo.isValid == false) {
+            mLocConfigInfo.robustLocationConfigInfo.isValid = true;
+            bool robustLocationEnabled = (gpsConf.ROBUST_LOCATION_ENABLED & 0x01);
+            bool robustLocationE911Enabled = robustLocationEnabled ?
+                    ((gpsConf.ROBUST_LOCATION_ENABLED & 0x02) != 0) : false;
+            mLocConfigInfo.robustLocationConfigInfo.enable = robustLocationEnabled;
+            mLocConfigInfo.robustLocationConfigInfo.enableFor911 = robustLocationE911Enabled;
         }
+        mLocApi->configRobustLocation(
+                mLocConfigInfo.robustLocationConfigInfo.enable,
+                mLocConfigInfo.robustLocationConfigInfo.enableFor911);
 
         if (sapConf.GYRO_BIAS_RANDOM_WALK_VALID ||
             sapConf.ACCEL_RANDOM_WALK_SPECTRAL_DENSITY_VALID ||
@@ -2175,7 +2182,7 @@ void GnssAdapter::reportGnssSvTypeConfig(const GnssSvTypeConfig& config)
 }
 
 void GnssAdapter::deleteAidingData(const GnssAidingData &data, uint32_t sessionId) {
-    struct timespec bootDeleteAidingDataTime;
+    struct timespec bootDeleteAidingDataTime = {};
     int64_t bootDeleteTimeMs;
     if (clock_gettime(CLOCK_BOOTTIME, &bootDeleteAidingDataTime) == 0) {
         bootDeleteTimeMs = (int64_t)bootDeleteAidingDataTime.tv_sec * 1000;
@@ -4569,8 +4576,8 @@ static void* niThreadProc(void *args)
     NiSession* pSession = (NiSession*)args;
     int rc = 0;          /* return code from pthread calls */
 
-    struct timespec present_time;
-    struct timespec expire_time;
+    struct timespec present_time = {};
+    struct timespec expire_time = {};
 
     pthread_mutex_lock(&pSession->tLock);
     /* Calculate absolute expire time */
