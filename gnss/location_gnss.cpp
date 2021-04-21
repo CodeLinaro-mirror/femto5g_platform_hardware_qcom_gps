@@ -113,6 +113,7 @@ static void getPowerStateChanges(std::function<void(bool)> powerStateCb);
 
 static void odcpiInit(const odcpiRequestCallback& callback, OdcpiPrioritytype priority);
 static void odcpiInject(const Location& location);
+static void odcpiDeinit(OdcpiPrioritytype priority);
 
 static void blockCPI(double latitude, double longitude, float accuracy,
                      int blockDurationMsec, double latLonDiffThreshold);
@@ -184,6 +185,7 @@ static const GnssInterface gGnssInterface = {
     updateConnectionStatus,
     odcpiInit,
     odcpiInject,
+    odcpiDeinit,
     blockCPI,
     setEsStatusCallback,
     getGnssEnergyConsumed,
@@ -456,10 +458,17 @@ static void odcpiInit(const odcpiRequestCallback& callback, OdcpiPrioritytype pr
     }
 }
 
-static void odcpiInject(const Location& location)
-{
+static void odcpiInject(const Location& location) {
+
     if (NULL != gGnssAdapter) {
         gGnssAdapter->injectOdcpiCommand(location);
+    }
+}
+
+static void odcpiDeinit(OdcpiPrioritytype priority) {
+
+    if (NULL != gGnssAdapter) {
+        gGnssAdapter->deinitOdcpiCommand(priority);
     }
 }
 

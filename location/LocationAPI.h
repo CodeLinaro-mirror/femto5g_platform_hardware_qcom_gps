@@ -621,6 +621,11 @@ public:
     */
     virtual void odcpiInject(const ::Location& location) override;
 
+    virtual void odcpiInit(const odcpiRequestCallback& callback,
+                           OdcpiPrioritytype priority) override;
+
+    void odcpiDeinit(OdcpiPrioritytype priority);
+
     /** @brief
         Resets all cached network info in HAL.
     */

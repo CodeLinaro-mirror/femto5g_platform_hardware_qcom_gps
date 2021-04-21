@@ -93,8 +93,10 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class GnssAdapter;
 
+
 typedef std::map<LocationSessionKey, LocationOptions> LocationSessionMap;
 typedef std::map<LocationSessionKey, TrackingOptions> TrackingOptionsMap;
+typedef std::map<OdcpiPrioritytype, odcpiRequestCallback> OdcpiRequestCbMap;
 
 class OdcpiTimer : public LocTimer {
 public:
@@ -322,9 +324,12 @@ class GnssAdapter : public LocAdapterBase {
     } OdcpiStateBits;
 
     OdcpiPrioritytype mCallbackPriority;
+    OdcpiRequestCbMap mOdcpiRequestCbMap;
+    bool mOdcpiRequestActive;
     OdcpiTimer mOdcpiTimer;
     OdcpiRequestInfo mOdcpiRequest;
     void odcpiTimerExpire();
+    void handleOdcpiRequestCb(const OdcpiRequestInfo& request);
 
     std::function<void(const Location&)> mAddressRequestCb;
     /* ==== Emergency Status =============================================================== */
@@ -370,6 +375,7 @@ class GnssAdapter : public LocAdapterBase {
 
     /* ======== UTILITIES ================================================================== */
     inline void initOdcpi(const odcpiRequestCallback& callback, OdcpiPrioritytype priority);
+    inline void deinitOdcpi(OdcpiPrioritytype priority);
     inline void injectOdcpi(const Location& location);
     inline void setAddressRequestCb(const std::function<void(const Location&)>& addressRequestCb)
     { mAddressRequestCb = addressRequestCb;}
@@ -558,6 +564,8 @@ public:
     void injectOdcpiCommand(const Location& location);
     void setAddressRequestCbCommand(const std::function<void(const Location&)>& addressRequestCb);
     void injectLocationAndAddrCommand(const Location& location, const GnssCivicAddress& addr);
+    void deinitOdcpiCommand(OdcpiPrioritytype priority);
+
     /* ======== RESPONSES ================================================================== */
     void reportResponse(LocationError err, uint32_t sessionId);
     void reportResponse(size_t count, LocationError* errs, uint32_t* ids);

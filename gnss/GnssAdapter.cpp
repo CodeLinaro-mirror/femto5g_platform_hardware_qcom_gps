@@ -175,7 +175,6 @@ GnssAdapter::GnssAdapter() :
     mDGnssNeedReport(false),
     mDGnssDataUsage(false),
     mOdcpiStateMask(0),
-    mCallbackPriority(OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_LOW),
     mOdcpiTimer(this),
     mOdcpiRequest(),
     mSystemStatus(SystemStatus::getInstance(mMsgTask)),
@@ -2837,7 +2836,7 @@ GnssAdapter::updateClientsEventMask()
         mask |= LOC_API_ADAPTER_BIT_LOCATION_SERVER_REQUEST;
     }
     // Add ODCPI handling
-    if (nullptr != mControlCallbacks.odcpiReqCb) {
+    if (nullptr != mControlCallbacks.odcpiReqCb || 0 != mOdcpiRequestCbMap.size()) {
         mask |= LOC_API_ADAPTER_BIT_REQUEST_WIFI;
     }
 
@@ -5210,9 +5209,21 @@ GnssAdapter::requestOdcpiEvent(OdcpiRequestInfo& request)
     return true;
 }
 
+void GnssAdapter::handleOdcpiRequestCb(const OdcpiRequestInfo& request) {
+    OdcpiPrioritytype priority = OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_HIGH;
+    while (priority >= OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_LOW) {
+        auto it = mOdcpiRequestCbMap.find(priority);
+        if (mOdcpiRequestCbMap.cend() != it) {
+            (it->second)(request);
+            break;
+        }
+        priority = static_cast<OdcpiPrioritytype>(priority - 1);
+    }
+}
+
 void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
 {
-    if (nullptr != mControlCallbacks.odcpiReqCb) {
+    if (nullptr != mControlCallbacks.odcpiReqCb || 0 != mOdcpiRequestCbMap.size()) {
         bool sendEmergencyCallStatusEvent = false;
         LOC_LOGd("request: type %d, tbf %d, isEmergency %d"
                  " requestActive: %d timerActive: %d",
@@ -5223,6 +5234,7 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
         // extending the odcpi session past 30 seconds if needed
         if (ODCPI_REQUEST_TYPE_START == request.type) {
             if (!(mOdcpiStateMask & ODCPI_REQ_ACTIVE)  && false == mOdcpiTimer.isActive()) {
+                handleOdcpiRequestCb(request);
                 mControlCallbacks.odcpiReqCb(request);
                 mOdcpiStateMask |= ODCPI_REQ_ACTIVE;
                 if (nullptr != mEsStatusCb) {
@@ -5236,6 +5248,7 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
             } else if (false == mOdcpiRequest.isEmergencyMode &&
                        true == request.isEmergencyMode) {
                 mControlCallbacks.odcpiReqCb(request);
+                handleOdcpiRequestCb(request);
                 mOdcpiStateMask |= ODCPI_REQ_ACTIVE;
                 if (nullptr != mEsStatusCb) {
                     mEsStatusCb(request.isEmergencyMode);
@@ -5264,6 +5277,7 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
         } else if (ODCPI_REQUEST_TYPE_STOP == request.type) {
             LOC_LOGd("request: type %d, isEmergency %d", request.type, request.isEmergencyMode);
             mControlCallbacks.odcpiReqCb(request);
+            handleOdcpiRequestCb(request);
             mOdcpiStateMask = 0;
             sendEmergencyCallStatusEvent = true;
             if (nullptr != mEsStatusCb) {
@@ -5352,6 +5366,11 @@ void GnssAdapter::initOdcpiCommand(const odcpiRequestCallback& callback,
         }
     };
 
+    if (priority > ODCPI_HANDLER_PRIORITY_HIGH ||
+            priority < ODCPI_HANDLER_PRIORITY_LOW) {
+        LOC_LOGe("Invalid priorty %d", priority);
+        return;
+    }
     sendMsg(new MsgInitOdcpi(*this, callback, priority));
 }
 
@@ -5362,11 +5381,48 @@ void GnssAdapter::initOdcpi(const odcpiRequestCallback& callback,
     if (priority >= mCallbackPriority) {
         mControlCallbacks.odcpiReqCb = callback;
         mCallbackPriority = priority;
+        size_t mapSize = mOdcpiRequestCbMap.size();
+        LOC_LOGd("Init priority: %d map size %zu", priority, mapSize);
+        mOdcpiRequestCbMap[priority] = callback;
         /* Register for WIFI request */
         updateEvtMask(LOC_API_ADAPTER_BIT_REQUEST_WIFI,
                 LOC_REGISTRATION_MASK_ENABLED);
     }
     UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izatConfParamTable);
+}
+
+void GnssAdapter::deinitOdcpiCommand(OdcpiPrioritytype priority)
+{
+    struct MsgDeinitOdcpi : public LocMsg {
+        GnssAdapter& mAdapter;
+        OdcpiPrioritytype   mPriority;
+        inline MsgDeinitOdcpi(GnssAdapter& adapter, OdcpiPrioritytype priority) :
+                LocMsg(),
+                mAdapter(adapter), mPriority(priority) {}
+        inline virtual void proc() const {
+            mAdapter.deinitOdcpi(mPriority);
+        }
+    };
+
+    if (priority > ODCPI_HANDLER_PRIORITY_HIGH ||
+            priority < ODCPI_HANDLER_PRIORITY_LOW) {
+        LOC_LOGe("Invalid priorty %d", priority);
+        return;
+    }
+    sendMsg(new MsgDeinitOdcpi(*this, priority));
+}
+
+void GnssAdapter::deinitOdcpi(OdcpiPrioritytype priority) {
+    LOC_LOGd("Deinit priority: %d", priority);
+    mOdcpiRequestCbMap.erase(priority);
+
+    if (0 == mOdcpiRequestCbMap.size()) {
+        /* deregister for WIFI request */
+        LOC_LOGv("Deregister REQUEST_WIFI");
+        updateEvtMask(
+                LOC_API_ADAPTER_BIT_REQUEST_WIFI,
+                LOC_REGISTRATION_MASK_DISABLED);
+    }
 }
 
 void GnssAdapter::injectOdcpiCommand(const Location& location)
@@ -5402,7 +5458,7 @@ void GnssAdapter::injectOdcpi(const Location& location)
         mAddressRequestCb(location);
     }
 
-    mLocApi->injectPosition(location, true);
+    mLocApi->injectPosition(location, mOdcpiRequestActive);
 }
 
 void GnssAdapter::setAddressRequestCbCommand(
@@ -5488,6 +5544,7 @@ void GnssAdapter::odcpiTimerExpire()
     // expires, request again and restart timer
     if (mOdcpiStateMask & ODCPI_REQ_ACTIVE) {
         mControlCallbacks.odcpiReqCb(mOdcpiRequest);
+        handleOdcpiRequestCb(mOdcpiRequest);
         mOdcpiTimer.restart();
     } else {
         mOdcpiTimer.stop();

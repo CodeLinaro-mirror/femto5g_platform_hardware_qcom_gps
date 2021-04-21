@@ -600,13 +600,18 @@ public:
         No return value.
     */
     virtual void powerStateEvent(PowerStateType powerState) {};
+
+    virtual void odcpiInit(const odcpiRequestCallback& callback,
+                           OdcpiPrioritytype priority) {};
     /** @brief
         Inject on-demand coarse position
 
         @param
         location: Location structure
     */
-    virtual void odcpiInject(const ::Location& location) {}
+    virtual void odcpiInject(const ::Location& location) {};
+
+    virtual void odcpiDeinit(OdcpiPrioritytype priority){};
 
     /** @brief
         Resets all cached network info in HAL.

@@ -116,6 +116,7 @@ struct GnssInterface {
                                    NetworkHandle networkHandle, std::string& apn);
     void (*odcpiInit)(const odcpiRequestCallback& callback, OdcpiPrioritytype priority);
     void (*odcpiInject)(const Location& location);
+    void (*odcpiDeinit)(OdcpiPrioritytype priority);
     void (*blockCPI)(double latitude, double longitude, float accuracy,
                      int blockDurationMsec, double latLonDiffThreshold);
     void (*setEsStatusCallback)(std::function<void(bool)> esStatusCb);
