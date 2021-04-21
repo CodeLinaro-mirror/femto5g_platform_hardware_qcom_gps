@@ -502,7 +502,8 @@ typedef enum {
     GNSS_SV_OPTIONS_HAS_ALMANAC_BIT             = (1<<1),
     GNSS_SV_OPTIONS_USED_IN_FIX_BIT             = (1<<2),
     GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT   = (1<<3),
-    GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT    = (1<<4)
+    GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT          = (1<<4),
+    GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT = (1<<5),
 } GnssSvOptionsBits;
 
 typedef enum {
@@ -1278,6 +1279,7 @@ typedef struct {
     float carrierFrequencyHz; // carrier frequency of the signal tracked
     GnssSignalTypeMask gnssSignalTypeMask; // Specifies GNSS signal type
     uint16_t  gloFrequency; // GLONASS Frequency channel number
+    double basebandCarrierToNoiseDbHz;
 } GnssSv;
 
 struct GnssConfigSetAssistanceServer {
@@ -1309,8 +1311,13 @@ typedef struct {
     GnssSvType svType;
     double timeOffsetNs;
     GnssMeasurementsStateMask stateMask;       // bitwise OR of GnssMeasurementsStateBits
+    // valid when GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_BIT is set
+    // total time is: receivedSvTimeNs + receivedSvTimeSubNs
     int64_t receivedSvTimeNs;
-    int64_t receivedSvTimeUncertaintyNs;
+    // valid when GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_BIT is set
+    // total time is: receivedSvTimeNs + receivedSvTimeSubNs
+    float  receivedSvTimeSubNs;
+    int64_t  receivedSvTimeUncertaintyNs;
     double carrierToNoiseDbHz;
     double pseudorangeRateMps;
     double pseudorangeRateUncertaintyMps;
@@ -1962,6 +1969,7 @@ typedef struct {
     gnssNmeaCallback gnssNmeaCb;                     // optional
     gnssDataCallback gnssDataCb;                     // optional
     gnssMeasurementsCallback gnssMeasurementsCb;     // optional
+    gnssMeasurementsCallback gnssNHzMeasurementsCb;  // optional
     batchingStatusCallback batchingStatusCb;         // optional
     locationSystemInfoCallback locationSystemInfoCb; // optional
     engineLocationsInfoCallback engineLocationsInfoCb;     // optional
