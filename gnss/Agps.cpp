@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -293,6 +293,7 @@ void AgpsStateMachine::requestOrReleaseDataConn(bool request){
 
     nifRequest.type = mAgpsType;
     nifRequest.apnTypeMask = mApnTypeMask;
+    nifRequest.subId = mSubId;
     if (request) {
         LOC_LOGD("AGPS Data Conn Request mAgpsType=%d mApnTypeMask=0x%X",
                  mAgpsType, mApnTypeMask);
@@ -553,7 +554,7 @@ AgpsStateMachine* AgpsManager::getAgpsStateMachine(AGpsExtType agpsType) {
 }
 
 void AgpsManager::requestATL(int connHandle, AGpsExtType agpsType,
-                             LocApnTypeMask apnTypeMask){
+                             LocApnTypeMask apnTypeMask, LocSubId subId) {
 
     LOC_LOGD("AgpsManager::requestATL(): connHandle %d, agpsType 0x%X apnTypeMask: 0x%X",
                connHandle, agpsType, apnTypeMask);
@@ -579,6 +580,7 @@ void AgpsManager::requestATL(int connHandle, AGpsExtType agpsType,
     }
     sm->setType(agpsType);
     sm->setApnTypeMask(apnTypeMask);
+    sm->setSubId(subId);
 
     /* Invoke AGPS SM processing */
     AgpsSubscriber subscriber(connHandle, false, false, apnTypeMask);
@@ -626,12 +628,14 @@ void AgpsManager::reportAtlOpenSuccess(
     /* Find the state machine instance */
     AgpsStateMachine* sm = getAgpsStateMachine(agpsType);
 
-    /* Set bearer and apn info in state machine instance */
-    sm->setBearer(bearerType);
-    sm->setAPN(apnName, apnLen);
+    if (sm != NULL) {
+        /* Set bearer and apn info in state machine instance */
+        sm->setBearer(bearerType);
+        sm->setAPN(apnName, apnLen);
 
-    /* Send GRANTED event to state machine */
-    sm->processAgpsEvent(AGPS_EVENT_GRANTED);
+        /* Send GRANTED event to state machine */
+        sm->processAgpsEvent(AGPS_EVENT_GRANTED);
+    }
 }
 
 void AgpsManager::reportAtlOpenFailed(AGpsExtType agpsType){
@@ -640,7 +644,9 @@ void AgpsManager::reportAtlOpenFailed(AGpsExtType agpsType){
 
     /* Fetch SM and send DENIED event */
     AgpsStateMachine* sm = getAgpsStateMachine(agpsType);
-    sm->processAgpsEvent(AGPS_EVENT_DENIED);
+    if (sm != NULL) {
+        sm->processAgpsEvent(AGPS_EVENT_DENIED);
+    }
 }
 
 void AgpsManager::reportAtlClosed(AGpsExtType agpsType){
@@ -649,7 +655,9 @@ void AgpsManager::reportAtlClosed(AGpsExtType agpsType){
 
     /* Fetch SM and send RELEASED event */
     AgpsStateMachine* sm = getAgpsStateMachine(agpsType);
-    sm->processAgpsEvent(AGPS_EVENT_RELEASED);
+    if (sm != NULL) {
+        sm->processAgpsEvent(AGPS_EVENT_RELEASED);
+    }
 }
 
 void AgpsManager::handleModemSSR(){

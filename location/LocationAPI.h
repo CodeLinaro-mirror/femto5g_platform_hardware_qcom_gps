@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -178,6 +178,22 @@ public:
                 LOCATION_ERROR_INVALID_PARAMETER if any parameters in GnssNiResponse are invalid
                 LOCATION_ERROR_ID_UNKNOWN if id does not match a gnssNiCallback */
     virtual void gnssNiResponse(uint32_t id, GnssNiResponse response) override;
+
+    /* ================================== NETWORK PROVIDER =========================== */
+
+    /* enableNetworkProvider enables Network Provider */
+    virtual void enableNetworkProvider();
+
+    /* disableNetworkProvider disables Network Provider */
+    virtual void disableNetworkProvider();
+
+    /* startNetworkLocation starts tracking session for
+       network location request */
+    virtual void startNetworkLocation(trackingCallback* callback);
+
+    /* stopNetworkLocation stops the ongoing tracking session for
+       network location request */
+    virtual void stopNetworkLocation(trackingCallback* callback);
 };
 
 typedef struct {
@@ -480,6 +496,53 @@ public:
     */
     virtual uint32_t configEngineRunState(PositioningEngineMask engType,
                                           LocEngineRunState engState) override;
+
+      /** @brief
+        Set the EULA opt-in status from system user. This is used as consent to
+        use network-based positioning.
+
+        @param
+        userConsnt: user agrees to use GTP service or not.
+
+        @return
+        A session id that will be returned in responseCallback to
+        match command with response.
+    */
+    virtual uint32_t setOptInStatus(bool userConsent);
+
+    /** @brief
+        This API is used to config the NMEA sentence types.
+
+        Without prior calling this API, all NMEA sentences supported
+        in the system, as defined in NmeaTypesMask, will get
+        generated and delivered to all the location clients that
+        register to receive NMEA sentences.
+
+        The NMEA sentence types are per-device setting and calling
+        this API will impact all the location api clients that
+        register to receive NMEA sentences. This API call is not
+        incremental and the new NMEA sentence types will completely
+        overwrite the previous call.
+
+        If one or more unspecified bits are set in the NMEA mask,
+        those bits will be ignored, but the rest of the
+        configuration will get applied.
+
+        Please note that the configured NMEA sentence types are not
+        persistent.
+
+        @param
+        enabledNmeaTypes: specify the set of NMEA sentences the
+        device will generate and deliver to the location api clients
+        that register to receive NMEA sentences. <br/>
+
+        @return
+        A session id that will be returned in responseCallback to
+        match command with response.
+    */
+    virtual uint32_t configOutputNmeaTypes(
+            GnssNmeaTypesMask enabledNmeaTypes) override;
+
 };
 
 #endif /* LOCATIONAPI_H */

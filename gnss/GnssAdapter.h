@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -434,6 +434,7 @@ public:
     uint32_t configDeadReckoningEngineParamsCommand(const DeadReckoningEngineConfig& dreConfig);
     uint32_t configEngineRunStateCommand(PositioningEngineMask engType,
                                          LocEngineRunState engState);
+    uint32_t configOutputNmeaTypesCommand(GnssNmeaTypesMask enabledNmeaTypes);
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
@@ -465,8 +466,7 @@ public:
     virtual void reportEnginePositionsEvent(unsigned int count,
                                             EngineLocationInfo* locationArr);
 
-    virtual void reportSvEvent(const GnssSvNotification& svNotify,
-                               bool fromEngineHub=false);
+    virtual void reportSvEvent(const GnssSvNotification& svNotify);
     virtual void reportNmeaEvent(const char* nmea, size_t length);
     virtual bool requestNiNotifyEvent(const GnssNiNotification& notify, const void* data,
                                       const LocInEmergency emergencyState);
@@ -481,7 +481,9 @@ public:
     virtual bool reportGnssEngEnergyConsumedEvent(uint64_t energyConsumedSinceFirstBoot);
     virtual void reportLocationSystemInfoEvent(const LocationSystemInfo& locationSystemInfo);
 
-    virtual bool requestATL(int connHandle, LocAGpsType agps_type, LocApnTypeMask apn_type_mask);
+    virtual bool requestATL(int connHandle, LocAGpsType agps_type,
+                            LocApnTypeMask apn_type_mask,
+                            LocSubId sub_id=LOC_DEFAULT_SUB);
     virtual bool releaseATL(int connHandle);
     virtual bool requestOdcpiEvent(OdcpiRequestInfo& request);
     virtual bool reportDeleteAidingDataEvent(GnssAidingData& aidingData);
@@ -519,11 +521,18 @@ public:
     void saveGnssEnergyConsumedCallback(GnssEnergyConsumedCallback energyConsumedCb);
     void reportLocationSystemInfo(const LocationSystemInfo & locationSystemInfo);
     void updatePowerState(PowerStateType powerState);
-    inline bool getE911State(void) {
+    inline bool getE911State(GnssNiType niType) {
         if (NULL != mIsE911Session) {
             return mIsE911Session();
+        } else {
+            /* On LE targets(mIsE911Session is NULL) with old modem
+            and when (!LOC_SUPPORTED_FEATURE_LOCATION_PRIVACY) there is no way of
+            knowing for GNSS_NI_TYPE_EMERGENCY_SUPL we are "in emergency",
+            so we treat all emergency SUPL sessions as being "in emergency" so
+            the session will be auto-accepted */
+            return (!ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_LOCATION_PRIVACY) &&
+                    GNSS_NI_TYPE_EMERGENCY_SUPL == niType);
         }
-        return false;
     }
 
     /*======== GNSSDEBUG ================================================================*/

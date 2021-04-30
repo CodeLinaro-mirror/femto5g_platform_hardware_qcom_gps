@@ -31,12 +31,14 @@
 
 #include <stddef.h>
 #include <ctype.h>
+#include <loc_pla.h>
 #include <gps_extended.h>
 #include <LocationAPI.h>
 #include <MsgTask.h>
 #include <log_util.h>
 #ifdef NO_UNORDERED_SET_OR_MAP
     #include <map>
+    #define unordered_map map
 #else
     #include <unordered_map>
 #endif
@@ -180,7 +182,8 @@ public:
     void requestXtraData();
     void requestTime();
     void requestLocation();
-    void requestATL(int connHandle, LocAGpsType agps_type, LocApnTypeMask apn_type_mask);
+    void requestATL(int connHandle, LocAGpsType agps_type,
+                    LocApnTypeMask apn_type_mask, LocSubId sub_id=LOC_DEFAULT_SUB);
     void releaseATL(int connHandle);
     void requestNiNotify(GnssNiNotification &notify, const void* data,
                          const LocInEmergency emergencyState);
