@@ -34,6 +34,7 @@
 #include <functional>
 #include <list>
 #include <string.h>
+#include <string>
 
 #define GNSS_NI_REQUESTOR_MAX  (256)
 #define GNSS_NI_MESSAGE_ID_MAX (2048)
@@ -1984,6 +1985,17 @@ typedef struct {
     locationSystemInfoCallback locationSystemInfoCb; // optional
     engineLocationsInfoCallback engineLocationsInfoCb;     // optional
 } LocationCallbacks;
+
+typedef struct {
+    uint32_t size;                        // set to sizeof
+    bool requiresNmeaLocation;
+    std::string hostNameOrIp;    // null terminated string
+    std::string mountPoint;      // null terminated string
+    std::string username;        // null terminated string
+    std::string password;        // null terminated string
+    uint32_t port;
+    bool useSSL;
+} GnssNtripConnectionParams;
 
 typedef struct {
     uint64_t meQtimer1;

@@ -1290,7 +1290,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
                                const LocationSystemInfo &systemInfo,
                                unsigned char generate_nmea,
                                bool custom_gga_fix_quality,
-                               std::vector<std::string> &nmeaArraystr)
+                               std::vector<std::string> &nmeaArraystr,
+                               int& indexOfGGA)
 {
     ENTRY_LOG();
 
@@ -2057,7 +2058,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         }
         // ------$--GGA-------
         nmeaArraystr.push_back(sentence_GGA);
-
+        indexOfGGA = static_cast<int>(nmeaArraystr.size() - 1);
     }
     //Send blank NMEA reports for non-final fixes
     else {
