@@ -166,11 +166,14 @@ struct CdfwInterface {
     void (*startDgnssApiService)(const MsgTask& msgTask);
     QDgnssListenerHDL (*createUsableReporter)(
             QDgnssSessionActiveCb sessionActiveCb);
-
     void (*destroyUsableReporter)(QDgnssListenerHDL handle);
-
     void (*reportUsable)(QDgnssListenerHDL handle, bool usable);
 };
+
+typedef uint16_t  DGnssStateBitMask;
+#define DGNSS_STATE_ENABLE_NTRIP_COMMAND      0X01
+#define DGNSS_STATE_NO_NMEA_PENDING           0X02
+#define DGNSS_STATE_NTRIP_SESSION_STARTED     0X04
 
 class GnssReportLoggerUtil {
 public:
@@ -277,6 +280,14 @@ class GnssAdapter : public LocAdapterBase {
     inline void injectOdcpi(const Location& location);
     inline void setNmeaReportRateConfig();
     void logLatencyInfo();
+
+    /*==== DGnss Ntrip Source ==========================================================*/
+    StartDgnssNtripParams   mStartDgnssNtripParams;
+    bool    mSendNmeaConsent;
+    DGnssStateBitMask   mDgnssState;
+    void checkUpdateDgnssNtrip(bool isLocationValid);
+    void stopDgnssNtrip();
+    uint64_t   mDgnssLastNmeaBootTimeMilli;
 
 public:
     GnssAdapter();
@@ -578,6 +589,19 @@ public:
 
     /*==== DGnss Usable Report Flag ====================================================*/
     inline void setDGnssUsableFLag(bool dGnssNeedReport) { mDGnssNeedReport = dGnssNeedReport;}
+    inline bool isNMEAPrintEnabled() {
+       return ((mContext != NULL) && (0 != mContext->mGps_conf.ENABLE_NMEA_PRINT));
+    }
+
+    /*==== DGnss Ntrip Source ==========================================================*/
+    void updateNTRIPGGAConsentCommand(bool consentAccepted) { mSendNmeaConsent = consentAccepted; }
+    void enablePPENtripStreamCommand(const GnssNtripConnectionParams& params, bool enableRTKEngine);
+    void disablePPENtripStreamCommand();
+    void handleEnablePPENtrip(const GnssNtripConnectionParams& params);
+    void handleDisablePPENtrip();
+    void reportGGAToNtrip(const char* nmea);
+    inline bool isDgnssNmeaRequired() { return mSendNmeaConsent &&
+            mStartDgnssNtripParams.ntripParams.requiresNmeaLocation;}
 };
 
 #endif //GNSS_ADAPTER_H

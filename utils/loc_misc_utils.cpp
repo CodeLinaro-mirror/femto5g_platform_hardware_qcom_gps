@@ -36,6 +36,10 @@
 #include <loc_misc_utils.h>
 #include <ctype.h>
 
+#ifndef MSEC_IN_ONE_SEC
+#define MSEC_IN_ONE_SEC 1000ULL
+#endif
+#define GET_MSEC_FROM_TS(ts) ((ts.tv_sec * MSEC_IN_ONE_SEC) + (ts.tv_nsec + 500000)/1000000)
 
 int loc_util_split_string(char *raw_string, char **split_strings_ptr,
                           int max_num_substrings, char delimiter)
@@ -173,6 +177,13 @@ uint64_t getQTimerFreq()
     asm volatile("mrc p15, 0, %0, c14, c0, 0" : "=r" (val));
 #endif
     return val;
+}
+
+uint64_t getBootTimeMilliSec()
+{
+    struct timespec curTs;
+    clock_gettime(CLOCK_BOOTTIME, &curTs);
+    return (uint64_t)GET_MSEC_FROM_TS(curTs);
 }
 
 // Used for convert position/velocity from GSNS antenna based to VRP based
