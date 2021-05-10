@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -39,11 +39,8 @@
 typedef const GnssInterface* (getGnssInterface)();
 typedef const GeofenceInterface* (getGeofenceInterface)();
 typedef const BatchingInterface* (getBatchingInterface)();
-typedef void (createOSFramework)();
-typedef void (destroyOSFramework)();
 
 // GTP services
-typedef uint32_t (setOptInStatusGetter)(bool userConsent, responseCallback* callback);
 typedef void (enableProviderGetter)();
 typedef void (disableProviderGetter)();
 typedef void (getSingleNetworkLocationGetter)(trackingCallback* callback);
@@ -77,7 +74,6 @@ static pthread_mutex_t gDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static bool gGnssLoadFailed = false;
 static bool gBatchingLoadFailed = false;
 static bool gGeofenceLoadFailed = false;
-static uint32_t gOSFrameworkRefCount = 0;
 
 template <typename T1, typename T2>
 static const T1* loadLocationInterface(const char* library, const char* name) {
@@ -87,28 +83,6 @@ static const T1* loadLocationInterface(const char* library, const char* name) {
         return (const T1*) getter;
     }else {
         return (*getter)();
-    }
-}
-
-static void createOSFrameworkInstance() {
-    void* libHandle = nullptr;
-    createOSFramework* getter = (createOSFramework*)dlGetSymFromLib(libHandle,
-            "liblocationservice_glue.so", "createOSFramework");
-    if (getter != nullptr) {
-        (*getter)();
-    } else {
-        LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
-    }
-}
-
-static void destroyOSFrameworkInstance() {
-    void* libHandle = nullptr;
-    destroyOSFramework* getter = (destroyOSFramework*)dlGetSymFromLib(libHandle,
-            "liblocationservice_glue.so", "destroyOSFramework");
-    if (getter != nullptr) {
-        (*getter)();
-    } else {
-        LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
     }
 }
 
@@ -203,11 +177,6 @@ LocationAPI::createInstance (LocationCallbacks& locationCallbacks)
     bool requestedCapabilities = false;
 
     pthread_mutex_lock(&gDataMutex);
-
-    gOSFrameworkRefCount++;
-    if (1 == gOSFrameworkRefCount) {
-        createOSFrameworkInstance();
-    }
 
     if (isGnssClient(locationCallbacks)) {
         if (NULL == gData.gnssInterface && !gGnssLoadFailed) {
@@ -333,11 +302,6 @@ LocationAPI::destroy(locationApiDestroyCompleteCallback destroyCompleteCb)
         LOC_LOGE("%s:%d]: Location API client %p not found in client data",
                  __func__, __LINE__, this);
     }
-
-    if (1 == gOSFrameworkRefCount) {
-        destroyOSFrameworkInstance();
-    }
-    gOSFrameworkRefCount--;
 
     pthread_mutex_unlock(&gDataMutex);
     if (invokeDestroyCb) {
@@ -963,14 +927,30 @@ uint32_t LocationControlAPI::configEngineRunState(
 }
 
 uint32_t LocationControlAPI::setOptInStatus(bool userConsent) {
-    void* libHandle = nullptr;
-    uint32_t sessionId = 0;
-    setOptInStatusGetter* setter = (setOptInStatusGetter*)dlGetSymFromLib(libHandle,
-            "liblocationservice_glue.so", "setOptInStatus");
-    if (setter != nullptr) {
-        sessionId = (*setter)(userConsent, &gData.controlCallbacks.responseCb);
+    uint32_t id = 0;
+    pthread_mutex_lock(&gDataMutex);
+
+    if (gData.gnssInterface != NULL) {
+        id = gData.gnssInterface->setOptInStatus(userConsent);
     } else {
-        LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
+        LOC_LOGe("No gnss interface available for Location Control API");
     }
-    return sessionId;
+
+    pthread_mutex_unlock(&gDataMutex);
+    return id;
+}
+
+uint32_t LocationControlAPI::configOutputNmeaTypes(
+            GnssNmeaTypesMask enabledNmeaTypes) {
+    uint32_t id = 0;
+    pthread_mutex_lock(&gDataMutex);
+
+    if (gData.gnssInterface != NULL) {
+        id = gData.gnssInterface->configOutputNmeaTypes(enabledNmeaTypes);
+    } else {
+        LOC_LOGe("No gnss interface available for Location Control API");
+    }
+
+    pthread_mutex_unlock(&gDataMutex);
+    return id;
 }

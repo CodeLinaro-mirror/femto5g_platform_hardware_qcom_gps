@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, 2017, 2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -26,59 +26,39 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+#ifndef NATIVEAGPSHANDLER_H
+#define NATIVEAGPSHANDLER_H
 
-#ifndef __IDATAITEMCORE_H__
-#define __IDATAITEMCORE_H__
-
-#include <string>
-#include <DataItemId.h>
-
-namespace loc_core {
+#include <cinttypes>
+#include <string.h>
+#include <gps_extended_c.h>
+#include <IDataItemObserver.h>
+#include <IDataItemCore.h>
+#include <IOsObserver.h>
 
 using namespace std;
+using loc_core::IOsObserver;
+using loc_core::IDataItemObserver;
+using loc_core::IDataItemCore;
 
-/**
- * @brief IDataItemCore interface.
- * @details IDataItemCore interface.
- *
- */
-class IDataItemCore {
+class GnssAdapter;
+
+class NativeAgpsHandler : public IDataItemObserver {
 public:
-    /**
-     * @brief Gets Data item id.
-     * @details Gets Data item id.
-     * @return Data item id.
-     */
-    inline DataItemId getId() { return mId; }
-
-    /**
-     * @brief Stringify.
-     * @details Stringify.
-     *
-     * @param valueStr Reference to string.
-     */
-    virtual void stringify (string & valueStr) = 0;
-
-    /**
-     * @brief copy.
-     * @details copy.
-     *
-     * @param src Where to copy from.
-     * @param dataItemCopied Boolean flag indicated whether or not copied.
-     *
-     * @return Zero for success or non zero for failure.
-     */
-    virtual int32_t copyFrom(IDataItemCore * src) = 0;
-
-    /**
-     * @brief Destructor.
-     * @details Destructor.
-     */
-    virtual ~IDataItemCore () {}
-protected:
-    DataItemId mId = INVALID_DATA_ITEM_ID;
+    NativeAgpsHandler(IOsObserver* sysStatObs, GnssAdapter& adapter);
+    ~NativeAgpsHandler();
+    AgpsCbInfo getAgpsCbInfo();
+    // IDataItemObserver overrides
+    virtual void notify(const list<IDataItemCore*>& dlist);
+    inline virtual void getName(string& name);
+private:
+    static NativeAgpsHandler* sLocalHandle;
+    static void agnssStatusIpV4Cb(AGnssExtStatusIpV4 statusInfo);
+    void processATLRequestRelease(AGnssExtStatusIpV4 statusInfo);
+    IOsObserver* mSystemStatusObsrvr;
+    bool mConnected;
+    string mApn;
+    GnssAdapter& mAdapter;
 };
 
-} // namespace loc_core
-
-#endif // __IDATAITEMCORE_H__
+#endif // NATIVEAGPSHANDLER_H

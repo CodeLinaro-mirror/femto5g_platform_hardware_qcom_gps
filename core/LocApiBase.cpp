@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2014, 2016-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2014, 2016-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -511,11 +511,11 @@ void LocApiBase::requestLocation()
 }
 
 void LocApiBase::requestATL(int connHandle, LocAGpsType agps_type,
-                            LocApnTypeMask apn_type_mask)
+                            LocApnTypeMask apn_type_mask, LocSubId sub_id)
 {
     // loop through adapters, and deliver to the first handling adapter.
     TO_1ST_HANDLING_LOCADAPTERS(
-            mLocAdapters[i]->requestATL(connHandle, agps_type, apn_type_mask));
+            mLocAdapters[i]->requestATL(connHandle, agps_type, apn_type_mask, sub_id));
 }
 
 void LocApiBase::releaseATL(int connHandle)
@@ -949,14 +949,14 @@ int64_t ElapsedRealtimeEstimator::getElapsedRealtimeEstimateNanos(int64_t curDat
     //   reset mFixTimeStablizationThreshold to default value, jump to step 2 to continue.
 
     int64_t currentTravelTimeNanos = mInitialTravelTime;
-    struct timespec currentTime;
-    int64_t sinceBootTimeNanos;
+    struct timespec currentTime = {};
+    int64_t sinceBootTimeNanos = 0;
     if (getCurrentTime(currentTime, sinceBootTimeNanos)) {
         if (isCurDataTimeTrustable) {
             if (tbf > 0 && tbf != curDataTimeNanos - mPrevDataTimeNanos) {
                 mFixTimeStablizationThreshold = 5;
             }
-            int64_t currentTimeNanos = currentTime.tv_sec*1000000000 + currentTime.tv_nsec;
+            int64_t currentTimeNanos = (int64_t)currentTime.tv_sec*1000000000 + currentTime.tv_nsec;
             LOC_LOGd("sinceBootTimeNanos:%" PRIi64 " currentTimeNanos:%" PRIi64 ""
                      " locationTimeNanos:%" PRIi64 "",
                      sinceBootTimeNanos, currentTimeNanos, curDataTimeNanos);
@@ -990,9 +990,9 @@ void ElapsedRealtimeEstimator::reset() {
 }
 
 int64_t ElapsedRealtimeEstimator::getElapsedRealtimeQtimer(int64_t qtimerTicksAtOrigin) {
-    struct timespec currentTime;
-    int64_t sinceBootTimeNanos;
-    int64_t elapsedRealTimeNanos;
+    struct timespec currentTime = {};
+    int64_t sinceBootTimeNanos = 0;
+    int64_t elapsedRealTimeNanos = 0;
 
     if (getCurrentTime(currentTime, sinceBootTimeNanos)) {
        uint64_t qtimerDiff = 0;
@@ -1031,8 +1031,8 @@ int64_t ElapsedRealtimeEstimator::getElapsedRealtimeQtimer(int64_t qtimerTicksAt
 bool ElapsedRealtimeEstimator::getCurrentTime(
         struct timespec& currentTime, int64_t& sinceBootTimeNanos)
 {
-    struct timespec sinceBootTime;
-    struct timespec sinceBootTimeTest;
+    struct timespec sinceBootTime = {};
+    struct timespec sinceBootTimeTest = {};
     bool clockGetTimeSuccess = false;
     const uint32_t MAX_TIME_DELTA_VALUE_NANOS = 10000;
     const uint32_t MAX_GET_TIME_COUNT = 20;
@@ -1048,9 +1048,9 @@ bool ElapsedRealtimeEstimator::getCurrentTime(
         if (clock_gettime(CLOCK_BOOTTIME, &sinceBootTimeTest) != 0) {
             break;
         };
-        sinceBootTimeNanos = sinceBootTime.tv_sec * 1000000000 + sinceBootTime.tv_nsec;
+        sinceBootTimeNanos = (int64_t)sinceBootTime.tv_sec * 1000000000 + sinceBootTime.tv_nsec;
         int64_t sinceBootTimeTestNanos =
-            sinceBootTimeTest.tv_sec * 1000000000 + sinceBootTimeTest.tv_nsec;
+            (int64_t)sinceBootTimeTest.tv_sec * 1000000000 + sinceBootTimeTest.tv_nsec;
         int64_t sinceBootTimeDeltaNanos = sinceBootTimeTestNanos - sinceBootTimeNanos;
 
         /* sinceBootTime and sinceBootTimeTest should have a close value if there was no
