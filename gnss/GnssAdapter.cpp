@@ -4261,10 +4261,13 @@ GnssAdapter::requestNiNotifyEvent(const GnssNiNotification &notify, const void* 
             } else if (GNSS_NI_TYPE_CONTROL_PLANE == mNotify.type) {
                 if (bIsInEmergency && (1 == ContextBase::mGps_conf.CP_MTLR_ES)) {
                     mApi.informNiResponse(GNSS_NI_RESPONSE_ACCEPT, mData);
-                }
-                else {
+                } else {
                     mAdapter.requestNiNotify(mNotify, mData, false);
                 }
+            } else if ((GNSS_NI_TYPE_SUPL == mNotify.type ||
+                        GNSS_NI_TYPE_EMERGENCY_SUPL == mNotify.type)
+                      && (GNSS_NI_OPTIONS_PRIVACY_OVERRIDE_BIT & mNotify.options)) {
+                mApi.informNiResponse(GNSS_NI_RESPONSE_ACCEPT, mData);
             } else {
                 mAdapter.requestNiNotify(mNotify, mData, false);
             }
@@ -4467,6 +4470,8 @@ GnssAdapter::requestNiNotify(const GnssNiNotification& notify, const void* data,
         if (rc) {
             LOC_LOGE("%s]: Loc NI thread is not created.", __func__);
         }
+        pthread_setname_np(pSession->thread, "NiThread");
+
         rc = pthread_detach(pSession->thread);
         if (rc) {
             LOC_LOGE("%s]: Loc NI thread is not detached.", __func__);
