@@ -15,6 +15,10 @@ libgnss_la_SOURCES = \
     XtraSystemStatusObserver.cpp \
     Agps.cpp
 
+if USE_TELSDK
+AM_CFLAGS += -DUSE_FEATURE_TELSDK
+endif
+
 if USE_GLIB
 libgnss_la_CFLAGS = -DUSE_GLIB $(AM_CFLAGS) @GLIB_CFLAGS@
 libgnss_la_LDFLAGS = -lstdc++ -Wl,-z,defs -lpthread @GLIB_LIBS@ -shared -avoid-version

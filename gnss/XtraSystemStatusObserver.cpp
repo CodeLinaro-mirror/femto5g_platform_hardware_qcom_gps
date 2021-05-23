@@ -174,7 +174,9 @@ XtraSystemStatusObserver::XtraSystemStatusObserver(IOsObserver* sysStatObs,
         mIsConnectivityStatusKnown(false),
         mSender(LocIpc::getLocIpcLocalSender(LOC_IPC_XTRA)),
         mDelayLocTimer(*mSender) {
+#ifndef USE_FEATURE_TELSDK
     subscribe(true);
+#endif
     auto recver = LocIpc::getLocIpcLocalRecver(
             make_shared<XtraIpcListener>(sysStatObs, msgTask, *this),
             LOC_IPC_HAL);
@@ -254,21 +256,41 @@ bool XtraSystemStatusObserver::updateXtraThrottle(const bool enabled) {
 }
 
 bool XtraSystemStatusObserver::updatePowerState(const PowerStateType powerState) {
+
+    if (mPowerState == powerState) {
+        return true;
+    }
+
     mPowerState = powerState;
 
     if (!mReqStatusReceived) {
         return true;
     }
 
-    // Just send if power state shutdown since Xtra Client only needs that for now
-    if (POWER_STATE_SHUTDOWN == powerState) {
-        stringstream ss;
-        ss <<  "powershutdown";
-        string s = ss.str();
-        return ( LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()) );
-    } else {
-        return true;
-    }
+    int32_t pState;
+    switch (mPowerState) {
+        case POWER_STATE_UNKNOWN:
+            pState = 0;
+            break;
+        case POWER_STATE_SUSPEND:
+            pState = 1;
+            break;
+        case POWER_STATE_RESUME:
+            pState = 2;
+            break;
+        case POWER_STATE_SHUTDOWN:
+            pState = 3;
+            break;
+        default:
+            LOC_LOGd("Invalid power state %d", mPowerState);
+            break;
+    };
+
+    stringstream ss;
+    ss <<  "powerstate";
+    ss << " " << pState;
+    string s = ss.str();
+    return ( LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()) );
 }
 
 inline bool XtraSystemStatusObserver::onStatusRequested(int32_t xtraStatusUpdated) {
