@@ -175,6 +175,12 @@ typedef uint16_t LocAGpsSetIDType;
 #define LOC_AGPS_SETID_TYPE_IMSI    1
 #define LOC_AGPS_SETID_TYPE_MSISDN  2
 
+typedef uint16_t LocSubId;
+#define LOC_DEFAULT_SUB    0
+#define LOC_PRIMARY_SUB    1
+#define LOC_SECONDARY_SUB  2
+#define LOC_TERTIARY_SUB   3
+
 typedef uint16_t LocApnIpType;
 #define LOC_APN_IP_INVALID          0
 #define LOC_APN_IP_IPV4             1
