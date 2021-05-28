@@ -115,7 +115,6 @@ static void destroyOSFrameworkInstance() {
 static bool isGnssClient(LocationCallbacks& locationCallbacks)
 {
     return (locationCallbacks.gnssNiCb != nullptr ||
-            locationCallbacks.trackingCb != nullptr ||
             locationCallbacks.gnssLocationInfoCb != nullptr ||
             locationCallbacks.engineLocationsInfoCb != nullptr ||
             locationCallbacks.gnssMeasurementsCb != nullptr ||
@@ -124,7 +123,8 @@ static bool isGnssClient(LocationCallbacks& locationCallbacks)
 
 static bool isBatchingClient(LocationCallbacks& locationCallbacks)
 {
-    return (locationCallbacks.batchingCb != nullptr);
+    return (locationCallbacks.batchingCb != nullptr ||
+            (locationCallbacks.trackingCb != nullptr && !isGnssClient(locationCallbacks)));
 }
 
 static bool isGeofenceClient(LocationCallbacks& locationCallbacks)
@@ -905,14 +905,15 @@ uint32_t LocationControlAPI::configRobustLocation(bool enable, bool enableForE91
 }
 
 uint32_t LocationControlAPI::setOptInStatus(bool userConsent) {
-    void* libHandle = nullptr;
-    uint32_t sessionId = 0;
-    setOptInStatusGetter* setter = (setOptInStatusGetter*)dlGetSymFromLib(libHandle,
-            "liblocationservice_glue.so", "setOptInStatus");
-    if (setter != nullptr) {
-        sessionId = (*setter)(userConsent, &gData.controlCallbacks.responseCb);
+    uint32_t id = 0;
+    pthread_mutex_lock(&gDataMutex);
+
+    if (gData.gnssInterface != NULL) {
+        id = gData.gnssInterface->setOptInStatus(userConsent);
     } else {
-        LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
+        LOC_LOGe("No gnss interface available for Location Control API");
     }
-    return sessionId;
+
+    pthread_mutex_unlock(&gDataMutex);
+    return id;
 }
