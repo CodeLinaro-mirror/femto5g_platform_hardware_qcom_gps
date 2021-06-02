@@ -163,6 +163,7 @@ typedef std::function<void(
 )> QDgnssSessionActiveCb;
 
 struct CdfwInterface {
+    void (*startDgnssApiService)(const MsgTask& msgTask);
     QDgnssListenerHDL (*createUsableReporter)(
             QDgnssSessionActiveCb sessionActiveCb);
 
@@ -175,12 +176,7 @@ class GnssReportLoggerUtil {
 public:
     typedef void (*LogGnssLatency)(const GnssLatencyInfo& gnssLatencyMeasInfo);
 
-    GnssReportLoggerUtil() : mLogLatency(nullptr) {
-        const char* libname = "liblocdiagiface.so";
-        void* libHandle = nullptr;
-        mLogLatency = (LogGnssLatency)dlGetSymFromLib(libHandle, libname, "LogGnssLatency");
-    }
-
+    GnssReportLoggerUtil();
     bool isLogEnabled();
     void log(const GnssLatencyInfo& gnssLatencyMeasInfo);
 
@@ -283,7 +279,6 @@ class GnssAdapter : public LocAdapterBase {
     void logLatencyInfo();
 
 public:
-
     GnssAdapter();
     virtual inline ~GnssAdapter() { }
 
@@ -444,6 +439,7 @@ public:
     void reportResponse(LocationError err, uint32_t sessionId);
     void reportResponse(size_t count, LocationError* errs, uint32_t* ids);
     /* ======== UTILITIES ================================================================== */
+    void initCDFWServiceCommand();
     LocationControlCallbacks& getControlCallbacks() { return mControlCallbacks; }
     void setControlCallbacks(const LocationControlCallbacks& controlCallbacks)
     { mControlCallbacks = controlCallbacks; }
@@ -452,8 +448,8 @@ public:
     virtual bool isInSession() { return !mTrackingSessions.empty(); }
     void initDefaultAgps();
     bool initEngHubProxy();
-    void initDGnssUsableReporter();
     void odcpiTimerExpireEvent();
+    void initCDFWService();
 
     /* ==== REPORTS ======================================================================== */
     /* ======== EVENTS ====(Called from QMI/EngineHub Thread)===================================== */
@@ -495,6 +491,8 @@ public:
     (
         const std::unordered_map<LocationQwesFeatureType, bool> &featureMap
     );
+    void reportPdnTypeFromWds(int pdnType, AGpsExtType agpsType, std::string apnName,
+            AGpsBearerType bearerType);
 
     /* ======== UTILITIES ================================================================= */
     bool needReport(const UlpLocation& ulpLocation,
