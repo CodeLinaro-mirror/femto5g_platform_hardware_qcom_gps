@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -112,6 +112,7 @@ struct GnssInterface {
     uint32_t (*configEngineRunState)(PositioningEngineMask engType,
                                      LocEngineRunState engState);
     uint32_t (*configOutputNmeaTypes)(GnssNmeaTypesMask enabledNmeaTypes);
+    uint32_t (*setOptInStatus)(bool userConsent);
 };
 
 struct BatchingInterface {
@@ -125,6 +126,7 @@ struct BatchingInterface {
     void (*stopBatching)(LocationAPI* client, uint32_t id);
     void (*updateBatchingOptions)(LocationAPI* client, uint32_t id, BatchingOptions&);
     void (*getBatchedLocations)(LocationAPI* client, uint32_t id, size_t count);
+    void (*updateSystemPowerState)(PowerStateType systemPowerState);
 };
 
 struct GeofenceInterface {
@@ -140,6 +142,7 @@ struct GeofenceInterface {
                             GeofenceOption* options);
     void (*pauseGeofences)(LocationAPI* client, size_t count, uint32_t* ids);
     void (*resumeGeofences)(LocationAPI* client, size_t count, uint32_t* ids);
+    void (*updateSystemPowerState)(PowerStateType systemPowerState);
 };
 
 #endif /* LOCATION_INTERFACE_H */

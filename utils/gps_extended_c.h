@@ -51,22 +51,8 @@ struct timespec32_t {
 extern "C" {
 #endif /* __cplusplus */
 
-/** Location has valid source information. */
-#define LOCATION_HAS_SOURCE_INFO   0x0020
-/** LocGpsLocation has valid "is indoor?" flag */
-#define LOC_GPS_LOCATION_HAS_IS_INDOOR   0x0040
-/** LocGpsLocation has valid floor number */
-#define LOC_GPS_LOCATION_HAS_FLOOR_NUMBER   0x0080
-/** LocGpsLocation has valid map URL*/
-#define LOC_GPS_LOCATION_HAS_MAP_URL   0x0100
-/** LocGpsLocation has valid map index */
-#define LOC_GPS_LOCATION_HAS_MAP_INDEX   0x0200
 
 #define GNSS_INVALID_JAMMER_IND 0x7FFFFFFF
-
-/** Sizes for indoor fields */
-#define GPS_LOCATION_MAP_URL_SIZE 400
-#define GPS_LOCATION_MAP_INDEX_SIZE 16
 
 /** Position source is ULP */
 #define ULP_LOCATION_IS_FROM_HYBRID   0x0001
@@ -2377,16 +2363,10 @@ typedef void (*LocAgpsOpenResultCb)(bool isSuccess, AGpsExtType agpsType, const 
 
 typedef void (*LocAgpsCloseResultCb)(bool isSuccess, AGpsExtType agpsType, void* userDataPtr);
 
-enum PowerStateType {
-    POWER_STATE_UNKNOWN = 0,
-    POWER_STATE_SUSPEND = 1,
-    POWER_STATE_RESUME  = 2,
-    POWER_STATE_SHUTDOWN = 3
-};
-
 /* Shared resources of LocIpc */
 #define LOC_IPC_HAL                    "/dev/socket/location/socket_hal"
 #define LOC_IPC_XTRA                   "/dev/socket/location/xtra/socket_xtra"
+#define LOC_IPC_DGNSS                  "/dev/socket/location/dgnss/socket_dgnss"
 
 #define SOCKET_DIR_LOCATION            "/dev/socket/location/"
 #define SOCKET_DIR_EHUB                "/dev/socket/location/ehub/"
