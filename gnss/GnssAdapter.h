@@ -44,7 +44,16 @@
 #define MAX_SATELLITES_IN_USE 12
 #define LOC_NI_NO_RESPONSE_TIME 20
 #define LOC_GPS_NI_RESPONSE_IGNORE 4
+/* On LE, don't need 10 seconds request call back behavior,
+   Define a large expire number, becuase timer will not
+   expire, the ODCPI register won't get notified every 10s.
+   Meanwhile, a LocTimer resource is located at constructor,
+   start a timer does not waste resource */
+#ifdef USE_GLIB
+#define ODCPI_EXPECTED_INJECTION_TIME_MS 0xFFFFFFFF
+#else
 #define ODCPI_EXPECTED_INJECTION_TIME_MS 10000
+#endif
 
 class GnssAdapter;
 

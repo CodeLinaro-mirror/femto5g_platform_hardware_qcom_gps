@@ -4438,13 +4438,11 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
                 mOdcpiRequestActive = true;
             }
             mOdcpiRequest = request;
-        // the request is being stopped, but allow timer to expire first
-        // before stopping the timer just in case more ODCPI requests come
-        // to avoid spamming more odcpi requests to the framework
         } else if (ODCPI_REQUEST_TYPE_STOP == request.type) {
             LOC_LOGd("request: type %d, isEmergency %d", request.type, request.isEmergencyMode);
             handleOdcpiRequestCb(request);
             mOdcpiRequestActive = false;
+            mOdcpiTimer.stop();
         } else {
             LOC_LOGE("Invalid ODCPI request type..");
         }
