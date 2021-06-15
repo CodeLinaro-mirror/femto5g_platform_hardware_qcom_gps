@@ -56,6 +56,30 @@ struct StartDgnssNtripParams {
     }
 };
 
+#ifdef USE_GLIB
+typedef uint32_t  NetConnectReqBitMask;
+#define NO_CONNECT_REQ        0X00
+#define XTRA_CONNECT_REQ      0X01
+#define NTRP_CONNECT_REQ      0X02
+
+class XtraSystemStatusObserver;
+
+class NetConnectTimer : public LocTimer {
+public:
+    NetConnectTimer(XtraSystemStatusObserver&  XtraSSO,
+                    const MsgTask& msgTask) :
+        mXtraSSO(XtraSSO), mMsgTask(msgTask) {}
+
+    ~NetConnectTimer() = default;
+
+    virtual void timeOutCallback() override;
+
+private:
+    XtraSystemStatusObserver&    mXtraSSO;
+    const MsgTask&               mMsgTask;
+};
+#endif
+
 class XtraSystemStatusObserver : public IDataItemObserver {
 public :
     // constructor & destructor
@@ -82,6 +106,11 @@ public :
     void restartDgnssSource();
     void stopDgnssSource();
     void updateNmeaToDgnssServer(const string& nmea);
+#ifdef USE_GLIB
+    void connectNetwork(NetConnectReqBitMask conMask);
+    void disconnectNetwork(NetConnectReqBitMask conMask);
+    BackhaulContext mBackhaulCtx;
+#endif
 
 private:
     IOsObserver*    mSystemStatusObsrvr;
@@ -98,14 +127,24 @@ private:
     shared_ptr<LocIpcSender> mSender;
     string mNtripParamsString;
 
+#ifdef USE_GLIB
+    NetConnectReqBitMask mNetReqMask;
+    NetConnectTimer mNetConnectTimer;
+    string mClientName;
+#endif
+
     class DelayLocTimer : public LocTimer {
         LocIpcSender& mSender;
     public:
         DelayLocTimer(LocIpcSender& sender) : mSender(sender) {}
-        void timeOutCallback() override {
+        virtual void timeOutCallback() override {
             LocIpc::send(mSender, (const uint8_t*)"halinit", sizeof("halinit"));
         }
     } mDelayLocTimer;
+
+#ifdef USE_GLIB
+friend class XtraIpcListener;
+#endif
 };
 
 #endif
