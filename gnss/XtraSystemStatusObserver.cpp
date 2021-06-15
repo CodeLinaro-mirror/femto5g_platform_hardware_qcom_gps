@@ -75,16 +75,24 @@ public:
             char clientName[30] = {0};
             uint16_t prefSub;
             char prefApnName[30] = {0};
+            string prefApn;
             uint16_t prefIpType;
             int ret = sscanf(data, "%*s %29s %u %29s %u",
                              clientName, &prefSub, prefApnName, &prefIpType);
-            BackhaulContext ctx = { clientName, prefSub,
-                    (0 == STRNCMP(prefApnName, "EMPTY")) ? "" : prefApnName, prefIpType };
+            if (0 == strcmp(prefApnName, "EMPTY")) {
+                prefApn = "";
+            } else {
+                prefApn = string(prefApnName);
+            }
+            mXSSO.mBackhaulCtx.clientName.assign(clientName);
+            mXSSO.mBackhaulCtx.prefSub = prefSub;
+            mXSSO.mBackhaulCtx.prefApn.assign(prefApn);
+            mXSSO.mBackhaulCtx.prefIpType = prefIpType;
 
             if (!STRNCMP(data, "connectBackhaul")) {
-                mSystemStatusObsrvr->connectBackhaul(ctx);
+                mXSSO.connectNetwork(XTRA_CONNECT_REQ);
             } else {
-                mSystemStatusObsrvr->disconnectBackhaul(ctx);
+                mXSSO.disconnectNetwork(XTRA_CONNECT_REQ);
             }
 #endif
         } else if (!STRNCMP(data, "requestStatus")) {
@@ -99,7 +107,7 @@ public:
                         mXSSO(xsso), mXtraStatusUpdated(xtraStatusUpdated) {}
                 inline void proc() const override {
                     mXSSO.onStatusRequested(mXtraStatusUpdated);
-                    /* SSR for DGnss Ntrip Source*/
+                    // SSR for DGnss Ntrip Source
                     mXSSO.restartDgnssSource();
                 }
             };
@@ -110,8 +118,56 @@ public:
     }
 };
 
+#ifdef USE_GLIB
+void NetConnectTimer::timeOutCallback() {
+
+    struct TimerMsg : public LocMsg {
+        XtraSystemStatusObserver&    mXtraSSO;
+
+        inline TimerMsg(XtraSystemStatusObserver&    XtraSSO) :
+            LocMsg(), mXtraSSO(XtraSSO) {}
+
+        inline virtual void proc() const {
+            mXtraSSO.connectNetwork(NO_CONNECT_REQ);
+        }
+    };
+
+    mMsgTask.sendMsg(new TimerMsg(mXtraSSO));
+}
+
+void XtraSystemStatusObserver::connectNetwork(NetConnectReqBitMask conMask) {
+    mNetReqMask |= conMask;
+    uint32_t CHECK_NETWORK_CONNECT_TIMER  = (10000);    //10s
+    LOC_LOGd("conMask 0x%x mNetReqMask 0x%x", conMask, mNetReqMask);
+    if (mConnections != ~0) {
+        LOC_LOGd("mConnections=%" PRIu64 " ", mConnections);
+    } else {
+        // mBackhaulCtx should be set by XtraClient
+        if (!mBackhaulCtx.clientName.empty()) {
+            mSystemStatusObsrvr->connectBackhaul(mBackhaulCtx);
+            if (mNetReqMask & XTRA_CONNECT_REQ) {
+                return;
+            }
+        }
+        mNetConnectTimer.start(CHECK_NETWORK_CONNECT_TIMER, false);
+    }
+}
+
+void XtraSystemStatusObserver::disconnectNetwork(NetConnectReqBitMask conMask) {
+    mNetReqMask &= ~conMask;
+    LOC_LOGd("conMask 0x%x mNetReqMask 0x%x", conMask, mNetReqMask);
+    if (NO_CONNECT_REQ == mNetReqMask) {
+        mSystemStatusObsrvr->disconnectBackhaul(mBackhaulCtx);
+    }
+}
+#endif
+
 XtraSystemStatusObserver::XtraSystemStatusObserver(IOsObserver* sysStatObs,
                                                    const MsgTask* msgTask) :
+#ifdef USE_GLIB
+        mNetConnectTimer(*this, *msgTask),
+        mNetReqMask(NO_CONNECT_REQ),
+#endif
         mSystemStatusObsrvr(sysStatObs), mMsgTask(msgTask),
         mGpsLock(-1), mConnections(~0), mXtraThrottle(true),
         mReqStatusReceived(false),
@@ -253,6 +309,10 @@ void XtraSystemStatusObserver::startDgnssSource(const StartDgnssNtripParams& par
     LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size());
     // make a local copy of the string for SSR
     mNtripParamsString.assign(std::move(s));
+
+#ifdef USE_GLIB
+    connectNetwork(NTRP_CONNECT_REQ);
+#endif
 }
 
 void XtraSystemStatusObserver::restartDgnssSource() {
@@ -269,6 +329,9 @@ void XtraSystemStatusObserver::stopDgnssSource() {
 
     const char s[] = "stopDgnssSource";
     LocIpc::send(*mSender, (const uint8_t*)s, strlen(s));
+#ifdef USE_GLIB
+    disconnectNetwork(NTRP_CONNECT_REQ);
+#endif
 }
 
 void XtraSystemStatusObserver::updateNmeaToDgnssServer(const string& nmea)

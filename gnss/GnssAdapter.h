@@ -599,6 +599,7 @@ public:
     void reportGGAToNtrip(const char* nmea);
     inline bool isDgnssNmeaRequired() { return mSendNmeaConsent &&
             mStartDgnssNtripParams.ntripParams.requiresNmeaLocation;}
+    void readPPENtripConfig();
 };
 
 #endif //GNSS_ADAPTER_H
