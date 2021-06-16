@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -178,6 +178,20 @@ public:
                 LOCATION_ERROR_INVALID_PARAMETER if any parameters in GnssNiResponse are invalid
                 LOCATION_ERROR_ID_UNKNOWN if id does not match a gnssNiCallback */
     virtual void gnssNiResponse(uint32_t id, GnssNiResponse response) override;
+
+    /* ================================== NETWORK PROVIDER =========================== */
+
+    /* enableNetworkProvider enables Network Provider */
+    virtual void enableNetworkProvider();
+
+    /* disableNetworkProvider disables Network Provider */
+    virtual void disableNetworkProvider();
+
+    /* startNetworkLocation start a single shot network location request */
+    virtual void startNetworkLocation(trackingCallback* callback);
+
+    /* stopNetworkLocation stop any ongoing network location request */
+    virtual void stopNetworkLocation(trackingCallback* callback);
 };
 
 typedef struct {
@@ -395,6 +409,19 @@ public:
                 LOCATION_ERROR_INVALID_PARAMETER if any parameters are invalid
     */
     virtual uint32_t configRobustLocation(bool enable, bool enableForE911) override;
+
+      /** @brief
+        Set the EULA opt-in status from system user. This is used as consent to
+        use network-based positioning.
+
+        @param
+        userConsnt: user agrees to use GTP service or not.
+
+        @return
+        A session id that will be returned in responseCallback to
+        match command with response.
+    */
+    virtual uint32_t setOptInStatus(bool userConsent);
 };
 
 #endif /* LOCATIONAPI_H */
