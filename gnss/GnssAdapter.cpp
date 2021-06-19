@@ -451,6 +451,16 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
         out.flags |= GNSS_LOCATION_INFO_CALIBRATION_STATUS_BIT;
         out.calibrationStatus = locationExtended.calibrationStatus;
     }
+
+    if (GPS_LOCATION_EXTENDED_HAS_LOC_OUTPUT_ENG_MASK & locationExtended.flags) {
+        out.flags |= GNSS_LOCATION_INFO_LOC_OUTPUT_ENG_MASK_BIT;
+        out.locOutputEngMask = locationExtended.locOutputEngMask;
+    }
+
+    if (GPS_LOCATION_EXTENDED_HAS_PROPAGATION_TIME_MS & locationExtended.flags) {
+        out.flags |= GNSS_LOCATION_INFO_PROPAGATION_TIME_MS_BIT;
+        out.propagationTimeMs = locationExtended.propagationTimeMs;
+    }
 }
 
 inline uint32_t

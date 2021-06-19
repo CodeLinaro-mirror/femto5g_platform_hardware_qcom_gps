@@ -162,7 +162,9 @@ typedef enum {
     GNSS_LOCATION_INFO_TIME_UNC_BIT                     = (1<<23),// valid time uncertainty
     GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT      = (1<<24),// number of SV used in position
     GNSS_LOCATION_INFO_CALIBRATION_CONFIDENCE_BIT       = (1<<25),// valid sensor cal confidence
-    GNSS_LOCATION_INFO_CALIBRATION_STATUS_BIT           = (1<<26) // valid sensor cal status
+    GNSS_LOCATION_INFO_CALIBRATION_STATUS_BIT           = (1<<26), // valid sensor cal status
+    GNSS_LOCATION_INFO_LOC_OUTPUT_ENG_MASK_BIT               = (1<<27), // valid output eng mask
+    GNSS_LOCATION_INFO_PROPAGATION_TIME_MS_BIT               = (1<<28), // valid propagation time ms
 } GnssLocationInfoFlagBits;
 
 typedef enum {
@@ -625,6 +627,13 @@ typedef enum {
     DR_GYRO_CALIBRATION_NEEDED  = (1<<4)
 } DrCalibrationStatusBits;
 
+typedef uint32_t PositioningEngineMask;
+typedef enum {
+    STANDARD_POSITIONING_ENGINE = (1 << 0),
+    DEAD_RECKONING_ENGINE       = (1 << 1),
+    PRECISE_POSITIONING_ENGINE  = (1 << 2)
+} PositioningEngineBits;
+
 typedef struct {
     size_t size;             // set to sizeof(Location)
     LocationFlagsMask flags; // bitwise OR of LocationFlagsBits to mark which params are valid
@@ -853,6 +862,8 @@ typedef struct {
     uint8_t calibrationConfidence;                // Sensor calibration confidence percent,
                                                   // in range of [0, 100]
     DrCalibrationStatusMask calibrationStatus;    // Sensor calibration status
+    PositioningEngineMask locOutputEngMask;       // loc output engine mask
+    uint32_t propagationTimeMs;                   // propagation time ms
     Location location;
 } GnssLocationInfoNotification;
 

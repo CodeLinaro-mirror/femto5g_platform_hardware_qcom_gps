@@ -343,6 +343,10 @@ typedef uint64_t GpsLocationExtendedFlags;
 #define GPS_LOCATION_EXTENDED_HAS_CALIBRATION_CONFIDENCE 0x400000000
 /** GpsLocationExtended has sensor calibration status */
 #define GPS_LOCATION_EXTENDED_HAS_CALIBRATION_STATUS     0x800000000
+/** GpsLocationExtended has loc eng output mask */
+#define GPS_LOCATION_EXTENDED_HAS_LOC_OUTPUT_ENG_MASK    0x1000000000
+/** GpsLocationExtended has propagation time ms */
+#define GPS_LOCATION_EXTENDED_HAS_PROPAGATION_TIME_MS    0x2000000000
 
 typedef uint32_t LocNavSolutionMask;
 /* Bitmask to specify whether SBAS ionospheric correction is used  */
@@ -657,6 +661,12 @@ typedef struct {
     /** Sensor calibration confidence percent. Range: 0 - 100 */
     uint8_t calibrationConfidence;
     DrCalibrationStatusMask calibrationStatus;
+    /** This field indicates the set of engines contribute to the
+     *  fix. <br/> */
+    PositioningEngineMask locOutputEngMask;
+    /** This field specifies the number of mill-seconds that this
+     *  position report is propagated from RAW PVT report. */
+    uint32_t propagationTimeMs;
 } GpsLocationExtended;
 
 enum loc_sess_status {
