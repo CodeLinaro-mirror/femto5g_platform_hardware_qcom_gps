@@ -257,6 +257,9 @@ class GnssAdapter : public LocAdapterBase {
     OdcpiRequestInfo mOdcpiRequest;
     void odcpiTimerExpire();
 
+    /* ==== Emergency Status =============================================================== */
+    std::function<void(bool)> mEsStatusCb;
+
     /* ==== DELETEAIDINGDATA =============================================================== */
     int64_t mLastDeleteAidingDataTime;
 
@@ -316,7 +319,6 @@ protected:
     void logLatencyInfo();
 
 public:
-
     GnssAdapter();
     virtual inline ~GnssAdapter() { }
 
@@ -522,6 +524,8 @@ public:
     (
         const std::unordered_map<LocationQwesFeatureType, bool> &featureMap
     );
+    void reportPdnTypeFromWds(int pdnType, AGpsExtType agpsType, std::string apnName,
+            AGpsBearerType bearerType);
 
     /* ======== UTILITIES ================================================================= */
     bool needReportForGnssClient(const UlpLocation& ulpLocation,
@@ -632,6 +636,9 @@ public:
                                                 const LocationCallbacks& callbacks);
     LocationCapabilitiesMask getCapabilities();
     void updateSystemPowerStateCommand(PowerStateType systemPowerState);
+    void setEsStatusCallbackCommand(std::function<void(bool)> esStatusCb);
+    inline void setEsStatusCallback (std::function<void(bool)> esStatusCb) {
+            mEsStatusCb = esStatusCb; }
 
     /*==== DGnss Usable Report Flag ====================================================*/
     inline void setDGnssUsableFLag(bool dGnssNeedReport) { mDGnssNeedReport = dGnssNeedReport;}
