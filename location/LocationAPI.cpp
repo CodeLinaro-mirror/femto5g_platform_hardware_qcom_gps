@@ -93,7 +93,8 @@ static bool needsGnssTrackingInfo(LocationCallbacks& locationCallbacks)
             locationCallbacks.gnssSvCb != nullptr ||
             locationCallbacks.gnssNmeaCb != nullptr ||
             locationCallbacks.gnssDataCb != nullptr ||
-            locationCallbacks.gnssMeasurementsCb != nullptr);
+            locationCallbacks.gnssMeasurementsCb != nullptr ||
+            locationCallbacks.gnssNHzMeasurementsCb != nullptr);
 }
 
 static bool isGnssClient(LocationCallbacks& locationCallbacks)
@@ -106,6 +107,7 @@ static bool isGnssClient(LocationCallbacks& locationCallbacks)
             locationCallbacks.gnssNmeaCb != nullptr ||
             locationCallbacks.gnssDataCb != nullptr ||
             locationCallbacks.gnssMeasurementsCb != nullptr ||
+            locationCallbacks.gnssNHzMeasurementsCb != nullptr ||
             locationCallbacks.locationSystemInfoCb != nullptr);
 }
 
@@ -665,27 +667,44 @@ LocationControlAPI::createInstance(LocationControlCallbacks& locationControlCall
     LocationControlAPI* controlAPI = NULL;
     pthread_mutex_lock(&gDataMutex);
 
-    if (nullptr != locationControlCallbacks.responseCb && NULL == gData.controlAPI) {
-        if (NULL == gData.gnssInterface && !gGnssLoadFailed) {
-            gData.gnssInterface =
-                (GnssInterface*)loadLocationInterface<GnssInterface,
-                    getGnssInterface>("libgnss.so", "getGnssInterface");
-            if (NULL == gData.gnssInterface) {
-                gGnssLoadFailed = true;
-                LOC_LOGW("%s:%d]: No gnss interface available", __func__, __LINE__);
-            } else {
-                gData.gnssInterface->initialize();
+    if (NULL != gData.controlAPI) {
+        controlAPI = gData.controlAPI;
+    } else {
+        if (nullptr != locationControlCallbacks.responseCb && NULL == gData.controlAPI) {
+            if (NULL == gData.gnssInterface && !gGnssLoadFailed) {
+                gData.gnssInterface =
+                    (GnssInterface*)loadLocationInterface<GnssInterface,
+                        getGnssInterface>("libgnss.so", "getGnssInterface");
+                if (NULL == gData.gnssInterface) {
+                    gGnssLoadFailed = true;
+                    LOC_LOGW("%s:%d]: No gnss interface available", __func__, __LINE__);
+                } else {
+                    gData.gnssInterface->initialize();
+                }
             }
-        }
-        if (NULL != gData.gnssInterface) {
-            gData.controlAPI = new LocationControlAPI();
-            gData.controlCallbacks = locationControlCallbacks;
-            gData.gnssInterface->setControlCallbacks(locationControlCallbacks);
-            controlAPI = gData.controlAPI;
+            if (NULL != gData.gnssInterface) {
+                gData.controlAPI = new LocationControlAPI();
+                gData.controlCallbacks = locationControlCallbacks;
+                gData.gnssInterface->setControlCallbacks(locationControlCallbacks);
+                controlAPI = gData.controlAPI;
+            }
         }
     }
 
     pthread_mutex_unlock(&gDataMutex);
+    return controlAPI;
+}
+
+
+LocationControlAPI*
+LocationControlAPI::getInstance()
+{
+    LocationControlAPI* controlAPI = NULL;
+
+    pthread_mutex_lock(&gDataMutex);
+    controlAPI = gData.controlAPI;
+    pthread_mutex_unlock(&gDataMutex);
+
     return controlAPI;
 }
 
@@ -953,4 +972,30 @@ uint32_t LocationControlAPI::configOutputNmeaTypes(
 
     pthread_mutex_unlock(&gDataMutex);
     return id;
+}
+
+void LocationControlAPI::powerStateEvent(PowerStateType powerState) {
+    pthread_mutex_lock(&gDataMutex);
+
+    LOC_LOGv("--> entry, powerState: %d", powerState);
+
+    if (NULL != gData.gnssInterface) {
+        gData.gnssInterface->updateSystemPowerState(powerState);
+    } else {
+        LOC_LOGv("No gnss interface available.");
+    }
+
+    if (NULL != gData.geofenceInterface) {
+            gData.geofenceInterface->updateSystemPowerState(powerState);
+        } else {
+            LOC_LOGv("No geofence interface available.");
+    }
+
+    if (NULL != gData.batchingInterface) {
+        gData.batchingInterface->updateSystemPowerState(powerState);
+    } else {
+        LOC_LOGv("No batching interface available.");
+    }
+
+    pthread_mutex_unlock(&gDataMutex);
 }
