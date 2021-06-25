@@ -26,6 +26,10 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_GnssAdapter"
 
@@ -52,6 +56,11 @@
 #define PROCESS_NAME_ENGINE_SERVICE "engine-service"
 
 using namespace loc_core;
+
+static int sUseZppInDBH = 0;
+static loc_param_s_type izatConfParamTable[] = {
+    {"USE_ZPP_IN_DBH", &sUseZppInDBH, nullptr,'n'}
+};
 
 /* Method to fetch status cb from loc_net_iface library */
 typedef AgpsCbInfo& (*LocAgpsGetAgpsCbInfo)(LocAgpsOpenResultCb openResultCb,
@@ -3736,6 +3745,7 @@ void GnssAdapter::initOdcpi(const OdcpiRequestCallback& callback,
         updateEvtMask(LOC_API_ADAPTER_BIT_REQUEST_WIFI,
                 LOC_REGISTRATION_MASK_ENABLED);
     }
+    UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izatConfParamTable);
 }
 
 void GnssAdapter::injectOdcpiCommand(const Location& location)
@@ -4643,4 +4653,41 @@ GnssAdapter::initEngHubProxy() {
 
     firstTime = false;
     return engHubLoadSuccessful;
+}
+
+bool GnssAdapter::reportZppBestAvailableFix(LocGpsLocation &zppLoc,
+            GpsLocationExtended &location_extended, LocPosTechMask tech_mask) {
+    if (sUseZppInDBH && mOdcpiRequest.isEmergencyMode && mOdcpiRequestActive
+            && zppLoc.timestamp != 0) {
+        LOC_LOGd("report valid ZPP fix to Flp client in DBH");
+
+        struct MsgReportZppPosition : public LocMsg {
+            GnssAdapter& mAdapter;
+            mutable UlpLocation mUlpLoc;
+            mutable GpsLocationExtended mLocationExtended;
+            enum loc_sess_status mStatus;
+
+            inline MsgReportZppPosition(GnssAdapter& adapter,
+                                        const LocGpsLocation& zppLoc,
+                                        const GpsLocationExtended& locationExtended,
+                                        enum loc_sess_status status,
+                                        LocPosTechMask techMask) :
+                    LocMsg(),
+                    mAdapter(adapter),
+                    mLocationExtended(locationExtended),
+                    mStatus(status) {
+                memset(&mUlpLoc, 0, sizeof(UlpLocation));
+                mUlpLoc.size = sizeof(mUlpLoc);
+                mUlpLoc.tech_mask = techMask;
+                memcpy(&(mUlpLoc.gpsLocation), &zppLoc, sizeof(LocGpsLocation));
+            }
+            inline virtual void proc() const {
+                mAdapter.reportPosition(mUlpLoc, mLocationExtended, mStatus, mUlpLoc.tech_mask);
+            }
+        };
+
+        sendMsg(new MsgReportZppPosition(*this,
+                    zppLoc, location_extended, LOC_SESS_INTERMEDIATE, tech_mask));
+    }
+    return true;
 }

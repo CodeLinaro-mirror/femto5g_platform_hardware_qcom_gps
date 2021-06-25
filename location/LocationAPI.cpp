@@ -25,6 +25,10 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_LocationAPI"
 
@@ -166,7 +170,7 @@ LocationAPI::createInstance(LocationCallbacks& locationCallbacks)
 
     pthread_mutex_lock(&gDataMutex);
 
-    if (isGnssClient(locationCallbacks)) {
+    if (isGnssClient(locationCallbacks) || isFlpClient(locationCallbacks)) {
         if (NULL == gData.gnssInterface && !gGnssLoadFailed) {
             gData.gnssInterface =
                 (GnssInterface*)loadLocationInterface<GnssInterface,
@@ -322,7 +326,7 @@ LocationAPI::updateCallbacks(LocationCallbacks& locationCallbacks)
 
     pthread_mutex_lock(&gDataMutex);
 
-    if (isGnssClient(locationCallbacks)) {
+    if (isGnssClient(locationCallbacks) || isFlpClient(locationCallbacks)) {
         if (NULL == gData.gnssInterface && !gGnssLoadFailed) {
             gData.gnssInterface =
                 (GnssInterface*)loadLocationInterface<GnssInterface,
@@ -394,7 +398,7 @@ LocationAPI::startTracking(TrackingOptions& trackingOptions)
         } else if (NULL != gData.gnssInterface && needsGnssTrackingInfo(it->second)) {
             id = gData.gnssInterface->startTracking(this, trackingOptions);
         } else if (NULL != gData.flpInterface) {
-            id = gData.flpInterface->startTracking(this, trackingOptions);
+            id = gData.gnssInterface->startTracking(this, trackingOptions);
         } else if (NULL != gData.gnssInterface) {
             id = gData.gnssInterface->startTracking(this, trackingOptions);
         } else {
