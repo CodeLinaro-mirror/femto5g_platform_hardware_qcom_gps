@@ -907,7 +907,7 @@ static void loc_nmea_generate_DTM(const LocLla &ref_lla,
     int lengthRemaining = bufSize;
     int length = 0;
     int datum_type;
-    char ref_datum[4] = {0};
+    char ref_datum[4] = {'W', '8', '4', '\0'};
     char local_datum[4] = {0};
     double lla_offset[3] = {0};
     char latHem, longHem;
@@ -918,20 +918,14 @@ static void loc_nmea_generate_DTM(const LocLla &ref_lla,
     datum_type = loc_get_datum_type();
     switch (datum_type) {
         case LOC_GNSS_DATUM_WGS84:
-            ref_datum[0] = 'W';
-            ref_datum[1] = '8';
-            ref_datum[2] = '4';
-            local_datum[0] = 'P';
-            local_datum[1] = '9';
-            local_datum[2] = '0';
-            break;
-        case LOC_GNSS_DATUM_PZ90:
-            ref_datum[0] = 'P';
-            ref_datum[1] = '9';
-            ref_datum[2] = '0';
             local_datum[0] = 'W';
             local_datum[1] = '8';
             local_datum[2] = '4';
+            break;
+        case LOC_GNSS_DATUM_PZ90:
+            local_datum[0] = 'P';
+            local_datum[1] = '9';
+            local_datum[2] = '0';
             break;
         default:
             break;
@@ -952,7 +946,7 @@ static void loc_nmea_generate_DTM(const LocLla &ref_lla,
         lla_offset[1] -= 360.0;
     }
     lla_offset[2] = local_lla.alt - ref_lla.alt;
-    if (lla_offset[0] > 0.0) {
+    if (lla_offset[0] >= 0.0) {
         latHem = 'N';
     } else {
         latHem = 'S';
@@ -1308,7 +1302,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
                                const LocationSystemInfo &systemInfo,
                                unsigned char generate_nmea,
                                bool custom_gga_fix_quality,
-                               std::vector<std::string> &nmeaArraystr)
+                               std::vector<std::string> &nmeaArraystr,
+                               int& indexOfGGA)
 {
     ENTRY_LOG();
 
@@ -1559,22 +1554,20 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             convert_WGS84_to_PZ90(ecef_w84, ecef_p90);
             convert_Ecef_to_Lla(ecef_p90, lla_p90);
 
+            ref_lla.lat = location.gpsLocation.latitude;
+            ref_lla.lon = location.gpsLocation.longitude;
+            ref_lla.alt = location.gpsLocation.altitude;
+
             switch (datum_type) {
                 case LOC_GNSS_DATUM_WGS84:
-                    ref_lla.lat = location.gpsLocation.latitude;
-                    ref_lla.lon = location.gpsLocation.longitude;
-                    ref_lla.alt = location.gpsLocation.altitude;
-                    local_lla.lat = lla_p90.lat / M_PI * 180.0;
-                    local_lla.lon = lla_p90.lon / M_PI * 180.0;
-                    local_lla.alt = lla_p90.alt;
-                    break;
-                case LOC_GNSS_DATUM_PZ90:
-                    ref_lla.lat = lla_p90.lat / M_PI * 180.0;
-                    ref_lla.lon = lla_p90.lon / M_PI * 180.0;
-                    ref_lla.alt = lla_p90.alt;
                     local_lla.lat = location.gpsLocation.latitude;
                     local_lla.lon = location.gpsLocation.longitude;
                     local_lla.alt = location.gpsLocation.altitude;
+                    break;
+                case LOC_GNSS_DATUM_PZ90:
+                    local_lla.lat = lla_p90.lat / M_PI * 180.0;
+                    local_lla.lon = lla_p90.lon / M_PI * 180.0;
+                    local_lla.alt = lla_p90.alt;
                     break;
                 default:
                     break;
@@ -2093,7 +2086,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         }
         // ------$--GGA-------
         nmeaArraystr.push_back(sentence_GGA);
-
+        indexOfGGA = static_cast<int>(nmeaArraystr.size() - 1);
     }
     //Send blank NMEA reports for non-final fixes
     else {

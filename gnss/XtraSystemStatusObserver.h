@@ -1,4 +1,4 @@
-/* Copyright (c) 2017, 2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017, 2020-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -40,6 +40,46 @@ using loc_core::IOsObserver;
 using loc_core::IDataItemObserver;
 using loc_core::IDataItemCore;
 
+struct StartDgnssNtripParams {
+    GnssNtripConnectionParams ntripParams;
+    string                    nmea;
+
+    void clear() {
+        ntripParams.hostNameOrIp.clear();
+        ntripParams.mountPoint.clear();
+        ntripParams.username.clear();
+        ntripParams.password.clear();
+        ntripParams.port = 0;
+        ntripParams.useSSL = false;
+        ntripParams.requiresNmeaLocation = false;
+        nmea.clear();
+    }
+};
+
+#ifdef USE_GLIB
+typedef uint32_t  NetConnectReqBitMask;
+#define NO_CONNECT_REQ        0X00
+#define XTRA_CONNECT_REQ      0X01
+#define NTRP_CONNECT_REQ      0X02
+
+class XtraSystemStatusObserver;
+
+class NetConnectTimer : public LocTimer {
+public:
+    NetConnectTimer(XtraSystemStatusObserver&  XtraSSO,
+                    const MsgTask& msgTask) :
+        mXtraSSO(XtraSSO), mMsgTask(msgTask) {}
+
+    ~NetConnectTimer() = default;
+
+    virtual void timeOutCallback() override;
+
+private:
+    XtraSystemStatusObserver&    mXtraSSO;
+    const MsgTask&               mMsgTask;
+};
+#endif
+
 class XtraSystemStatusObserver : public IDataItemObserver {
 public :
     // constructor & destructor
@@ -62,6 +102,15 @@ public :
     inline const MsgTask* getMsgTask() { return mMsgTask; }
     void subscribe(bool yes);
     bool onStatusRequested(int32_t xtraStatusUpdated);
+    void startDgnssSource(const StartDgnssNtripParams& params);
+    void restartDgnssSource();
+    void stopDgnssSource();
+    void updateNmeaToDgnssServer(const string& nmea);
+#ifdef USE_GLIB
+    void connectNetwork(NetConnectReqBitMask conMask);
+    void disconnectNetwork(NetConnectReqBitMask conMask);
+    BackhaulContext mBackhaulCtx;
+#endif
 
 private:
     IOsObserver*    mSystemStatusObsrvr;
@@ -76,15 +125,26 @@ private:
     bool mReqStatusReceived;
     bool mIsConnectivityStatusKnown;
     shared_ptr<LocIpcSender> mSender;
+    string mNtripParamsString;
+
+#ifdef USE_GLIB
+    NetConnectReqBitMask mNetReqMask;
+    NetConnectTimer mNetConnectTimer;
+    string mClientName;
+#endif
 
     class DelayLocTimer : public LocTimer {
         LocIpcSender& mSender;
     public:
         DelayLocTimer(LocIpcSender& sender) : mSender(sender) {}
-        void timeOutCallback() override {
+        virtual void timeOutCallback() override {
             LocIpc::send(mSender, (const uint8_t*)"halinit", sizeof("halinit"));
         }
     } mDelayLocTimer;
+
+#ifdef USE_GLIB
+friend class XtraIpcListener;
+#endif
 };
 
 #endif
