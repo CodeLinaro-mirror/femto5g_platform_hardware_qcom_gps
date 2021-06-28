@@ -126,7 +126,7 @@ public:
     void onGnssNmeaCb(GnssNmeaNotification gnssNmeaNotification) final;
     void onEngineLocationsInfoCb(uint32_t count,
             GnssLocationInfoNotification* engineLocationInfoNotification);
-
+    void onGnssRequestTimeCb() final;
 
     void onStartTrackingCb(LocationError error) final;
     void onStopTrackingCb(LocationError error) final;
