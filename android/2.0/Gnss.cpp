@@ -322,6 +322,11 @@ Return<bool> Gnss::injectLocation(double latitudeDegrees,
 
 Return<bool> Gnss::injectTime(int64_t timeMs, int64_t timeReferenceMs,
                               int32_t uncertaintyMs) {
+    ENTRY_LOG_CALLFLOW();
+    const GnssInterface* gnssInterface = getGnssInterface();
+    if ((nullptr != gnssInterface) && (gnssInterface->isSS5HWEnabled())) {
+        gnssInterface->injectTime(timeMs, timeReferenceMs, uncertaintyMs);
+    }
     return true;
 }
 
@@ -501,6 +506,7 @@ Return<bool> Gnss::injectBestLocation(const GnssLocation& gnssLocation) {
     if (nullptr != gnssInterface) {
         Location location = {};
         convertGnssLocation(gnssLocation, location);
+        location.techMask |= LOCATION_TECHNOLOGY_HYBRID_BIT;
         gnssInterface->odcpiInject(location);
     }
     return true;

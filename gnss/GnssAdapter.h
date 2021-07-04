@@ -51,6 +51,7 @@
 #define LOC_GPS_NI_RESPONSE_IGNORE 4
 #define ODCPI_EXPECTED_INJECTION_TIME_MS 10000
 #define DELETE_AIDING_DATA_EXPECTED_TIME_MS 5000
+#define IS_SS5_HW_ENABLED (1)
 
 class GnssAdapter;
 
@@ -184,12 +185,7 @@ class GnssReportLoggerUtil {
 public:
     typedef void (*LogGnssLatency)(const GnssLatencyInfo& gnssLatencyMeasInfo);
 
-    GnssReportLoggerUtil() : mLogLatency(nullptr) {
-        const char* libname = "liblocdiagiface.so";
-        void* libHandle = nullptr;
-        mLogLatency = (LogGnssLatency)dlGetSymFromLib(libHandle, libname, "LogGnssLatency");
-    }
-
+    GnssReportLoggerUtil();
     bool isLogEnabled();
     void log(const GnssLatencyInfo& gnssLatencyMeasInfo);
 
@@ -262,6 +258,9 @@ class GnssAdapter : public LocAdapterBase {
     OdcpiRequestInfo mOdcpiRequest;
     void odcpiTimerExpire();
 
+    /* ==== Emergency Status =============================================================== */
+    std::function<void(bool)> mEsStatusCb;
+
     /* ==== DELETEAIDINGDATA =============================================================== */
     int64_t mLastDeleteAidingDataTime;
 
@@ -316,12 +315,11 @@ protected:
 
     /* ==== CLIENT ========================================================================= */
     virtual void updateClientsEventMask();
-    virtual void stopClientSessions(LocationAPI* client);
+    virtual void stopClientSessions(LocationAPI* client, bool eraseSession = true);
     inline void setNmeaReportRateConfig();
     void logLatencyInfo();
 
 public:
-
     GnssAdapter();
     virtual inline ~GnssAdapter() { }
 
@@ -385,6 +383,8 @@ public:
     void configLeverArm(uint32_t sessionId, const LeverArmConfigInfo& configInfo);
     void configRobustLocation(uint32_t sessionId, bool enable, bool enableForE911);
     void configMinGpsWeek(uint32_t sessionId, uint16_t minGpsWeek);
+    inline bool isSS5HWEnabled()
+    { return ((mContext != NULL) && (IS_SS5_HW_ENABLED == mContext->mGps_conf.GNSS_DEPLOYMENT)); }
 
     /* ==== NI ============================================================================= */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
@@ -527,6 +527,9 @@ public:
     (
         const std::unordered_map<LocationQwesFeatureType, bool> &featureMap
     );
+    void reportPdnTypeFromWds(int pdnType, AGpsExtType agpsType, std::string apnName,
+            AGpsBearerType bearerType);
+    virtual bool requestTime();
 
     /* ======== UTILITIES ================================================================= */
     bool needReportForGnssClient(const UlpLocation& ulpLocation,
@@ -558,16 +561,24 @@ public:
             mNfwCb(notification);
         }
     }
-    inline bool getE911State(void) {
+    void updatePowerState(PowerStateType powerState);
+    inline bool getE911State(GnssNiType niType) {
         if (NULL != mIsE911Session) {
             return mIsE911Session();
+        } else {
+            /* On LE targets(mIsE911Session is NULL) with old modem
+            and when (!LOC_SUPPORTED_FEATURE_LOCATION_PRIVACY) there is no way of
+            knowing for GNSS_NI_TYPE_EMERGENCY_SUPL we are "in emergency",
+            so we treat all emergency SUPL sessions as being "in emergency" so
+            the session will be auto-accepted */
+            return (!ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_LOCATION_PRIVACY) &&
+                    GNSS_NI_TYPE_EMERGENCY_SUPL == niType);
         }
-        return false;
     }
 
     void updateSystemPowerState(PowerStateType systemPowerState);
     void reportSvPolynomial(const GnssSvPolynomial &svPolynomial);
-
+    void requestTimeInternal();
 
     std::vector<double> parseDoublesString(char* dString);
     void reportGnssAntennaInformation(const antennaInfoCb antennaInfoCallback);
@@ -629,6 +640,9 @@ public:
                                                 const LocationCallbacks& callbacks);
     LocationCapabilitiesMask getCapabilities();
     void updateSystemPowerStateCommand(PowerStateType systemPowerState);
+    void setEsStatusCallbackCommand(std::function<void(bool)> esStatusCb);
+    inline void setEsStatusCallback (std::function<void(bool)> esStatusCb) {
+            mEsStatusCb = esStatusCb; }
 
     /*==== DGnss Usable Report Flag ====================================================*/
     inline void setDGnssUsableFLag(bool dGnssNeedReport) { mDGnssNeedReport = dGnssNeedReport;}
