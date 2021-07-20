@@ -112,6 +112,13 @@ public:
         (void) dreConfig;
         return false;
     }
+
+    inline virtual bool configEngineIntegrityRisk(
+            PositioningEngineMask engType, uint32_t integrityRisk) {
+        (void) engType;
+        (void) integrityRisk;
+        return false;
+    }
 };
 
 typedef std::function<void(int count, EngineLocationInfo* locationArr)>
