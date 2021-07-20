@@ -265,6 +265,7 @@ class GnssAdapter : public LocAdapterBase {
     std::queue<GnssLatencyInfo> mGnssLatencyInfoQueue;
     GnssReportLoggerUtil mLogger;
     bool mDreIntEnabled;
+    bool mPpeEnabled;
 
     /* === Misc callback from QMI LOC API ============================================== */
     GnssEnergyConsumedCallback mGnssEnergyConsumedCb;
@@ -446,6 +447,8 @@ public:
     uint32_t configEngineRunStateCommand(PositioningEngineMask engType,
                                          LocEngineRunState engState);
     uint32_t configOutputNmeaTypesCommand(GnssNmeaTypesMask enabledNmeaTypes);
+    uint32_t configEngineIntegrityRiskCommand(PositioningEngineMask engType,
+                                              uint32_t integrityRisk);
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */

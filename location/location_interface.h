@@ -98,6 +98,7 @@ struct GnssInterface {
     uint32_t (*configEngineRunState)(PositioningEngineMask engType,
                                      LocEngineRunState engState);
     uint32_t (*configOutputNmeaTypes)(GnssNmeaTypesMask enabledNmeaTypes);
+    uint32_t (*configEngineIntegrityRisk)(PositioningEngineMask engineType, uint32_t integrityRisk);
 };
 
 struct FlpInterface {
