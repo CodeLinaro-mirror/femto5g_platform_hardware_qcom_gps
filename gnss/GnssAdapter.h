@@ -234,6 +234,7 @@ class GnssAdapter : public LocAdapterBase {
     /* === Misc ===================================================================== */
     BlockCPIInfo mBlockCPIInfo;
     bool mDreIntEnabled;
+    bool mPpeEnabled;
 
     /* === Misc callback from QMI LOC API ============================================== */
     GnssEnergyConsumedCallback mGnssEnergyConsumedCb;
@@ -405,6 +406,8 @@ public:
     uint32_t configMinGpsWeekCommand(uint16_t minGpsWeek);
     uint32_t configDeadReckoningEngineParamsCommand(const DeadReckoningEngineConfig& dreConfig);
     uint32_t configOutputNmeaTypesCommand(GnssNmeaTypesMask enabledNmeaTypes);
+    uint32_t configEngineIntegrityRiskCommand(PositioningEngineMask engType,
+                                              uint32_t integrityRisk);
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */

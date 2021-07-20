@@ -88,6 +88,7 @@ static uint32_t configDeadReckoningEngineParams(const DeadReckoningEngineConfig&
 static uint32_t gnssUpdateSecondaryBandConfig(const GnssSvTypeConfig& secondaryBandConfig);
 static uint32_t gnssGetSecondaryBandConfig();
 static uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes);
+static uint32_t configEngineIntegrityRisk(PositioningEngineMask engType, uint32_t integrityRisk);
 
 static const GnssInterface gGnssInterface = {
     sizeof(GnssInterface),
@@ -135,6 +136,7 @@ static const GnssInterface gGnssInterface = {
     gnssUpdateSecondaryBandConfig,
     gnssGetSecondaryBandConfig,
     configOutputNmeaTypes,
+    configEngineIntegrityRisk,
 };
 
 #ifndef DEBUG_X86
@@ -473,6 +475,15 @@ static uint32_t gnssGetSecondaryBandConfig(){
 static uint32_t configOutputNmeaTypes (GnssNmeaTypesMask enabledNmeaTypes) {
     if (NULL != gGnssAdapter) {
         return gGnssAdapter->configOutputNmeaTypesCommand(enabledNmeaTypes);
+    } else {
+        return 0;
+    }
+}
+
+static uint32_t configEngineIntegrityRisk(PositioningEngineMask engType,
+                                          uint32_t integrityRisk) {
+    if (NULL != gGnssAdapter) {
+        return gGnssAdapter->configEngineIntegrityRiskCommand(engType, integrityRisk);
     } else {
         return 0;
     }
