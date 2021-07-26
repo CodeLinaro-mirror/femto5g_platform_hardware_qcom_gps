@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Not a Contribution
+ *
  * Copyright (C) 2010 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -99,13 +102,15 @@ typedef uint16_t LocGpsLocationFlags;
 /** LocGpsLocation has valid accuracy. */
 #define LOC_GPS_LOCATION_HAS_ACCURACY   0x0010
 /** LocGpsLocation has valid vertical uncertainity */
-#define LOC_GPS_LOCATION_HAS_VERT_UNCERTAINITY   0x0040
-/** LocGpsLocation has valid spoof mask */
-#define LOC_GPS_LOCATION_HAS_SPOOF_MASK   0x0080
+#define LOC_GPS_LOCATION_HAS_VERT_UNCERTAINITY   0x0020
 /** LocGpsLocation has valid speed accuracy */
-#define LOC_GPS_LOCATION_HAS_SPEED_ACCURACY   0x0100
+#define LOC_GPS_LOCATION_HAS_SPEED_ACCURACY   0x0040
 /** LocGpsLocation has valid bearing accuracy */
-#define LOC_GPS_LOCATION_HAS_BEARING_ACCURACY 0x0200
+#define LOC_GPS_LOCATION_HAS_BEARING_ACCURACY 0x0080
+/** LocGpsLocation has valid spoof mask */
+#define LOC_GPS_LOCATION_HAS_SPOOF_MASK   0x0100
+/** Location has valid source information. */
+#define LOC_GPS_LOCATION_HAS_SOURCE_INFO   0x0400
 
 /** Spoof mask in LocGpsLocation */
 typedef uint32_t LocGpsSpoofMask;
@@ -181,9 +186,9 @@ typedef uint16_t LocAGpsSetIDType;
 
 typedef uint16_t LocApnIpType;
 #define LOC_APN_IP_INVALID          0
-#define LOC_APN_IP_IPV4             1
-#define LOC_APN_IP_IPV6             2
-#define LOC_APN_IP_IPV4V6           3
+#define LOC_APN_IP_IPV4             4
+#define LOC_APN_IP_IPV6             6
+#define LOC_APN_IP_IPV4V6           10
 
 /**
  * String length constants

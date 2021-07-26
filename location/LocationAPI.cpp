@@ -41,7 +41,6 @@ typedef const FlpInterface* (getFlpInterface)();
 typedef const GeofenceInterface* (getGeofenceInterface)();
 
 // GTP services
-typedef uint32_t (setOptInStatusGetter)(bool userConsent, responseCallback* callback);
 typedef void (enableProviderGetter)();
 typedef void (disableProviderGetter)();
 typedef void (getSingleNetworkLocationGetter)(trackingCallback* callback);
@@ -101,7 +100,6 @@ static bool needsGnssTrackingInfo(LocationCallbacks& locationCallbacks)
 static bool isGnssClient(LocationCallbacks& locationCallbacks)
 {
     return (locationCallbacks.gnssNiCb != nullptr ||
-            locationCallbacks.trackingCb != nullptr ||
             locationCallbacks.gnssLocationInfoCb != nullptr ||
             locationCallbacks.engineLocationsInfoCb != nullptr ||
             locationCallbacks.gnssSvCb != nullptr ||
@@ -114,8 +112,8 @@ static bool isGnssClient(LocationCallbacks& locationCallbacks)
 
 static bool isFlpClient(LocationCallbacks& locationCallbacks)
 {
-    return (locationCallbacks.trackingCb != nullptr ||
-            locationCallbacks.batchingCb != nullptr);
+    return (locationCallbacks.batchingCb != nullptr ||
+            (locationCallbacks.trackingCb != nullptr && !isGnssClient(locationCallbacks)));
 }
 
 static bool isGeofenceClient(LocationCallbacks& locationCallbacks)
@@ -944,16 +942,17 @@ uint32_t LocationControlAPI::configEngineRunState(
 }
 
 uint32_t LocationControlAPI::setOptInStatus(bool userConsent) {
-    void* libHandle = nullptr;
-    uint32_t sessionId = 0;
-    setOptInStatusGetter* setter = (setOptInStatusGetter*)dlGetSymFromLib(libHandle,
-            "liblocationservice_glue.so", "setOptInStatus");
-    if (setter != nullptr) {
-        sessionId = (*setter)(userConsent, &gData.controlCallbacks.responseCb);
+    uint32_t id = 0;
+    pthread_mutex_lock(&gDataMutex);
+
+    if (gData.gnssInterface != NULL) {
+        id = gData.gnssInterface->setOptInStatus(userConsent);
     } else {
-        LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
+        LOC_LOGe("No gnss interface available for Location Control API");
     }
-    return sessionId;
+
+    pthread_mutex_unlock(&gDataMutex);
+    return id;
 }
 
 uint32_t LocationControlAPI::configOutputNmeaTypes(

@@ -163,24 +163,23 @@ typedef std::function<void(
 )> QDgnssSessionActiveCb;
 
 struct CdfwInterface {
+    void (*startDgnssApiService)(const MsgTask& msgTask);
     QDgnssListenerHDL (*createUsableReporter)(
             QDgnssSessionActiveCb sessionActiveCb);
-
     void (*destroyUsableReporter)(QDgnssListenerHDL handle);
-
     void (*reportUsable)(QDgnssListenerHDL handle, bool usable);
 };
+
+typedef uint16_t  DGnssStateBitMask;
+#define DGNSS_STATE_ENABLE_NTRIP_COMMAND      0X01
+#define DGNSS_STATE_NO_NMEA_PENDING           0X02
+#define DGNSS_STATE_NTRIP_SESSION_STARTED     0X04
 
 class GnssReportLoggerUtil {
 public:
     typedef void (*LogGnssLatency)(const GnssLatencyInfo& gnssLatencyMeasInfo);
 
-    GnssReportLoggerUtil() : mLogLatency(nullptr) {
-        const char* libname = "liblocdiagiface.so";
-        void* libHandle = nullptr;
-        mLogLatency = (LogGnssLatency)dlGetSymFromLib(libHandle, libname, "LogGnssLatency");
-    }
-
+    GnssReportLoggerUtil();
     bool isLogEnabled();
     void log(const GnssLatencyInfo& gnssLatencyMeasInfo);
 
@@ -282,8 +281,15 @@ class GnssAdapter : public LocAdapterBase {
     inline void setNmeaReportRateConfig();
     void logLatencyInfo();
 
-public:
+    /*==== DGnss Ntrip Source ==========================================================*/
+    StartDgnssNtripParams   mStartDgnssNtripParams;
+    bool    mSendNmeaConsent;
+    DGnssStateBitMask   mDgnssState;
+    void checkUpdateDgnssNtrip(bool isLocationValid);
+    void stopDgnssNtrip();
+    uint64_t   mDgnssLastNmeaBootTimeMilli;
 
+public:
     GnssAdapter();
     virtual inline ~GnssAdapter() { }
 
@@ -444,6 +450,7 @@ public:
     void reportResponse(LocationError err, uint32_t sessionId);
     void reportResponse(size_t count, LocationError* errs, uint32_t* ids);
     /* ======== UTILITIES ================================================================== */
+    void initCDFWServiceCommand();
     LocationControlCallbacks& getControlCallbacks() { return mControlCallbacks; }
     void setControlCallbacks(const LocationControlCallbacks& controlCallbacks)
     { mControlCallbacks = controlCallbacks; }
@@ -452,8 +459,8 @@ public:
     virtual bool isInSession() { return !mTrackingSessions.empty(); }
     void initDefaultAgps();
     bool initEngHubProxy();
-    void initDGnssUsableReporter();
     void odcpiTimerExpireEvent();
+    void initCDFWService();
 
     /* ==== REPORTS ======================================================================== */
     /* ======== EVENTS ====(Called from QMI/EngineHub Thread)===================================== */
@@ -495,6 +502,8 @@ public:
     (
         const std::unordered_map<LocationQwesFeatureType, bool> &featureMap
     );
+    void reportPdnTypeFromWds(int pdnType, AGpsExtType agpsType, std::string apnName,
+            AGpsBearerType bearerType);
 
     /* ======== UTILITIES ================================================================= */
     bool needReport(const UlpLocation& ulpLocation,
@@ -521,11 +530,18 @@ public:
     void saveGnssEnergyConsumedCallback(GnssEnergyConsumedCallback energyConsumedCb);
     void reportLocationSystemInfo(const LocationSystemInfo & locationSystemInfo);
     void updatePowerState(PowerStateType powerState);
-    inline bool getE911State(void) {
+    inline bool getE911State(GnssNiType niType) {
         if (NULL != mIsE911Session) {
             return mIsE911Session();
+        } else {
+            /* On LE targets(mIsE911Session is NULL) with old modem
+            and when (!LOC_SUPPORTED_FEATURE_LOCATION_PRIVACY) there is no way of
+            knowing for GNSS_NI_TYPE_EMERGENCY_SUPL we are "in emergency",
+            so we treat all emergency SUPL sessions as being "in emergency" so
+            the session will be auto-accepted */
+            return (!ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_LOCATION_PRIVACY) &&
+                    GNSS_NI_TYPE_EMERGENCY_SUPL == niType);
         }
-        return false;
     }
 
     /*======== GNSSDEBUG ================================================================*/
@@ -573,6 +589,20 @@ public:
 
     /*==== DGnss Usable Report Flag ====================================================*/
     inline void setDGnssUsableFLag(bool dGnssNeedReport) { mDGnssNeedReport = dGnssNeedReport;}
+    inline bool isNMEAPrintEnabled() {
+       return ((mContext != NULL) && (0 != mContext->mGps_conf.ENABLE_NMEA_PRINT));
+    }
+
+    /*==== DGnss Ntrip Source ==========================================================*/
+    void updateNTRIPGGAConsentCommand(bool consentAccepted) { mSendNmeaConsent = consentAccepted; }
+    void enablePPENtripStreamCommand(const GnssNtripConnectionParams& params, bool enableRTKEngine);
+    void disablePPENtripStreamCommand();
+    void handleEnablePPENtrip(const GnssNtripConnectionParams& params);
+    void handleDisablePPENtrip();
+    void reportGGAToNtrip(const char* nmea);
+    inline bool isDgnssNmeaRequired() { return mSendNmeaConsent &&
+            mStartDgnssNtripParams.ntripParams.requiresNmeaLocation;}
+    void readPPENtripConfig();
 };
 
 #endif //GNSS_ADAPTER_H

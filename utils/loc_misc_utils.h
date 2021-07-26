@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, 2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014, 2020-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -159,6 +159,23 @@ SIDE EFFECTS
    N/A
 ===========================================================================*/
 uint64_t getQTimerFreq();
+
+/*===========================================================================
+FUNCTION getBootTimeMilliSec
+
+DESCRIPTION
+   This function is used to get boot time in milliseconds.
+
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+    uint64_t boot time in milliseconds
+
+SIDE EFFECTS
+   N/A
+===========================================================================*/
+uint64_t getBootTimeMilliSec();
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2018, 2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2018, 2020-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -155,6 +155,9 @@ public:
                      uint32_t length, int32_t msgId = -1);
 
 private:
+    static std::string generateThreadName(const std::string& recverName);
+
+private:
     LocThread mThread;
     LocIpcRunnable *mRunnable;
 };
@@ -210,7 +213,7 @@ class Sock {
                      int sid, int flags, struct sockaddr *srcAddr, socklen_t *addrlen) const;
 public:
     int mSid;
-    inline Sock(int sid, const uint32_t maxTxSize = 8192) : mMaxTxSize(maxTxSize), mSid(sid) {}
+    inline Sock(int sid, const uint32_t maxTxSize = 7168) : mMaxTxSize(maxTxSize), mSid(sid) {}
     inline ~Sock() { close(); }
     inline bool isValid() const { return -1 != mSid; }
     ssize_t send(const void *buf, size_t len, int flags, const struct sockaddr *destAddr,
