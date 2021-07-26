@@ -76,8 +76,6 @@ typedef struct loc_sv_cache_info_s
     float vdop;
 } loc_sv_cache_info;
 
-static loc_sv_cache_info sv_cache_info;
-
 /*===========================================================================
 FUNCTION    convert_Lla_to_Ecef
 
@@ -215,6 +213,7 @@ SIDE EFFECTS
 
 ===========================================================================*/
 static loc_nmea_sv_meta* loc_nmea_sv_meta_init(loc_nmea_sv_meta& sv_meta,
+                                               loc_sv_cache_info& sv_cache_info,
                                                GnssSvType svType,
                                                bool needCombine)
 {
@@ -917,6 +916,20 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         utcMSeconds = locationExtended.gpsTime.gpsTimeOfWeekMs % 1000;
     }
 
+    loc_sv_cache_info sv_cache_info = {};
+
+    if (GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA & locationExtended.flags) {
+        sv_cache_info.gps_used_mask =
+                (uint32_t)locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask;
+        sv_cache_info.glo_used_mask =
+                (uint32_t)locationExtended.gnss_sv_used_ids.glo_sv_used_ids_mask;
+        sv_cache_info.gal_used_mask =
+                (uint32_t)locationExtended.gnss_sv_used_ids.gal_sv_used_ids_mask;
+        sv_cache_info.qzss_used_mask =
+                (uint32_t)locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask;
+        sv_cache_info.bds_used_mask =
+                (uint32_t)locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask;
+    }
     if (generate_nmea) {
         char talker[3] = {'G', 'P', '\0'};
         uint32_t svUsedCount = 0;
@@ -927,7 +940,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         // -------------------
 
         count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
-                loc_nmea_sv_meta_init(sv_meta, GNSS_SV_TYPE_GPS, true), nmeaArraystr);
+                        loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_GPS, true),
+                        nmeaArraystr);
         if (count > 0)
         {
             svUsedCount += count;
@@ -940,7 +954,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         // -------------------
 
         count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
-                loc_nmea_sv_meta_init(sv_meta, GNSS_SV_TYPE_GLONASS, true), nmeaArraystr);
+                        loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_GLONASS, true),
+                        nmeaArraystr);
         if (count > 0)
         {
             svUsedCount += count;
@@ -953,7 +968,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         // -------------------
 
         count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
-                loc_nmea_sv_meta_init(sv_meta, GNSS_SV_TYPE_GALILEO, true), nmeaArraystr);
+                        loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_GALILEO, true),
+                        nmeaArraystr);
         if (count > 0)
         {
             svUsedCount += count;
@@ -966,7 +982,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         // --------------------------
 
         count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
-                loc_nmea_sv_meta_init(sv_meta, GNSS_SV_TYPE_QZSS, false), nmeaArraystr);
+                        loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_QZSS, false),
+                        nmeaArraystr);
         if (count > 0)
         {
             svUsedCount += count;
@@ -977,7 +994,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         // ---$PQGSA/$GNGSA (BEIDOU)---
         // ----------------------------
         count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
-                loc_nmea_sv_meta_init(sv_meta, GNSS_SV_TYPE_BEIDOU, false), nmeaArraystr);
+                        loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_BEIDOU, false),
+                        nmeaArraystr);
         if (count > 0)
         {
             svUsedCount += count;
@@ -1375,12 +1393,6 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         // ------$--GGA-------
         nmeaArraystr.push_back(sentence_GGA);
 
-        // clear the cache so they can't be used again
-        sv_cache_info.gps_used_mask = 0;
-        sv_cache_info.glo_used_mask = 0;
-        sv_cache_info.gal_used_mask = 0;
-        sv_cache_info.qzss_used_mask = 0;
-        sv_cache_info.bds_used_mask = 0;
     }
     //Send blank NMEA reports for non-final fixes
     else {
@@ -1443,20 +1455,9 @@ void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
     int sentenceCount = 0;
     int sentenceNumber = 1;
     int svNumber = 1;
+    loc_sv_cache_info sv_cache_info = {};
 
     //Count GPS SVs for saparating GPS from GLONASS and throw others
-
-    sv_cache_info.gps_used_mask = 0;
-    sv_cache_info.glo_used_mask = 0;
-    sv_cache_info.gal_used_mask = 0;
-    sv_cache_info.qzss_used_mask = 0;
-    sv_cache_info.bds_used_mask = 0;
-
-    sv_cache_info.gps_count = 0;
-    sv_cache_info.glo_count = 0;
-    sv_cache_info.gal_count = 0;
-    sv_cache_info.qzss_count = 0;
-    sv_cache_info.bds_count = 0;
     for(svNumber=1; svNumber <= svCount; svNumber++) {
         if (GNSS_SV_TYPE_GPS == svNotify.gnssSvs[svNumber - 1].type)
         {
@@ -1526,35 +1527,38 @@ void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
     // ------------------
 
     loc_nmea_generate_GSV(svNotify, sentence, sizeof(sentence),
-            loc_nmea_sv_meta_init(sv_meta, GNSS_SV_TYPE_GPS, false), nmeaArraystr);
+            loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_GPS, false), nmeaArraystr);
 
     // ------------------
     // ------$GLGSV------
     // ------------------
 
     loc_nmea_generate_GSV(svNotify, sentence, sizeof(sentence),
-            loc_nmea_sv_meta_init(sv_meta, GNSS_SV_TYPE_GLONASS, false), nmeaArraystr);
+            loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_GLONASS, false),
+            nmeaArraystr);
 
     // ------------------
     // ------$GAGSV------
     // ------------------
 
     loc_nmea_generate_GSV(svNotify, sentence, sizeof(sentence),
-            loc_nmea_sv_meta_init(sv_meta, GNSS_SV_TYPE_GALILEO, false), nmeaArraystr);
+            loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_GALILEO, false),
+            nmeaArraystr);
 
     // -------------------------
     // ------$PQGSV (QZSS)------
     // -------------------------
 
     loc_nmea_generate_GSV(svNotify, sentence, sizeof(sentence),
-            loc_nmea_sv_meta_init(sv_meta, GNSS_SV_TYPE_QZSS, false), nmeaArraystr);
+            loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_QZSS, false), nmeaArraystr);
 
     // ---------------------------
     // ------$PQGSV (BEIDOU)------
     // ---------------------------
 
     loc_nmea_generate_GSV(svNotify, sentence, sizeof(sentence),
-            loc_nmea_sv_meta_init(sv_meta, GNSS_SV_TYPE_BEIDOU, false), nmeaArraystr);
+            loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_BEIDOU, false),
+            nmeaArraystr);
 
     EXIT_LOG(%d, 0);
 }
