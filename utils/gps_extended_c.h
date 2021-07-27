@@ -467,6 +467,7 @@ typedef uint32_t GnssAdditionalSystemInfoMask;
 #define GAL_SV_PRN_MAX      336
 #define NAVIC_SV_PRN_MIN    401
 #define NAVIC_SV_PRN_MAX    414
+#define GLO_SV_PRN_SLOT_UNKNOWN 255
 
 /* Checking svIdOneBase can be set to the corresponding bit in mask */
 #define svFitsMask(mask, svIdOneBase)                 \
@@ -474,6 +475,8 @@ typedef uint32_t GnssAdditionalSystemInfoMask;
 /* Setting svIdOneBase specific bit in the mask if the bit offset fits */
 #define setSvMask(mask, svIdOneBase)                  \
     if (svFitsMask(mask, svIdOneBase)) mask |= (1ULL << ((svIdOneBase) - 1))
+
+#define isGloSlotUnknown(val) ((val) == GLO_SV_PRN_SLOT_UNKNOWN)
 
 typedef enum {
     LOC_RELIABILITY_NOT_SET = 0,
@@ -2295,13 +2298,6 @@ typedef void (*LocAgpsOpenResultCb)(bool isSuccess, AGpsExtType agpsType, const 
         AGpsBearerType bearerType, void* userDataPtr);
 
 typedef void (*LocAgpsCloseResultCb)(bool isSuccess, AGpsExtType agpsType, void* userDataPtr);
-
-enum PowerStateType {
-    POWER_STATE_UNKNOWN = 0,
-    POWER_STATE_SUSPEND = 1,
-    POWER_STATE_RESUME  = 2,
-    POWER_STATE_SHUTDOWN = 3
-};
 
 /* Shared resources of LocIpc */
 #define LOC_IPC_HAL                    "/dev/socket/location/socket_hal"

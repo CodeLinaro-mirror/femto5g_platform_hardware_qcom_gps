@@ -1107,6 +1107,7 @@ typedef struct {
     GnssSvOptionsMask gnssSvOptionsMask; // Bitwise OR of GnssSvOptionsBits
     float carrierFrequencyHz; // carrier frequency of the signal tracked
     GnssSignalTypeMask gnssSignalTypeMask; // Specifies GNSS signal type
+    uint16_t  gloFrequency; // GLONASS Frequency channel number
 } GnssSv;
 
 struct GnssConfigSetAssistanceServer {
@@ -1620,5 +1621,12 @@ typedef struct {
     engineLocationsInfoCallback engineLocationsInfoCb;     // optional
     gnssRequestTimeCallback gnssRequestTimeCb;       // optional
 } LocationCallbacks;
+
+enum PowerStateType {
+    POWER_STATE_UNKNOWN = 0,
+    POWER_STATE_SUSPEND = 1,
+    POWER_STATE_RESUME  = 2,
+    POWER_STATE_SHUTDOWN = 3
+};
 
 #endif /* LOCATIONDATATYPES_H */
