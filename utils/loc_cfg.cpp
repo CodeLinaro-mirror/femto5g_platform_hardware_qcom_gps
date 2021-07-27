@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -90,7 +90,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *============================================================================*/
 
 /* Parameter data */
-static uint32_t DEBUG_LEVEL = 0xff;
+static uint32_t DEBUG_LEVEL = UINT32_MAX;
 static uint32_t TIMESTAMP = 0;
 static uint32_t DATUM_TYPE = 0;
 static uint32_t sLogBufferEnabled = 0;
@@ -437,12 +437,19 @@ void loc_read_conf(const char* conf_file_name, const loc_param_s_type* config_ta
     FILE *conf_fp = NULL;
 
     log_buffer_init(false);
-    if((conf_fp = fopen(conf_file_name, "r")) != NULL)
+    if ((conf_fp = fopen(conf_file_name, "r")) != NULL)
     {
-        LOC_LOGD("%s: using %s", __FUNCTION__, conf_file_name);
-        if(table_length && config_table) {
+        LOC_LOGd("using %s", conf_file_name);
+        if (table_length && config_table) {
             loc_read_conf_r(conf_fp, config_table, table_length);
             rewind(conf_fp);
+        }
+        if (DEBUG_LEVEL == UINT32_MAX) {
+            /* Read default config entries*/
+            loc_read_conf_r(conf_fp, loc_param_table, loc_param_num);
+            /* Initialize logging mechanism with parsed data */
+            loc_logger_init(DEBUG_LEVEL, TIMESTAMP);
+            log_buffer_init(sLogBufferEnabled);
         }
         loc_read_conf_r(conf_fp, loc_param_table, loc_param_num);
         fclose(conf_fp);
