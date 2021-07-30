@@ -3621,19 +3621,24 @@ GnssAdapter::reportEnginePositionsEvent(unsigned int count,
 }
 
 bool
-GnssAdapter::needReport(const UlpLocation& ulpLocation,
+GnssAdapter::needReportForAllClients(const UlpLocation& ulpLocation,
                         enum loc_sess_status status,
                         LocPosTechMask techMask) {
-    bool reported = false;
+    return LocApiBase::needReport(ulpLocation, status, techMask);
+}
 
-    // if engine hub is enabled, aka, any of the engine services is enabled,
-    // then always output position reported by engine hub to requesting client
-    if (true == initEngHubProxy()) {
-        reported = true;
-    } else {
-        reported = LocApiBase::needReport(ulpLocation, status, techMask);
+bool GnssAdapter::needReportForClient(LocationAPI* client, enum loc_sess_status status) {
+    // when client is null, function returns true if  the fix with specified
+    // session status need to be delivered to any client.
+    // when client is not full, function returns true if the fix with the
+    // specified session status need to be delivered to this client.
+    for (auto it = mTrackingSessions.begin(); it != mTrackingSessions.end(); ++it) {
+        if ((it->second.qualityLevelAccepted >= status) &&
+                ((client == nullptr) || (it->first.client == client))) {
+            return true;
+        }
     }
-    return reported;
+    return false;
 }
 
 bool GnssAdapter::needToGenerateNmeaReport(const uint32_t &gpsTimeOfWeekMs,
@@ -3677,14 +3682,17 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                             enum loc_sess_status status,
                             LocPosTechMask techMask)
 {
-    bool reported = needReport(ulpLocation, status, techMask);
+    bool reportToAllClients = needReportForAllClients(ulpLocation, status, techMask);
+    bool reportToAnyClient = needReportForAnyClient(status);
     mGnssSvIdUsedInPosAvail = false;
     mGnssMbSvIdUsedInPosAvail = false;
 
-    LOC_LOGd("needReport %d, status %d, eng type %d, eng hub inited %d", reported, status,
+    LOC_LOGd("reportToAllClients %d, reportToAnyClient %d, status %d, eng type %d, "
+             "eng hub inited %d",
+             reportToAllClients, reportToAnyClient, status,
              locationExtended.locOutputEngType, initEngHubProxy());
 
-    if (reported) {
+    if (reportToAllClients || reportToAnyClient) {
         if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA) {
             mGnssSvIdUsedInPosAvail = true;
             mGnssSvIdUsedInPosition = locationExtended.gnss_sv_used_ids;
@@ -3699,22 +3707,24 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
         convertLocation(locationInfo.location, ulpLocation, locationExtended, techMask);
 
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
-            if ((nullptr != it->second.engineLocationsInfoCb) &&
-                (false == initEngHubProxy())) {
-                // if engine hub is disabled, this is SPE fix from modem
-                // we need to have one copy marked as fused and leave the other copy
-                // unmodified (which is marked as SPE fix in LocAPIV02.cpp) and
-                // dispatch both copies to the engineLocationsInfoCb
-                GnssLocationInfoNotification engLocationsInfo[2];
-                engLocationsInfo[0] = locationInfo;
-                engLocationsInfo[0].locOutputEngType = LOC_OUTPUT_ENGINE_FUSED;
-                engLocationsInfo[0].flags |= GNSS_LOCATION_INFO_OUTPUT_ENG_TYPE_BIT;
-                engLocationsInfo[1] = locationInfo;
-                it->second.engineLocationsInfoCb(2, engLocationsInfo);
-            }else if (nullptr != it->second.gnssLocationInfoCb) {
-                it->second.gnssLocationInfoCb(locationInfo);
-            } else if (nullptr != it->second.trackingCb) {
-                it->second.trackingCb(locationInfo.location);
+            if (reportToAllClients || needReportForClient(it->first, status)) {
+                if ((nullptr != it->second.engineLocationsInfoCb) &&
+                    (false == initEngHubProxy())) {
+                    // if engine hub is disabled, this is SPE fix from modem
+                    // we need to have one copy marked as fused and leave the other copy
+                    // unmodified (which is marked as SPE fix in LocAPIV02.cpp) and
+                    // dispatch both copies to the engineLocationsInfoCb
+                    GnssLocationInfoNotification engLocationsInfo[2];
+                    engLocationsInfo[0] = locationInfo;
+                    engLocationsInfo[0].locOutputEngType = LOC_OUTPUT_ENGINE_FUSED;
+                    engLocationsInfo[0].flags |= GNSS_LOCATION_INFO_OUTPUT_ENG_TYPE_BIT;
+                    engLocationsInfo[1] = locationInfo;
+                    it->second.engineLocationsInfoCb(2, engLocationsInfo);
+                }else if (nullptr != it->second.gnssLocationInfoCb) {
+                    it->second.gnssLocationInfoCb(locationInfo);
+                } else if (nullptr != it->second.trackingCb) {
+                    it->second.trackingCb(locationInfo.location);
+                }
             }
         }
 
@@ -3740,7 +3750,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
         bool blank_fix = ((0 == ulpLocation.gpsLocation.latitude) &&
                           (0 == ulpLocation.gpsLocation.longitude) &&
                           (LOC_RELIABILITY_NOT_SET == locationExtended.horizontal_reliability));
-        uint8_t generate_nmea = (reported && status != LOC_SESS_FAILURE && !blank_fix);
+        uint8_t generate_nmea = (reportToAllClients && status != LOC_SESS_FAILURE && !blank_fix);
         bool custom_nmea_gga = (1 == ContextBase::mGps_conf.CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED);
         std::vector<std::string> nmeaArraystr;
         loc_nmea_generate_pos(ulpLocation, locationExtended, mLocSystemInfo,
@@ -3787,10 +3797,11 @@ GnssAdapter::reportEnginePositions(unsigned int count,
                             engLocation->location.tech_mask);
         }
     }
-
+    const EngineLocationInfo* engLocation = locationArr;
     if (needReportEnginePositions) {
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
-            if (nullptr != it->second.engineLocationsInfoCb) {
+            if ((nullptr != it->second.engineLocationsInfoCb) &&
+                (needReportForClient(it->first, engLocation->sessionStatus))) {
                 it->second.engineLocationsInfoCb(count, locationInfo);
             }
         }
