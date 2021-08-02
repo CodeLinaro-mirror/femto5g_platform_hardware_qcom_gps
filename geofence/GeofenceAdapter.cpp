@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2019, 2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -42,9 +42,13 @@ GeofenceAdapter::GeofenceAdapter() :
                         NULL,
                         LocContext::mLocationHalName,
                         false),
-                    true /*isMaster*/)
+                    true /*isMaster*/, nullptr, true)
 {
     LOC_LOGD("%s]: Constructor", __func__);
+
+    // at last step, let us inform adapater base that we are done
+    // with initialization, e.g.: ready to process handleEngineUpEvent
+    doneInit();
 }
 
 void
