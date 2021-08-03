@@ -106,6 +106,7 @@ void BatchingAPIClient::setCallbacks()
     locationCallbacks.gnssNiCb = nullptr;
     locationCallbacks.gnssSvCb = nullptr;
     locationCallbacks.gnssNmeaCb = nullptr;
+    locationCallbacks.gnssRequestTimeCb = nullptr;
     locationCallbacks.gnssMeasurementsCb = nullptr;
 
     locAPISetCallbacks(locationCallbacks);
