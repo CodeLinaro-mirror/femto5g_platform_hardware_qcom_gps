@@ -332,7 +332,7 @@ void XtraSystemStatusObserver::startDgnssSource(const StartDgnssNtripParams& par
     // make a local copy of the string for SSR
     mNtripParamsString.assign(std::move(s));
 
-#ifdef USE_GLIB
+#if defined(USE_GLIB) && !defined(USE_FEATURE_TELSDK)
     connectNetwork(NTRP_CONNECT_REQ);
 #endif
 }
@@ -351,7 +351,7 @@ void XtraSystemStatusObserver::stopDgnssSource() {
 
     const char s[] = "stopDgnssSource";
     LocIpc::send(*mSender, (const uint8_t*)s, strlen(s));
-#ifdef USE_GLIB
+#if defined(USE_GLIB) && !defined(USE_FEATURE_TELSDK)
     disconnectNetwork(NTRP_CONNECT_REQ);
 #endif
 }
