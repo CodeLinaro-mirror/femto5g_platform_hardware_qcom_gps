@@ -509,7 +509,7 @@ public:
         for (uint8_t i = 0; rtv && i < MAX_NETWORK_HANDLES; ++i) {
             rtv &= (mAllNetworkHandles[i] == peer.mAllNetworkHandles[i]);
         }
-        return peer.mApn.compare(mApn);
+        return rtv && !peer.mApn.compare(mApn);
     }
     inline virtual SystemStatusItemBase& collate(SystemStatusItemBase& curInfo) {
         uint64_t allTypes = (static_cast<SystemStatusNetworkInfo&>(curInfo)).mAllTypes;
