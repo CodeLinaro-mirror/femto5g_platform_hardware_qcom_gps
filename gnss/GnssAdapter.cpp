@@ -722,6 +722,7 @@ GnssAdapter::setConfigCommand()
             mApi(api) {}
         inline virtual void proc() const {
 
+            mAdapter.updateClientsEventMask();
             // set nmea mask type
             uint32_t mask = 0;
             if (NMEA_PROVIDER_MP == ContextBase::mGps_conf.NMEA_PROVIDER) {
@@ -2147,9 +2148,6 @@ GnssAdapter::updateClientsEventMask()
             it->second.engineLocationsInfoCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_PARSED_POSITION_REPORT;
         }
-        if (it->second.gnssNiCb != nullptr) {
-            mask |= LOC_API_ADAPTER_BIT_NI_NOTIFY_VERIFY_REQUEST;
-        }
         if (it->second.gnssSvCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_SATELLITE_REPORT;
         }
@@ -2198,6 +2196,9 @@ GnssAdapter::updateClientsEventMask()
     if (nullptr != mOdcpiRequestCb) {
         mask |= LOC_API_ADAPTER_BIT_REQUEST_WIFI;
     }
+
+    // always register for NI NOTIFY VERIFY to handle internally in HAL
+    mask |= LOC_API_ADAPTER_BIT_NI_NOTIFY_VERIFY_REQUEST;
 
     // need to register for leap second info
     // for proper nmea generation
