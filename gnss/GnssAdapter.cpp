@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -106,7 +106,8 @@ GnssAdapter::GnssAdapter() :
     mLocSystemInfo{},
     mGnssMbSvIdUsedInPosition{},
     mGnssMbSvIdUsedInPosAvail(false),
-    mPowerState(POWER_STATE_UNKNOWN)
+    mPowerState(POWER_STATE_UNKNOWN),
+    mElapsedRealTimeCal(30000000)
 {
     LOC_LOGD("%s]: Constructor %p", __func__, this);
     mLocPositionMode.mode = LOC_POSITION_MODE_INVALID;
@@ -278,6 +279,20 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
     if (LOC_GPS_LOCATION_HAS_SPOOF_MASK & ulpLocation.gpsLocation.flags) {
         out.flags |= LOCATION_HAS_SPOOF_MASK;
         out.spoofMask = ulpLocation.gpsLocation.spoof_mask;
+    }
+}
+
+void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtended,
+                                      Location& out) {
+    if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GPS_TIME) {
+        int64_t elapsedTimeNs = 0;
+        float elapsedTimeUncMsec = 0.0;
+        if (mElapsedRealTimeCal.getElapsedRealtimeForGpsTime(
+                locationExtended.gpsTime, elapsedTimeNs, elapsedTimeUncMsec)) {
+            out.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
+            out.elapsedRealTime = elapsedTimeNs;
+            out.elapsedRealTimeUnc = (int64_t) (elapsedTimeUncMsec * 1000000);
+        }
     }
 }
 
@@ -2523,6 +2538,7 @@ GnssAdapter::suspendSessions()
         // inform engine hub that GNSS session has stopped
         mEngHubProxy->gnssStopFix();
         mLocApi->stopFix(nullptr);
+        mElapsedRealTimeCal.reset();
         mSPEAlreadyRunningAtHighestInterval = false;
     }
 }
@@ -3255,6 +3271,7 @@ GnssAdapter::stopTracking(LocationAPI* client, uint32_t id)
         reportResponse(client, err, id);
     }));
 
+    mElapsedRealTimeCal.reset();
     mSPEAlreadyRunningAtHighestInterval = false;
 }
 
@@ -3651,6 +3668,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
         GnssLocationInfoNotification locationInfo = {};
         convertLocationInfo(locationInfo, locationExtended, status);
         convertLocation(locationInfo.location, ulpLocation, locationExtended, techMask);
+        fillElapsedRealTime(locationExtended, locationInfo.location);
 
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
             if (reportToAllClients || needReportForClient(it->first, status)) {
@@ -3741,6 +3759,8 @@ GnssAdapter::reportEnginePositions(unsigned int count,
                             engLocation->location,
                             engLocation->locationExtended,
                             engLocation->location.tech_mask);
+            fillElapsedRealTime(engLocation->locationExtended,
+                                locationInfo[i].location);
         }
     }
 
@@ -4317,14 +4337,14 @@ GnssAdapter::reportGnssMeasurementData(const GnssMeasurementsNotification& measu
 }
 
 void
-GnssAdapter::reportDGnssDataUsable(GnssSvMeasurementSet &svMeasurementSet)
+GnssAdapter::reportDGnssDataUsable(const GnssSvMeasurementSet &svMeasurementSet)
 {
     uint32_t i;
     bool preDGnssDataUsage = mDGnssDataUsage;
 
     mDGnssDataUsage = false;
     for (i = 0; i < svMeasurementSet.svMeasCount; i++) {
-        Gnss_SVMeasurementStructType& svMeas = svMeasurementSet.svMeas[i];
+        const Gnss_SVMeasurementStructType& svMeas = svMeasurementSet.svMeas[i];
         if (svMeas.dgnssSvMeas.dgnssMeasStatus) {
             mDGnssDataUsage = true;
             break;
@@ -4341,10 +4361,27 @@ void
 GnssAdapter::reportSvMeasurementEvent(GnssSvMeasurementSet &svMeasurementSet)
 {
     LOC_LOGD("%s]: ", __func__);
+
+    struct MsgReportSvMeasurement : public LocMsg {
+        GnssAdapter& mAdapter;
+        GnssSvMeasurementSet mSvMeasurementSet;
+
+        inline MsgReportSvMeasurement(GnssAdapter& adapter,
+                                      GnssSvMeasurementSet &svMeasurementSet) :
+            LocMsg(),
+            mAdapter(adapter),
+            mSvMeasurementSet(svMeasurementSet) {}
+        inline virtual void proc() const {
+            // save the association of GPS timestamp and qtimer tick cnt
+            mAdapter.mElapsedRealTimeCal.saveGpsTimeAndQtimerPairInMeasReport(mSvMeasurementSet);
+            if (mAdapter.mDGnssNeedReport) {
+                mAdapter.reportDGnssDataUsable(mSvMeasurementSet);
+            }
+        }
+    };
+
     mEngHubProxy->gnssReportSvMeasurement(svMeasurementSet);
-    if (mDGnssNeedReport) {
-        reportDGnssDataUsable(svMeasurementSet);
-    }
+    sendMsg(new MsgReportSvMeasurement(*this, svMeasurementSet));
 }
 
 void
