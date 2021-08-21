@@ -142,6 +142,42 @@ SIDE EFFECTS
 ===========================================================================*/
 uint64_t getQTimerTickCount();
 
+/*===========================================================================
+FUNCTION getQTimerDeltaNanos
+
+DESCRIPTION
+This function is used to read the the difference in nanoseconds between
+Qtimer on AP side and Qtimer on MP side for dual-SoC architectures such as Kona
+
+DEPENDENCIES
+N/A
+
+RETURN VALUE
+uint64_t QTimer difference in nanoseconds
+
+SIDE EFFECTS
+N/A
+===========================================================================*/
+uint64_t getQTimerDeltaNanos();
+
+/*===========================================================================
+FUNCTION getQTimerFreq
+
+DESCRIPTION
+   This function is used to read the QTimer frequency in hz. This value is globally maintained and
+   must be the same across all processors on a target.
+
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+    uint64_t QTimer frequency
+
+SIDE EFFECTS
+   N/A
+===========================================================================*/
+uint64_t getQTimerFreq();
+
 #ifdef __cplusplus
 }
 #endif

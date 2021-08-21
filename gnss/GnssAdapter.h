@@ -224,7 +224,7 @@ class GnssAdapter : public LocAdapterBase {
     const CdfwInterface* mCdfwInterface;
     bool mDGnssNeedReport;
     bool mDGnssDataUsage;
-    void reportDGnssDataUsable(GnssSvMeasurementSet &svMeasurementSet);
+    void reportDGnssDataUsable(const GnssSvMeasurementSet &svMeasurementSet);
 
     /* ==== ODCPI ========================================================================== */
     OdcpiRequestCbMap mOdcpiRequestCbMap;
@@ -247,6 +247,7 @@ class GnssAdapter : public LocAdapterBase {
     BlockCPIInfo mBlockCPIInfo;
     bool mDreIntEnabled;
     bool mPpeEnabled;
+    ElapsedRealtimeEstimator mElapsedRealTimeCal;
 
     /* === Misc callback from QMI LOC API ============================================== */
     GnssEnergyConsumedCallback mGnssEnergyConsumedCb;
@@ -267,6 +268,8 @@ class GnssAdapter : public LocAdapterBase {
     inline void deinitOdcpi(OdcpiPrioritytype priority);
     inline void injectOdcpi(const Location& location);
     inline void setNmeaReportRateConfig();
+    void fillElapsedRealTime(const GpsLocationExtended& locationExtended,
+                             Location& out);
 
 public:
 

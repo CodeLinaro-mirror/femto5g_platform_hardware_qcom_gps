@@ -35,6 +35,8 @@
 #include <log_util.h>
 #include <loc_misc_utils.h>
 #include <ctype.h>
+#include <fcntl.h>
+#include <inttypes.h>
 
 
 int loc_util_split_string(char *raw_string, char **split_strings_ptr,
@@ -155,6 +157,64 @@ uint64_t getQTimerTickCount()
 #endif
 
     return qTimerCount;
+}
+
+uint64_t getQTimerDeltaNanos()
+{
+    char qtimer_val_string[100];
+    char *temp;
+    uint64_t local_qtimer = 0, remote_qtimer = 0;
+    int mdm_fd = -1, wlan_fd = -1, ret = 0;
+    uint64_t delta = 0;
+
+    memset(qtimer_val_string, '\0', sizeof(qtimer_val_string));
+
+    char devNode[] = "/sys/bus/mhi/devices/0306_00.01.00/time_us";
+    for (; devNode[27] < 3 && mdm_fd < 0; devNode[27]++) {
+        mdm_fd = ::open(devNode, O_RDONLY);
+        if (mdm_fd < 0) {
+            LOC_LOGe("MDM open file: %s error: %s", devNode, strerror(errno));
+        }
+    }
+    if (mdm_fd > 0) {
+        ret = read(mdm_fd, qtimer_val_string, sizeof(qtimer_val_string)-1);
+        ::close(mdm_fd);
+        if (ret < 0) {
+            LOC_LOGe("MDM read time_us file error: %s", strerror(errno));
+        } else {
+            temp = qtimer_val_string;
+            temp = strchr(temp, ':');
+            temp = temp + 2;
+            local_qtimer = atoll(temp);
+
+            temp = strchr(temp, ':');
+            temp = temp + 2;
+            remote_qtimer = atoll(temp);
+
+            if (local_qtimer >= remote_qtimer) {
+                delta = (local_qtimer - remote_qtimer) * 1000;
+            }
+            LOC_LOGv("qtimer values in microseconds: local:%" PRIi64 " remote:%" PRIi64 ""
+                     " delta in nanoseconds:%" PRIi64 "",
+                     local_qtimer, remote_qtimer, delta);
+        }
+    }
+    return delta;
+}
+
+uint64_t getQTimerFreq()
+{
+#if __aarch64__
+    uint64_t val = 0;
+    asm volatile("mrs %0, cntfrq_el0" : "=r" (val));
+#elif defined (__i386__) || defined (__x86_64__)
+    /* Qtimer not supported in x86 architecture */
+    uint64_t val = 0;
+#else
+    uint32_t val = 0;
+    asm volatile("mrc p15, 0, %0, c14, c0, 0" : "=r" (val));
+#endif
+    return val;
 }
 
 // Used for convert position/velocity from GSNS antenna based to VRP based
