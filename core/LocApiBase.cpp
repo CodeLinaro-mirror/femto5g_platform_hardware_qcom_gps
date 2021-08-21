@@ -73,6 +73,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocAdapterBase.h>
 #include <log_util.h>
 #include <LocDualContext.h>
+#include <loc_misc_utils.h>
 
 namespace loc_core {
 
@@ -846,4 +847,212 @@ DEFAULT_IMPL()
 void LocApiBase::
     getConstellationMultiBandConfig(uint32_t sessionId, LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
+
+int64_t ElapsedRealtimeEstimator::getElapsedRealtimeEstimateNanos(int64_t curDataTimeNanos,
+            bool isCurDataTimeTrustable, int64_t tbf) {
+    //The algorithm works follow below steps:
+    //When isCurDataTimeTrustable is meet (means Modem timestamp is already stable),
+    //1, Wait for mFixTimeStablizationThreshold fixes; While waiting for modem time
+    //   stable, we set the traveltime to a default value;
+    //2, When the mFixTimeStablizationThreshold fix comes, we think now the mode time
+    //   is already stable, calculate the initial AP-Modem clock diff(mCurrentClockDiff)
+    //   using formula:
+    //   mCurrentClockDiff = currentTimeNanos - locationTimeNanos - currentTravelTimeNanos
+    //3, since then, when the nth fix comes,
+    //   3.1 First update mCurrentClockDiff using below formula:
+    //        mCurrentClockDiff = mCurrentClockDiff + (currentTimeNanos - sinceBootTimeNanos)
+    //                - (mPrevUtcTimeNanos - mPrevBootTimeNanos)
+    //   3.2 Calculate currentTravelTimeNanos:
+    //        currentTravelTimeNanos = currentTimeNanos - locationTimeNanos - mCurrentClockDiff
+    //4, It is possible that locationTimeNanos will jump,
+    //   reset mFixTimeStablizationThreshold to default value, jump to step 2 to continue.
+
+    int64_t currentTravelTimeNanos = mInitialTravelTime;
+    struct timespec currentTime = {};
+    int64_t sinceBootTimeNanos = 0;
+    if (getCurrentTime(currentTime, sinceBootTimeNanos)) {
+        if (isCurDataTimeTrustable) {
+            if (tbf > 0 && tbf != curDataTimeNanos - mPrevDataTimeNanos) {
+                mFixTimeStablizationThreshold = 5;
+            }
+            int64_t currentTimeNanos = (int64_t)currentTime.tv_sec*1000000000 + currentTime.tv_nsec;
+            LOC_LOGd("sinceBootTimeNanos:%" PRIi64 " currentTimeNanos:%" PRIi64 ""
+                     " locationTimeNanos:%" PRIi64 "",
+                     sinceBootTimeNanos, currentTimeNanos, curDataTimeNanos);
+            if (mFixTimeStablizationThreshold == 0) {
+                currentTravelTimeNanos = mInitialTravelTime;
+                mCurrentClockDiff = currentTimeNanos - curDataTimeNanos - currentTravelTimeNanos;
+            } else if (mFixTimeStablizationThreshold < 0) {
+                mCurrentClockDiff = mCurrentClockDiff + (currentTimeNanos - sinceBootTimeNanos)
+                        - (mPrevUtcTimeNanos - mPrevBootTimeNanos);
+                currentTravelTimeNanos = currentTimeNanos - curDataTimeNanos - mCurrentClockDiff;
+            }
+
+            mPrevUtcTimeNanos = currentTimeNanos;
+            mPrevBootTimeNanos = sinceBootTimeNanos;
+            mPrevDataTimeNanos = curDataTimeNanos;
+            mFixTimeStablizationThreshold--;
+        }
+    } else {
+        return -1;
+    }
+    LOC_LOGd("Estimated travel time: %" PRIi64 "", currentTravelTimeNanos);
+    return (sinceBootTimeNanos - currentTravelTimeNanos);
+}
+
+void ElapsedRealtimeEstimator::reset() {
+    mCurrentClockDiff = 0;
+    mPrevDataTimeNanos = 0;
+    mPrevUtcTimeNanos = 0;
+    mPrevBootTimeNanos = 0;
+    mFixTimeStablizationThreshold = 5;
+    memset(&mTimePairPVTReport, 0, sizeof(mTimePairPVTReport));
+    memset(&mTimePairMeasReport, 0, sizeof(mTimePairMeasReport));
+}
+
+void ElapsedRealtimeEstimator::saveGpsTimeAndQtimerPairInPvtReport(
+        const GpsLocationExtended& locationExtended) {
+
+    // Use GPS timestamp and qtimer tick for 1Hz PVT report for association
+    if ((locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GPS_TIME) &&
+            (locationExtended.gpsTime.gpsTimeOfWeekMs % 1000 == 0) &&
+            (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK) &&
+            (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK_UNC)) {
+        mTimePairPVTReport.gpsTime.gpsWeek = locationExtended.gpsTime.gpsWeek;
+        mTimePairPVTReport.gpsTime.gpsTimeOfWeekMs =
+                locationExtended.gpsTime.gpsTimeOfWeekMs;
+        mTimePairPVTReport.qtimerTick = locationExtended.systemTick;
+        mTimePairPVTReport.timeUncMsec = locationExtended.systemTickUnc;
+
+        LOC_LOGv("gps time (%d, %d), qtimer tick %" PRIi64 ", qtime unc %f",
+                 mTimePairPVTReport.gpsTime.gpsWeek, mTimePairPVTReport.gpsTime.gpsTimeOfWeekMs,
+                 mTimePairPVTReport.qtimerTick, mTimePairPVTReport.timeUncMsec);
+    }
+}
+
+void ElapsedRealtimeEstimator::saveGpsTimeAndQtimerPairInMeasReport(
+        const GnssSvMeasurementSet& svMeasurementSet) {
+
+    const GnssSvMeasurementHeader& svMeasSetHeader = svMeasurementSet.svMeasSetHeader;
+    // Use 1Hz measurement report timestamp and qtimer tick for association
+    if ((svMeasurementSet.isNhz == false) &&
+            (svMeasSetHeader.gpsSystemTime.validityMask & GNSS_SYSTEM_TIME_WEEK_VALID) &&
+            (svMeasSetHeader.gpsSystemTime.validityMask & GNSS_SYSTEM_TIME_WEEK_MS_VALID)) {
+
+        LOC_LOGv("gps time %d %d, meas unc %f, ref cnt tick %" PRIi64 ","
+                 "system rtc ms %" PRIi64 ", systemClkTimeUncMs %f",
+                 svMeasurementSet.svMeasSetHeader.gpsSystemTime.systemWeek,
+                 svMeasurementSet.svMeasSetHeader.gpsSystemTime.systemMsec,
+                 svMeasurementSet.svMeasSetHeader.gpsSystemTime.systemClkTimeUncMs,
+                 svMeasurementSet.svMeasSetHeader.refCountTicks,
+                 svMeasurementSet.svMeasSetHeader.gpsSystemTimeExt.systemRtcMs,
+                 svMeasurementSet.svMeasSetHeader.gpsSystemTime.systemClkTimeUncMs);
+        if ((svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS) &&
+                (svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS_UNC)) {
+            mTimePairMeasReport.gpsTime.gpsWeek = svMeasSetHeader.gpsSystemTime.systemWeek;
+            mTimePairMeasReport.gpsTime.gpsTimeOfWeekMs = svMeasSetHeader.gpsSystemTime.systemMsec;
+            mTimePairMeasReport.qtimerTick = svMeasurementSet.svMeasSetHeader.refCountTicks;
+            mTimePairMeasReport.timeUncMsec = svMeasurementSet.svMeasSetHeader.refCountTicksUnc;
+        } else if ((svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_GPS_SYSTEM_TIME_EXT) &&
+                   (svMeasSetHeader.gpsSystemTimeExt.systemRtc_valid) &&
+                   (svMeasSetHeader.gpsSystemTime.validityMask &
+                    GNSS_SYSTEM_CLK_TIME_BIAS_UNC_VALID)) {
+            mTimePairMeasReport.gpsTime.gpsWeek = svMeasSetHeader.gpsSystemTime.systemWeek;
+            mTimePairMeasReport.gpsTime.gpsTimeOfWeekMs = svMeasSetHeader.gpsSystemTime.systemMsec;
+            // convert ms to tick
+            mTimePairMeasReport.qtimerTick =
+                    svMeasurementSet.svMeasSetHeader.gpsSystemTimeExt.systemRtcMs * 10 / 192;
+            mTimePairMeasReport.timeUncMsec =
+                    svMeasurementSet.svMeasSetHeader.gpsSystemTime.systemClkTimeUncMs;
+        }
+
+       LOC_LOGv("gps time (%d, %d), qtimer tick %" PRIi64 ", unc %f",
+                mTimePairMeasReport.gpsTime.gpsWeek,  mTimePairMeasReport.gpsTime.gpsTimeOfWeekMs,
+                mTimePairMeasReport.qtimerTick, mTimePairMeasReport.timeUncMsec);
+    }
+}
+
+#define MSEC_IN_ONE_WEEK 604800000LL
+bool ElapsedRealtimeEstimator::getElapsedRealtimeForGpsTime(
+        const GPSTimeStruct& gpsTimeAtOrigin, int64_t &bootTimeNsAtOrigin, float & bootTimeUnc) {
+    struct timespec curBootTime = {};
+    int64_t curBootTimeNs = 0;
+    int64_t curQTimerNSec = 0;
+    int64_t qtimerNsecAtOrigin = 0;
+    int64_t gpsTimeDiffMsec = 0;
+    GpsTimeQtimerTickPair timePair;
+
+    // We have valid association
+    if (mTimePairMeasReport.gpsTime.gpsWeek != 0) {
+        timePair = mTimePairMeasReport;
+        LOC_LOGv("user meas time association");
+    } else if (mTimePairPVTReport.gpsTime.gpsWeek != 0) {
+        LOC_LOGv("user PVT time association");
+        timePair = mTimePairPVTReport;
+    } else {
+        return false;
+    }
+
+    gpsTimeDiffMsec = (gpsTimeAtOrigin.gpsWeek - timePair.gpsTime.gpsWeek) * MSEC_IN_ONE_WEEK +
+                       (gpsTimeAtOrigin.gpsTimeOfWeekMs - timePair.gpsTime.gpsTimeOfWeekMs);
+    qtimerNsecAtOrigin = timePair.qtimerTick * 10000/192 + gpsTimeDiffMsec * 1000000;
+
+    clock_gettime(CLOCK_BOOTTIME, &curBootTime);
+    curBootTimeNs = ((int64_t)curBootTime.tv_sec) * 1000000000 + (int64_t)curBootTime.tv_nsec;
+    // qtimer freq: 19200000, so
+    // so 1 tick equals 1000,000,000/19,200,000 ns = 10000/192
+    curQTimerNSec = getQTimerTickCount() * 10000/192;
+    bootTimeNsAtOrigin = curBootTimeNs - (curQTimerNSec - qtimerNsecAtOrigin);
+
+    bootTimeUnc = timePair.timeUncMsec;
+    LOC_LOGv("gpsTimeAtOrigin (%d, %d), timepair: gps (%d, %d), "
+             "qtimer nsec =%" PRIi64 ", curQTimerNSec=%" PRIi64 " qtimerNsecAtOrigin=%" PRIi64 ""
+             " curBoottimeNSec=%" PRIi64 " bootimeNsecAtOrigin=%" PRIi64 ", boottime unc =%f",
+             gpsTimeAtOrigin.gpsWeek, gpsTimeAtOrigin.gpsTimeOfWeekMs,
+             timePair.gpsTime.gpsWeek, timePair.gpsTime.gpsTimeOfWeekMs,
+             timePair.qtimerTick * 100000 / 192,
+             curQTimerNSec, qtimerNsecAtOrigin, curBootTimeNs, bootTimeNsAtOrigin, bootTimeUnc);
+
+    return true;
+}
+
+
+bool ElapsedRealtimeEstimator::getCurrentTime(
+        struct timespec& currentTime, int64_t& sinceBootTimeNanos)
+{
+    struct timespec sinceBootTime = {};
+    struct timespec sinceBootTimeTest = {};
+    bool clockGetTimeSuccess = false;
+    const uint32_t MAX_TIME_DELTA_VALUE_NANOS = 10000;
+    const uint32_t MAX_GET_TIME_COUNT = 20;
+    /* Attempt to get CLOCK_REALTIME and CLOCK_BOOTIME in succession without an interruption
+    or context switch (for up to MAX_GET_TIME_COUNT times) to avoid errors in the calculation */
+    for (uint32_t i = 0; i < MAX_GET_TIME_COUNT; i++) {
+        if (clock_gettime(CLOCK_BOOTTIME, &sinceBootTime) != 0) {
+            break;
+        };
+        if (clock_gettime(CLOCK_REALTIME, &currentTime) != 0) {
+            break;
+        }
+        if (clock_gettime(CLOCK_BOOTTIME, &sinceBootTimeTest) != 0) {
+            break;
+        };
+        sinceBootTimeNanos = (int64_t)sinceBootTime.tv_sec * 1000000000 + sinceBootTime.tv_nsec;
+        int64_t sinceBootTimeTestNanos =
+            (int64_t)sinceBootTimeTest.tv_sec * 1000000000 + sinceBootTimeTest.tv_nsec;
+        int64_t sinceBootTimeDeltaNanos = sinceBootTimeTestNanos - sinceBootTimeNanos;
+
+        /* sinceBootTime and sinceBootTimeTest should have a close value if there was no
+        interruption or context switch between clock_gettime for CLOCK_BOOTIME and
+        clock_gettime for CLOCK_REALTIME */
+        if (sinceBootTimeDeltaNanos < MAX_TIME_DELTA_VALUE_NANOS) {
+            clockGetTimeSuccess = true;
+            break;
+        } else {
+            LOC_LOGd("Delta:%" PRIi64 "ns time too large, retry number #%u...",
+                     sinceBootTimeDeltaNanos, i + 1);
+        }
+    }
+    return clockGetTimeSuccess;
+}
 } // namespace loc_core
