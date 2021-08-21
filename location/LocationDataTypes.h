@@ -75,6 +75,7 @@ typedef enum {
     LOCATION_HAS_SPEED_ACCURACY_BIT    = (1<<6), // location has valid speed accuracy
     LOCATION_HAS_BEARING_ACCURACY_BIT  = (1<<7), // location has valid bearing accuracy
     LOCATION_HAS_SPOOF_MASK            = (1<<8), // location has valid spoof mask
+    LOCATION_HAS_ELAPSED_REAL_TIME_BIT = (1<<9), // location has valid elapsed real time
 } LocationFlagsBits;
 
 typedef uint16_t LocationTechnologyMask;
