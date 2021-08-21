@@ -422,6 +422,10 @@ typedef uint64_t GpsLocationExtendedFlags;
 #define GPS_LOCATION_EXTENDED_HAS_PROTECT_CROSS_TRACK            0x10000000000000
 /** GpsLocationExtended has protectVertical. */
 #define GPS_LOCATION_EXTENDED_HAS_PROTECT_VERTICAL               0x20000000000000
+/** GpsLocationExtended has system tick. */
+#define GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK                    0x40000000000000
+/** GpsLocationExtended has system tick unc. */
+#define GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK_UNC                0x80000000000000
 
 typedef uint32_t LocNavSolutionMask;
 /* Bitmask to specify whether SBAS ionospheric correction is used  */
@@ -916,6 +920,10 @@ typedef struct {
      *  risk, in unit of meter.
      */
     float    protectVertical;
+    /** System Tick at GPS Time */
+    uint64_t systemTick;
+    /** Uncertainty for System Tick at GPS Time in milliseconds   */
+    float systemTickUnc;
 } GpsLocationExtended;
 
 // struct that contains complete position info from engine
@@ -1566,6 +1574,7 @@ typedef uint64_t GpsSvMeasHeaderFlags;
 #define GNSS_SV_MEAS_HEADER_HAS_BDS_NAVIC_INTER_SYSTEM_BIAS   0x20000000
 #define GNSS_SV_MEAS_HEADER_HAS_NAVIC_SYSTEM_TIME             0x40000000
 #define GNSS_SV_MEAS_HEADER_HAS_NAVIC_SYSTEM_TIME_EXT         0x80000000
+#define GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS_UNC           0x100000000
 
 typedef struct
 {
@@ -1615,6 +1624,7 @@ typedef struct
 
     /** Receiver tick at frame count */
     uint64_t                                    refCountTicks;
+    float                                       refCountTicksUnc;
 
     /** DGNSS corrections source type RTCM, 3GPP etc, if DGNSS was
      *  used for these measurements. */
