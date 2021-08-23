@@ -63,8 +63,10 @@
 using namespace loc_core;
 
 static int loadEngHubForExternalEngine = 0;
+static int sUseZppInDBH = 0;
 static loc_param_s_type izatConfParamTable[] = {
-    {"LOAD_ENGHUB_FOR_EXTERNAL_ENGINE", &loadEngHubForExternalEngine, nullptr,'n'}
+    {"LOAD_ENGHUB_FOR_EXTERNAL_ENGINE", &loadEngHubForExternalEngine, nullptr, 'n'},
+    {"USE_ZPP_IN_DBH", &sUseZppInDBH, nullptr,'n'}
 };
 
 /* Method to fetch status cb from loc_net_iface library */
@@ -76,6 +78,8 @@ static void agpsOpenResultCb (bool isSuccess, AGpsExtType agpsType, const char* 
 static void agpsCloseResultCb (bool isSuccess, AGpsExtType agpsType, void* userDataPtr);
 
 typedef const CdfwInterface* (*getCdfwInterface)();
+
+typedef void getPdnTypeFromWds(const std::string& apnName, std::function<void(int)> pdnCb);
 
 GnssReportLoggerUtil::GnssReportLoggerUtil() : mLogLatency(nullptr) {
     int loadDiagIfaceLib = 1;
@@ -133,6 +137,7 @@ GnssAdapter::GnssAdapter() :
     mOdcpiTimer(this),
     mOdcpiRequest(),
     mCallbackPriority(OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_LOW),
+    mEsStatusCb(nullptr),
     mSystemStatus(SystemStatus::getInstance(mMsgTask)),
     mServerUrl(":"),
     mXtraObserver(mSystemStatus->getOsObserver(), mMsgTask),
@@ -2423,6 +2428,27 @@ GnssAdapter::blockCPICommand(double latitude, double longitude,
 }
 
 void
+GnssAdapter::setEsStatusCallbackCommand(std::function<void(bool)> esStatusCb)
+{
+    LOC_LOGD("%s]: ", __func__);
+
+    struct MsgReportEsStatus : public LocMsg {
+        GnssAdapter& mAdapter;
+        std::function<void(bool)> mEsStatusCb;
+        inline MsgReportEsStatus(GnssAdapter& adapter,
+                                 std::function<void(bool)> esStatusCb) :
+            LocMsg(),
+            mAdapter(adapter),
+            mEsStatusCb(esStatusCb) {}
+        inline virtual void proc() const {
+            mAdapter.setEsStatusCallback(mEsStatusCb);
+        }
+    };
+
+    sendMsg(new MsgReportEsStatus(*this, esStatusCb));
+}
+
+void
 GnssAdapter::updateSystemPowerState(PowerStateType systemPowerState) {
     if (POWER_STATE_UNKNOWN != systemPowerState) {
         mSystemPowerState = systemPowerState;
@@ -3899,7 +3925,8 @@ bool
 GnssAdapter::needReportForFlpClient(enum loc_sess_status status,
                                     LocPosTechMask techMask) {
     if (((LOC_SESS_INTERMEDIATE == status) && !(techMask & LOC_POS_TECH_MASK_SENSORS) &&
-        (!getAllowFlpNetworkFixes())) ||
+        (!(getAllowFlpNetworkFixes() ||
+        (sUseZppInDBH && mOdcpiRequest.isEmergencyMode && mOdcpiRequestActive)))) ||
         (LOC_SESS_FAILURE == status)) {
         return false;
     } else {
@@ -3914,7 +3941,8 @@ GnssAdapter::isFlpClient(LocationCallbacks& locationCallbacks)
             locationCallbacks.gnssSvCb == nullptr &&
             locationCallbacks.gnssNmeaCb == nullptr &&
             locationCallbacks.gnssDataCb == nullptr &&
-            locationCallbacks.gnssMeasurementsCb == nullptr);
+            locationCallbacks.gnssMeasurementsCb == nullptr &&
+            locationCallbacks.engineLocationsInfoCb == nullptr);
 }
 
 bool GnssAdapter::needToGenerateNmeaReport(const uint32_t &gpsTimeOfWeekMs,
@@ -4019,12 +4047,12 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
 
     if (reportToGnssClient || reportToFlpClient) {
         GnssLocationInfoNotification locationInfo = {};
+        list<trackingCallback> cbRunnables;
         convertLocationInfo(locationInfo, locationExtended, status);
         convertLocation(locationInfo.location, ulpLocation, locationExtended);
         logLatencyInfo();
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
-            if ((reportToFlpClient && isFlpClient(it->second)) ||
-                    (reportToGnssClient && !isFlpClient(it->second))) {
+            if ((reportToGnssClient && !isFlpClient(it->second))) {
                 if (nullptr != it->second.gnssLocationInfoCb) {
                     it->second.gnssLocationInfoCb(locationInfo);
                 } else if ((nullptr != it->second.engineLocationsInfoCb) &&
@@ -4041,7 +4069,22 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                 } else if (nullptr != it->second.trackingCb) {
                     it->second.trackingCb(locationInfo.location);
                 }
+            } else if (reportToFlpClient && isFlpClient(it->second)) {
+                if (nullptr != it->second.trackingCb) {
+                    cbRunnables.emplace_back([ cb=it->second.trackingCb ] (Location location) {
+                        cb(location);
+                    });
+                }
             }
+        }
+
+        if (cbRunnables.size() > 0) {
+            mContext->getLBSProxyBase()->populateAltitudeAndBroadCast(locationInfo.location,
+                [ cbRunnables ] (Location location) {
+                    for (auto cb : cbRunnables) {
+                        cb(location);
+                    }
+                });
         }
 
         mGnssSvIdUsedInPosAvail = false;
@@ -4890,6 +4933,9 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
         if (ODCPI_REQUEST_TYPE_START == request.type) {
             if (false == mOdcpiRequestActive && false == mOdcpiTimer.isActive()) {
                 mOdcpiRequestCb(request);
+                if (nullptr != mEsStatusCb) {
+                    mEsStatusCb(request.isEmergencyMode);
+                }
                 mOdcpiRequestActive = true;
                 mOdcpiTimer.start();
             // if the current active odcpi session is non-emergency, and the new
@@ -4898,6 +4944,9 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
             } else if (false == mOdcpiRequest.isEmergencyMode &&
                        true == request.isEmergencyMode) {
                 mOdcpiRequestCb(request);
+                if (nullptr != mEsStatusCb) {
+                    mEsStatusCb(request.isEmergencyMode);
+                }
                 mOdcpiRequestActive = true;
                 if (true == mOdcpiTimer.isActive()) {
                     mOdcpiTimer.restart();
@@ -4917,6 +4966,9 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
         } else if (ODCPI_REQUEST_TYPE_STOP == request.type) {
             LOC_LOGd("request: type %d, isEmergency %d", request.type, request.isEmergencyMode);
             mOdcpiRequestCb(request);
+            if (nullptr != mEsStatusCb) {
+                mEsStatusCb(false);
+            }
             mOdcpiRequestActive = false;
         } else {
             LOC_LOGE("Invalid ODCPI request type..");
@@ -5005,6 +5057,7 @@ void GnssAdapter::initOdcpi(const OdcpiRequestCallback& callback,
         updateEvtMask(LOC_API_ADAPTER_BIT_REQUEST_WIFI,
                 LOC_REGISTRATION_MASK_ENABLED);
     }
+    UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izatConfParamTable);
 }
 
 void GnssAdapter::injectOdcpiCommand(const Location& location)
@@ -5012,16 +5065,21 @@ void GnssAdapter::injectOdcpiCommand(const Location& location)
     struct MsgInjectOdcpi : public LocMsg {
         GnssAdapter& mAdapter;
         Location mLocation;
-        inline MsgInjectOdcpi(GnssAdapter& adapter, const Location& location) :
+        inline MsgInjectOdcpi(GnssAdapter& adapter, const Location& location, ContextBase& context):
                 LocMsg(),
                 mAdapter(adapter),
-                mLocation(location) {}
+                mLocation(location) {
+            // Update techMask to tell whether ALE FLP or Android FLP
+            if (context.getLBSProxyBase()->getIzatFusedProviderOverride()) {
+                mLocation.techMask |= LOCATION_TECHNOLOGY_HYBRID_ALE_BIT;
+            }
+        }
         inline virtual void proc() const {
             mAdapter.injectOdcpi(mLocation);
         }
     };
 
-    sendMsg(new MsgInjectOdcpi(*this, location));
+    sendMsg(new MsgInjectOdcpi(*this, location, *mContext));
 }
 
 void GnssAdapter::injectOdcpi(const Location& location)
@@ -5030,7 +5088,6 @@ void GnssAdapter::injectOdcpi(const Location& location)
              "lat %.7f long %.7f",
             mOdcpiRequestActive, mOdcpiTimer.isActive(),
             location.latitude, location.longitude);
-
     mLocApi->injectPosition(location, true);
 }
 
@@ -5279,6 +5336,38 @@ bool GnssAdapter::releaseATL(int connHandle){
     return true;
 }
 
+void GnssAdapter::reportPdnTypeFromWds(int pdnType, AGpsExtType agpsType, std::string apnName,
+        AGpsBearerType bearerType) {
+    LOC_LOGd("pdnType from WDS QMI: %d, agpsType: %d, apnName: %s, bearerType: %d",
+            pdnType, agpsType, apnName.c_str(), bearerType);
+
+    struct MsgReportAtlPdn : public LocMsg {
+        GnssAdapter& mAdapter;
+        int mPdnType;
+        AgpsManager* mAgpsManager;
+        AGpsExtType mAgpsType;
+        string mApnName;
+        AGpsBearerType mBearerType;
+
+        inline MsgReportAtlPdn(GnssAdapter& adapter, int pdnType,
+                AgpsManager* agpsManager, AGpsExtType agpsType,
+                const string& apnName, AGpsBearerType bearerType) :
+            LocMsg(), mAgpsManager(agpsManager), mAgpsType(agpsType),
+            mApnName(apnName), mBearerType(bearerType),
+            mAdapter(adapter), mPdnType(pdnType) {}
+        inline virtual void proc() const {
+            mAgpsManager->reportAtlOpenSuccess(mAgpsType,
+                    const_cast<char*>(mApnName.c_str()),
+                    mApnName.length(), mPdnType<=0? mBearerType:mPdnType);
+        }
+    };
+
+    AGpsBearerType atlPdnType = (pdnType+1) & 3; // convert WDS QMI pdn type to AgpsBearerType
+    sendMsg(new MsgReportAtlPdn(*this, atlPdnType, &mAgpsManager,
+                agpsType, apnName, bearerType));
+}
+
+
 void GnssAdapter::dataConnOpenCommand(
         AGpsExtType agpsType,
         const char* apnName, int apnLen, AGpsBearerType bearerType){
@@ -5286,17 +5375,16 @@ void GnssAdapter::dataConnOpenCommand(
     LOC_LOGI("GnssAdapter::frameworkDataConnOpen");
 
     struct AgpsMsgAtlOpenSuccess: public LocMsg {
-
+        GnssAdapter& mAdapter;
         AgpsManager* mAgpsManager;
         AGpsExtType mAgpsType;
         char* mApnName;
-        int mApnLen;
         AGpsBearerType mBearerType;
 
-        inline AgpsMsgAtlOpenSuccess(AgpsManager* agpsManager, AGpsExtType agpsType,
-                const char* apnName, int apnLen, AGpsBearerType bearerType) :
+        inline AgpsMsgAtlOpenSuccess(GnssAdapter& adapter, AgpsManager* agpsManager,
+                AGpsExtType agpsType, const char* apnName, int apnLen, AGpsBearerType bearerType) :
                 LocMsg(), mAgpsManager(agpsManager), mAgpsType(agpsType), mApnName(
-                        new char[apnLen + 1]), mApnLen(apnLen), mBearerType(bearerType) {
+                        new char[apnLen + 1]), mBearerType(bearerType), mAdapter(adapter) {
 
             LOC_LOGV("AgpsMsgAtlOpenSuccess");
             if (mApnName == nullptr) {
@@ -5314,9 +5402,27 @@ void GnssAdapter::dataConnOpenCommand(
         }
 
         inline virtual void proc() const {
+            LOC_LOGv("AgpsMsgAtlOpenSuccess::proc()");
+            string apn(mApnName);
+            //Use QMI WDS API to query IP Protocol from modem profile
+            void* libHandle = nullptr;
+            getPdnTypeFromWds* getPdnTypeFunc = (getPdnTypeFromWds*)dlGetSymFromLib(libHandle,
+            #ifdef USE_GLIB
+                    "libloc_api_wds.so", "_Z10getPdnTypeRKNSt7__cxx1112basic_string"\
+                    "IcSt11char_traitsIcESaIcEEESt8functionIFviEE");
+            #else
+                    "libloc_api_wds.so", "_Z10getPdnTypeRKNSt3__112basic_stringIcNS_11char_traits"\
+                    "IcEENS_9allocatorIcEEEENS_8functionIFviEEE");
+            #endif
 
-            LOC_LOGV("AgpsMsgAtlOpenSuccess::proc()");
-            mAgpsManager->reportAtlOpenSuccess(mAgpsType, mApnName, mApnLen, mBearerType);
+            std::function<void(int)> wdsPdnTypeCb = std::bind(&GnssAdapter::reportPdnTypeFromWds,
+                    &mAdapter, std::placeholders::_1, mAgpsType, apn, mBearerType);
+           if (getPdnTypeFunc != nullptr) {
+               LOC_LOGv("dlGetSymFromLib success");
+               (*getPdnTypeFunc)(apn, wdsPdnTypeCb);
+           } else {
+               mAgpsManager->reportAtlOpenSuccess(mAgpsType, mApnName, apn.length(), mBearerType);
+           }
         }
     };
     // Added inital length checks for apnlen check to avoid security issues
@@ -5326,7 +5432,7 @@ void GnssAdapter::dataConnOpenCommand(
         LOC_LOGe("%s]: incorrect apnlen length or incorrect apnName", __func__);
         mAgpsManager.reportAtlClosed(agpsType);
     } else {
-        sendMsg( new AgpsMsgAtlOpenSuccess(
+        sendMsg( new AgpsMsgAtlOpenSuccess(*this,
                     &mAgpsManager, agpsType, apnName, apnLen, bearerType));
     }
 }
@@ -6990,4 +7096,41 @@ void GnssAdapter::reportGGAToNtrip(const char* nmea) {
     }
 
     return;
+}
+
+bool GnssAdapter::reportZppBestAvailableFix(LocGpsLocation &zppLoc,
+            GpsLocationExtended &location_extended, LocPosTechMask tech_mask) {
+    if (sUseZppInDBH && mOdcpiRequest.isEmergencyMode && mOdcpiRequestActive
+            && zppLoc.timestamp != 0) {
+        LOC_LOGd("report valid ZPP fix to Flp client in DBH");
+
+        struct MsgReportZppPosition : public LocMsg {
+            GnssAdapter& mAdapter;
+            mutable UlpLocation mUlpLoc;
+            mutable GpsLocationExtended mLocationExtended;
+            enum loc_sess_status mStatus;
+
+            inline MsgReportZppPosition(GnssAdapter& adapter,
+                                        const LocGpsLocation& zppLoc,
+                                        const GpsLocationExtended& locationExtended,
+                                        enum loc_sess_status status,
+                                        LocPosTechMask techMask) :
+                    LocMsg(),
+                    mAdapter(adapter),
+                    mLocationExtended(locationExtended),
+                    mStatus(status) {
+                memset(&mUlpLoc, 0, sizeof(UlpLocation));
+                mUlpLoc.size = sizeof(mUlpLoc);
+                mUlpLoc.tech_mask = techMask;
+                memcpy(&(mUlpLoc.gpsLocation), &zppLoc, sizeof(LocGpsLocation));
+            }
+            inline virtual void proc() const {
+                mAdapter.reportPosition(mUlpLoc, mLocationExtended, mStatus, mUlpLoc.tech_mask);
+            }
+        };
+
+        sendMsg(new MsgReportZppPosition(*this,
+                    zppLoc, location_extended, LOC_SESS_INTERMEDIATE, tech_mask));
+    }
+    return true;
 }
