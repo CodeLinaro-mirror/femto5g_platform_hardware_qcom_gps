@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -89,6 +89,7 @@ static uint32_t gnssResetSvConfig();
 static uint32_t configLeverArm(const LeverArmConfigInfo& configInfo);
 static uint32_t configRobustLocation(bool enable, bool enableForE911);
 static bool isSS5HWEnabled();
+static uint32_t setOptInStatus(bool userConsent);
 
 static const GnssInterface gGnssInterface = {
     sizeof(GnssInterface),
@@ -136,6 +137,7 @@ static const GnssInterface gGnssInterface = {
     configLeverArm,
     configRobustLocation,
     isSS5HWEnabled,
+    setOptInStatus,
 };
 
 #ifndef DEBUG_X86
@@ -471,6 +473,26 @@ static bool isSS5HWEnabled() {
 static uint32_t configRobustLocation(bool enable, bool enableForE911){
     if (NULL != gGnssAdapter) {
         return gGnssAdapter->configRobustLocationCommand(enable, enableForE911);
+    } else {
+        return 0;
+    }
+}
+
+static uint32_t setOptInStatus(bool userConsent) {
+    if (NULL != gGnssAdapter) {
+        struct RespMsg : public LocMsg {
+            uint32_t mSessionId;
+            inline RespMsg(uint32_t id) : LocMsg(), mSessionId(id) {}
+            inline void proc() const override {
+                gGnssAdapter->reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
+            }
+        };
+
+        uint32_t sessionId = gGnssAdapter->generateSessionId();
+        gGnssAdapter->getSystemStatus()->eventOptInStatus(userConsent);
+        gGnssAdapter->sendMsg(new RespMsg(sessionId));
+
+        return sessionId;
     } else {
         return 0;
     }
