@@ -1574,17 +1574,9 @@ typedef uint64_t GpsSvMeasHeaderFlags;
 #define GNSS_SV_MEAS_HEADER_HAS_BDS_NAVIC_INTER_SYSTEM_BIAS   0x20000000
 #define GNSS_SV_MEAS_HEADER_HAS_NAVIC_SYSTEM_TIME             0x40000000
 #define GNSS_SV_MEAS_HEADER_HAS_NAVIC_SYSTEM_TIME_EXT         0x80000000
-<<<<<<< HEAD
-=======
-#define GNSS_SV_MEAS_HEADER_HAS_GPSL1L2C_TIME_BIAS            0x100000000
-#define GNSS_SV_MEAS_HEADER_HAS_GLOG1G2_TIME_BIAS             0x200000000
-#define GNSS_SV_MEAS_HEADER_HAS_BDSB1IB1C_TIME_BIAS           0x400000000
-#define GNSS_SV_MEAS_HEADER_HAS_GALE1E5B_TIME_BIAS            0x800000000
-#define GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS_UNC           0x1000000000
->>>>>>> bfc6187... GPS HW: add support for bootimestamp in PVT report
+#define GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS_UNC           0x100000000
 
-typedef struct
-{
+typedef struct {
     uint32_t                                      size;
     // see defines in GNSS_SV_MEAS_HEADER_HAS_XXX_XXX
     uint64_t                                    flags;
