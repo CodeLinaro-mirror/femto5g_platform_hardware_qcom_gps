@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2014, 2020-2021 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2014, 2020 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -52,14 +52,14 @@
 #endif /* LOG_TAG */
 
 // LE targets with no logcat support
-#if defined(USE_SYSLOG_LOGGING)
+#if defined(FEATURE_EXTERNAL_AP) || defined(USE_SYSLOG_LOGGING)
 #include <syslog.h>
 #define ALOGE(...) syslog(LOG_ERR,     "LOC_LOGE: " __VA_ARGS__);
 #define ALOGW(...) syslog(LOG_WARNING, "LOC_LOGW: " __VA_ARGS__);
 #define ALOGI(...) syslog(LOG_NOTICE,  "LOC_LOGI: " __VA_ARGS__);
 #define ALOGD(...) syslog(LOG_DEBUG,   "LOC_LOGD: " __VA_ARGS__);
 #define ALOGV(...) syslog(LOG_NOTICE,  "LOC_LOGV: " __VA_ARGS__);
-#else /* USE_SYSLOG_LOGGING */
+#else /* FEATURE_EXTERNAL_AP USE_SYSLOG_LOGGING */
 #define TS_PRINTF(format, x...)                                  \
 {                                                                \
     struct timeval tv;                                           \
@@ -77,7 +77,7 @@
 #define ALOGI(format, x...) TS_PRINTF("I/%s (%d): " format , LOG_TAG, getpid(), ##x)
 #define ALOGD(format, x...) TS_PRINTF("D/%s (%d): " format , LOG_TAG, getpid(), ##x)
 #define ALOGV(format, x...) TS_PRINTF("V/%s (%d): " format , LOG_TAG, getpid(), ##x)
-#endif /* USE_SYSLOG_LOGGING */
+#endif /* FEATURE_EXTERNAL_AP */
 
 #endif /* #if defined (USE_ANDROID_LOGGING) || defined (ANDROID) */
 
