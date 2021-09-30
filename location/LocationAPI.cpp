@@ -115,6 +115,7 @@ static void destroyOSFrameworkInstance() {
 static bool isGnssClient(LocationCallbacks& locationCallbacks)
 {
     return (locationCallbacks.gnssNiCb != nullptr ||
+            locationCallbacks.trackingCb != nullptr ||
             locationCallbacks.gnssLocationInfoCb != nullptr ||
             locationCallbacks.engineLocationsInfoCb != nullptr ||
             locationCallbacks.gnssMeasurementsCb != nullptr ||
@@ -123,8 +124,7 @@ static bool isGnssClient(LocationCallbacks& locationCallbacks)
 
 static bool isBatchingClient(LocationCallbacks& locationCallbacks)
 {
-    return (locationCallbacks.batchingCb != nullptr ||
-            (locationCallbacks.trackingCb != nullptr && !isGnssClient(locationCallbacks)));
+    return (locationCallbacks.batchingCb != nullptr);
 }
 
 static bool isGeofenceClient(LocationCallbacks& locationCallbacks)
