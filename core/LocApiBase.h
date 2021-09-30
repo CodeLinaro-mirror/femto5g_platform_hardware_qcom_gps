@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2014, 2016-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2014, 2016-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -333,6 +333,43 @@ public:
                                               LocApiResponse* adapterResponse=nullptr);
     virtual void getConstellationMultiBandConfig(uint32_t sessionId,
                                         LocApiResponse* adapterResponse=nullptr);
+};
+
+typedef struct {
+    GPSTimeStruct gpsTime;
+    int64_t qtimerTick;
+    float timeUncMsec; // in milli-seconds
+} GpsTimeQtimerTickPair;
+
+class ElapsedRealtimeEstimator {
+private:
+    int64_t mCurrentClockDiff;
+    int64_t mPrevUtcTimeNanos;
+    int64_t mPrevBootTimeNanos;
+    int64_t mFixTimeStablizationThreshold;
+    int64_t mInitialTravelTime;
+    int64_t mPrevDataTimeNanos;
+
+    // association between gps time and qtimer value
+    // the two variable saves a pair of gps time and qtimer time
+    // read at the same point
+    GpsTimeQtimerTickPair mTimePairPVTReport;
+    GpsTimeQtimerTickPair mTimePairMeasReport;
+
+public:
+    ElapsedRealtimeEstimator(int64_t travelTimeNanosEstimate):
+            mInitialTravelTime(travelTimeNanosEstimate)
+        {reset();}
+    int64_t getElapsedRealtimeEstimateNanos(int64_t curDataTimeNanos,
+            bool isCurDataTimeTrustable, int64_t tbf);
+    inline int64_t getElapsedRealtimeUncNanos() { return 5000000;}
+    void reset();
+
+    bool getElapsedRealtimeForGpsTime(const GPSTimeStruct& gpsTimeAtOrigin,
+                            int64_t &elapsedTime, float & elpasedTimeUnc);
+    void saveGpsTimeAndQtimerPairInPvtReport(const GpsLocationExtended& locationExtended);
+    void saveGpsTimeAndQtimerPairInMeasReport(const GnssSvMeasurementSet& svMeasurementSet);
+    static bool getCurrentTime(struct timespec& currentTime, int64_t& sinceBootTimeNanos);
 };
 
 typedef LocApiBase* (getLocApi_t)(LOC_API_ADAPTER_EVENT_MASK_T exMask,
