@@ -447,6 +447,9 @@ public:
     uint32_t configOutputNmeaTypesCommand(GnssNmeaTypesMask enabledNmeaTypes);
     uint32_t configEngineIntegrityRiskCommand(PositioningEngineMask engType,
                                               uint32_t integrityRisk);
+    uint32_t configXtraParamsCommand(bool enable, const XtraConfigParams& xtraParams);
+    uint32_t getXtraStatusCommand();
+    uint32_t registerXtraStatusUpdateCommand(bool registerUpdate);
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */

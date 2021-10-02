@@ -136,7 +136,7 @@ GnssAdapter::GnssAdapter() :
     mCallbackPriority(OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_LOW),
     mSystemStatus(SystemStatus::getInstance(mMsgTask)),
     mServerUrl(":"),
-    mXtraObserver(mSystemStatus->getOsObserver(), mMsgTask),
+    mXtraObserver(this, mSystemStatus->getOsObserver(), mMsgTask),
     mBlockCPIInfo{},
     mDreIntEnabled(false),
     mPpeEnabled(false),
@@ -2187,9 +2187,13 @@ GnssAdapter::gnssDeleteAidingDataCommand(GnssAidingData& data)
         inline virtual void proc() const {
             if ((mData.posEngineMask & STANDARD_POSITIONING_ENGINE) != 0) {
                 mAdapter.deleteAidingData(mData, mSessionId);
-                SystemStatus* s = mAdapter.getSystemStatus();
-                if ((nullptr != s) && (mData.deleteAll)) {
-                    s->setDefaultGnssEngineStates();
+                if (mData.deleteAll) {
+                    SystemStatus* s = mAdapter.getSystemStatus();
+                    if (nullptr != s) {
+                        s->setDefaultGnssEngineStates();
+                    }
+                    // inform xtra daemon that XTRA assistance data gets deleted
+                    mAdapter.mXtraObserver.updateXtraDataDeletion();
                 }
             }
 
@@ -6262,6 +6266,92 @@ uint32_t GnssAdapter::configEngineIntegrityRiskCommand(
 
     sendMsg(new MsgConfigEngineIntegrityRisk(*this, sessionId, engType, integrityRisk));
 
+    return sessionId;
+}
+
+uint32_t GnssAdapter::configXtraParamsCommand(bool enable,
+                                              const XtraConfigParams& xtraParams) {
+    // generated session id will be none-zero
+    uint32_t sessionId = generateSessionId();
+    LOC_LOGd("session id %u, xtra enable %d", sessionId, enable);
+
+    struct MsgConfigXtraParams : public LocMsg {
+        GnssAdapter&     mAdapter;
+        uint32_t         mSessionId;
+        bool             mEnable;
+        XtraConfigParams mXtraParams;
+
+        inline MsgConfigXtraParams(GnssAdapter& adapter,
+                                   uint32_t sessionId,
+                                   bool enable,
+                                   XtraConfigParams xtraParams) :
+            LocMsg(), mAdapter(adapter), mSessionId(sessionId),
+            mEnable(enable), mXtraParams(xtraParams) {}
+        inline virtual void proc() const {
+            if(true == mAdapter.mXtraObserver.updateXtraConfig(mEnable, mXtraParams)) {
+                mAdapter.reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
+            } else {
+                mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
+            }
+        }
+    };
+
+    sendMsg(new MsgConfigXtraParams(*this, sessionId, enable, xtraParams));
+
+    return sessionId;
+}
+
+uint32_t GnssAdapter::getXtraStatusCommand() {
+    // generated session id will be none-zero
+    uint32_t sessionId = generateSessionId();
+    LOC_LOGd("session id %u", sessionId);
+
+    struct MsgGetXtraStatus : public LocMsg {
+        GnssAdapter& mAdapter;
+        uint32_t     mSessionId;
+
+        inline MsgGetXtraStatus(GnssAdapter& adapter,
+                                uint32_t sessionId) :
+            LocMsg(), mAdapter(adapter), mSessionId(sessionId) {}
+        inline virtual void proc() const {
+            if (false == mAdapter.mXtraObserver.getXtraStatus(mSessionId)) {
+                mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
+            }
+        }
+    };
+
+    sendMsg(new MsgGetXtraStatus(*this, sessionId));
+
+    return sessionId;
+}
+
+uint32_t GnssAdapter::registerXtraStatusUpdateCommand(bool registerUpdate) {
+    // generated session id will be none-zero
+    uint32_t sessionId = generateSessionId();
+    LOC_LOGd("session id %u, register for update %d", sessionId, registerUpdate);
+
+    struct MsgRegisterXtraStatusUpdate : public LocMsg {
+        GnssAdapter&     mAdapter;
+        uint32_t         mSessionId;
+        bool             mRegisterUpdate;
+
+        inline MsgRegisterXtraStatusUpdate(GnssAdapter& adapter,
+                                           uint32_t sessionId,
+                                           bool registerUpdate) :
+            LocMsg(), mAdapter(adapter), mSessionId(sessionId),
+            mRegisterUpdate(registerUpdate) {}
+        inline virtual void proc() const {
+            if (false == mAdapter.mXtraObserver.registerXtraStatusUpdate(
+                    mSessionId, mRegisterUpdate)) {
+                mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
+            } else if (!mRegisterUpdate) {
+                // de-register will not have status callback, send out response now
+                mAdapter.reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
+            }
+        }
+    };
+
+    sendMsg(new MsgRegisterXtraStatusUpdate(*this, sessionId, registerUpdate));
     return sessionId;
 }
 

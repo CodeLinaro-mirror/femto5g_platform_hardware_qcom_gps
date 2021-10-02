@@ -80,10 +80,12 @@ private:
 };
 #endif
 
+class GnssAdapter;
+
 class XtraSystemStatusObserver : public IDataItemObserver {
 public :
     // constructor & destructor
-    XtraSystemStatusObserver(IOsObserver* sysStatObs, const MsgTask* msgTask);
+    XtraSystemStatusObserver(GnssAdapter* adapter, IOsObserver* sysStatObs, const MsgTask* msgTask);
     inline virtual ~XtraSystemStatusObserver() {
         subscribe(false);
         mIpc.stopNonBlockingListening();
@@ -106,6 +108,11 @@ public :
     void restartDgnssSource();
     void stopDgnssSource();
     void updateNmeaToDgnssServer(const string& nmea);
+    bool updateXtraConfig(bool enabled, const XtraConfigParams& configParams);
+    bool getXtraStatus(uint32_t sessionId);
+    bool registerXtraStatusUpdate(uint32_t sessionId, bool registerUpdate);
+    bool updateXtraDataDeletion();
+
 #ifdef USE_GLIB
     void connectNetwork(NetConnectReqBitMask conMask);
     void disconnectNetwork(NetConnectReqBitMask conMask);
@@ -113,7 +120,8 @@ public :
 #endif
 
 private:
-    IOsObserver*    mSystemStatusObsrvr;
+    GnssAdapter*   mAdapter;
+    IOsObserver*   mSystemStatusObsrvr;
     const MsgTask* mMsgTask;
     GnssConfigGpsLock mGpsLock;
     LocIpc mIpc;
@@ -126,6 +134,7 @@ private:
     bool mIsConnectivityStatusKnown;
     shared_ptr<LocIpcSender> mSender;
     string mNtripParamsString;
+    bool mRegisterForXtraStatus;
 
 #ifdef USE_GLIB
     NetConnectReqBitMask mNetReqMask;
