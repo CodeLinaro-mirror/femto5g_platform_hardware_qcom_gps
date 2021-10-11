@@ -167,7 +167,7 @@ GnssAdapter::GnssAdapter() :
 
     pthread_condattr_t condAttr;
     pthread_condattr_init(&condAttr);
-    pthread_condattr_setclock(&condAttr, CLOCK_MONOTONIC);
+    pthread_condattr_setclock(&condAttr, CLOCK_REALTIME);
     pthread_cond_init(&mNiData.session.tCond, &condAttr);
     pthread_cond_init(&mNiData.sessionEs.tCond, &condAttr);
     pthread_condattr_destroy(&condAttr);
@@ -727,6 +727,9 @@ GnssAdapter::convertLppeCp(const GnssConfigLppeControlPlaneMask lppeControlPlane
     if (GNSS_CONFIG_LPPE_CONTROL_PLANE_SENSOR_BARO_MEASUREMENTS_BIT & lppeControlPlaneMask) {
         mask |= (1<<3);
     }
+    if (GNSS_CONFIG_LPPE_CONTROL_PLANE_NON_E911_BIT & lppeControlPlaneMask) {
+        mask |= (1<<4);
+    }
     return mask;
 }
 
@@ -745,6 +748,9 @@ GnssAdapter::convertLppeUp(const GnssConfigLppeUserPlaneMask lppeUserPlaneMask)
     }
     if (GNSS_CONFIG_LPPE_USER_PLANE_SENSOR_BARO_MEASUREMENTS_BIT & lppeUserPlaneMask) {
         mask |= (1<<3);
+    }
+    if (GNSS_CONFIG_LPPE_USER_PLANE_NON_E911_BIT & lppeUserPlaneMask) {
+        mask |= (1<<4);
     }
     return mask;
 }
@@ -4675,7 +4681,7 @@ static void* niThreadProc(void *args)
 
     pthread_mutex_lock(&pSession->tLock);
     /* Calculate absolute expire time */
-    clock_gettime(CLOCK_MONOTONIC, &present_time);
+    clock_gettime(CLOCK_REALTIME, &present_time);
     expire_time.tv_sec  = present_time.tv_sec + pSession->respTimeLeft;
     expire_time.tv_nsec = present_time.tv_nsec;
     LOC_LOGD("%s]: time out set for abs time %ld with delay %d sec",
