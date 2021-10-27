@@ -272,3 +272,15 @@ void loc_convert_velocity_gnss_to_vrp(float enuVelocity[3], float rollPitchYaw[3
     enuVelocity[1] = enuVelocity[1] - deltaEnuVelocity[1];
     enuVelocity[2] = enuVelocity[2] - deltaEnuVelocity[2];
 }
+
+uint64_t getQTimerFreq()
+{
+#if __aarch64__
+    uint64_t val = 0;
+    asm volatile("mrs %0, cntfrq_el0" : "=r" (val));
+#else
+    uint32_t val = 0;
+    asm volatile("mrc p15, 0, %0, c14, c0, 0" : "=r" (val));
+#endif
+    return val;
+}
