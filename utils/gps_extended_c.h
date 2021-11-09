@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2022 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -117,6 +117,7 @@ typedef uint32_t LocPosTechMask;
 #define LOC_POS_TECH_MASK_PPE ((LocPosTechMask)0x00000100)
 #define LOC_POS_TECH_MASK_VEH ((LocPosTechMask)0x00000200)
 #define LOC_POS_TECH_MASK_VIS ((LocPosTechMask)0x00000400)
+#define LOC_POS_TECH_MASK_PROPAGATED ((LocPosTechMask)0x00000800)
 
 
 enum loc_registration_mask_status {
