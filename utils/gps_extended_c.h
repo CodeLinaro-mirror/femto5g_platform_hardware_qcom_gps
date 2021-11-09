@@ -154,6 +154,7 @@ typedef uint32_t LocPosTechMask;
 #define LOC_POS_TECH_MASK_VIS ((LocPosTechMask)0x00000400)
 #define LOC_POS_TECH_MASK_INS ((LocPosTechMask)0x00000800)
 #define LOC_POS_TECH_MASK_PDR ((LocPosTechMask)0x00001000)
+#define LOC_POS_TECH_MASK_PROPAGATED ((LocPosTechMask)0x00002000)
 
 enum loc_registration_mask_status {
     LOC_REGISTRATION_MASK_ENABLED,
