@@ -229,6 +229,9 @@ class GnssAdapter : public LocAdapterBase {
     void initAgps(const AgpsCbInfo& cbInfo);
 
     /* ==== NFW =========================================================================== */
+    NfwStatusCb mNfwCb;
+    unordered_map<string, uint32_t> mNfws;
+    IsInEmergencySession mIsE911Session;
     inline void initNfw(const NfwCbInfo& cbInfo) {
         mControlCallbacks.nfwStatusCb = cbInfo.visibilityControlCb;
         mControlCallbacks.isInEmergencyStatusCb = cbInfo.isInEmergencySession;
@@ -275,6 +278,8 @@ class GnssAdapter : public LocAdapterBase {
     std::queue<GnssLatencyInfo> mGnssLatencyInfoQueue;
     GnssReportLoggerUtil mLogger;
     bool mDreIntEnabled;
+    bool mPpeEnabled;
+    ElapsedRealtimeEstimator mPositionElapsedRealTimeCal;
 
     /* === NativeAgpsHandler ======================================================== */
     NativeAgpsHandler mNativeAgpsHandler;
@@ -297,6 +302,8 @@ class GnssAdapter : public LocAdapterBase {
     inline void initOdcpi(const odcpiRequestCallback& callback, OdcpiPrioritytype priority);
     inline void injectOdcpi(const Location& location);
     static bool isFlpClient(LocationCallbacks& locationCallbacks);
+    void fillElapsedRealTime(const GpsLocationExtended& locationExtended,
+                             Location& out);
 
     /*==== DGnss Ntrip Source ==========================================================*/
     StartDgnssNtripParams   mStartDgnssNtripParams;
@@ -427,6 +434,8 @@ public:
     { return mGnssSvTypeConfigCb; }
     void setConfig();
     void gnssSecondaryBandConfigUpdate(LocApiResponse* locApiResponse= nullptr);
+    uint32_t getNfwControlBits(const std::vector<std::string>& enabledNfws);
+    void readNfwLockConfig();
 
     /* ========= AGPS ====================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
@@ -438,7 +447,7 @@ public:
     void dataConnClosedCommand(AGpsExtType agpsType);
     void dataConnFailedCommand(AGpsExtType agpsType);
     void getGnssEnergyConsumedCommand(GnssEnergyConsumedCallback energyConsumedCb);
-    void nfwControlCommand(bool enable);
+    void nfwControlCommand(std::vector<std::string>& enabledNfws);
     uint32_t setConstrainedTuncCommand (bool enable, float tuncConstraint,
                                         uint32_t energyBudget);
     uint32_t setPositionAssistedClockEstimatorCommand (bool enable);
@@ -460,6 +469,8 @@ public:
     uint32_t configEngineRunStateCommand(PositioningEngineMask engType,
                                          LocEngineRunState engState);
     uint32_t configOutputNmeaTypesCommand(GnssNmeaTypesMask enabledNmeaTypes);
+    uint32_t configEngineIntegrityRiskCommand(PositioningEngineMask engType,
+                                              uint32_t integrityRisk);
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
@@ -526,6 +537,10 @@ public:
     bool needReportForGnssClient(const UlpLocation& ulpLocation,
             enum loc_sess_status status, LocPosTechMask techMask);
     bool needReportForFlpClient(enum loc_sess_status status, LocPosTechMask techMask);
+    bool needReportForClient(LocationAPI* client, enum loc_sess_status status);
+    inline bool needReportForAnyClient(enum loc_sess_status status) {
+        return needReportForClient(nullptr, status);
+    }
     bool needToGenerateNmeaReport(const uint32_t &gpsTimeOfWeekMs,
         const struct timespec32_t &apTimeStamp);
     void reportPosition(const UlpLocation &ulpLocation,

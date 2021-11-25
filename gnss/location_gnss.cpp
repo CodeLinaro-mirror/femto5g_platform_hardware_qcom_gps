@@ -71,7 +71,7 @@ static void getDebugReport(GnssDebugReport& report);
 static void updateConnectionStatus(bool connected, int8_t type, bool roaming,
                                    NetworkHandle networkHandle, string& apn);
 static void getGnssEnergyConsumed(GnssEnergyConsumedCallback energyConsumedCb);
-static void enableNfwLocationAccess(bool enable);
+static void enableNfwLocationAccess(std::vector<std::string>& enabledNfws);
 static void nfwInit(const NfwCbInfo& cbInfo);
 static void getPowerStateChanges(std::function<void(bool)> powerStateCb);
 
@@ -110,6 +110,7 @@ static void antennaInfoClose();
 static uint32_t configEngineRunState(PositioningEngineMask engType, LocEngineRunState engState);
 static uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes);
 static uint32_t setOptInStatus(bool userConsent);
+static uint32_t configEngineIntegrityRisk(PositioningEngineMask engType, uint32_t integrityRisk);
 
 static const GnssInterface gGnssInterface = {
     sizeof(GnssInterface),
@@ -173,6 +174,7 @@ static const GnssInterface gGnssInterface = {
     configEngineRunState,
     configOutputNmeaTypes,
     setOptInStatus,
+    configEngineIntegrityRisk,
 };
 
 #ifndef DEBUG_X86
@@ -436,9 +438,9 @@ static void getGnssEnergyConsumed(GnssEnergyConsumedCallback energyConsumedCb) {
     }
 }
 
-static void enableNfwLocationAccess(bool enable) {
+static void enableNfwLocationAccess(std::vector<std::string>& enabledNfws) {
     if (NULL != gGnssAdapter) {
-        gGnssAdapter->nfwControlCommand(enable);
+        gGnssAdapter->nfwControlCommand(enabledNfws);
     }
 }
 
@@ -650,6 +652,15 @@ static uint32_t setOptInStatus(bool userConsent) {
         gGnssAdapter->sendMsg(new RespMsg(sessionId));
 
         return sessionId;
+    } else {
+        return 0;
+    }
+}
+
+static uint32_t configEngineIntegrityRisk(PositioningEngineMask engType,
+                                          uint32_t integrityRisk) {
+    if (NULL != gGnssAdapter) {
+        return gGnssAdapter->configEngineIntegrityRiskCommand(engType, integrityRisk);
     } else {
         return 0;
     }

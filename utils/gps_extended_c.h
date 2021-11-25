@@ -111,26 +111,45 @@ enum loc_registration_mask_status {
     LOC_REGISTRATION_MASK_SET
 };
 
+/* The entries in the following enum should mimic the entries in qmiLocSupportedFeatureEnumT_v02
+   in location_service_v02.h */
 typedef enum {
-    LOC_SUPPORTED_FEATURE_ODCPI_2_V02 = 0, /**<  Support ODCPI version 2 feature  */
-    LOC_SUPPORTED_FEATURE_WIFI_AP_DATA_INJECT_2_V02, /**<  Support Wifi AP data inject version 2 feature  */
-    LOC_SUPPORTED_FEATURE_DEBUG_NMEA_V02, /**< Support debug NMEA feature */
-    LOC_SUPPORTED_FEATURE_GNSS_ONLY_POSITION_REPORT, /**< Support GNSS Only position reports */
-    LOC_SUPPORTED_FEATURE_FDCL, /**< Support FDCL */
-    LOC_SUPPORTED_FEATURE_CONSTELLATION_ENABLEMENT_V02, /**< Support constellation enablement */
-    LOC_SUPPORTED_FEATURE_AGPM_V02, /**< Support AGPM feature */
-    LOC_SUPPORTED_FEATURE_XTRA_INTEGRITY, /**< Support XTRA integrity */
-    LOC_SUPPORTED_FEATURE_FDCL_2, /**< Support FDCL V2 */
-    LOC_SUPPORTED_FEATURE_LOCATION_PRIVACY, /**< Support location privacy */
-    LOC_SUPPORTED_FEATURE_NAVIC, /**< Support NAVIC constellation */
-    LOC_SUPPORTED_FEATURE_MEASUREMENTS_CORRECTION, /**< Support measurements correction */
-    LOC_SUPPORTED_FEATURE_ROBUST_LOCATION, /**<  Support Robust Location feature */
-    LOC_SUPPORTED_FEATURE_EDGNSS, /**< Support precise location dgnss */
-    LOC_SUPPORTED_FEATURE_MULTIBAND_CONFIG, /**<  Support the multiband GNSS config. feature  */
-    LOC_SUPPORTED_FEATURE_QMI_AGNSS_CONFIG_DISABLED, /**<  Support the AGNSS config. for DSDA  */
-    LOC_SUPPORTED_FEATURE_MULTIPLE_ATTRIBUTION_APPS, /**<  Support the Multiple Attribution Apps
-                                                       (UTH clients Lock control) feature  */
-    LOC_SUPPORTED_FEATURE_QMI_FLP_NLP_SOURCE, /**< Support the FLP, NLP Z-Source provider feature */
+    /**<  Support ODCPI version 2 feature  */
+    LOC_SUPPORTED_FEATURE_ODCPI_2_V02 = 0,
+    /**<  Support Wifi AP data inject version 2 feature  */
+    LOC_SUPPORTED_FEATURE_WIFI_AP_DATA_INJECT_2_V02,
+    /**< Support debug NMEA feature */
+    LOC_SUPPORTED_FEATURE_DEBUG_NMEA_V02,
+    /**< Support GNSS Only position reports */
+    LOC_SUPPORTED_FEATURE_GNSS_ONLY_POSITION_REPORT,
+    /**< Support FDCL */
+    LOC_SUPPORTED_FEATURE_FDCL,
+    /**< Support constellation enablement */
+    LOC_SUPPORTED_FEATURE_CONSTELLATION_ENABLEMENT_V02,
+    /**< Support AGPM feature */
+    LOC_SUPPORTED_FEATURE_AGPM_V02,
+    /**< Support XTRA integrity */
+    LOC_SUPPORTED_FEATURE_XTRA_INTEGRITY,
+    /**< Support FDCL V2 */
+    LOC_SUPPORTED_FEATURE_FDCL_2,
+    /**< Support location privacy */
+    LOC_SUPPORTED_FEATURE_LOCATION_PRIVACY,
+    /**< Support NAVIC constellation */
+    LOC_SUPPORTED_FEATURE_NAVIC,
+    /**< Support measurements correction */
+    LOC_SUPPORTED_FEATURE_MEASUREMENTS_CORRECTION,
+    /**<  Support Robust Location feature */
+    LOC_SUPPORTED_FEATURE_ROBUST_LOCATION,
+    /**< Support precise location dgnss */
+    LOC_SUPPORTED_FEATURE_EDGNSS,
+    /**<  Support the multiband GNSS configuration feature   */
+    LOC_SUPPORTED_FEATURE_MULTIBAND_CONFIG,
+    /**<  Support the configuration for DSDA   */
+    LOC_SUPPORTED_FEATURE_DSDA_CONFIGURATION,
+    /**<  Support the Multiple Attribution Apps(UTH clients Lock control) feature   */
+    LOC_SUPPORTED_FEATURE_MULTIPLE_ATTRIBUTION_APPS,
+    /**< Support the FLP, NLP Z-Source provider feature */
+    LOC_SUPPORTED_FEATURE_QMI_FLP_NLP_SOURCE
 } loc_supported_feature_enum;
 
 typedef struct {
@@ -405,6 +424,17 @@ typedef uint64_t GpsLocationExtendedFlags;
 #define GPS_LOCATION_EXTENDED_HAS_DR_SOLUTION_STATUS_MASK        0x800000000000
 /** GpsLocationExtended has altitudeAssumed. */
 #define GPS_LOCATION_EXTENDED_HAS_ALTITUDE_ASSUMED               0x1000000000000
+/** GpsLocationExtended has integrityRiskUsed. */
+#define GPS_LOCATION_EXTENDED_HAS_INTEGRITY_RISK_USED            0x2000000000000
+/** GpsLocationExtended has protectAlongTrack. */
+#define GPS_LOCATION_EXTENDED_HAS_PROTECT_ALONG_TRACK            0x4000000000000
+/** GpsLocationExtended has protectCrossTrack. */
+#define GPS_LOCATION_EXTENDED_HAS_PROTECT_CROSS_TRACK            0x8000000000000
+/** GpsLocationExtended has protectVertical. */
+#define GPS_LOCATION_EXTENDED_HAS_PROTECT_VERTICAL               0x10000000000000
+#define GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK                    0x20000000000000
+/** GpsLocationExtended has system tick unc. */
+#define GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK_UNC                0x40000000000000
 
 typedef uint32_t LocNavSolutionMask;
 /* Bitmask to specify whether SBAS ionospheric correction is used  */
@@ -851,6 +881,31 @@ typedef struct {
      *  true:  Altitude is assumed; there may not be enough
      *         satellites to determine the precise altitude. */
     bool altitudeAssumed;
+
+    /** Integrity risk used for protection level parameters.
+     *  Unit of 2.5e-10. Valid range is [1 to (4e9-1)].
+     *  Other values means integrity risk is disabled and
+     *  GnssLocation::protectAlongTrack,
+     *  GnssLocation::protectCrossTrack and
+     *  GnssLocation::protectVertical will not be available.
+     */
+    uint32_t integrityRiskUsed;
+    /** Along-track protection level at specified integrity risk, in
+     *  unit of meter.
+     */
+    float    protectAlongTrack;
+   /** Cross-track protection level at specified integrity risk, in
+     *  unit of meter.
+     */
+    float    protectCrossTrack;
+    /** Vertical component protection level at specified integrity
+     *  risk, in unit of meter.
+     */
+    float    protectVertical;
+    /** System Tick at GPS Time */
+    uint64_t systemTick;
+    /** Uncertainty for System Tick at GPS Time in milliseconds   */
+    float systemTickUnc;
 } GpsLocationExtended;
 
 // struct that contains complete position info from engine
@@ -1495,6 +1550,7 @@ typedef uint64_t GpsSvMeasHeaderFlags;
 #define GNSS_SV_MEAS_HEADER_HAS_GLOG1G2_TIME_BIAS             0x200000000
 #define GNSS_SV_MEAS_HEADER_HAS_BDSB1IB1C_TIME_BIAS           0x400000000
 #define GNSS_SV_MEAS_HEADER_HAS_GALE1E5B_TIME_BIAS            0x800000000
+#define GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS_UNC           0x1000000000
 
 typedef struct
 {
@@ -1548,6 +1604,7 @@ typedef struct
 
     /** Receiver tick at frame count */
     uint64_t                                    refCountTicks;
+    float                                       refCountTicksUnc;
 
     /** DGNSS corrections source type RTCM, 3GPP etc, if DGNSS was
      *  used for these measurements. */
@@ -2192,6 +2249,12 @@ typedef enum {
     GNSS_NMEA_REPORT_RATE_1HZ  = 1,
     GNSS_NMEA_REPORT_RATE_NHZ  = 2
 } GnssNMEARptRate;
+
+/*
+ * Callback with NFW information.
+ */
+typedef void(*NfwStatusCb)(GnssNfwNotification notification);
+typedef bool(*IsInEmergencySession)(void);
 
 enum AntennaInfoStatus {
     ANTENNA_INFO_SUCCESS = 0,

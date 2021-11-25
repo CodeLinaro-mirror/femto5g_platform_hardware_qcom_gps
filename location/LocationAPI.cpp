@@ -1243,15 +1243,30 @@ void LocationControlAPI::getDebugReport(GnssDebugReport& report) {
 
 }
 
-void LocationControlAPI::enableNfwLocationAccess(bool enable) {
+void LocationControlAPI::enableNfwLocationAccess(std::vector<std::string>& enabledNfws) {
     pthread_mutex_lock(&gDataMutex);
 
     if (gData.gnssInterface != NULL) {
-        gData.gnssInterface->enableNfwLocationAccess(enable);
+        gData.gnssInterface->enableNfwLocationAccess(enabledNfws);
     }
     else {
         LOC_LOGe("No gnss interface available for Location Control API");
     }
 
     pthread_mutex_unlock(&gDataMutex);
+}
+
+uint32_t LocationControlAPI::configEngineIntegrityRisk(
+            PositioningEngineMask engType, uint32_t integrityRisk) {
+    uint32_t id = 0;
+    pthread_mutex_lock(&gDataMutex);
+
+    if (gData.gnssInterface != NULL) {
+        id = gData.gnssInterface->configEngineIntegrityRisk(engType, integrityRisk);
+    } else {
+        LOC_LOGe("No gnss interface available for Location Control API");
+    }
+
+    pthread_mutex_unlock(&gDataMutex);
+    return id;
 }

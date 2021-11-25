@@ -85,7 +85,7 @@ struct GnssInterface {
                      int blockDurationMsec, double latLonDiffThreshold);
     void (*setEsStatusCallback)(std::function<void(bool)> esStatusCb);
     void (*getGnssEnergyConsumed)(GnssEnergyConsumedCallback energyConsumedCb);
-    void (*enableNfwLocationAccess)(bool enable);
+    void (*enableNfwLocationAccess)(std::vector<std::string>& enabledNfws);
     void (*nfwInit)(const NfwCbInfo& cbInfo);
     void (*getPowerStateChanges)(std::function<void(bool)> powerStateCb);
     void (*injectLocationExt)(const GnssLocationInfoNotification &locationInfo);
@@ -115,6 +115,7 @@ struct GnssInterface {
                                      LocEngineRunState engState);
     uint32_t (*configOutputNmeaTypes)(GnssNmeaTypesMask enabledNmeaTypes);
     uint32_t (*setOptInStatus)(bool userConsent);
+    uint32_t (*configEngineIntegrityRisk)(PositioningEngineMask engineType, uint32_t integrityRisk);
 };
 
 struct BatchingInterface {
