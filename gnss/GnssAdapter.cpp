@@ -171,6 +171,7 @@ GnssAdapter::GnssAdapter() :
     mSystemStatus(SystemStatus::getInstance(mMsgTask)),
     mServerUrl(":"),
     mXtraObserver(this, mSystemStatus->getOsObserver(), mMsgTask),
+    mMpXtraEnabled(true),
     mBlockCPIInfo{},
     mDreIntEnabled(false),
     mPpeEnabled(false),
@@ -6327,6 +6328,20 @@ uint32_t GnssAdapter::configEngineIntegrityRiskCommand(
     return sessionId;
 }
 
+void GnssAdapter::reportXtraMpDisabledEvent() {
+    struct MsgReportXtraMpDisabled : public LocMsg {
+        GnssAdapter& mAdapter;
+
+        inline MsgReportXtraMpDisabled(GnssAdapter& adapter) :
+            LocMsg(), mAdapter(adapter) {}
+        inline virtual void proc() const {
+            mAdapter.mMpXtraEnabled = false;
+        }
+    };
+
+    sendMsg(new MsgReportXtraMpDisabled(*this));
+}
+
 uint32_t GnssAdapter::configXtraParamsCommand(bool enable,
                                               const XtraConfigParams& xtraParams) {
     // generated session id will be none-zero
@@ -6346,10 +6361,14 @@ uint32_t GnssAdapter::configXtraParamsCommand(bool enable,
             LocMsg(), mAdapter(adapter), mSessionId(sessionId),
             mEnable(enable), mXtraParams(xtraParams) {}
         inline virtual void proc() const {
-            if(true == mAdapter.mXtraObserver.updateXtraConfig(mEnable, mXtraParams)) {
-                mAdapter.reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
+            if (mAdapter.mMpXtraEnabled == false) {
+                mAdapter.reportResponse(LOCATION_ERROR_NOT_SUPPORTED, mSessionId);
             } else {
-                mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
+                if(true == mAdapter.mXtraObserver.updateXtraConfig(mEnable, mXtraParams)) {
+                    mAdapter.reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
+                } else {
+                    mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
+                }
             }
         }
     };

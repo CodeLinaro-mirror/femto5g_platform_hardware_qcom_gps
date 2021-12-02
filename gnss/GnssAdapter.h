@@ -287,6 +287,7 @@ class GnssAdapter : public LocAdapterBase {
     std::string mServerUrl;
     std::string mMoServerUrl;
     XtraSystemStatusObserver mXtraObserver;
+    bool mMpXtraEnabled;
     LocationSystemInfo mLocSystemInfo;
     std::vector<GnssSvIdSource> mBlacklistedSvIds;
     PowerStateType mPowerState;
@@ -549,6 +550,7 @@ public:
     );
     void reportPdnTypeFromWds(int pdnType, AGpsExtType agpsType, std::string apnName,
             AGpsBearerType bearerType);
+    void reportXtraMpDisabledEvent();
 
     /* ======== UTILITIES ================================================================= */
     bool needReportForAllClients(const UlpLocation& ulpLocation,
