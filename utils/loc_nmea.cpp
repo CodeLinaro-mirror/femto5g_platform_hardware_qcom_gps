@@ -1441,8 +1441,9 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         sv_cache_info.qzss_used_mask =
                 locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask;
     }
-
-    if (generate_nmea) {
+    // Generate valid NMEA strings only when utc Time stamp is set
+    // Output empty nmea sentence if utctime is zero
+    if (generate_nmea && (0 != utcPosTimestamp)) {
         char talker[3] = {'G', 'P', '\0'};
         uint32_t svUsedCount = 0;
         uint32_t count = 0;
