@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2020,2022 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -181,8 +181,8 @@ bool XtraSystemStatusObserver::updateTac(const string& tac) {
     return ( LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()) );
 }
 
-bool XtraSystemStatusObserver::updateMccMnc(const string& mccmnc) {
-    mMccmnc = mccmnc;
+bool XtraSystemStatusObserver::updateMccMnc(const string& mccmncCountry) {
+    mMccmnc = mccmncCountry;
 
     if (!mReqStatusReceived) {
         return true;
@@ -190,7 +190,7 @@ bool XtraSystemStatusObserver::updateMccMnc(const string& mccmnc) {
 
     stringstream ss;
     ss <<  "mncmcc";
-    ss << " " << mccmnc.c_str();
+    ss << " " << mccmncCountry.c_str();
     string s = ss.str();
     return ( LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()) );
 }
