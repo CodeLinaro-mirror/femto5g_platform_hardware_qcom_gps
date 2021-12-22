@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -26,10 +26,13 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+#include <loc_pla.h>
+
 #ifndef ENGINE_HUB_PROXY_BASE_H
 #define ENGINE_HUB_PROXY_BASE_H
 #ifdef NO_UNORDERED_SET_OR_MAP
     #include <map>
+    #define unordered_map map
 #else
     #include <unordered_map>
 #endif
@@ -126,6 +129,13 @@ public:
         (void) engState;
         return false;
     }
+
+    inline virtual bool configEngineIntegrityRisk(
+            PositioningEngineMask engType, uint32_t integrityRisk) {
+        (void) engType;
+        (void) integrityRisk;
+        return false;
+    }
 };
 
 typedef std::function<void(int count, EngineLocationInfo* locationArr)>
@@ -150,7 +160,6 @@ typedef EngineHubProxyBase* (getEngHubProxyFn)(
         const MsgTask * msgTask,
         IOsObserver* osObserver,
         GnssAdapterReportEnginePositionsEventCb positionEventCb,
-        GnssAdapterReportSvEventCb svEventCb,
         GnssAdapterReqAidingDataCb reqAidingDataCb,
         GnssAdapterUpdateNHzRequirementCb updateNHzRequirementCb,
         GnssAdapterUpdateQwesFeatureStatusCb updateQwesFeatureStatusCb);
