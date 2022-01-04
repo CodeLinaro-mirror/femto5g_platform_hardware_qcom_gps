@@ -113,6 +113,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define SIGNAL_ID_NAVIC_SRS    4
 #define SIGNAL_ID_NAVIC_L1SPS  5
 
+static LocPosTechMask techMaskGnss = LOC_POS_TECH_MASK_SATELLITE | LOC_POS_TECH_MASK_HYBRID;
 
 typedef struct loc_nmea_sv_meta_s
 {
@@ -512,7 +513,8 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-static uint32_t loc_nmea_generate_GSA(const GpsLocationExtended &locationExtended,
+static uint32_t loc_nmea_generate_GSA(const UlpLocation &location,
+                              const GpsLocationExtended &locationExtended,
                               char* sentence,
                               int bufSize,
                               loc_nmea_sv_meta* sv_meta_p,
@@ -547,12 +549,13 @@ static uint32_t loc_nmea_generate_GSA(const GpsLocationExtended &locationExtende
     if (svUsedCount == 0 && GNSS_SV_TYPE_GPS != sv_meta_p->svType)
         return 0;
 
-    if (svUsedCount == 0)
-        fixType = '1'; // no fix
-    else if (svUsedCount <= 3)
-        fixType = '2'; // 2D fix
-    else
+    if (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ALTITUDE) {
         fixType = '3'; // 3D fix
+    } else if (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG) {
+        fixType = '2'; // 2D fix
+    } else {
+        fixType = '1'; // no fix
+    }
 
     // Start printing the sentence
     // Format: $--GSA,a,x,xx,xx,xx,xx,xx,xx,xx,xx,xx,xx,xx,xx,p.p,h.h,v.v,s*cc
@@ -1129,7 +1132,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         // ---$GPGSA/$GNGSA---
         // -------------------
 
-        count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
+        count = loc_nmea_generate_GSA(location, locationExtended, sentence, sizeof(sentence),
                         loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_GPS,
                         GNSS_SIGNAL_GPS_L1CA, true), nmeaArraystr);
         if (count > 0)
@@ -1143,7 +1146,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         // ---$GLGSA/$GNGSA---
         // -------------------
 
-        count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
+        count = loc_nmea_generate_GSA(location, locationExtended, sentence, sizeof(sentence),
                         loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_GLONASS,
                         GNSS_SIGNAL_GLONASS_G1, true), nmeaArraystr);
         if (count > 0)
@@ -1157,7 +1160,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         // ---$GAGSA/$GNGSA---
         // -------------------
 
-        count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
+        count = loc_nmea_generate_GSA(location, locationExtended, sentence, sizeof(sentence),
                         loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_GALILEO,
                         GNSS_SIGNAL_GALILEO_E1, true), nmeaArraystr);
         if (count > 0)
@@ -1171,7 +1174,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         // ---$GQGSA/$GNGSA (QZSS)---
         // --------------------------
 
-        count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
+        count = loc_nmea_generate_GSA(location, locationExtended, sentence, sizeof(sentence),
                         loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_QZSS,
                         GNSS_SIGNAL_QZSS_L1CA, true), nmeaArraystr);
         if (count > 0)
@@ -1184,7 +1187,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         // ----------------------------
         // ---$GBGSA/$GNGSA (BEIDOU)---
         // ----------------------------
-        count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
+        count = loc_nmea_generate_GSA(location, locationExtended, sentence, sizeof(sentence),
                         loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_BEIDOU,
                         GNSS_SIGNAL_BEIDOU_B1I, true), nmeaArraystr);
         if (count > 0)
