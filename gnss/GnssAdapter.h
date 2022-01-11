@@ -532,6 +532,10 @@ public:
        return (((mContext != NULL) && (0 != mContext->mGps_conf.ENABLE_NMEA_PRINT)) ?
               (true) : (false));
     }
+
+    // Zpp related
+    virtual bool reportZppBestAvailableFix(LocGpsLocation &zppLoc,
+            GpsLocationExtended &location_extended, LocPosTechMask tech_mask) override;
 };
 
 #endif //GNSS_ADAPTER_H
