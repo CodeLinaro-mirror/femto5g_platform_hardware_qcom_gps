@@ -71,6 +71,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <pthread.h>
 #include <map>
 #include <loc_misc_utils.h>
+#include <loc_cfg.h>
 
 typedef const GnssInterface* (getGnssInterface)();
 typedef const GeofenceInterface* (getGeofenceInterface)();
@@ -113,6 +114,12 @@ static pthread_mutex_t gDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static bool gGnssLoadFailed = false;
 static bool gBatchingLoadFailed = false;
 static bool gGeofenceLoadFailed = false;
+static uint32_t gEnableInfotainmentHal = 0;
+static bool gReadInfotainmentHalConfigOnce = false;
+
+const loc_param_s_type gps_conf_params[] = {
+    {"ENABLE_INFOTAINMENT_HAL", &gEnableInfotainmentHal, nullptr, 'n'}
+};
 
 template <typename T1, typename T2>
 static const T1* loadLocationInterface(const char* library, const char* name) {
@@ -252,8 +259,8 @@ void onGeofenceRemoveClientCompleteCb (LocationAPI* client)
 ILocationAPI*
 LocationAPI::createInstance (LocationCallbacks& locationCallbacks)
 {
-    ILocationAPI* newLocationAPIIntf = nullptr;
-    LocationAPI* newLocationAPI = nullptr;
+    ILocationAPI* locationClientApiImpl = nullptr;
+    LocationAPI* locationApiObj = nullptr;
 
     if (nullptr == locationCallbacks.capabilitiesCb ||
         nullptr == locationCallbacks.responseCb ||
@@ -262,20 +269,27 @@ LocationAPI::createInstance (LocationCallbacks& locationCallbacks)
         return NULL;
     }
 
-    void *handle = nullptr;
-    getLocationClientApiImpl getter = (getLocationClientApiImpl)dlGetSymFromLib(handle,
-            "liblocation_client_api.impl.so", "getLocationClientApiImpl");
-    if (nullptr == getter) {
-        LOC_LOGi("Failed to load LocationClientApi implementation.");
-    } else {
-        newLocationAPIIntf = getter(locationCallbacks.capabilitiesCb);
-        LOC_LOGi("Succesfully loaded LocationClientApi implementation.");
-        return newLocationAPIIntf;
+    if (!gReadInfotainmentHalConfigOnce) {
+        UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_params);
+        gReadInfotainmentHalConfigOnce = true;
     }
 
-    if (newLocationAPI == nullptr) {
-        newLocationAPI = new LocationAPI();
+    if (gEnableInfotainmentHal) {
+        void *handle = nullptr;
+        getLocationClientApiImpl getter = (getLocationClientApiImpl)dlGetSymFromLib(handle,
+                "liblocation_client_api.so", "getLocationClientApiImpl");
+        if (nullptr == getter) {
+            LOC_LOGe("Failed to load LocationClientApi implementation.");
+        } else {
+            locationClientApiImpl = getter(locationCallbacks.capabilitiesCb);
+            locationClientApiImpl->updateCallbacks(locationCallbacks);
+            LOC_LOGi("Succesfully loaded LocationClientApi implementation.");
+        }
+
+        return locationClientApiImpl;
     }
+
+    locationApiObj = new LocationAPI();
 
     bool requestedCapabilities = false;
     pthread_mutex_lock(&gDataMutex);
@@ -283,9 +297,9 @@ LocationAPI::createInstance (LocationCallbacks& locationCallbacks)
     if (isGnssClient(locationCallbacks)) {
         loadLibGnss();
         if (NULL != gData.gnssInterface) {
-            gData.gnssInterface->addClient(newLocationAPI, locationCallbacks);
+            gData.gnssInterface->addClient(locationApiObj, locationCallbacks);
             if (!requestedCapabilities) {
-                gData.gnssInterface->requestCapabilities(newLocationAPI);
+                gData.gnssInterface->requestCapabilities(locationApiObj);
                 requestedCapabilities = true;
             }
         }
@@ -294,9 +308,9 @@ LocationAPI::createInstance (LocationCallbacks& locationCallbacks)
     if (isBatchingClient(locationCallbacks)) {
         loadLibBatching();
         if (NULL != gData.batchingInterface) {
-            gData.batchingInterface->addClient(newLocationAPI, locationCallbacks);
+            gData.batchingInterface->addClient(locationApiObj, locationCallbacks);
             if (!requestedCapabilities) {
-                gData.batchingInterface->requestCapabilities(newLocationAPI);
+                gData.batchingInterface->requestCapabilities(locationApiObj);
                 requestedCapabilities = true;
             }
         }
@@ -305,9 +319,9 @@ LocationAPI::createInstance (LocationCallbacks& locationCallbacks)
     if (isGeofenceClient(locationCallbacks)) {
         loadLibGeofencing();
         if (NULL != gData.geofenceInterface) {
-            gData.geofenceInterface->addClient(newLocationAPI, locationCallbacks);
+            gData.geofenceInterface->addClient(locationApiObj, locationCallbacks);
             if (!requestedCapabilities) {
-                gData.geofenceInterface->requestCapabilities(newLocationAPI);
+                gData.geofenceInterface->requestCapabilities(locationApiObj);
                 requestedCapabilities = true;
             }
         }
@@ -316,17 +330,17 @@ LocationAPI::createInstance (LocationCallbacks& locationCallbacks)
     if (!requestedCapabilities && locationCallbacks.capabilitiesCb != nullptr) {
         loadLibGnss();
         if (NULL != gData.gnssInterface) {
-            gData.gnssInterface->addClient(newLocationAPI, locationCallbacks);
-            gData.gnssInterface->requestCapabilities(newLocationAPI);
+            gData.gnssInterface->addClient(locationApiObj, locationCallbacks);
+            gData.gnssInterface->requestCapabilities(locationApiObj);
             requestedCapabilities = true;
         }
     }
 
-    gData.clientData[newLocationAPI] = locationCallbacks;
+    gData.clientData[locationApiObj] = locationCallbacks;
 
     pthread_mutex_unlock(&gDataMutex);
 
-    return newLocationAPI;
+    return locationApiObj;
 }
 
 void
@@ -729,19 +743,25 @@ LocationControlAPI::getInstance(LocationControlCallbacks& locationControlCallbac
     void *handle = nullptr;
 
     if (NULL == gData.controlAPI) {
-        getLocationIntegrationApiImpl getter =
-             (getLocationIntegrationApiImpl)dlGetSymFromLib(handle,
-            "libloc_integration_api.impl.so", "getLocationIntegrationApiImpl");
-        if (nullptr == getter) {
-            LOC_LOGi("Failed to load LocationIntegrationApi implementation.");
-            loadLibGnss();
-
-            if (NULL != gData.gnssInterface) {
-                gData.controlAPI = new LocationControlAPI();
+        if (!gReadInfotainmentHalConfigOnce) {
+            UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_params);
+            gReadInfotainmentHalConfigOnce = true;
+        }
+        if (gEnableInfotainmentHal) {
+            getLocationIntegrationApiImpl getter =
+                (getLocationIntegrationApiImpl)dlGetSymFromLib(handle,
+                "liblocation_integration_api.so", "getLocationIntegrationApiImpl");
+            if (nullptr == getter) {
+                LOC_LOGe("Failed to load LocationIntegrationApi implementation.");
+            } else {
+                gData.controlAPI = getter();
+                LOC_LOGi("Succesfully loaded LocationIntegrationApi implementation.");
             }
         } else {
-            gData.controlAPI = getter();
-            LOC_LOGi("Succesfully loaded LocationIntegrationApi implementation.");
+            loadLibGnss();
+            if (!gGnssLoadFailed) {
+                gData.controlAPI = new LocationControlAPI();
+            }
         }
     }
 
