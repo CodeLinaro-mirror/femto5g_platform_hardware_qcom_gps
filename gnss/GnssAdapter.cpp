@@ -31,7 +31,6 @@
 Changes from Qualcomm Innovation Center are provided under the following license:
 
 Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
-
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
 disclaimer below) provided that the following conditions are met:
@@ -62,6 +61,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_GnssAdapter"
 
@@ -83,6 +83,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SystemStatus.h>
 #include <vector>
 #include <loc_misc_utils.h>
+#include <sys/stat.h>
 
 #define RAD2DEG    (180.0 / M_PI)
 #define DEG2RAD    (M_PI / 180.0)
@@ -6141,7 +6142,7 @@ void GnssAdapter::reportGnssConfigEvent(uint32_t sessionId, const GnssConfig& gn
 /* ======== UTILITIES ================================================================= */
 void
 GnssAdapter::initEngHubProxyCommand() {
-    LOC_LOGD("%s]: ", __func__);
+    LOC_LOGd();
 
     struct MsgInitEngHubProxy : public LocMsg {
         GnssAdapter* mAdapter;
@@ -6164,7 +6165,6 @@ GnssAdapter::initEngHubProxy() {
     const char *error = nullptr;
     unsigned int processListLength = 0;
     loc_process_info_s_type* processInfoList = nullptr;
-
     do {
         // load eng hub only once
         if (firstTime == false) {
@@ -6250,6 +6250,8 @@ GnssAdapter::initEngHubProxy() {
 
         getEngHubProxyFn* getter = (getEngHubProxyFn*) dlsym(handle, "getEngHubProxy");
         if(getter != nullptr) {
+            // Wait for the script(rootdir/etc/init.qcom.rc) to create socket folder
+            locUtilWaitForDir(SOCKET_DIR_EHUB);
             EngineHubProxyBase* hubProxy = (*getter) (mMsgTask, mSystemStatus->getOsObserver(),
                                                       reportPositionEventCb,
                                                       reqAidingDataCb,
