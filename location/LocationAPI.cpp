@@ -1026,3 +1026,18 @@ void LocationControlAPI::odcpiDeinit(OdcpiPrioritytype priority) {
 
     pthread_mutex_unlock(&gDataMutex);
 }
+
+uint32_t LocationControlAPI::configXtraParams(
+        bool enable, const XtraConfigParams& xtraParams) {
+    uint32_t id = 0;
+    pthread_mutex_lock(&gDataMutex);
+
+    if (gData.gnssInterface != NULL) {
+        id = gData.gnssInterface->configXtraParams(enable, xtraParams);
+    } else {
+        LOC_LOGe("No gnss interface available for Location Control API");
+    }
+
+    pthread_mutex_unlock(&gDataMutex);
+    return id;
+}

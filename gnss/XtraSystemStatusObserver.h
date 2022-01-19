@@ -40,10 +40,12 @@ using loc_core::IOsObserver;
 using loc_core::IDataItemObserver;
 using loc_core::IDataItemCore;
 
+class GnssAdapter;
+
 class XtraSystemStatusObserver : public IDataItemObserver {
 public :
     // constructor & destructor
-    XtraSystemStatusObserver(IOsObserver* sysStatObs, const MsgTask* msgTask);
+    XtraSystemStatusObserver(GnssAdapter* adapter, IOsObserver* sysStatObs, const MsgTask* msgTask);
     inline virtual ~XtraSystemStatusObserver() {
         subscribe(false);
         mIpc.stopNonBlockingListening();
@@ -62,9 +64,14 @@ public :
     inline const MsgTask* getMsgTask() { return mMsgTask; }
     void subscribe(bool yes);
     bool onStatusRequested(int32_t xtraStatusUpdated);
+    bool updateXtraConfig(bool enabled, const XtraConfigParams& configParams);
+    bool getXtraStatus(uint32_t sessionId);
+    bool registerXtraStatusUpdate(uint32_t sessionId, bool registerUpdate);
+    bool updateXtraDataDeletion();
 
 private:
-    IOsObserver*    mSystemStatusObsrvr;
+    GnssAdapter*   mAdapter;
+    IOsObserver*   mSystemStatusObsrvr;
     const MsgTask* mMsgTask;
     GnssConfigGpsLock mGpsLock;
     LocIpc mIpc;
@@ -76,6 +83,7 @@ private:
     bool mReqStatusReceived;
     bool mIsConnectivityStatusKnown;
     shared_ptr<LocIpcSender> mSender;
+    bool mRegisterForXtraStatus;
 
     class DelayLocTimer : public LocTimer {
         LocIpcSender& mSender;
@@ -85,6 +93,10 @@ private:
             LocIpc::send(mSender, (const uint8_t*)"halinit", sizeof("halinit"));
         }
     } mDelayLocTimer;
+
+#ifdef USE_GLIB
+friend class XtraIpcListener;
+#endif
 };
 
 #endif

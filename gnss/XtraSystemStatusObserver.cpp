@@ -43,11 +43,12 @@
 #include <SystemStatus.h>
 #include <vector>
 #include <sstream>
-#include <XtraSystemStatusObserver.h>
 #include <LocAdapterBase.h>
 #include <DataItemId.h>
 #include <DataItemsFactoryProxy.h>
 #include <DataItemConcreteTypesBase.h>
+#include <GnssAdapter.h>
+#include <XtraSystemStatusObserver.h>
 
 using namespace loc_util;
 using namespace loc_core;
@@ -92,22 +93,37 @@ public:
                         mXSSO(xsso), mXtraStatusUpdated(xtraStatusUpdated) {}
                 inline void proc() const override {
                     mXSSO.onStatusRequested(mXtraStatusUpdated);
+                    mXSSO.registerXtraStatusUpdate(0, mXSSO.mRegisterForXtraStatus);
                 }
             };
             mMsgTask->sendMsg(new HandleStatusRequestMsg(mXSSO, xtraStatusUpdated));
+        } else if (!STRNCMP(data, "xtraStatusUpdate")) {
+            uint32_t sessionId = 0;
+            XtraStatusUpdateType updateType = XTRA_STATUS_UPDATE_UNDEFINED;
+            GnssConfig gnssConfig = {};
+            gnssConfig.size = sizeof(gnssConfig);
+            gnssConfig.flags = GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT;
+            sscanf(data, "%*s %d %d %d %d %d", &sessionId, &updateType,
+                   &gnssConfig.xtraStatus.featureEnabled,
+                   &gnssConfig.xtraStatus.xtraDataStatus,
+                   &gnssConfig.xtraStatus.xtraValidForHours);
+
+            mXSSO.mAdapter->reportGnssConfigEvent(sessionId, gnssConfig);
         } else {
             LOC_LOGw("unknown event: %s", data);
         }
     }
 };
 
-XtraSystemStatusObserver::XtraSystemStatusObserver(IOsObserver* sysStatObs,
+XtraSystemStatusObserver::XtraSystemStatusObserver(GnssAdapter* adapter,
+                                                   IOsObserver* sysStatObs,
                                                    const MsgTask* msgTask) :
-        mSystemStatusObsrvr(sysStatObs), mMsgTask(msgTask),
+        mAdapter(adapter), mSystemStatusObsrvr(sysStatObs), mMsgTask(msgTask),
         mGpsLock(-1), mConnections(~0), mXtraThrottle(true),
         mReqStatusReceived(false),
         mIsConnectivityStatusKnown (false),
         mSender(LocIpc::getLocIpcLocalSender(LOC_IPC_XTRA)),
+        mRegisterForXtraStatus(false),
         mDelayLocTimer(*mSender) {
 #ifndef USE_FEATURE_TELSDK
     subscribe(true);
@@ -130,7 +146,7 @@ bool XtraSystemStatusObserver::updateLockStatus(GnssConfigGpsLock lock) {
     ss <<  "gpslock";
     ss << " " << lock;
     string s = ss.str();
-    return ( LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()) );
+    return (LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()));
 }
 
 bool XtraSystemStatusObserver::updateConnections(uint64_t allConnections) {
@@ -145,7 +161,7 @@ bool XtraSystemStatusObserver::updateConnections(uint64_t allConnections) {
     ss <<  "connection";
     ss << " " << mConnections;
     string s = ss.str();
-    return ( LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()) );
+    return (LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()));
 }
 
 bool XtraSystemStatusObserver::updateTac(const string& tac) {
@@ -159,7 +175,7 @@ bool XtraSystemStatusObserver::updateTac(const string& tac) {
     ss <<  "tac";
     ss << " " << tac.c_str();
     string s = ss.str();
-    return ( LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()) );
+    return (LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()));
 }
 
 bool XtraSystemStatusObserver::updateMccMnc(const string& mccmnc) {
@@ -173,7 +189,7 @@ bool XtraSystemStatusObserver::updateMccMnc(const string& mccmnc) {
     ss <<  "mncmcc";
     ss << " " << mccmnc.c_str();
     string s = ss.str();
-    return ( LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()) );
+    return (LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()));
 }
 
 bool XtraSystemStatusObserver::updateXtraThrottle(const bool enabled) {
@@ -187,7 +203,7 @@ bool XtraSystemStatusObserver::updateXtraThrottle(const bool enabled) {
     ss <<  "xtrathrottle";
     ss << " " << (enabled ? 1 : 0);
     string s = ss.str();
-    return ( LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()) );
+    return (LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()));
 }
 
 bool XtraSystemStatusObserver::updatePowerState(const PowerStateType powerState) {
@@ -243,7 +259,106 @@ inline bool XtraSystemStatusObserver::onStatusRequested(int32_t xtraStatusUpdate
             << mTac << endl << mMccmnc << endl << mIsConnectivityStatusKnown;
 
     string s = ss.str();
-    return ( LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()) );
+    return (LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()));
+}
+
+bool XtraSystemStatusObserver::updateXtraConfig(bool enable, const XtraConfigParams& configParams) {
+    if (!mReqStatusReceived) {
+        return false;
+    }
+
+    stringstream ss;
+    ss << "xtraConfig" << endl;
+    ss << (enable ? 1 : 0) << endl;
+    if (enable == true) {
+        ss << configParams.xtraDownloadIntervalMinute << endl;
+        ss << configParams.xtraDownloadTimeoutSec << endl;
+        ss << configParams.xtraDownloadRetryIntervalMinute << endl;
+        ss << configParams.xtraDownloadRetryAttempts << endl;
+        ss << configParams.xtraCaPath << endl;
+
+        if (configParams.xtraServerURLsCount == 2 ||
+                configParams.ntpServerURLsCount == 2) {
+             srand(time(0));
+        }
+        if (configParams.xtraServerURLsCount == 1) {
+            ss << configParams.xtraServerURLs[0] << endl;
+            ss << configParams.xtraServerURLs[0] << endl;
+            ss << configParams.xtraServerURLs[0] << endl;
+        } else if (configParams.xtraServerURLsCount == 2) {
+            ss << configParams.xtraServerURLs[0] << endl;
+            ss << configParams.xtraServerURLs[1] << endl;
+            int index = rand() % 2;
+            ss << configParams.xtraServerURLs[index] << endl;
+        } else {
+            ss << configParams.xtraServerURLs[0] << endl;
+            ss << configParams.xtraServerURLs[1] << endl;
+            ss << configParams.xtraServerURLs[2] << endl;
+        }
+
+        if (configParams.ntpServerURLsCount == 1) {
+            ss << configParams.ntpServerURLs[0] << endl;
+            ss << configParams.ntpServerURLs[0] << endl;
+            ss << configParams.ntpServerURLs[0] << endl;
+        } else if (configParams.ntpServerURLsCount == 2) {
+            ss << configParams.ntpServerURLs[0] << endl;
+            ss << configParams.ntpServerURLs[1] << endl;
+            int index = rand() % 2;
+            ss << configParams.ntpServerURLs[index] << endl;
+        } else {
+            ss << configParams.ntpServerURLs[0] << endl;
+            ss << configParams.ntpServerURLs[1] << endl;
+            ss << configParams.ntpServerURLs[2] << endl;
+        }
+        ss << configParams.xtraDaemonDebugLogLevel << endl;
+    }
+
+    string s = ss.str();
+    LOC_LOGd("config params: %s", s.c_str());
+    return (LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()));
+}
+
+bool XtraSystemStatusObserver::getXtraStatus(uint32_t sessionId) {
+    if (!mReqStatusReceived) {
+        return false;
+    }
+
+    stringstream ss;
+    ss << "getXtraStatus" << endl;
+    ss << sessionId <<endl;
+
+    string s = ss.str();
+    return (LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()));
+}
+
+bool XtraSystemStatusObserver::registerXtraStatusUpdate(uint32_t sessionId,
+                                                        bool registerUpdate) {
+    if (!mReqStatusReceived) {
+        return false;
+    }
+
+    mRegisterForXtraStatus = registerUpdate;
+
+    stringstream ss;
+    ss << "registerXtraStatusUpdate" << endl;
+    ss << sessionId << endl;
+    ss << registerUpdate << endl;
+
+    string s = ss.str();
+    return (LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()));
+}
+
+
+bool XtraSystemStatusObserver::updateXtraDataDeletion() {
+    if (!mReqStatusReceived) {
+        return false;
+    }
+
+    stringstream ss;
+    ss << "updateXtraDataDeletion" << endl;
+
+    string s = ss.str();
+    return (LocIpc::send(*mSender, (const uint8_t*)s.data(), s.size()));
 }
 
 void XtraSystemStatusObserver::subscribe(bool yes)
