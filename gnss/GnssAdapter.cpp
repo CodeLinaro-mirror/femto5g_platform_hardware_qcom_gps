@@ -6477,6 +6477,7 @@ GnssAdapter::initEngHubProxy() {
             break;
         }
 
+        EngineServiceInfo engServiceInfo = {};
         bool pluginDaemonEnabled = false;
         // go over the conf table to see whether any plugin daemon is enabled
         for (unsigned int i = 0; i < processListLength; i++) {
@@ -6489,6 +6490,11 @@ GnssAdapter::initEngHubProxy() {
                     if (strncmp(processInfoList[i].args[1], "DRE-INT", sizeof("DRE-INT")) == 0) {
                         mDreIntEnabled = true;
                     } else if (strncmp(processInfoList[i].args[1], "PPE", sizeof("PPE")) == 0) {
+                        mPpeEnabled = true;
+                    } else if (strncmp(processInfoList[i].args[1], "PPE-INT",
+                                       sizeof("PPE-INT")) == 0) {
+                        // check if this is PPE-INT engine
+                        engServiceInfo.ppeIntEnabled = true;
                         mPpeEnabled = true;
                     }
                 }
@@ -6557,7 +6563,7 @@ GnssAdapter::initEngHubProxy() {
             // Wait for the script(rootdir/etc/init.qcom.rc) to create socket folder
             locUtilWaitForDir(SOCKET_DIR_EHUB);
             EngineHubProxyBase* hubProxy = (*getter) (mMsgTask, mSystemStatus->getOsObserver(),
-                      reportPositionEventCb, reqAidingDataCb,
+                      engServiceInfo, reportPositionEventCb, reqAidingDataCb,
                       updateNHzRequirementCb, updateQwesFeatureStatusCb);
             if (hubProxy != nullptr) {
                 mEngHubProxy = hubProxy;
