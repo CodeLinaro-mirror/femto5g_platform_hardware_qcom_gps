@@ -139,10 +139,7 @@ inline void GnssReportLoggerUtil::log(const GnssLatencyInfo& gnssLatencyMeasInfo
 
 GnssAdapter::GnssAdapter() :
     LocAdapterBase(0,
-                   LocDualContext::getLocFgContext(NULL,
-                                                   NULL,
-                                                   LocDualContext::mLocationHalName,
-                                                   false),
+                   LocDualContext::getLocFgContext(LocDualContext::mLocationHalName),
                    true, nullptr, true),
     mEngHubProxy(new EngineHubProxyBase()),
     mQDgnssListenerHDL(nullptr),
