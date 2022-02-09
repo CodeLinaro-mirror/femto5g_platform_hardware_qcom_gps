@@ -2786,6 +2786,9 @@ GnssAdapter::getCapabilities()
     if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_AGPM_V02)) {
         mask |= LOCATION_CAPABILITIES_AGPM_BIT;
     }
+    if ((ContextBase::getQwesFeatureStatus() & LOCATION_CAPABILITIES_QWES_PPE)) {
+        mask |= LOCATION_CAPABILITIES_QWES_PPE;
+    }
     //Get QWES feature status mask
     mask |= ContextBase::getQwesFeatureStatus();
     return mask;
