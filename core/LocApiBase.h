@@ -78,6 +78,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     #include <unordered_map>
 #endif
 
+using namespace loc_util;
+
 namespace loc_core {
 
 class ContextBase;
@@ -164,6 +166,7 @@ protected:
     inline virtual ~LocApiBase() {
         if (nullptr != mMsgTask) {
             mMsgTask->destroy();
+            delete mMsgTask;
             mMsgTask = nullptr;
         }
     }

@@ -75,6 +75,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace loc_core {
 
+using namespace loc_util;
+
 class EngineHubProxyBase {
 public:
     inline EngineHubProxyBase() {
