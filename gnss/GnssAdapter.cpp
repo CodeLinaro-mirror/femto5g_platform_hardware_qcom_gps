@@ -4159,7 +4159,9 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
             bool isFlpClnt = isFlpClient(it->second);
             if (!isFlpClnt) {
                 if ((reportToAllClients || needReportForClient(it->first, status))) {
-                    if ((nullptr != it->second.engineLocationsInfoCb) &&
+                    if (nullptr != it->second.gnssLocationInfoCb) {
+                        it->second.gnssLocationInfoCb(locationInfo);
+                    } else if ((nullptr != it->second.engineLocationsInfoCb) &&
                             (false == initEngHubProxy())) {
                         // if engine hub is disabled, this is SPE fix from modem
                         // we need to have one copy marked as fused and leave the other copy
@@ -4934,19 +4936,21 @@ GnssAdapter::reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurement
         struct MsgReportGnssMeasurementData : public LocMsg {
             GnssAdapter& mAdapter;
             GnssMeasurements mGnssMeasurements;
-            GnssMeasurementsNotification mMeasurementsNotify;
             inline MsgReportGnssMeasurementData(GnssAdapter& adapter,
                                                 const GnssMeasurements& gnssMeasurements,
                                                 int msInWeek) :
                     LocMsg(),
                     mAdapter(adapter),
-                    mMeasurementsNotify(gnssMeasurements.gnssMeasNotification) {
+                    mGnssMeasurements(gnssMeasurements) {
                 if (-1 != msInWeek) {
-                    mAdapter.getAgcInformation(mMeasurementsNotify, msInWeek);
+                    mAdapter.getAgcInformation(mGnssMeasurements.gnssMeasNotification, msInWeek);
                 }
             }
+
             inline virtual void proc() const {
-                mAdapter.reportGnssMeasurementData(mMeasurementsNotify);
+                mAdapter.mPositionElapsedRealTimeCal.saveGpsTimeAndQtimerPairInMeasReport(
+                        mGnssMeasurements.gnssSvMeasurementSet);
+                mAdapter.reportGnssMeasurementData(mGnssMeasurements.gnssMeasNotification);
             }
         };
 
@@ -5529,7 +5533,7 @@ void GnssAdapter::dataConnOpenCommand(
 
             std::function<void(int)> wdsPdnTypeCb = std::bind(&GnssAdapter::reportPdnTypeFromWds,
                     &mAdapter, std::placeholders::_1, mAgpsType, apn, mBearerType);
-           if (getPdnTypeFunc != nullptr) {
+           if (getPdnTypeFunc != nullptr && apn.length() > 0) {
                LOC_LOGv("dlGetSymFromLib success");
                (*getPdnTypeFunc)(apn, wdsPdnTypeCb);
            } else {
@@ -5539,8 +5543,7 @@ void GnssAdapter::dataConnOpenCommand(
     };
     // Added inital length checks for apnlen check to avoid security issues
     // In case of failure reporting the same
-    if (NULL == apnName || apnLen <= 0 || apnLen > MAX_APN_LEN ||
-            (strlen(apnName) != (unsigned)apnLen)) {
+    if (NULL == apnName || apnLen > MAX_APN_LEN || (strlen(apnName) != apnLen)) {
         LOC_LOGe("%s]: incorrect apnlen length or incorrect apnName", __func__);
         mAgpsManager.reportAtlClosed(agpsType);
     } else {
