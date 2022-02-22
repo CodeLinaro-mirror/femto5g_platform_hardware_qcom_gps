@@ -3716,15 +3716,17 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
             // save the association of GPS timestamp and qtimer tick cnt in PVT report
             mAdapter.mElapsedRealTimeCal.saveGpsTimeAndQtimerPairInPvtReport(mLocationExtended);
 
-            // save sv used in fix and mb sv used in fix info
-            mAdapter.mGnssSvIdUsedInPosAvail = false;
-            mAdapter.mGnssMbSvIdUsedInPosAvail = false;
-            if (mLocationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA) {
-                mAdapter.mGnssSvIdUsedInPosAvail = true;
-                mAdapter.mGnssSvIdUsedInPosition = mLocationExtended.gnss_sv_used_ids;
-                if (mLocationExtended.flags & GPS_LOCATION_EXTENDED_HAS_MULTIBAND) {
-                    mAdapter.mGnssMbSvIdUsedInPosAvail = true;
-                    mAdapter.mGnssMbSvIdUsedInPosition = mLocationExtended.gnss_mb_sv_used_ids;
+            if (!mUlpLocation.unpropagatedPosition) {
+                // save sv used in fix and mb sv used in fix info from propagated report
+                mAdapter.mGnssSvIdUsedInPosAvail = false;
+                mAdapter.mGnssMbSvIdUsedInPosAvail = false;
+                if (mLocationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA) {
+                    mAdapter.mGnssSvIdUsedInPosAvail = true;
+                    mAdapter.mGnssSvIdUsedInPosition = mLocationExtended.gnss_sv_used_ids;
+                    if (mLocationExtended.flags & GPS_LOCATION_EXTENDED_HAS_MULTIBAND) {
+                        mAdapter.mGnssMbSvIdUsedInPosAvail = true;
+                        mAdapter.mGnssMbSvIdUsedInPosition = mLocationExtended.gnss_mb_sv_used_ids;
+                    }
                 }
             }
 
