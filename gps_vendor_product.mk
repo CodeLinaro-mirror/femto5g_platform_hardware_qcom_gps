@@ -21,6 +21,7 @@ PRODUCT_PACKAGES += libgnss
 
 ifeq ($(strip $(TARGET_BOARD_AUTO)),true)
 PRODUCT_PACKAGES += libgnssauto_power
+PRODUCT_PACKAGES += libgnss_car_powerpolicy
 endif #TARGET_BOARD_AUTO
 
 PRODUCT_PACKAGES += android.hardware.gnss@2.1-impl-qti
