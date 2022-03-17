@@ -253,4 +253,8 @@ DEFAULT_IMPL(false)
 void LocAdapterBase::
     reportSignalTypeCapabilities(const GnssCapabNotification& /*gnssCapabNotification*/)
 DEFAULT_IMPL()
+
+void LocAdapterBase::reportEngDebugDataInfoEvent(GnssEngineDebugDataInfo& gnssEngineDebugDataInfo)
+DEFAULT_IMPL()
+
 } // namespace loc_core

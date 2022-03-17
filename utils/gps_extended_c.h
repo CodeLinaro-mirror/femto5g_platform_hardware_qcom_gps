@@ -892,6 +892,7 @@ enum loc_api_adapter_event_index {
     LOC_API_ADAPTER_LATENCY_INFORMATION_REPORT,       // Latency information report
     LOC_API_ADAPTER_FEATURE_STATUS_UPDATE,             // Dynamic feature status update
     LOC_API_ADAPTER_GNSS_BANDS_SUPPORTED,              // GNSS bands supported
+    LOC_API_ADAPTER_ENGINE_DEBUG_DATA_REPORT,         // Engine Debug data report
     LOC_API_ADAPTER_EVENT_MAX
 };
 
@@ -940,6 +941,8 @@ enum loc_api_adapter_event_index {
         (1ULL<<LOC_API_ADAPTER_REQUEST_ASSISTANCE_TIME)
 #define LOC_API_ADAPTER_BIT_GNSS_BANDS_SUPPORTED \
         (1ULL<<LOC_API_ADAPTER_GNSS_BANDS_SUPPORTED)
+#define LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT         (1ULL<<LOC_API_ADAPTER_ENGINE_DEBUG_DATA_REPORT)
+
 
 typedef uint64_t LOC_API_ADAPTER_EVENT_MASK_T;
 
