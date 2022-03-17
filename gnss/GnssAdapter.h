@@ -545,6 +545,8 @@ public:
     virtual bool reportGnssAdditionalSystemInfoEvent(
             GnssAdditionalSystemInfo& additionalSystemInfo);
     virtual void reportLatencyInfoEvent(const GnssLatencyInfo& gnssLatencyInfo);
+    virtual void reportEngDebugDataInfoEvent(GnssEngineDebugDataInfo&
+            gnssEngineDebugDataInfo) override;
     virtual bool reportQwesCapabilities
     (
         const std::unordered_map<LocationQwesFeatureType, bool> &featureMap
@@ -595,7 +597,7 @@ public:
     void getAgcInformation(GnssMeasurementsNotification& measurements, int msInWeek);
     /* get Data information from system status and fill it */
     void getDataInformation(GnssDataNotification& data, int msInWeek);
-
+    void reportEngDebugDataInfo(const GnssEngineDebugDataInfo& gnssEngineDebugDataInfo);
     /*==== SYSTEM STATUS ================================================================*/
     inline SystemStatus* getSystemStatus(void) { return mSystemStatus; }
     std::string& getServerUrl(void) { return mServerUrl; }
