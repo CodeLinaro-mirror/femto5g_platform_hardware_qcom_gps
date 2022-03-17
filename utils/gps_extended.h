@@ -44,6 +44,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <string.h>
 #endif
 #include <string>
+#include <vector>
 
 #ifdef __cplusplus
 extern "C" {
@@ -347,6 +348,329 @@ typedef struct {
     GpsLocationExtended locationExtended;
     enum loc_sess_status sessionStatus;
 } EngineLocationInfo;
+
+/* Engine Debug data Information */
+
+#define GNSS_MAX_SV_INFO_LIST_SIZE 176
+
+typedef struct {
+    int32_t jammerInd;
+    // Jammer Indication
+    int32_t agc;
+    // Automatic gain control
+} GnssJammerData;
+
+
+typedef struct {
+    uint16_t gnssSvId;
+    /**<   GNSS SV ID. Range:
+      - GPS --     1 to 32
+      - GLONASS -- 65 to 96
+      - SBAS --    120 to 158 and 183 to 191
+      - QZSS --    193 to 197
+      - BDS --     201 to 263
+      - Galileo -- 301 to 336
+      - NavIC --   401 to 414 */
+
+    uint8_t type;
+    /**<   Navigation data type */
+
+    uint8_t src;
+    /**<   Navigation data source.*/
+    int32_t age;
+    /**<   Age of navigation data.
+      - Units: Seconds */
+} GnssNavDataInfo;
+
+
+typedef struct {
+    uint32_t hours;
+    /**<   Hours of timestamp */
+
+    uint32_t mins;
+    /**<   Minutes of timestamp */
+
+    float secs;
+    /**<   Seconds of timestamp */
+} GnssTimeInfo;
+
+typedef enum {
+    GPS_XTRA_VALID_BIT     = 1 << 0,
+    GLONASS_XTRA_VALID_BIT = 1 << 1,
+    BDS_XTRA_VALID_BIT     = 1 << 2,
+    GAL_XTRA_VALID_BIT     = 1 << 3,
+    QZSS_XTRA_VALID_BIT    = 1 << 4,
+    NAVIC_XTRA_VALID_BIT   = 1 << 5
+} GnssXtraValidMaskBits;
+
+typedef struct {
+
+    uint8_t timeValid;
+    /**<Time validity >*/
+
+    uint16_t gpsWeek;
+    /**<   Full GPS week */
+
+    uint32_t gpsTowMs;
+    /**<   GPS time of week.
+      - Units: milliseconds  */
+
+    uint8_t sourceOfTime;
+    /**<   Source of the time information*/
+
+    float clkTimeUnc;
+    /**<   Single-sided maximum time bias uncertainty.
+      - Units: milliseconds */
+
+    float clkFreqBias;
+    /**<   Receiver clock frequency bias. \n
+      - Units -- ppb */
+
+    float clkFreqUnc;
+    /**<   Receiver clock frequency uncertainty. \n
+      - Units -- ppb */
+
+    uint8_t xoState;
+    /**<   XO calibration. */
+
+    uint32_t rcvrErrRecovery;
+    /**<   Error recovery reason. */
+
+    Gnss_LeapSecondInfoStructType leapSecondInfo;
+    /**<   Leap second information. */
+
+    std::vector<GnssJammerData> jammerData;
+    /**<   Jammer indicator of each signal. */
+
+    uint64_t jammedSignalsMask;
+    /* Jammer Signal Mask */
+
+    GnssTimeInfo epiTime;
+    /**<   UTC Time associated with EPI. */
+
+    uint8_t epiValidity;
+    /**<   Epi validity >*/
+
+    float epiLat;
+    /**<   EPI Latitude. - Units: Radians */
+
+    float epiLon;
+    /**<   EPI Longitude. - Units: Radians */
+
+    float epiAlt;
+    /**<   EPI Altitude. - Units: Meters */
+
+    float epiHepe;
+    /**<   EPI Horizontal Estimated Position Error.
+      - Units: Meters */
+    float epiAltUnc;
+    /**<   EPI Altitude Uncertainty.
+      - Units: Meters */
+
+    uint8_t epiSrc;
+    /**<   EPI Source*/
+
+    GnssTimeInfo bestPosTime;
+    /**<   UTC Time associated with Best Position. */
+
+    float bestPosLat;
+    /**<   Best Position Latitude.
+      - Units: Radians */
+
+    float bestPosLon;
+    /**<   Best Position Longitude.
+      - Units: Radians */
+
+    float bestPosAlt;
+    /**<   Best Position Altitude.
+      - Units: Meters */
+
+    float bestPosHepe;
+    /**<   Best Position Horizontal Estimated Position Error.
+      - Units: Meters */
+
+    float bestPosAltUnc;
+    /**<   Best Position Altitude Uncertainty.
+      - Units: Meters */
+
+    GnssTimeInfo xtraInfoTime;
+    /**<   UTC time when XTRA debug information was generated. */
+
+    uint8_t xtraValidMask;
+    /**<xtra valid mask>*/
+
+    uint32_t gpsXtraAge;
+    /**<   Age of GPS XTRA data.
+      - Units: Seconds */
+
+    uint32_t gloXtraAge;
+    /**<   Age of GLONASS XTRA data.
+      - Units: Seconds */
+
+    uint32_t bdsXtraAge;
+    /**<   Age of BDS XTRA data.
+      - Units: Seconds */
+
+    uint32_t galXtraAge;
+    /**<   Age of GAL XTRA data.
+      - Units: Seconds */
+
+    uint32_t qzssXtraAge;
+    /**<   Age of QZSS XTRA data.
+      - Units: Seconds */
+
+    uint32_t navicXtraAge;
+    /**<   Age of NAVIC XTRA data.
+      - Units: Seconds */
+
+    uint32_t gpsXtraMask;
+    /**<   Specifies the GPS SV mask.
+      - SV ID mapping: SV 1 maps to bit 0. */
+
+    uint32_t gloXtraMask;
+    /**<   Specifies the GLONASS SV mask.
+      - SV ID mapping: SV 65 maps to bit 0. */
+
+    uint64_t bdsXtraMask;
+    /**<   Specifies the BDS SV mask.
+      - SV ID mapping: SV 201 maps to bit 0. */
+
+    uint64_t galXtraMask;
+    /**<   Specifies the Galileo SV mask.
+      - SV ID mapping: SV 301 maps to bit 0. */
+
+    uint8_t qzssXtraMask;
+    /**<   Specifies the QZSS SV mask.
+      - SV ID mapping: SV 193 maps to bit 0 */
+
+    uint32_t navicXtraMask;
+    /**<   Specifies the NAVIC SV mask.
+      - SV ID mapping: SV 401 maps to bits 0. */
+
+    GnssTimeInfo ephInfoTime;
+    /**<   UTC time when ephemeris debug information was generated. */
+
+    uint32_t gpsEphMask;
+    /**<   Specifies the GPS SV mask.
+      - SV ID mapping: SV 1 maps to bit 0. */
+
+    uint32_t gloEphMask;
+    /**<   Specifies the GLONASS SV mask.
+      - SV ID mapping: SV 65 maps to bit 0. */
+
+    uint64_t bdsEphMask;
+    /**<   Specifies the BDS SV mask.
+      - SV ID mapping: SV 201 maps to bit 0. */
+
+    uint64_t galEphMask;
+    /**<   Specifies the Galileo SV mask.
+      - SV ID mapping: SV 301 maps to bit 0. */
+
+    uint8_t qzssEphMask;
+    /**<   Specifies the QZSS SV mask.
+      - SV ID mapping: SV 193 maps to bit 0 */
+
+    uint32_t navicEphMask;
+    /**<   Specifies the NAVIC SV mask.
+      - SV ID mapping: SV 401 maps to bits 0. */
+
+    GnssTimeInfo healthInfoTime;
+    /**<   UTC time when SV health information was generated. */
+
+    uint32_t gpsHealthUnknownMask;
+    /**<   Specifies the GPS SV mask.
+      - SV ID mapping: SV 1 maps to bit 0. */
+
+    uint32_t gloHealthUnknownMask;
+    /**<   Specifies the GLONASS SV mask.
+      - SV ID mapping: SV 65 maps to bit 0. */
+
+    uint64_t bdsHealthUnknownMask;
+    /**<   Specifies the BDS SV mask.
+      - SV ID mapping: SV 201 maps to bit 0. */
+
+    uint64_t galHealthUnknownMask;
+    /**<   Specifies the Galileo SV mask.
+      - SV ID mapping: SV 301 maps to bit 0. */
+
+    uint8_t qzssHealthUnknownMask;
+    /**<   Specifies the QZSS SV mask.
+      - SV ID mapping: SV 193 maps to bit 0 */
+
+    uint32_t navicHealthUnknownMask;
+    /**<   Specifies the NAVIC SV mask.
+      - SV ID mapping: SV 401 maps to bits 0. */
+
+    uint32_t gpsHealthGoodMask;
+    /**<   Specifies the GPS SV mask.
+      - SV ID mapping: SV 1 maps to bit 0. */
+
+    uint32_t gloHealthGoodMask;
+    /**<   Specifies the GLONASS SV mask.
+      - SV ID mapping: SV 65 maps to bit 0. */
+
+    uint64_t bdsHealthGoodMask;
+    /**<   Specifies the BDS SV mask.
+      - SV ID mapping: SV 201 maps to bit 0. */
+
+    uint64_t galHealthGoodMask;
+    /**<   Specifies the Galileo SV mask.
+      - SV ID mapping: SV 301 maps to bit 0. */
+
+    uint8_t qzssHealthGoodMask;
+    /**<   Specifies the QZSS SV mask.
+      - SV ID mapping: SV 193 maps to bit 0 */
+
+    uint32_t navicHealthGoodMask;
+    /**<   Specifies the NAVIC SV mask.
+      - SV ID mapping: SV 401 maps to bits 0. */
+
+    uint32_t gpsHealthBadMask;
+    /**<   Specifies the GPS SV mask.
+      - SV ID mapping: SV 1 maps to bit 0. */
+
+    uint32_t gloHealthBadMask;
+    /**<   Specifies the GLONASS SV mask.
+      - SV ID mapping: SV 65 maps to bit 0. */
+
+    uint64_t bdsHealthBadMask;
+    /**<   Specifies the BDS SV mask.
+      - SV ID mapping: SV 201 maps to bit 0. */
+
+    uint64_t galHealthBadMask;
+    /**<   Specifies the Galileo SV mask.
+      - SV ID mapping: SV 301 maps to bit 0. */
+
+    uint8_t qzssHealthBadMask;
+    /**<   Specifies the QZSS SV mask.
+      - SV ID mapping: SV 193 maps to bit 0 */
+
+    uint32_t navicHealthBadMask;
+    /**<   Specifies the NAVIC SV mask.
+      - SV ID mapping: SV 401 maps to bits 0. */
+
+    GnssTimeInfo fixInfoTime;
+    /**<   UTC time when fix information was generated. */
+
+    uint32_t fixInfoMask;
+    /**<   Fix Information Mask*/
+
+    GnssTimeInfo navDataTime;
+    /**<   UTC time when navigation data was generated. */
+
+    GnssNavDataInfo navData[GNSS_MAX_SV_INFO_LIST_SIZE];
+    /**<   Satellite navigation data. */
+
+    GnssTimeInfo fixStatusTime;
+    /**<   UTC time when fix status was generated. */
+
+    uint32_t fixStatusMask;
+    /**<   Fix Status Mask */
+
+    uint32_t fixHepeLimit;
+    /**<   Session HEPE Limit.
+      - Units: Meters */
+} GnssEngineDebugDataInfo;
 
 #ifdef __cplusplus
 }

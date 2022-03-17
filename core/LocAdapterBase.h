@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -275,6 +275,7 @@ public:
     void requestCapabilitiesCommand(LocationAPI* client);
 
     virtual void reportLatencyInfoEvent(const GnssLatencyInfo& gnssLatencyInfo);
+    virtual void reportEngDebugDataInfoEvent(GnssEngineDebugDataInfo& gnssEngineDebugDataInfo);
     virtual bool reportQwesCapabilities(
             const std::unordered_map<LocationQwesFeatureType, bool> &featureMap);
     virtual void reportDcMessage(const GnssDcReportInfo& dcReport);
