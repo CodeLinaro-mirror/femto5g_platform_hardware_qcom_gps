@@ -133,8 +133,7 @@ bool MTRunnable::run() {
     LocMsg* msg;
     msq_q_err_type result = msg_q_rcv((void*)mQ, (void **)&msg);
     if (eMSG_Q_SUCCESS != result) {
-        LOC_LOGE("%s:%d] fail receiving msg: %s\n", __func__, __LINE__,
-                 loc_get_msg_q_status(result));
+        LOC_LOGe("msgTask run failed to receive msg, error code is: %d", result);
         return false;
     }
 
