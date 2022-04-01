@@ -3715,8 +3715,6 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
             mAdapter.mElapsedRealTimeCal.saveGpsTimeAndQtimerPairInPvtReport(mLocationExtended);
 
             if (true == mAdapter.initEngHubProxy()){
-                // send the SPE fix to engine hub
-                mAdapter.mEngHubProxy->gnssReportPosition(mUlpLocation, mLocationExtended, mStatus);
                 // report out all SPE fix if it is not propagated, even for failed fix
                 if (false == mUlpLocation.unpropagatedPosition) {
                     EngineLocationInfo engLocationInfo = {};
@@ -3749,6 +3747,11 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
             mAdapter.reportPosition(mUlpLocation, mLocationExtended, mStatus, mTechMask);
         }
     };
+
+    // some position engine requires the QMI order of PVT report and SV measurement
+    // report to be preserved. So, send out both SV measurement report and PVT report
+    // directly to engine hub
+    mEngHubProxy->gnssReportPosition(ulpLocation, locationExtended, status);
 
     if (mContext != NULL) {
         GnssDataNotification dataNotifyCopy = {};
@@ -4721,6 +4724,9 @@ GnssAdapter::reportSvMeasurementEvent(GnssSvMeasurementSet &svMeasurementSet)
         }
     };
 
+    // some position engine requires the QMI order of PVT report and SV measurement
+    // report to be preserved. So, send out both SV measurement report and PVT report
+    // directly to engine hub
     mEngHubProxy->gnssReportSvMeasurement(svMeasurementSet);
     sendMsg(new MsgReportSvMeasurement(*this, svMeasurementSet));
 }
