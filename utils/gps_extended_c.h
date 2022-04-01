@@ -2334,6 +2334,12 @@ typedef void (*LocAgpsCloseResultCb)(bool isSuccess, AGpsExtType agpsType, void*
 // every client can get the notification that hal daemon has restarted.
 #define LOC_INTAPI_NAME_PREFIX         LOC_CLIENT_NAME_PREFIX "_intapi"
 
+/* gps.conf GNSS_DEPLOYMENT value meanings */
+#define QTI_GNSS_ENABLED                0
+#define QCSR_SS5_ENABLED                1
+#define PDS_API_ENABLED                 2
+#define QTI_MDM_GNSS_ENABLED            3
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
