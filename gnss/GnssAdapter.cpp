@@ -61,6 +61,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_GnssAdapter"
 
@@ -3714,6 +3715,18 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
             // save the association of GPS timestamp and qtimer tick cnt in PVT report
             mAdapter.mElapsedRealTimeCal.saveGpsTimeAndQtimerPairInPvtReport(mLocationExtended);
 
+            // save sv used in fix and mb sv used in fix info
+            mAdapter.mGnssSvIdUsedInPosAvail = false;
+            mAdapter.mGnssMbSvIdUsedInPosAvail = false;
+            if (mLocationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA) {
+                mAdapter.mGnssSvIdUsedInPosAvail = true;
+                mAdapter.mGnssSvIdUsedInPosition = mLocationExtended.gnss_sv_used_ids;
+                if (mLocationExtended.flags & GPS_LOCATION_EXTENDED_HAS_MULTIBAND) {
+                    mAdapter.mGnssMbSvIdUsedInPosAvail = true;
+                    mAdapter.mGnssMbSvIdUsedInPosition = mLocationExtended.gnss_mb_sv_used_ids;
+                }
+            }
+
             if (true == mAdapter.initEngHubProxy()){
                 // report out all SPE fix if it is not propagated, even for failed fix
                 if (false == mUlpLocation.unpropagatedPosition) {
@@ -3913,8 +3926,6 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
 {
     bool reportToAllClients = needReportForAllClients(ulpLocation, status, techMask);
     bool reportToAnyClient = needReportForAnyClient(status);
-    mGnssSvIdUsedInPosAvail = false;
-    mGnssMbSvIdUsedInPosAvail = false;
 
     LOC_LOGd("reportToAllClients %d, reportToAnyClient %d, status %d, eng type %d, "
              "eng hub inited %d",
@@ -3922,15 +3933,6 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
              locationExtended.locOutputEngType, initEngHubProxy());
 
     if (reportToAllClients || reportToAnyClient) {
-        if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA) {
-            mGnssSvIdUsedInPosAvail = true;
-            mGnssSvIdUsedInPosition = locationExtended.gnss_sv_used_ids;
-            if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_MULTIBAND) {
-                mGnssMbSvIdUsedInPosAvail = true;
-                mGnssMbSvIdUsedInPosition = locationExtended.gnss_mb_sv_used_ids;
-            }
-        }
-
         GnssLocationInfoNotification locationInfo = {};
         convertLocationInfo(locationInfo, locationExtended, status);
         convertLocation(locationInfo.location, ulpLocation, locationExtended, techMask);
@@ -4261,8 +4263,6 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify)
         string s = ss.str();
         reportNmea(s.c_str(), s.length());
     }
-
-    mGnssSvIdUsedInPosAvail = false;
 
     // report to engine hub to deliver to registered plugin
     mEngHubProxy->gnssReportSv(svNotify);
