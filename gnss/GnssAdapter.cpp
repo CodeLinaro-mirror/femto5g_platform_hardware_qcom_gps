@@ -6027,7 +6027,7 @@ bool GnssAdapter::getDebugReport(GnssDebugReport& r)
     }
 
     SystemStatusReports reports;
-    systemstatus->getReport(reports, true);
+    systemstatus->getReport(reports, true, false);
 
     r.size = sizeof(r);
 
@@ -6134,7 +6134,7 @@ GnssAdapter::getAgcInformation(GnssMeasurementsNotification& measurements, int m
 
     if (nullptr != systemstatus) {
         SystemStatusReports reports = {};
-        systemstatus->getReport(reports, true);
+        systemstatus->getReport(reports, true, false);
 
         if ((!reports.mRfAndParams.empty()) && (!reports.mTimeAndClock.empty()) &&
             (abs(msInWeek - (int)reports.mTimeAndClock.back().mGpsTowMs) < 2000)) {
@@ -6189,7 +6189,7 @@ GnssAdapter::getDataInformation(GnssDataNotification& data, int msInWeek)
     LOC_LOGV("%s]: msInWeek=%d", __func__, msInWeek);
     if (nullptr != systemstatus) {
         SystemStatusReports reports = {};
-        systemstatus->getReport(reports, true);
+        systemstatus->getReport(reports, true, false);
 
         if ((!reports.mRfAndParams.empty()) && (!reports.mTimeAndClock.empty()) &&
             (abs(msInWeek - (int)reports.mTimeAndClock.back().mGpsTowMs) < 2000)) {
