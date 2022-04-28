@@ -25,10 +25,11 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -161,6 +162,8 @@ typedef enum {
     LOC_SUPPORTED_FEATURE_NAVIC, /**<  Support the NavIC constellation */
     LOC_SUPPORTED_FEATURE_ENV_AIDING, /**<  Support Environment Aiding */
     LOC_SUPPORTED_FEATURE_ROBUST_LOCATION, /**<  Support Robust Location feature */
+    /**< Support the feature to report feature update in QMI_LOC_EVENT_REPORT_IND */
+    LOC_SUPPORTED_FEATURE_DYNAMIC_FEATURE_STATUS
 } loc_supported_feature_enum;
 
 typedef struct {
@@ -1050,6 +1053,7 @@ enum loc_api_adapter_event_index {
     LOC_API_ADAPTER_GNSS_NHZ_MEASUREMENT_REPORT,       // GNSS SV nHz measurement report
     LOC_API_ADAPTER_EVENT_REPORT_INFO,                 // Event report info
     LOC_API_ADAPTER_REQUEST_ASSISTANCE_TIME,           // NTP time download
+    LOC_API_ADAPTER_FEATURE_STATUS_UPDATE,             // Dynamic feature status update
     LOC_API_ADAPTER_EVENT_MAX
 };
 
@@ -1093,6 +1097,7 @@ enum loc_api_adapter_event_index {
 #define LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT             (1ULL<<LOC_API_ADAPTER_GNSS_NHZ_MEASUREMENT_REPORT)
 #define LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO                (1ULL<<LOC_API_ADAPTER_EVENT_REPORT_INFO)
 #define LOC_API_ADAPTER_BIT_ASSISTANCE_TIME_REQUEST          (1ULL<<LOC_API_ADAPTER_REQUEST_ASSISTANCE_TIME)
+#define LOC_API_ADAPTER_BIT_FEATURE_STATUS_UPDATE            (1ULL<<LOC_API_ADAPTER_FEATURE_STATUS_UPDATE)
 
 typedef uint64_t LOC_API_ADAPTER_EVENT_MASK_T;
 
