@@ -74,7 +74,7 @@ public :
     bool updateConnections(uint64_t allConnections,
             loc_core::NetworkInfoType* networkHandleInfo);
     bool updateTac(const string& tac);
-    bool updateMccMnc(const string& mccmnc);
+    bool updateMccMnc(const string& mccmncCountry);
     bool updateXtraThrottle(const bool enabled);
     inline const MsgTask* getMsgTask() { return mMsgTask; }
     void subscribe(bool yes);
