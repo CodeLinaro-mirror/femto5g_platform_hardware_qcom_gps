@@ -71,11 +71,11 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <loc_gps.h>
 #include <LocationAPI.h>
 
-struct timespec32_t {
-  uint32_t  tv_sec;   /* seconds */
-  uint32_t  tv_nsec;  /* and nanoseconds */
+/** Y2038- Compliant */
+struct timespec64_t {
+    uint64_t  tv_sec;    /* seconds */
+    uint64_t  tv_nsec;  /* and nanoseconds */
 };
-
 
 /**
  * @file
@@ -535,7 +535,8 @@ typedef enum {
 }LocReliability;
 
 typedef struct {
-    struct timespec32_t apTimeStamp;
+    /** Y2038-Compliant */
+    struct timespec64_t apTimeStamp;
     /*boottime received from pps-ktimer*/
     float apTimeStampUncertaintyMs;
     /* timestamp uncertainty in milli seconds */
