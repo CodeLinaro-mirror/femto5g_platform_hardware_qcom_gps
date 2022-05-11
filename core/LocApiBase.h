@@ -167,7 +167,6 @@ protected:
     inline virtual ~LocApiBase() {
         if (nullptr != mMsgTask) {
             mMsgTask->destroy();
-            delete mMsgTask;
             mMsgTask = nullptr;
         }
     }
