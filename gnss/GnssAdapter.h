@@ -313,6 +313,7 @@ class GnssAdapter : public LocAdapterBase {
     std::string mServerUrl;
     std::string mMoServerUrl;
     XtraSystemStatusObserver mXtraObserver;
+    bool mMpXtraEnabled;
     LocationSystemInfo mLocSystemInfo;
     std::vector<GnssSvIdSource> mBlacklistedSvIds;
     PowerStateType mSystemPowerState;
@@ -520,6 +521,9 @@ public:
     void powerIndicationRequestCommand();
     uint32_t configEngineIntegrityRiskCommand(PositioningEngineMask engType,
                                               uint32_t integrityRisk);
+    uint32_t configXtraParamsCommand(bool enable, const XtraConfigParams& xtraParams);
+    uint32_t getXtraStatusCommand();
+    uint32_t registerXtraStatusUpdateCommand(bool registerUpdate);
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
@@ -586,6 +590,7 @@ public:
     );
     void reportPdnTypeFromWds(int pdnType, AGpsExtType agpsType, std::string apnName,
             AGpsBearerType bearerType);
+    void reportXtraMpDisabledEvent();
 
     /* ======== UTILITIES ================================================================= */
     bool needReportForAllClients(const UlpLocation& ulpLocation,
