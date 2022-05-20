@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -346,7 +346,7 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
         int64_t elapsedTimeNs = 0;
         float elapsedTimeUncMsec = 0.0;
         if (mElapsedRealTimeCal.getElapsedRealtimeForGpsTime(
-                locationExtended.gpsTime, elapsedTimeNs, elapsedTimeUncMsec)) {
+                locationExtended, elapsedTimeNs, elapsedTimeUncMsec)) {
             out.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
             out.elapsedRealTime = elapsedTimeNs;
             out.elapsedRealTimeUnc = (int64_t) (elapsedTimeUncMsec * 1000000);
