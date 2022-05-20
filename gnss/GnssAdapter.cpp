@@ -2403,6 +2403,9 @@ GnssAdapter::gnssDeleteAidingDataCommand(GnssAidingData& data)
             mSessionId(sessionId),
             mData(data) {}
         inline virtual void proc() const {
+            // suspend all tracking sessions to apply the aiding data deletion
+            mAdapter.suspendSessions();
+
             if ((mData.posEngineMask & STANDARD_POSITIONING_ENGINE) != 0) {
                 mAdapter.deleteAidingData(mData, mSessionId);
                 if (mData.deleteAll) {
@@ -2426,6 +2429,9 @@ GnssAdapter::gnssDeleteAidingDataCommand(GnssAidingData& data)
                 }
                 mAdapter.reportResponse(err, mSessionId);
             }
+
+            // resume all tracking sessions after applying aiding data deletion
+            mAdapter.restartSessions(false);
         }
     };
 
@@ -2641,12 +2647,12 @@ GnssAdapter::updateSystemPowerState(PowerStateType systemPowerState) {
 
             case POWER_STATE_SUSPEND:
             case POWER_STATE_SHUTDOWN:
-                suspendSessions();
                 LOC_LOGd("Suspending all active sessions -- powerState: %d", systemPowerState);
+                suspendSessions();
                 break;
             case POWER_STATE_RESUME:
-                restartSessions(false);
                 LOC_LOGd("Re-starting all active sessions -- powerState: %d", systemPowerState);
+                restartSessions(false);
                 break;
             default:
                 break;
@@ -2869,7 +2875,14 @@ GnssAdapter::handleEngineUpEvent()
 void
 GnssAdapter::restartSessions(bool modemSSR)
 {
-    LOC_LOGi(":enter");
+    LOC_LOGi(":enter, power state = %d, modemSSR = %d",
+             mSystemPowerState, modemSSR);
+
+    if ((POWER_STATE_SUSPEND == mSystemPowerState) ||
+        (POWER_STATE_SHUTDOWN == mSystemPowerState)) {
+        LOC_LOGi("power state = %d, session not resumed", mSystemPowerState);
+        return;
+    }
 
     if (modemSSR) {
         // odcpi session is no longer active after restart
