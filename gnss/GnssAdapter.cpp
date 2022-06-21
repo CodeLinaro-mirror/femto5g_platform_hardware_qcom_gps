@@ -26,43 +26,6 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
-/*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_GnssAdapter"
 
@@ -176,8 +139,7 @@ GnssAdapter::GnssAdapter() :
     mEsStatusCb(nullptr),
     mSystemStatus(SystemStatus::getInstance(mMsgTask)),
     mServerUrl(":"),
-    mXtraObserver(this, mSystemStatus->getOsObserver(), mMsgTask),
-    mMpXtraEnabled(true),
+    mXtraObserver(mSystemStatus->getOsObserver(), mMsgTask),
     mBlockCPIInfo{},
     mDreIntEnabled(false),
     mPpeEnabled(false),
@@ -2365,13 +2327,9 @@ GnssAdapter::gnssDeleteAidingDataCommand(GnssAidingData& data)
         inline virtual void proc() const {
             if ((mData.posEngineMask & STANDARD_POSITIONING_ENGINE) != 0) {
                 mAdapter.deleteAidingData(mData, mSessionId);
-                if (mData.deleteAll) {
-                    SystemStatus* s = mAdapter.getSystemStatus();
-                    if (nullptr != s) {
-                        s->setDefaultGnssEngineStates();
-                    }
-                    // inform xtra daemon that XTRA assistance data gets deleted
-                    mAdapter.mXtraObserver.updateXtraDataDeletion();
+                SystemStatus* s = mAdapter.getSystemStatus();
+                if ((nullptr != s) && (mData.deleteAll)) {
+                    s->setDefaultGnssEngineStates();
                 }
             }
 
@@ -6837,110 +6795,6 @@ uint32_t GnssAdapter::configEngineIntegrityRiskCommand(
 
     sendMsg(new MsgConfigEngineIntegrityRisk(*this, sessionId, engType, integrityRisk));
 
-    return sessionId;
-}
-
-void GnssAdapter::reportXtraMpDisabledEvent() {
-    struct MsgReportXtraMpDisabled : public LocMsg {
-        GnssAdapter& mAdapter;
-
-        inline MsgReportXtraMpDisabled(GnssAdapter& adapter) :
-            LocMsg(), mAdapter(adapter) {}
-        inline virtual void proc() const {
-            mAdapter.mMpXtraEnabled = false;
-        }
-    };
-
-    sendMsg(new MsgReportXtraMpDisabled(*this));
-}
-
-uint32_t GnssAdapter::configXtraParamsCommand(bool enable,
-                                              const XtraConfigParams& xtraParams) {
-    // generated session id will be none-zero
-    uint32_t sessionId = generateSessionId();
-    LOC_LOGd("session id %u, xtra enable %d", sessionId, enable);
-
-    struct MsgConfigXtraParams : public LocMsg {
-        GnssAdapter&     mAdapter;
-        uint32_t         mSessionId;
-        bool             mEnable;
-        XtraConfigParams mXtraParams;
-
-        inline MsgConfigXtraParams(GnssAdapter& adapter,
-                                   uint32_t sessionId,
-                                   bool enable,
-                                   XtraConfigParams xtraParams) :
-            LocMsg(), mAdapter(adapter), mSessionId(sessionId),
-            mEnable(enable), mXtraParams(xtraParams) {}
-        inline virtual void proc() const {
-            if (mAdapter.mMpXtraEnabled == false) {
-                mAdapter.reportResponse(LOCATION_ERROR_NOT_SUPPORTED, mSessionId);
-            } else {
-                if (true == mAdapter.mXtraObserver.updateXtraConfig(mEnable, mXtraParams)) {
-                    mAdapter.reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
-                } else {
-                    mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
-                }
-            }
-        }
-    };
-
-    sendMsg(new MsgConfigXtraParams(*this, sessionId, enable, xtraParams));
-
-    return sessionId;
-}
-
-uint32_t GnssAdapter::getXtraStatusCommand() {
-    // generated session id will be none-zero
-    uint32_t sessionId = generateSessionId();
-    LOC_LOGd("session id %u", sessionId);
-
-    struct MsgGetXtraStatus : public LocMsg {
-        GnssAdapter& mAdapter;
-        uint32_t     mSessionId;
-
-        inline MsgGetXtraStatus(GnssAdapter& adapter,
-                                uint32_t sessionId) :
-            LocMsg(), mAdapter(adapter), mSessionId(sessionId) {}
-        inline virtual void proc() const {
-            if (false == mAdapter.mXtraObserver.getXtraStatus(mSessionId)) {
-                mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
-            }
-        }
-    };
-
-    sendMsg(new MsgGetXtraStatus(*this, sessionId));
-
-    return sessionId;
-}
-
-uint32_t GnssAdapter::registerXtraStatusUpdateCommand(bool registerUpdate) {
-    // generated session id will be none-zero
-    uint32_t sessionId = generateSessionId();
-    LOC_LOGd("session id %u, register for update %d", sessionId, registerUpdate);
-
-    struct MsgRegisterXtraStatusUpdate : public LocMsg {
-        GnssAdapter&     mAdapter;
-        uint32_t         mSessionId;
-        bool             mRegisterUpdate;
-
-        inline MsgRegisterXtraStatusUpdate(GnssAdapter& adapter,
-                                           uint32_t sessionId,
-                                           bool registerUpdate) :
-            LocMsg(), mAdapter(adapter), mSessionId(sessionId),
-            mRegisterUpdate(registerUpdate) {}
-        inline virtual void proc() const {
-            if (false == mAdapter.mXtraObserver.registerXtraStatusUpdate(
-                    mSessionId, mRegisterUpdate)) {
-                mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
-            } else if (!mRegisterUpdate) {
-                // de-register will not have status callback, send out response now
-                mAdapter.reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
-            }
-        }
-    };
-
-    sendMsg(new MsgRegisterXtraStatusUpdate(*this, sessionId, registerUpdate));
     return sessionId;
 }
 

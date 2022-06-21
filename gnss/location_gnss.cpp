@@ -111,9 +111,6 @@ static uint32_t configEngineRunState(PositioningEngineMask engType, LocEngineRun
 static uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes);
 static uint32_t setOptInStatus(bool userConsent);
 static uint32_t configEngineIntegrityRisk(PositioningEngineMask engType, uint32_t integrityRisk);
-static uint32_t configXtraParams(bool enable, const XtraConfigParams& configParams);
-static uint32_t getXtraStatus();
-static uint32_t registerXtraStatusUpdate(bool registerUpdate);
 
 static const GnssInterface gGnssInterface = {
     sizeof(GnssInterface),
@@ -178,9 +175,6 @@ static const GnssInterface gGnssInterface = {
     configOutputNmeaTypes,
     setOptInStatus,
     configEngineIntegrityRisk,
-    configXtraParams,
-    getXtraStatus,
-    registerXtraStatusUpdate,
 };
 
 #ifndef DEBUG_X86
@@ -667,30 +661,6 @@ static uint32_t configEngineIntegrityRisk(PositioningEngineMask engType,
                                           uint32_t integrityRisk) {
     if (NULL != gGnssAdapter) {
         return gGnssAdapter->configEngineIntegrityRiskCommand(engType, integrityRisk);
-    } else {
-        return 0;
-    }
-}
-
-static uint32_t configXtraParams(bool enable, const XtraConfigParams& xtraParams) {
-    if (NULL != gGnssAdapter) {
-        return gGnssAdapter->configXtraParamsCommand(enable, xtraParams);
-    } else {
-        return 0;
-    }
-}
-
-static uint32_t getXtraStatus(){
-    if (NULL != gGnssAdapter) {
-        return gGnssAdapter->getXtraStatusCommand();
-    } else {
-        return 0;
-    }
-}
-
-static uint32_t registerXtraStatusUpdate(bool registerUpdate) {
-    if (NULL != gGnssAdapter) {
-        return gGnssAdapter->registerXtraStatusUpdateCommand(registerUpdate);
     } else {
         return 0;
     }
