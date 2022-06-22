@@ -1318,6 +1318,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
     int utcMinutes = pTm->tm_min;
     int utcSeconds = pTm->tm_sec;
     int utcMSeconds = (location.gpsLocation.timestamp)%1000;
+    double geoidalSeparation = 0.0;
     LocEcef ecef_w84;
     LocEcef ecef_p90;
     LocLla  lla_w84;
@@ -1389,6 +1390,11 @@ void loc_nmea_generate_pos(const UlpLocation &location,
                 break;
             default:
                 break;
+        }
+
+        if ((location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ALTITUDE) &&
+                (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL)) {
+            geoidalSeparation = ref_lla.alt - locationExtended.altitudeMeanSeaLevel;
         }
 
         if (mEnabledNmeaTypes & NMEA_TYPE_GSA) {
@@ -1583,8 +1589,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
 
             if (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG)
             {
-                double latitude = ref_lla.lat;
-                double longitude = ref_lla.lon;
+                double latitude = local_lla.lat;
+                double longitude = local_lla.lon;
                 char latHemisphere;
                 char lonHemisphere;
                 double latMinutes;
@@ -1738,8 +1744,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
 
             if (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG)
             {
-                double latitude = ref_lla.lat;
-                double longitude = ref_lla.lon;
+                double latitude = local_lla.lat;
+                double longitude = local_lla.lon;
                 char latHemisphere;
                 char lonHemisphere;
                 double latMinutes;
@@ -1814,7 +1820,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL)
             {
                 length = snprintf(pMarker, lengthRemaining, "%.1lf,",
-                                  locationExtended.altitudeMeanSeaLevel);
+                        local_lla.alt - geoidalSeparation);
             }
             else
             {
@@ -1832,8 +1838,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             if ((location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ALTITUDE) &&
                 (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL))
             {
-                length = snprintf(pMarker, lengthRemaining, "%.1lf,",
-                                  ref_lla.alt - locationExtended.altitudeMeanSeaLevel);
+                length = snprintf(pMarker, lengthRemaining, "%.1lf,", geoidalSeparation);
             }
             else
             {
@@ -1906,8 +1911,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
 
             if (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG)
             {
-                double latitude = ref_lla.lat;
-                double longitude = ref_lla.lon;
+                double latitude = local_lla.lat;
+                double longitude = local_lla.lon;
                 char latHemisphere;
                 char lonHemisphere;
                 double latMinutes;
@@ -1981,7 +1986,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL)
             {
                 length = snprintf(pMarker, lengthRemaining, "%.1lf,M,",
-                                  locationExtended.altitudeMeanSeaLevel);
+                                  local_lla.alt - geoidalSeparation);
             }
             else
             {
@@ -1999,8 +2004,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             if ((location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ALTITUDE) &&
                 (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL))
             {
-                length = snprintf(pMarker, lengthRemaining, "%.1lf,M,",
-                                  ref_lla.alt - locationExtended.altitudeMeanSeaLevel);
+                length = snprintf(pMarker, lengthRemaining, "%.1lf,M,", geoidalSeparation);
             }
             else
             {
