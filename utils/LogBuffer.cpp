@@ -174,9 +174,12 @@ void LogBuffer::signalHandler(const int code, siginfo_t *const si, void *const s
     time_t now = time(NULL);
     struct tm *curr_time = localtime(&now);
     char path[50];
-    snprintf(path, 50, LOG_BUFFER_FILE_PATH "gpslog_%d%d%d-%d%d%d.log",
+
+    if (NULL != curr_time) {
+        snprintf(path, 50, LOG_BUFFER_FILE_PATH "gpslog_%d%d%d-%d%d%d.log",
             (1900 + curr_time->tm_year), ( 1 + curr_time->tm_mon), curr_time->tm_mday,
             curr_time->tm_hour, curr_time->tm_min, curr_time->tm_sec);
+    }
 
     mInstance->dumpToLogFile(path);
 
