@@ -252,8 +252,8 @@ bool XtraSystemStatusObserver::updateTac(const string& tac) {
     return ( LocIpc::send(*mXtraSender, (const uint8_t*)s.data(), s.size()) );
 }
 
-bool XtraSystemStatusObserver::updateMccMnc(const string& mccmncCountry) {
-    mMccmnc = mccmncCountry;
+bool XtraSystemStatusObserver::updateMccMnc(const string& mccmnc) {
+    mMccmnc = mccmnc;
 
     if (!mReqStatusReceived) {
         return true;
@@ -261,7 +261,7 @@ bool XtraSystemStatusObserver::updateMccMnc(const string& mccmncCountry) {
 
     stringstream ss;
     ss <<  "mncmcc";
-    ss << " " << mccmncCountry.c_str();
+    ss << " " << mccmnc.c_str();
     string s = ss.str();
     return ( LocIpc::send(*mXtraSender, (const uint8_t*)s.data(), s.size()) );
 }
