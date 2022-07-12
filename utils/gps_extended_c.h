@@ -26,7 +26,9 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -652,6 +654,7 @@ typedef struct {
 typedef struct {
 
   /**<   Current GPS week as calculated from midnight, Jan. 6, 1980. \n
+         65535 means unknown gps week
        - Units: Weeks */
   uint16_t gpsWeek;
 
