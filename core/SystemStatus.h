@@ -733,7 +733,7 @@ public:
         return mDataItem.mValue == ((const SystemStatusMccMnc&)peer).mDataItem.mValue;
     }
     inline void dump(void) override {
-        LOC_LOGD("TacMccMncCountry value=%s", mDataItem.mValue.c_str());
+        LOC_LOGD("TacMccMnc value=%s", mDataItem.mValue.c_str());
     }
 };
 
