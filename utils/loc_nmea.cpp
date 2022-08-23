@@ -27,6 +27,42 @@
  *
  */
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_nmea"
 #include <loc_nmea.h>
@@ -1366,6 +1402,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
     int utcSeconds = pTm->tm_sec;
     int utcMSeconds = (location.gpsLocation.timestamp)%1000;
     int datum_type = loc_get_datum_type();
+    double geoidalSeparation = 0.0;
     LocEcef ecef_w84;
     LocEcef ecef_p90;
     LocLla  lla_w84;
@@ -1413,6 +1450,38 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         uint32_t svUsedCount = 0;
         uint32_t count = 0;
         loc_nmea_sv_meta sv_meta;
+
+        lla_w84.lat = location.gpsLocation.latitude / 180.0 * M_PI;
+        lla_w84.lon = location.gpsLocation.longitude / 180.0 * M_PI;
+        lla_w84.alt = location.gpsLocation.altitude;
+
+        convert_Lla_to_Ecef(lla_w84, ecef_w84);
+        convert_WGS84_to_PZ90(ecef_w84, ecef_p90);
+        convert_Ecef_to_Lla(ecef_p90, lla_p90);
+
+        ref_lla.lat = location.gpsLocation.latitude;
+        ref_lla.lon = location.gpsLocation.longitude;
+        ref_lla.alt = location.gpsLocation.altitude;
+
+        switch (datum_type) {
+            case LOC_GNSS_DATUM_WGS84:
+                local_lla.lat = location.gpsLocation.latitude;
+                local_lla.lon = location.gpsLocation.longitude;
+                local_lla.alt = location.gpsLocation.altitude;
+                break;
+            case LOC_GNSS_DATUM_PZ90:
+                local_lla.lat = lla_p90.lat / M_PI * 180.0;
+                local_lla.lon = lla_p90.lon / M_PI * 180.0;
+                local_lla.alt = lla_p90.alt;
+                break;
+            default:
+                break;
+        }
+
+        if ((location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ALTITUDE) &&
+                (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL)) {
+            geoidalSeparation = ref_lla.alt - locationExtended.altitudeMeanSeaLevel;
+        }
 
         if (mEnabledNmeaTypes & NMEA_TYPE_GSA) {
             // -------------------
@@ -1570,33 +1639,6 @@ void loc_nmea_generate_pos(const UlpLocation &location,
 
             length = loc_nmea_put_checksum(sentence, sizeof(sentence), false);
             nmeaArraystr.push_back(sentence);
-
-            lla_w84.lat = location.gpsLocation.latitude / 180.0 * M_PI;
-            lla_w84.lon = location.gpsLocation.longitude / 180.0 * M_PI;
-            lla_w84.alt = location.gpsLocation.altitude;
-
-            convert_Lla_to_Ecef(lla_w84, ecef_w84);
-            convert_WGS84_to_PZ90(ecef_w84, ecef_p90);
-            convert_Ecef_to_Lla(ecef_p90, lla_p90);
-
-            ref_lla.lat = location.gpsLocation.latitude;
-            ref_lla.lon = location.gpsLocation.longitude;
-            ref_lla.alt = location.gpsLocation.altitude;
-
-            switch (datum_type) {
-                case LOC_GNSS_DATUM_WGS84:
-                    local_lla.lat = location.gpsLocation.latitude;
-                    local_lla.lon = location.gpsLocation.longitude;
-                    local_lla.alt = location.gpsLocation.altitude;
-                    break;
-                case LOC_GNSS_DATUM_PZ90:
-                    local_lla.lat = lla_p90.lat / M_PI * 180.0;
-                    local_lla.lon = lla_p90.lon / M_PI * 180.0;
-                    local_lla.alt = lla_p90.alt;
-                    break;
-                default:
-                    break;
-            }
         }
 
         // -------------------
@@ -1637,8 +1679,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
 
             if (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG)
             {
-                double latitude = ref_lla.lat;
-                double longitude = ref_lla.lon;
+                double latitude = local_lla.lat;
+                double longitude = local_lla.lon;
                 char latHemisphere;
                 char lonHemisphere;
                 double latMinutes;
@@ -1792,8 +1834,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
 
             if (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG)
             {
-                double latitude = ref_lla.lat;
-                double longitude = ref_lla.lon;
+                double latitude = local_lla.lat;
+                double longitude = local_lla.lon;
                 char latHemisphere;
                 char lonHemisphere;
                 double latMinutes;
@@ -1868,7 +1910,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL)
             {
                 length = snprintf(pMarker, lengthRemaining, "%.1lf,",
-                                  locationExtended.altitudeMeanSeaLevel);
+                        local_lla.alt - geoidalSeparation);
             }
             else
             {
@@ -1886,8 +1928,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             if ((location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ALTITUDE) &&
                 (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL))
             {
-                length = snprintf(pMarker, lengthRemaining, "%.1lf,",
-                                  ref_lla.alt - locationExtended.altitudeMeanSeaLevel);
+                length = snprintf(pMarker, lengthRemaining, "%.1lf,", geoidalSeparation);
             }
             else
             {
@@ -1959,8 +2000,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
 
             if (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG)
             {
-                double latitude = ref_lla.lat;
-                double longitude = ref_lla.lon;
+                double latitude = local_lla.lat;
+                double longitude = local_lla.lon;
                 char latHemisphere;
                 char lonHemisphere;
                 double latMinutes;
@@ -2034,7 +2075,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL)
             {
                 length = snprintf(pMarker, lengthRemaining, "%.1lf,M,",
-                                  locationExtended.altitudeMeanSeaLevel);
+                                  local_lla.alt - geoidalSeparation);
             }
             else
             {
@@ -2052,8 +2093,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             if ((location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ALTITUDE) &&
                 (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL))
             {
-                length = snprintf(pMarker, lengthRemaining, "%.1lf,M,",
-                                  ref_lla.alt - locationExtended.altitudeMeanSeaLevel);
+                length = snprintf(pMarker, lengthRemaining, "%.1lf,M,", geoidalSeparation);
             }
             else
             {
