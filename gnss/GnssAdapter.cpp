@@ -1730,7 +1730,7 @@ GnssAdapter::gnssGetConfigCommand(GnssConfigFlagsMask configMask) {
                 uint32_t sessionId = *(mIds+index);
                 LocApiResponse* locApiResponse =
                         new LocApiResponse(*mAdapter.getContext(),
-                                           [this, sessionId] (LocationError err) {
+                                           [&mAdapter = mAdapter, sessionId] (LocationError err) {
                                            mAdapter.reportResponse(err, sessionId);});
                 if (!locApiResponse) {
                     LOC_LOGe("memory alloc failed");
@@ -1744,7 +1744,7 @@ GnssAdapter::gnssGetConfigCommand(GnssConfigFlagsMask configMask) {
                 uint32_t sessionId = *(mIds+index);
                 LocApiResponse* locApiResponse =
                         new LocApiResponse(*mAdapter.getContext(),
-                                           [this, sessionId] (LocationError err) {
+                                           [&mAdapter = mAdapter, sessionId] (LocationError err) {
                                            mAdapter.reportResponse(err, sessionId);});
                 if (!locApiResponse) {
                     LOC_LOGe("memory alloc failed");
@@ -1758,7 +1758,7 @@ GnssAdapter::gnssGetConfigCommand(GnssConfigFlagsMask configMask) {
                 uint32_t sessionId = *(mIds+index);
                 LocApiResponse* locApiResponse =
                         new LocApiResponse(*mAdapter.getContext(),
-                                           [this, sessionId] (LocationError err) {
+                                           [&mAdapter = mAdapter, sessionId] (LocationError err) {
                                            mAdapter.reportResponse(err, sessionId);});
                 if (!locApiResponse) {
                     LOC_LOGe("memory alloc failed");
