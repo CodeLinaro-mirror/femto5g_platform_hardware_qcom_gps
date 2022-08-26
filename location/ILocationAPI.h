@@ -26,6 +26,42 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #ifndef ILOCATIONAPI_H
 #define ILOCATIONAPI_H
 
@@ -699,6 +735,46 @@ public:
     */
     virtual uint32_t configEngineIntegrityRisk(
             PositioningEngineMask engType, uint32_t integrityRisk) = 0;
+
+     /** @brief
+        This API is used to enable/disable the XTRA (Predicted GNSS
+        Satellite Orbit Data) feature on device. If XTRA feature is
+        to be enabled, this API is also used to configure the
+        various XTRA settings in the device.
+
+        Client should wait for the command to finish, e.g.: via
+        configCb received before issuing a second configXtraParams
+        command. Behavior is not defined if client issues a second
+        request of configXtraParams without waiting for the finish of the
+        previous configXtraParams request.
+
+        Please note that configXtraParamsParams is not incremental, as a
+        second call of configXtraParamsParams will always overwrite the
+        previous one. Also, the configured xtra parameters will be
+        made persistent. However, to be consistent with other
+        location integration API, it is recommended to config xtra
+        params using location integration API upon device bootup.
+        <br/>
+
+        @param
+        enable: true to enable XTRA feature on the device
+                false to disable XTRA feature on the device. When
+                setting to false, both XTRA assistance data and NTP
+                time download will be disabled.
+
+        @param
+        configParams:pointer to XtraConfigParams to be used by XTRA
+        daemon module when enabling XTRA feature on the device.
+        if xtra feature is to be disabled, this parameter should be
+        set to NULL. If it is not set to NULL, the parameter will be
+        ignored.
+
+         @return
+         A session id that will be returned in responseCallback to
+         match command with response.
+    */
+    virtual uint32_t configXtraParams(
+            bool enable, const XtraConfigParams& configParams) = 0;
 };
 
 #endif /* ILOCATIONAPI_H */
