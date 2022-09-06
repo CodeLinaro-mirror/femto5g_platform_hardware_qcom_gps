@@ -439,7 +439,8 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
             out.elapsedRealTimeUnc = (int64_t) (elapsedTimeUncMsec * 1000000);
         }
 #ifndef FEATURE_AUTOMOTIVE
-        else if (out.timestamp > 0) {
+        else if ((out.timestamp > 0) &&
+                 (locationExtended.gpsTime.gpsWeek != UNKNOWN_GPS_WEEK_NUM)) {
             int64_t locationTimeNanos = (int64_t)out.timestamp * 1000000;
             bool isCurDataTimeTrustable = (out.timestamp % mLocPositionMode.min_interval == 0);
             out.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
@@ -803,6 +804,14 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
     if (GPS_LOCATION_EXTENDED_HAS_PROTECT_VERTICAL & locationExtended.flags) {
         out.flags |= GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT;
         out.protectVertical = locationExtended.protectVertical;
+    }
+
+    if (GPS_LOCATION_EXTENDED_HAS_DGNSS_STATION_ID & locationExtended.flags) {
+        out.flags |= GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
+        out.numOfDgnssStationId = locationExtended.numOfDgnssStationId;
+        for (uint32_t i = 0; i < locationExtended.numOfDgnssStationId; i++) {
+            out.dgnssStationId[i] = locationExtended.dgnssStationId[i];
+        }
     }
 }
 
@@ -2678,6 +2687,7 @@ GnssAdapter::updateSystemPowerStateCommand(PowerStateType systemPowerState) {
             mSystemPowerState(systemPowerState) {}
         inline virtual void proc() const {
             mAdapter.updateSystemPowerState(mSystemPowerState);
+            mAdapter.mXtraObserver.updatePowerState(mSystemPowerState);
         }
     };
 
