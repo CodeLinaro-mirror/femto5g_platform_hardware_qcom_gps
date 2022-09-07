@@ -26,6 +26,41 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_nmea"
@@ -147,6 +182,7 @@ typedef struct loc_sv_cache_info_s
 } loc_sv_cache_info;
 
 static GnssNmeaTypesMask mEnabledNmeaTypes = NMEA_TYPE_ALL;
+static GnssGeodeticDatumType mNmeaDatumType = GEODETIC_TYPE_WGS_84;
 
 /*===========================================================================
 FUNCTION    convert_Lla_to_Ecef
@@ -866,23 +902,19 @@ static void loc_nmea_generate_DTM(const LocLla &ref_lla,
     char* pMarker = sentence;
     int lengthRemaining = bufSize;
     int length = 0;
-    int datum_type;
     char ref_datum[4] = {'W', '8', '4', '\0'};
     char local_datum[4] = {0};
     double lla_offset[3] = {0};
     char latHem, longHem;
     double latMins, longMins;
 
-
-
-    datum_type = loc_get_datum_type();
-    switch (datum_type) {
-        case LOC_GNSS_DATUM_WGS84:
+    switch (mNmeaDatumType) {
+        case GEODETIC_TYPE_WGS_84:
             local_datum[0] = 'W';
             local_datum[1] = '8';
             local_datum[2] = '4';
             break;
-        case LOC_GNSS_DATUM_PZ90:
+        case GEODETIC_TYPE_PZ_90:
             local_datum[0] = 'P';
             local_datum[1] = '9';
             local_datum[2] = '0';
@@ -1283,7 +1315,6 @@ void loc_nmea_generate_pos(const UlpLocation &location,
     int utcMinutes = pTm->tm_min;
     int utcSeconds = pTm->tm_sec;
     int utcMSeconds = (location.gpsLocation.timestamp)%1000;
-    int datum_type = loc_get_datum_type();
     LocEcef ecef_w84;
     LocEcef ecef_p90;
     LocLla  lla_w84;
@@ -1488,13 +1519,13 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             ref_lla.lon = location.gpsLocation.longitude;
             ref_lla.alt = location.gpsLocation.altitude;
 
-            switch (datum_type) {
-                case LOC_GNSS_DATUM_WGS84:
+            switch (mNmeaDatumType) {
+                case GEODETIC_TYPE_WGS_84:
                     local_lla.lat = location.gpsLocation.latitude;
                     local_lla.lon = location.gpsLocation.longitude;
                     local_lla.alt = location.gpsLocation.altitude;
                     break;
-                case LOC_GNSS_DATUM_PZ90:
+                case GEODETIC_TYPE_PZ_90:
                     local_lla.lat = lla_p90.lat / M_PI * 180.0;
                     local_lla.lon = lla_p90.lon / M_PI * 180.0;
                     local_lla.alt = lla_p90.alt;
@@ -2004,13 +2035,13 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         nmeaArraystr.push_back(sentence_DTM);
         // ------$--RMC-------
         nmeaArraystr.push_back(sentence_RMC);
-        if(LOC_GNSS_DATUM_PZ90 == datum_type) {
+        if (GEODETIC_TYPE_WGS_84 == mNmeaDatumType) {
             // ------$--DTM-------
             nmeaArraystr.push_back(sentence_DTM);
         }
         // ------$--GNS-------
         nmeaArraystr.push_back(sentence_GNS);
-        if(LOC_GNSS_DATUM_PZ90 == datum_type) {
+        if (GEODETIC_TYPE_PZ_90 == mNmeaDatumType) {
             // ------$--DTM-------
             nmeaArraystr.push_back(sentence_DTM);
         }
@@ -2302,6 +2333,9 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-void loc_nmea_config_output_types(GnssNmeaTypesMask enabledNmeaTypes) {
+void loc_nmea_config_output_types(GnssNmeaTypesMask enabledNmeaTypes,
+                                  GnssGeodeticDatumType nmeaDatumType) {
+    LOC_LOGd("nmea types 0x%x, datum type %d", enabledNmeaTypes, nmeaDatumType);
     mEnabledNmeaTypes = enabledNmeaTypes;
+    mNmeaDatumType = nmeaDatumType;
 }
