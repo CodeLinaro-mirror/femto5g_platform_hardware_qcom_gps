@@ -65,7 +65,6 @@ static const loc_param_s_type loc_param_table[] =
 {
     {"DEBUG_LEVEL",             &DEBUG_LEVEL,        NULL, 'n'},
     {"TIMESTAMP",               &TIMESTAMP,          NULL, 'n'},
-    {"DATUM_TYPE",              &DATUM_TYPE,         NULL, 'n'},
     {"LOG_BUFFER_ENABLED",      &sLogBufferEnabled,  NULL, 'n'},
 };
 static const int loc_param_num = sizeof(loc_param_table) / sizeof(loc_param_s_type);
@@ -90,29 +89,6 @@ const char LOC_PATH_XTWIFI_CONF[] = LOC_PATH_XTWIFI_CONF_STR;
 const char LOC_PATH_QUIPC_CONF[] = LOC_PATH_QUIPC_CONF_STR;
 const char LOC_PATH_SLIM_CONF[] = LOC_PATH_SLIM_CONF_STR;
 const char LOC_PATH_VPE_CONF[] = LOC_PATH_VPE_CONF_STR;
-
-/*===========================================================================
-FUNCTION loc_get_datum_type
-
-DESCRIPTION
-   get datum type
-
-PARAMETERS:
-   N/A
-
-DEPENDENCIES
-   N/A
-
-RETURN VALUE
-   DATUM TYPE
-
-SIDE EFFECTS
-   N/A
-===========================================================================*/
-int loc_get_datum_type()
-{
-    return DATUM_TYPE;
-}
 
 /*===========================================================================
 FUNCTION loc_set_config_entry
