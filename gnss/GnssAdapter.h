@@ -450,7 +450,8 @@ public:
     uint32_t configRobustLocationCommand(bool enable, bool enableForE911);
     uint32_t configMinGpsWeekCommand(uint16_t minGpsWeek);
     uint32_t configDeadReckoningEngineParamsCommand(const DeadReckoningEngineConfig& dreConfig);
-    uint32_t configOutputNmeaTypesCommand(GnssNmeaTypesMask enabledNmeaTypes);
+    uint32_t configOutputNmeaTypesCommand(GnssNmeaTypesMask enabledNmeaTypes,
+                                          GnssGeodeticDatumType nmeaDatumType);
     uint32_t configEngineIntegrityRiskCommand(PositioningEngineMask engType,
                                               uint32_t integrityRisk);
     uint32_t configXtraParamsCommand(bool enable, const XtraConfigParams& xtraParams);
