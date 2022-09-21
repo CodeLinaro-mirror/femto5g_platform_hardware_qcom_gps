@@ -126,7 +126,8 @@ typedef enum {
     LOCATION_TECHNOLOGY_HYBRID_BIT                   = (1<<7), // HYBRID
     LOCATION_TECHNOLOGY_PPE_BIT                      = (1<<8), // PPE
     LOCATION_TECHNOLOGY_VEH_BIT                      = (1<<9), // using vehicular data
-    LOCATION_TECHNOLOGY_VIS_BIT                      = (1<<10) // using visual data
+    LOCATION_TECHNOLOGY_VIS_BIT                      = (1<<10), // using visual data
+    LOCATION_TECHNOLOGY_PROPAGATED_BIT               = (1<<11) //using cached measures
 } LocationTechnologyBits;
 
 typedef uint32_t LocationSpoofMask;

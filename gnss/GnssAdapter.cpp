@@ -62,6 +62,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_GnssAdapter"
 
@@ -257,8 +258,7 @@ GnssAdapter::checkAndSetSPEToRunforNHz(LocPosMode & out) {
 
 void
 GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
-                             const GpsLocationExtended& locationExtended,
-                             const LocPosTechMask techMask)
+                             const GpsLocationExtended& locationExtended)
 {
     memset(&out, 0, sizeof(Location));
     out.size = sizeof(Location);
@@ -296,38 +296,42 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
         out.bearingAccuracy = locationExtended.bearing_unc;
     }
     out.timestamp = ulpLocation.gpsLocation.timestamp;
-    if (LOC_POS_TECH_MASK_SATELLITE & techMask) {
+    if (LOC_POS_TECH_MASK_SATELLITE & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_GNSS_BIT;
     }
-    if (LOC_POS_TECH_MASK_CELLID & techMask) {
+    if (LOC_POS_TECH_MASK_CELLID & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_CELL_BIT;
     }
-    if (LOC_POS_TECH_MASK_WIFI & techMask) {
+    if (LOC_POS_TECH_MASK_WIFI & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_WIFI_BIT;
     }
-    if (LOC_POS_TECH_MASK_SENSORS & techMask) {
+    if (LOC_POS_TECH_MASK_SENSORS & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_SENSORS_BIT;
     }
-    if (LOC_POS_TECH_MASK_REFERENCE_LOCATION & techMask) {
+    if (LOC_POS_TECH_MASK_REFERENCE_LOCATION & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_REFERENCE_LOCATION_BIT;
     }
-    if (LOC_POS_TECH_MASK_INJECTED_COARSE_POSITION & techMask) {
+    if (LOC_POS_TECH_MASK_INJECTED_COARSE_POSITION & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_INJECTED_COARSE_POSITION_BIT;
     }
-    if (LOC_POS_TECH_MASK_AFLT & techMask) {
+    if (LOC_POS_TECH_MASK_AFLT & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_AFLT_BIT;
     }
-    if (LOC_POS_TECH_MASK_HYBRID & techMask) {
+
+    if (LOC_POS_TECH_MASK_HYBRID & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_HYBRID_BIT;
     }
-    if (LOC_POS_TECH_MASK_PPE & techMask) {
+    if (LOC_POS_TECH_MASK_PPE & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_PPE_BIT;
     }
-    if (LOC_POS_TECH_MASK_VEH & techMask) {
+    if (LOC_POS_TECH_MASK_VEH & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_VEH_BIT;
     }
-    if (LOC_POS_TECH_MASK_VIS & techMask) {
+    if (LOC_POS_TECH_MASK_VIS & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_VIS_BIT;
+    }
+    if (LOC_POS_TECH_MASK_PROPAGATED & locationExtended.tech_mask) {
+        out.techMask |= LOCATION_TECHNOLOGY_PROPAGATED_BIT;
     }
 
     if (LOC_GPS_LOCATION_HAS_SPOOF_MASK & ulpLocation.gpsLocation.flags) {
@@ -3758,7 +3762,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
 
         GnssLocationInfoNotification locationInfo = {};
         convertLocationInfo(locationInfo, locationExtended, status);
-        convertLocation(locationInfo.location, ulpLocation, locationExtended, techMask);
+        convertLocation(locationInfo.location, ulpLocation, locationExtended);
 
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
             if (reportToAllClients || needReportForClient(it->first, status)) {
@@ -3847,8 +3851,8 @@ GnssAdapter::reportEnginePositions(unsigned int count,
                                 engLocation->sessionStatus);
             convertLocation(locationInfo[i].location,
                             engLocation->location,
-                            engLocation->locationExtended,
-                            engLocation->location.tech_mask);
+                            engLocation->locationExtended);
+
         }
     }
     const EngineLocationInfo* engLocation = locationArr;
