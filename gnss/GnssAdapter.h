@@ -62,6 +62,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
 #ifndef GNSS_ADAPTER_H
 #define GNSS_ADAPTER_H
 
@@ -278,8 +279,7 @@ class GnssAdapter : public LocAdapterBase {
     /*==== CONVERSION ===================================================================*/
     static void convertOptions(LocPosMode& out, const TrackingOptions& trackingOptions);
     static void convertLocation(Location& out, const UlpLocation& ulpLocation,
-                                const GpsLocationExtended& locationExtended,
-                                const LocPosTechMask techMask);
+                                const GpsLocationExtended& locationExtended);
     static void convertLocationInfo(GnssLocationInfoNotification& out,
                                     const GpsLocationExtended& locationExtended,
                                     loc_sess_status status);
