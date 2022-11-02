@@ -26,6 +26,41 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_utils_cfg"
@@ -57,7 +92,6 @@
 /* Parameter data */
 static uint32_t DEBUG_LEVEL = UINT32_MAX;
 static uint32_t TIMESTAMP = 0;
-static uint32_t DATUM_TYPE = 0;
 static bool sVendorEnhanced = true;
 static uint32_t sLogBufferEnabled = 0;
 
@@ -66,7 +100,6 @@ static const loc_param_s_type loc_param_table[] =
 {
     {"DEBUG_LEVEL",             &DEBUG_LEVEL,        NULL, 'n'},
     {"TIMESTAMP",               &TIMESTAMP,          NULL, 'n'},
-    {"DATUM_TYPE",              &DATUM_TYPE,         NULL, 'n'},
     {"LOG_BUFFER_ENABLED",      &sLogBufferEnabled,  NULL, 'n'},
 };
 static const int loc_param_num = sizeof(loc_param_table) / sizeof(loc_param_s_type);
@@ -99,29 +132,6 @@ bool isVendorEnhanced() {
 }
 void setVendorEnhanced(bool vendorEnhanced) {
     sVendorEnhanced = vendorEnhanced;
-}
-
-/*===========================================================================
-FUNCTION loc_get_datum_type
-
-DESCRIPTION
-   get datum type
-
-PARAMETERS:
-   N/A
-
-DEPENDENCIES
-   N/A
-
-RETURN VALUE
-   DATUM TYPE
-
-SIDE EFFECTS
-   N/A
-===========================================================================*/
-int loc_get_datum_type()
-{
-    return DATUM_TYPE;
 }
 
 /*===========================================================================
@@ -584,11 +594,10 @@ int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_p
     loc_process_info_s_type *child_proc = nullptr;
     volatile int i=0;
     unsigned int j=0;
-    gid_t gid_list[LOC_PROCESS_MAX_NUM_GROUPS];
     char *split_strings[MAX_NUM_STRINGS];
     int name_length=0, group_list_length=0, platform_length=0, baseband_length=0, ngroups=0, ret=0;
     int auto_platform_length = 0, soc_id_list_length=0;
-    int group_index=0, nstrings=0, status_length=0;
+    int nstrings=0, status_length=0;
     FILE* conf_fp = nullptr;
     char platform_name[PROPERTY_VALUE_MAX], baseband_name[PROPERTY_VALUE_MAX];
     int low_ram_target=0;
@@ -596,7 +605,6 @@ int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_p
     unsigned int loc_service_mask=0;
     unsigned char config_mask = 0;
     unsigned char proc_list_length=0;
-    int gtp_cell_ap_enabled = 0;
     char arg_gtp_waa[LOC_PROCESS_MAX_ARG_STR_LENGTH] = "--";
     char arg_gtp_modem_cell[LOC_PROCESS_MAX_ARG_STR_LENGTH] = "--";
     char arg_gtp_wifi[LOC_PROCESS_MAX_ARG_STR_LENGTH] = "--";

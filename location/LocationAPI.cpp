@@ -186,18 +186,6 @@ static void loadLibGeofencing() {
     }
 }
 
-static bool needsGnssTrackingInfo(LocationCallbacks& locationCallbacks)
-{
-    return (locationCallbacks.gnssLocationInfoCb != nullptr ||
-            locationCallbacks.engineLocationsInfoCb != nullptr ||
-            locationCallbacks.gnssSvCb != nullptr ||
-            locationCallbacks.gnssNmeaCb != nullptr ||
-            locationCallbacks.gnssDataCb != nullptr ||
-            locationCallbacks.gnssMeasurementsCb != nullptr ||
-            locationCallbacks.gnssNHzMeasurementsCb != nullptr ||
-            locationCallbacks.gnssDcReportCb != nullptr);
-}
-
 static bool isGnssClient(LocationCallbacks& locationCallbacks)
 {
     return (locationCallbacks.gnssNiCb != nullptr ||
@@ -1066,12 +1054,15 @@ uint32_t LocationControlAPI::setOptInStatus(bool userConsent) {
 }
 
 uint32_t LocationControlAPI::configOutputNmeaTypes(
-            GnssNmeaTypesMask enabledNmeaTypes) {
+            GnssNmeaTypesMask enabledNmeaTypes,
+            GnssGeodeticDatumType nmeaDatumType) {
+
     uint32_t id = 0;
     pthread_mutex_lock(&gDataMutex);
 
     if (gData.gnssInterface != NULL) {
-        id = gData.gnssInterface->configOutputNmeaTypes(enabledNmeaTypes);
+        id = gData.gnssInterface->configOutputNmeaTypes(enabledNmeaTypes,
+                                                        nmeaDatumType);
     } else {
         LOC_LOGe("No gnss interface available for Location Control API");
     }
