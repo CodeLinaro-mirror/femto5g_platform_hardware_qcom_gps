@@ -431,27 +431,25 @@ typedef uint64_t GpsLocationExtendedFlags;
 #define GPS_LOCATION_EXTENDED_HAS_LLA_VRP_BASED                0x200000000000
 /** GpsLocationExtended has the velocityVRPased. */
 #define GPS_LOCATION_EXTENDED_HAS_ENU_VELOCITY_LLA_VRP_BASED   0x400000000000
-/** GpsLocationExtended has upperTriangleFullCovMatrix. */
-#define GPS_LOCATION_EXTENDED_HAS_UPPER_TRIANGLE_FULL_COV_MATRIX 0x800000000000
 /** GpsLocationExtended has drSolutionStatusMask. */
-#define GPS_LOCATION_EXTENDED_HAS_DR_SOLUTION_STATUS_MASK        0x1000000000000
+#define GPS_LOCATION_EXTENDED_HAS_DR_SOLUTION_STATUS_MASK        0x800000000000
 /** GpsLocationExtended has altitudeAssumed. */
-#define GPS_LOCATION_EXTENDED_HAS_ALTITUDE_ASSUMED               0x2000000000000
+#define GPS_LOCATION_EXTENDED_HAS_ALTITUDE_ASSUMED               0x1000000000000
 /** GpsLocationExtended has integrityRiskUsed. */
-#define GPS_LOCATION_EXTENDED_HAS_INTEGRITY_RISK_USED            0x4000000000000
+#define GPS_LOCATION_EXTENDED_HAS_INTEGRITY_RISK_USED            0x2000000000000
 /** GpsLocationExtended has protectAlongTrack. */
-#define GPS_LOCATION_EXTENDED_HAS_PROTECT_ALONG_TRACK            0x8000000000000
+#define GPS_LOCATION_EXTENDED_HAS_PROTECT_ALONG_TRACK            0x4000000000000
 /** GpsLocationExtended has protectCrossTrack. */
-#define GPS_LOCATION_EXTENDED_HAS_PROTECT_CROSS_TRACK            0x10000000000000
+#define GPS_LOCATION_EXTENDED_HAS_PROTECT_CROSS_TRACK            0x8000000000000
 /** GpsLocationExtended has protectVertical. */
-#define GPS_LOCATION_EXTENDED_HAS_PROTECT_VERTICAL               0x20000000000000
+#define GPS_LOCATION_EXTENDED_HAS_PROTECT_VERTICAL               0x10000000000000
 /** GpsLocationExtended has system tick. */
-#define GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK                    0x40000000000000
+#define GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK                    0x20000000000000
 /** GpsLocationExtended has system tick unc. */
-#define GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK_UNC                0x80000000000000
+#define GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK_UNC                0x40000000000000
 /** GpsLocationExtended has valid numOfdgnssStationId and
  *  dgnssStationId. */
-#define GPS_LOCATION_EXTENDED_HAS_DGNSS_STATION_ID               0x100000000000000
+#define GPS_LOCATION_EXTENDED_HAS_DGNSS_STATION_ID               0x80000000000000
 
 typedef uint32_t LocNavSolutionMask;
 /* Bitmask to specify whether SBAS ionospheric correction is used  */
@@ -731,7 +729,6 @@ typedef struct {
     float carrierPhasAmbiguity;
 } GpsMeasUsageInfo;
 
-#define COV_MATRIX_SIZE 12
 /** Represents gps location extended. */
 typedef struct {
     /** set to sizeof(GpsLocationExtended) */
@@ -886,27 +883,6 @@ typedef struct {
     LLAInfo llaVRPBased;
     /** VRR-based east, north, and up velocity */
     float enuVelocityVRPBased[3];
-    /** Upper triangle elements of full matrix of position and
-        velocity estimate in ECEF
-
-         The full covariance matrix of PPE position
-         (x, y, z in ECEF, in the unit of meters) estimate is a 3x3 matrix
-            | px,x  px,y  px,z |
-            | py,x  py,y  py,z |
-            | pz,x  pz,y  pz,z |
-
-         The full covariance matrix of PPE velocity
-         (vx,vy, vz in ECEF, in the unit of m/s) estimate is a 3x3 matrix
-            | pvx,vx  pvx,vy  pvx,vz |
-            | pvy,vx  pvy,vy  pvy,vz |
-            | pvz,vx  pvz,vy  pvz,vz |
-
-        upperTriangleFullCovMatrix =
-          { px,x, px,y, px,z, py,y, py,z, pz,z, pvx,vx, pvx,vy, pvx,vz, pvy,vy, pvy,vz, pvz,vz}
-        Uint: px,x, px,y, px,z, py,y, py,z, pz,z is in meter
-              pvx,vx, pvx,vy, pvx,vz, pvy,vy, pvy,vz, pvz,vz is in meters/seconds
-    */
-    float upperTriangleFullCovMatrix[COV_MATRIX_SIZE];
     DrSolutionStatusMask drSolutionStatusMask;
     /** When this field is valid, it will indicates whether altitude
      *  is assumed or calculated.
