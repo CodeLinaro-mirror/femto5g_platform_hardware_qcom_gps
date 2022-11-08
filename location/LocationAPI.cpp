@@ -84,7 +84,8 @@ static bool isGnssClient(LocationCallbacks& locationCallbacks)
             locationCallbacks.trackingCb != nullptr ||
             locationCallbacks.gnssLocationInfoCb != nullptr ||
             locationCallbacks.engineLocationsInfoCb != nullptr ||
-            locationCallbacks.gnssMeasurementsCb != nullptr);
+            locationCallbacks.gnssMeasurementsCb != nullptr ||
+            locationCallbacks.locationSystemInfoCb != nullptr);
 }
 
 static bool isFlpClient(LocationCallbacks& locationCallbacks)
