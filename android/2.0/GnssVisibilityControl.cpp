@@ -26,6 +26,12 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #include <android/hardware/gnss/visibility_control/1.0/IGnssVisibilityControl.h>
 #include <hidl/MQDescriptor.h>
@@ -128,15 +134,12 @@ Return<bool> GnssVisibilityControl::enableNfwLocationAccess(const hidl_vec<::and
         return false;
     }
 
-    /* If the vector is empty we need to disable all NFW clients
-       If there is at least one app in the vector we need to enable
-       all NFW clients */
-    if (0 == proxyApps.size()) {
-        mGnss->getGnssInterface()->enableNfwLocationAccess(false);
-    } else {
-        mGnss->getGnssInterface()->enableNfwLocationAccess(true);
+    std::vector<std::string> apps;
+    for (auto i = 0; i < proxyApps.size(); i++) {
+        apps.push_back((std::string)proxyApps[i]);
     }
 
+    mGnss->getGnssInterface()->enableNfwLocationAccess(apps);
     return true;
 }
 /**
@@ -153,8 +156,8 @@ Return<bool> GnssVisibilityControl::setCallback(const ::android::sp<::android::h
     mGnssVisibilityControlCbIface = callback;
 
     NfwCbInfo cbInfo = {};
-    cbInfo.visibilityControlCb = (void*)nfwStatusCb;
-    cbInfo.isInEmergencySession = (void*)isInEmergencySession;
+    cbInfo.visibilityControlCb = nfwStatusCb;
+    cbInfo.isInEmergencySession = isInEmergencySession;
 
     mGnss->getGnssInterface()->nfwInit(cbInfo);
 

@@ -17,6 +17,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #ifndef ANDROID_HARDWARE_GNSS_V2_1_GNSS_H
 #define ANDROID_HARDWARE_GNSS_V2_1_GNSS_H
@@ -61,9 +67,7 @@ using IMeasurementCorrectionsV1_1 =
 using ::android::hardware::gnss::visibility_control::V1_0::IGnssVisibilityControl;
 
 struct Gnss : public IGnss {
-    Gnss();
-    ~Gnss();
-
+    static Gnss* getInstance();
 
     /*
      * Methods from ::android::hardware::gnss::V1_0::IGnss follow.
@@ -152,6 +156,9 @@ struct Gnss : public IGnss {
     void onCtrlCollectiveResponseCb(size_t count, LocationError* errors, uint32_t* ids) {}
 
  private:
+     Gnss();
+    ~Gnss();
+
     struct GnssDeathRecipient : hidl_death_recipient {
         GnssDeathRecipient(sp<Gnss> gnss) : mGnss(gnss) {
         }
@@ -184,6 +191,7 @@ struct Gnss : public IGnss {
     GnssAPIClient* mApi = nullptr;
     GnssConfig mPendingConfig;
     ILocationControlAPI* mLocationControlApi = nullptr;
+    static Gnss* mGnssInstance;
 };
 
 extern "C" V1_0::IGnss* HIDL_FETCH_IGnss(const char* name);
