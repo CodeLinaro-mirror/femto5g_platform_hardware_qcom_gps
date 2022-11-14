@@ -17,6 +17,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #define LOG_TAG "LocSvc_GnssInterface"
 #define LOG_NDEBUG 0
@@ -42,7 +48,8 @@ namespace V2_0 {
 namespace implementation {
 
 using ::android::hardware::gnss::visibility_control::V1_0::implementation::GnssVisibilityControl;
-static sp<Gnss> sGnss;
+Gnss* Gnss::mGnssInstance = nullptr;
+
 static std::string getVersionString() {
     static std::string version;
     if (!version.empty())
@@ -91,15 +98,24 @@ void Gnss::GnssDeathRecipient::serviceDied(uint64_t cookie, const wp<IBase>& who
 
 void location_on_battery_status_changed(bool charging) {
     LOC_LOGd("battery status changed to %s charging", charging ? "" : "not");
-    if (sGnss != nullptr) {
-        sGnss->getGnssInterface()->updateBatteryStatus(charging);
+    Gnss *gnssObj = Gnss::getInstance();
+    if ((gnssObj != nullptr) && (gnssObj->getGnssInterface() != nullptr)) {
+        gnssObj->getGnssInterface()->updateBatteryStatus(charging);
+    } else {
+        LOC_LOGe("Unable to get Gnss obj or Gnss interface");
     }
 }
 Gnss::Gnss() {
     ENTRY_LOG_CALLFLOW();
-    sGnss = this;
+
     // initilize gnss interface at first in case needing notify battery status
-    sGnss->getGnssInterface()->initialize();
+    const GnssInterface* gnssInterface = getGnssInterface();
+    if (nullptr != gnssInterface) {
+        gnssInterface->initialize();
+    } else {
+        LOC_LOGe("Unable to get Gnss interface");
+    }
+
     // register health client to listen on battery change
     loc_extn_battery_properties_listener_init(location_on_battery_status_changed);
     // clear pending GnssConfig
@@ -113,7 +129,6 @@ Gnss::~Gnss() {
         mApi->destroy();
         mApi = nullptr;
     }
-    sGnss = nullptr;
 }
 
 GnssAPIClient* Gnss::getApi() {
@@ -443,7 +458,7 @@ Return<bool> Gnss::setCallback_1_1(const sp<V1_1::IGnssCallback>& callback) {
 
     const GnssInterface* gnssInterface = getGnssInterface();
     if (nullptr != gnssInterface) {
-        OdcpiRequestCallback cb = [this](const OdcpiRequestInfo& odcpiRequest) {
+        odcpiRequestCallback cb = [this](const OdcpiRequestInfo& odcpiRequest) {
             odcpiRequestCb(odcpiRequest);
         };
         gnssInterface->odcpiInit(cb, OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_LOW);
@@ -577,7 +592,7 @@ Return<bool> Gnss::setCallback_2_0(const sp<V2_0::IGnssCallback>& callback) {
 
     const GnssInterface* gnssInterface = getGnssInterface();
     if (nullptr != gnssInterface) {
-        OdcpiRequestCallback cb = [this](const OdcpiRequestInfo& odcpiRequest) {
+        odcpiRequestCallback cb = [this](const OdcpiRequestInfo& odcpiRequest) {
             odcpiRequestCb(odcpiRequest);
         };
         gnssInterface->odcpiInit(cb, OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_LOW);
@@ -662,12 +677,23 @@ Return<sp<V2_0::IGnssBatching>> Gnss::getExtensionGnssBatching_2_0() {
     return nullptr;
 }
 
+Gnss* Gnss::getInstance() {
+    ENTRY_LOG_CALLFLOW();
+    if (nullptr == mGnssInstance) {
+        LOC_LOGi("Creating Gnss instance");
+        mGnssInstance = new Gnss();
+        if (nullptr == mGnssInstance) {
+            LOC_LOGe("failed to get Gnss instance");
+        }
+    }
+    return mGnssInstance;
+}
+
 V1_0::IGnss* HIDL_FETCH_IGnss(const char* hal) {
     ENTRY_LOG_CALLFLOW();
-    V1_0::IGnss* iface = nullptr;
-    iface = new Gnss();
-    if (iface == nullptr) {
-        LOC_LOGE("%s]: failed to get %s", __FUNCTION__, hal);
+    V1_0::IGnss* iface = Gnss::getInstance();
+    if (nullptr == iface) {
+        LOC_LOGe("failed to get %s", hal);
     }
     return iface;
 }
