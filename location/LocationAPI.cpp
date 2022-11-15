@@ -27,6 +27,8 @@
  */
 
 /*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
 Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -59,6 +61,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_LocationAPI"
 
@@ -135,6 +138,7 @@ static bool needsGnssTrackingInfo(LocationCallbacks& locationCallbacks)
 static bool isGnssClient(LocationCallbacks& locationCallbacks)
 {
     return (locationCallbacks.gnssNiCb != nullptr ||
+            locationCallbacks.trackingCb != nullptr ||
             locationCallbacks.gnssLocationInfoCb != nullptr ||
             locationCallbacks.engineLocationsInfoCb != nullptr ||
             locationCallbacks.gnssSvCb != nullptr ||
@@ -147,8 +151,8 @@ static bool isGnssClient(LocationCallbacks& locationCallbacks)
 
 static bool isFlpClient(LocationCallbacks& locationCallbacks)
 {
-    return (locationCallbacks.batchingCb != nullptr ||
-            (locationCallbacks.trackingCb != nullptr && !isGnssClient(locationCallbacks)));
+    return (locationCallbacks.trackingCb != nullptr ||
+            locationCallbacks.batchingCb != nullptr);
 }
 
 static bool isGeofenceClient(LocationCallbacks& locationCallbacks)
