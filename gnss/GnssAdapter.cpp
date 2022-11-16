@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -410,6 +410,9 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
     }
     if (LOC_NAV_MASK_DGNSS_CORRECTION & locationExtended.navSolutionMask) {
         out.techMask |= LOCATION_TECHNOLOGY_DGNSS_BIT;
+    }
+    if (LOC_POS_TECH_MASK_PROPAGATED & locationExtended.tech_mask) {
+        out.techMask |= LOCATION_TECHNOLOGY_PROPAGATED_BIT;
     }
 
     if (LOC_GPS_LOCATION_HAS_SPOOF_MASK & ulpLocation.gpsLocation.flags) {
