@@ -124,7 +124,6 @@ static uint32_t setConstrainedTunc (bool enable, float tuncConstraint,
 static uint32_t setPositionAssistedClockEstimator(bool enable);
 static uint32_t gnssUpdateSvConfig(const GnssSvTypeConfig& constellationEnablementConfig,
                                    const GnssSvIdConfig& blacklistSvConfig);
-static uint32_t gnssResetSvConfig();
 static uint32_t configLeverArm(const LeverArmConfigInfo& configInfo);
 static uint32_t configRobustLocation(bool enable, bool enableForE911);
 static uint32_t configMinGpsWeek(uint16_t minGpsWeek);
@@ -142,7 +141,8 @@ static bool measCorrSetCorrections(const GnssMeasurementCorrections gnssMeasCorr
 static void measCorrClose();
 static uint32_t getAntennaInfo(AntennaInfoCallback* antennaInfoCallback);
 static uint32_t configEngineRunState(PositioningEngineMask engType, LocEngineRunState engState);
-static uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes);
+static uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes,
+                                      GnssGeodeticDatumType nmeaDatumType);
 static void powerIndicationInit(const powerIndicationCb powerIndicationCallback);
 static void powerIndicationRequest();
 static void setAddressRequestCb(const std::function<void(const Location&)> addressRequestCb);
@@ -663,9 +663,11 @@ static uint32_t configEngineRunState(PositioningEngineMask engType, LocEngineRun
     }
 }
 
-static uint32_t configOutputNmeaTypes (GnssNmeaTypesMask enabledNmeaTypes) {
+static uint32_t configOutputNmeaTypes (GnssNmeaTypesMask enabledNmeaTypes,
+                                       GnssGeodeticDatumType nmeaDatumType) {
     if (NULL != gGnssAdapter) {
-        return gGnssAdapter->configOutputNmeaTypesCommand(enabledNmeaTypes);
+        return gGnssAdapter->configOutputNmeaTypesCommand(enabledNmeaTypes,
+                                                          nmeaDatumType);
     } else {
         return 0;
     }

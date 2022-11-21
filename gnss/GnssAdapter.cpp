@@ -232,6 +232,16 @@ GnssAdapter::GnssAdapter() :
             };
     mAgpsManager.registerATLCallbacks(atlOpenStatusCb, atlCloseStatusCb);
 
+    // init default nmea setting based on gps.conf
+    uint32_t DATUM_TYPE = 0;
+    const loc_param_s_type nmea_conf_params[] = {
+        {"DATUM_TYPE", &DATUM_TYPE, NULL, 'n'},
+    };
+    UTIL_READ_CONF(LOC_PATH_GPS_CONF, nmea_conf_params);
+    GnssGeodeticDatumType nmea_datum_type =
+            (DATUM_TYPE == 1) ? GEODETIC_TYPE_PZ_90 : GEODETIC_TYPE_WGS_84;
+    loc_nmea_config_output_types(NMEA_TYPE_ALL, nmea_datum_type);
+
     readConfigCommand();
     initDefaultAgpsCommand();
     initCDFWServiceCommand();
@@ -1230,7 +1240,6 @@ GnssAdapter::setConfig()
 std::vector<LocationError> GnssAdapter::gnssUpdateConfig(const std::string& oldMoServerUrl,
         const std::string& moServerUrl, const std::string& serverUrl,
         GnssConfig& gnssConfigRequested, GnssConfig& gnssConfigNeedEngineUpdate, size_t count) {
-    loc_gps_cfg_s gpsConf = ContextBase::mGps_conf;
     size_t index = 0;
     LocationError err = LOCATION_ERROR_SUCCESS;
     std::vector<LocationError> errsList = {err};
@@ -1882,7 +1891,7 @@ GnssAdapter::gnssGetConfigCommand(GnssConfigFlagsMask configMask) {
                 uint32_t sessionId = *(mIds+index);
                 LocApiResponse* locApiResponse =
                         new LocApiResponse(*mAdapter.getContext(),
-                                           [this, sessionId] (LocationError err) {
+                                           [&mAdapter = mAdapter, sessionId] (LocationError err) {
                                            mAdapter.reportResponse(err, sessionId);});
                 if (!locApiResponse) {
                     LOC_LOGe("memory alloc failed");
@@ -1896,7 +1905,7 @@ GnssAdapter::gnssGetConfigCommand(GnssConfigFlagsMask configMask) {
                 uint32_t sessionId = *(mIds+index);
                 LocApiResponse* locApiResponse =
                         new LocApiResponse(*mAdapter.getContext(),
-                                           [this, sessionId] (LocationError err) {
+                                           [&mAdapter = mAdapter, sessionId] (LocationError err) {
                                            mAdapter.reportResponse(err, sessionId);});
                 if (!locApiResponse) {
                     LOC_LOGe("memory alloc failed");
@@ -1910,7 +1919,7 @@ GnssAdapter::gnssGetConfigCommand(GnssConfigFlagsMask configMask) {
                 uint32_t sessionId = *(mIds+index);
                 LocApiResponse* locApiResponse =
                         new LocApiResponse(*mAdapter.getContext(),
-                                           [this, sessionId] (LocationError err) {
+                                           [&mAdapter = mAdapter, sessionId] (LocationError err) {
                                            mAdapter.reportResponse(err, sessionId);});
                 if (!locApiResponse) {
                     LOC_LOGe("memory alloc failed");
@@ -4176,8 +4185,9 @@ bool GnssAdapter::needReportForClient(LocationAPI* client, enum loc_sess_status 
     return false;
 }
 
+/** Y2038- Compliant */
 bool GnssAdapter::needToGenerateNmeaReport(const uint32_t &gpsTimeOfWeekMs,
-        const struct timespec32_t &apTimeStamp)
+        const struct timespec64_t &apTimeStamp)
 {
     bool retVal = false;
     uint64_t currentTimeNsec = 0;
@@ -4195,7 +4205,7 @@ bool GnssAdapter::needToGenerateNmeaReport(const uint32_t &gpsTimeOfWeekMs,
                 (0 != gpsTimeOfWeekMs) && (NMEA_MIN_THRESHOLD_MSEC >= (gpsTimeOfWeekMs % 1000))) {
                 retVal = true;
             } else {
-                uint64_t timeDiffMsec = ((currentTimeNsec - mPrevNmeaRptTimeNsec) / 1000000);
+                int64_t timeDiffMsec = ((currentTimeNsec - mPrevNmeaRptTimeNsec) / 1000000);
                 // Send when the delta time becomes >= 1 sec
                 if (NMEA_MAX_THRESHOLD_MSEC <= timeDiffMsec) {
                     retVal = true;
@@ -4361,7 +4371,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
         bool blank_fix = ((0 == ulpLocation.gpsLocation.latitude) &&
                           (0 == ulpLocation.gpsLocation.longitude) &&
                           (LOC_RELIABILITY_NOT_SET == locationExtended.horizontal_reliability));
-        uint8_t generate_nmea = (reportToAllClients && status != LOC_SESS_FAILURE && !blank_fix);
+        uint8_t generate_nmea = (reportToAllClients && LOC_SESS_SUCCESS == status  && !blank_fix);
         bool custom_nmea_gga = (1 == ContextBase::mGps_conf.CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED);
         bool isTagBlockGroupingEnabled =
                 (1 == ContextBase::mGps_conf.NMEA_TAG_BLOCK_GROUPING_ENABLED);
@@ -7004,30 +7014,35 @@ uint32_t GnssAdapter::configEngineRunStateCommand(
     return sessionId;
 }
 
-uint32_t GnssAdapter::configOutputNmeaTypesCommand(GnssNmeaTypesMask enabledNmeaTypes) {
+uint32_t GnssAdapter::configOutputNmeaTypesCommand(GnssNmeaTypesMask enabledNmeaTypes,
+                                                   GnssGeodeticDatumType nmeaDatumType) {
     // generated session id will be none-zero
     uint32_t sessionId = generateSessionId();
-    LOC_LOGd("session id %u, enabled nmea = 0x%x", sessionId, enabledNmeaTypes);
+    LOC_LOGd("session id %u, enabled nmea = 0x%x, datum type = %d",
+             sessionId, enabledNmeaTypes, nmeaDatumType);
 
     struct MsgConfigOutputNmeaType : public LocMsg {
         GnssAdapter& mAdapter;
         uint32_t     mSessionId;
         GnssNmeaTypesMask mEnabledNmeaTypes;
+        GnssGeodeticDatumType mNmeaDatumType;
 
         inline MsgConfigOutputNmeaType(GnssAdapter& adapter,
                                        uint32_t sessionId,
-                                       GnssNmeaTypesMask enabledNmeaTypes) :
+                                       GnssNmeaTypesMask enabledNmeaTypes,
+                                       GnssGeodeticDatumType nmeaDatumType) :
             LocMsg(),
             mAdapter(adapter),
             mSessionId(sessionId),
-            mEnabledNmeaTypes(enabledNmeaTypes) {}
+            mEnabledNmeaTypes(enabledNmeaTypes),
+            mNmeaDatumType(nmeaDatumType) {}
         inline virtual void proc() const {
-           loc_nmea_config_output_types(mEnabledNmeaTypes);
+           loc_nmea_config_output_types(mEnabledNmeaTypes, mNmeaDatumType);
            mAdapter.reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
         }
     };
 
-    sendMsg(new MsgConfigOutputNmeaType(*this, sessionId, enabledNmeaTypes));
+    sendMsg(new MsgConfigOutputNmeaType(*this, sessionId, enabledNmeaTypes, nmeaDatumType));
 
     return sessionId;
 }

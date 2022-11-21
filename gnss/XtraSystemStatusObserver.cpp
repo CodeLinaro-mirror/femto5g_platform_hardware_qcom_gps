@@ -154,7 +154,7 @@ public:
             gnssConfig.size = sizeof(gnssConfig);
             gnssConfig.flags = GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT;
             sscanf(data, "%*s %d %d %d %d %d", &sessionId, &updateType,
-                   &gnssConfig.xtraStatus.featureEnabled,
+                   (int *)&gnssConfig.xtraStatus.featureEnabled,
                    &gnssConfig.xtraStatus.xtraDataStatus,
                    &gnssConfig.xtraStatus.xtraValidForHours);
 
