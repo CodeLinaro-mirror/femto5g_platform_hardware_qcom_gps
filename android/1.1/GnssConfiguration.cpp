@@ -17,6 +17,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #define LOG_TAG "LocSvc_GnssConfigurationInterface"
 
@@ -289,7 +295,7 @@ bool GnssConfiguration::setBlacklistedSource(
         break;
     default:
         copyToSource.constellation = GNSS_SV_TYPE_UNKNOWN;
-        LOC_LOGe("Invalid constellation %d", copyFromSource.constellation);
+        LOC_LOGe("Invalid constellation %hhu", copyFromSource.constellation);
         retVal = false;
         break;
     }
