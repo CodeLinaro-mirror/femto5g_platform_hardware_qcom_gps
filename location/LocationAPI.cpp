@@ -149,6 +149,7 @@ static bool needsGnssTrackingInfo(LocationCallbacks& locationCallbacks)
 static bool isGnssClient(LocationCallbacks& locationCallbacks)
 {
     return (locationCallbacks.gnssNiCb != nullptr ||
+            locationCallbacks.trackingCb != nullptr ||
             locationCallbacks.gnssLocationInfoCb != nullptr ||
             locationCallbacks.engineLocationsInfoCb != nullptr ||
             locationCallbacks.gnssSvCb != nullptr ||
@@ -161,8 +162,8 @@ static bool isGnssClient(LocationCallbacks& locationCallbacks)
 
 static bool isFlpClient(LocationCallbacks& locationCallbacks)
 {
-    return (locationCallbacks.batchingCb != nullptr ||
-            (locationCallbacks.trackingCb != nullptr && !isGnssClient(locationCallbacks)));
+    return (locationCallbacks.trackingCb != nullptr ||
+            locationCallbacks.batchingCb != nullptr);
 }
 
 static bool isGeofenceClient(LocationCallbacks& locationCallbacks)
