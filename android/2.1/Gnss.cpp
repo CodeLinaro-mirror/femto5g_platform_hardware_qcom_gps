@@ -17,6 +17,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #define LOG_TAG "LocSvc_GnssInterface"
 #define LOG_NDEBUG 0
@@ -44,7 +50,8 @@ namespace implementation {
 using ::android::hardware::gnss::visibility_control::V1_0::implementation::GnssVisibilityControl;
 using ::android::hardware::gnss::measurement_corrections::V1_1::
         implementation::MeasurementCorrections;
-static sp<Gnss> sGnss;
+Gnss* Gnss::mGnssInstance = nullptr;
+
 static std::string getVersionString() {
     static std::string version;
     if (!version.empty())
@@ -93,13 +100,15 @@ void Gnss::GnssDeathRecipient::serviceDied(uint64_t cookie, const wp<IBase>& who
 
 void location_on_battery_status_changed(bool charging) {
     LOC_LOGd("battery status changed to %s charging", charging ? "" : "not");
-    if (sGnss != nullptr) {
-        sGnss->getLocationControlApi()->updateBatteryStatus(charging);
+    Gnss *gnssObj = Gnss::getInstance();
+    if ((gnssObj != nullptr) && (gnssObj->getLocationControlApi() != nullptr)) {
+        gnssObj->getLocationControlApi()->updateBatteryStatus(charging);
+    } else {
+        LOC_LOGe("Unable to get Gnss obj or Loc Ctrl api");
     }
 }
 Gnss::Gnss() {
     ENTRY_LOG_CALLFLOW();
-    sGnss = this;
 
     // register health client to listen on battery change
     loc_extn_battery_properties_listener_init(location_on_battery_status_changed);
@@ -114,7 +123,6 @@ Gnss::~Gnss() {
         mApi->destroy();
         mApi = nullptr;
     }
-    sGnss = nullptr;
 }
 
 GnssAPIClient* Gnss::getApi() {
@@ -150,7 +158,6 @@ GnssAPIClient* Gnss::getApi() {
 
 ILocationControlAPI* Gnss::getLocationControlApi() {
     if (mLocationControlApi == nullptr) {
-
         LocationControlCallbacks locCtrlCbs;
         memset(&locCtrlCbs, 0, sizeof(locCtrlCbs));
         locCtrlCbs.size = sizeof(LocationControlCallbacks);
@@ -761,12 +768,23 @@ Return<sp<V2_1::IGnssAntennaInfo>> Gnss::getExtensionGnssAntennaInfo() {
     return mGnssAntennaInfo;
 }
 
+Gnss* Gnss::getInstance() {
+    ENTRY_LOG_CALLFLOW();
+    if (nullptr == mGnssInstance) {
+        LOC_LOGi("Creating Gnss instance");
+        mGnssInstance = new Gnss();
+        if (nullptr == mGnssInstance) {
+            LOC_LOGe("failed to get Gnss instance");
+        }
+    }
+    return mGnssInstance;
+}
+
 V1_0::IGnss* HIDL_FETCH_IGnss(const char* hal) {
     ENTRY_LOG_CALLFLOW();
-    V1_0::IGnss* iface = nullptr;
-    iface = new Gnss();
-    if (iface == nullptr) {
-        LOC_LOGE("%s]: failed to get %s", __FUNCTION__, hal);
+    V1_0::IGnss* iface = Gnss::getInstance();
+    if (nullptr == iface) {
+        LOC_LOGe("failed to get %s", hal);
     }
     return iface;
 }
