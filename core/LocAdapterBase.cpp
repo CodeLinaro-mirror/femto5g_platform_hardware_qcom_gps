@@ -206,7 +206,6 @@ DEFAULT_IMPL(false)
 bool LocAdapterBase::
     reportGnssAdditionalSystemInfoEvent(GnssAdditionalSystemInfo& /*additionalSystemInfo*/)
 DEFAULT_IMPL(false)
-
 void
 LocAdapterBase::reportLatencyInfoEvent(const GnssLatencyInfo& /*gnssLatencyInfo*/)
 DEFAULT_IMPL()
@@ -215,4 +214,8 @@ bool LocAdapterBase::
     reportQwesCapabilities(const std::unordered_map<LocationQwesFeatureType, bool> &featureMap)
 DEFAULT_IMPL(false)
 
+
+void LocAdapterBase::
+    reportSignalTypeCapabilities(const GnssCapabNotification& /*gnssCapabNotification*/)
+DEFAULT_IMPL()
 } // namespace loc_core

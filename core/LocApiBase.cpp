@@ -520,6 +520,11 @@ void LocApiBase::reportLocationSystemInfo(const LocationSystemInfo& locationSyst
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportLocationSystemInfoEvent(locationSystemInfo));
 }
 
+void LocApiBase::reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification) {
+    // loop through adapters, and deliver to all adapters.
+    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportSignalTypeCapabilities(gnssCapabNotification));
+}
+
 void LocApiBase::reportQwesCapabilities
 (
     const std::unordered_map<LocationQwesFeatureType, bool> &featureMap

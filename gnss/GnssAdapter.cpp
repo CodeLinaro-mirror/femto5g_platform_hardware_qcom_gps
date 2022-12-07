@@ -183,7 +183,7 @@ GnssAdapter::GnssAdapter() :
     mSendNmeaConsent(false),
     mDgnssState(0),
     mDgnssLastNmeaBootTimeMilli(0),
-    mElapsedRealTimeCal(30000000)
+    mPositionElapsedRealTimeCal(30000000)
 {
     LOC_LOGD("%s]: Constructor %p", __func__, this);
     mLocPositionMode.mode = LOC_POSITION_MODE_INVALID;
@@ -400,13 +400,19 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
     if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GPS_TIME) {
         int64_t elapsedTimeNs = 0;
         float elapsedTimeUncMsec = 0.0;
-        if (mElapsedRealTimeCal.getElapsedRealtimeForGpsTime(
+        if (mPositionElapsedRealTimeCal.getElapsedRealtimeForGpsTime(
                 locationExtended, elapsedTimeNs, elapsedTimeUncMsec)) {
             out.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
             out.elapsedRealTime = elapsedTimeNs;
             out.elapsedRealTimeUnc = (int64_t) (elapsedTimeUncMsec * 1000000);
         }
     }
+#ifndef FEATURE_AUTOMOTIVE
+    if (!(out.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT)) {
+        out.elapsedRealTime = getBootTimeMilliSec() * 1000000;
+        out.elapsedRealTimeUnc = mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+    }
+#endif //FEATURE_AUTOMOTIVE
 }
 
 /* This is utility routine that computes number of SV used
@@ -2582,6 +2588,11 @@ GnssAdapter::updateClientsEventMask()
             mask |= LOC_API_ADAPTER_BIT_NMEA_1HZ_REPORT;
             updateNmeaMask(mNmeaMask | LOC_NMEA_MASK_DEBUG_V02);
         }
+        if (it->second.gnssSignalTypesCb != nullptr) {
+            // GNSS Bands supported
+            LOC_LOGd("GNSS Bands supported");
+            mask |= LOC_API_ADAPTER_BIT_GNSS_BANDS_SUPPORTED;
+        }
     }
 
     /*
@@ -2697,7 +2708,7 @@ GnssAdapter::suspendSessions()
             mDgnssState &= ~DGNSS_STATE_NO_NMEA_PENDING;
         }
         stopDgnssNtrip();
-        mElapsedRealTimeCal.reset();
+        mPositionElapsedRealTimeCal.reset();
         mSPEAlreadyRunningAtHighestInterval = false;
     }
 }
@@ -2877,7 +2888,8 @@ GnssAdapter::hasCallbacksToStartTracking(LocationAPI* client)
         if (it->second.trackingCb || it->second.gnssLocationInfoCb ||
                 it->second.engineLocationsInfoCb || it->second.gnssMeasurementsCb ||
                 it->second.gnssNHzMeasurementsCb || it->second.gnssDataCb ||
-                it->second.gnssSvCb || it->second.gnssNmeaCb) {
+                it->second.gnssSvCb || it->second.gnssNmeaCb  ||
+                it->second.gnssSignalTypesCb) {
             allowed = true;
         } else {
             LOC_LOGi("missing right callback to start tracking")
@@ -3415,7 +3427,7 @@ GnssAdapter::stopTracking(LocationAPI* client, uint32_t id)
         mDgnssState &= ~DGNSS_STATE_NO_NMEA_PENDING;
     }
     stopDgnssNtrip();
-    mElapsedRealTimeCal.reset();
+    mPositionElapsedRealTimeCal.reset();
 
     mSPEAlreadyRunningAtHighestInterval = false;
 }
@@ -3736,7 +3748,7 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
             }
 
             // save the association of GPS timestamp and qtimer tick cnt in PVT report
-            mAdapter.mElapsedRealTimeCal.saveGpsTimeAndQtimerPairInPvtReport(mLocationExtended);
+            mAdapter.mPositionElapsedRealTimeCal.saveGpsTimeAndQtimerPairInPvtReport(mLocationExtended);
 
             if (!mUlpLocation.unpropagatedPosition) {
                 // save sv used in fix and mb sv used in fix info from propagated report
@@ -4528,6 +4540,31 @@ GnssAdapter::reportLocationSystemInfo(const LocationSystemInfo & locationSystemI
             }
         }
     }
+}
+
+void
+GnssAdapter::reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification) {
+    LOC_LOGv("received SignalTypeCapabilities report message");
+    struct MsgSignalTypeReport : public LocMsg {
+        GnssAdapter& mAdapter;
+        GnssCapabNotification mGnssCapabNotification;
+        inline MsgSignalTypeReport(GnssAdapter& adapter,
+            const GnssCapabNotification& gnssCapabNotification) :
+            LocMsg(),
+            mAdapter(adapter),
+            mGnssCapabNotification(gnssCapabNotification) {}
+        inline virtual void proc() const {
+            LOC_LOGv("Enter");
+            for (auto it = mAdapter.mClientData.begin(); it != mAdapter.mClientData.end(); ++it) {
+                if (it->second.gnssSignalTypesCb != nullptr) {
+                    LOC_LOGv("Calling gnssSignalTypesCb");
+                    it->second.gnssSignalTypesCb(mGnssCapabNotification);
+                }
+            }
+        }
+    };
+
+    sendMsg(new MsgSignalTypeReport(*this, gnssCapabNotification));
 }
 
 static void* niThreadProc(void *args)

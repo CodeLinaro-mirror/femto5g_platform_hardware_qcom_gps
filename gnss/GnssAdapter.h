@@ -299,7 +299,7 @@ class GnssAdapter : public LocAdapterBase {
     GnssReportLoggerUtil mLogger;
     bool mDreIntEnabled;
     bool mPpeEnabled;
-    ElapsedRealtimeEstimator mElapsedRealTimeCal;
+    ElapsedRealtimeEstimator mPositionElapsedRealTimeCal;
 
     /* === Misc callback from QMI LOC API ============================================== */
     GnssEnergyConsumedCallback mGnssEnergyConsumedCb;
@@ -534,7 +534,7 @@ public:
     virtual void reportGnssConfigEvent(uint32_t sessionId, const GnssConfig& gnssConfig);
     virtual bool reportGnssEngEnergyConsumedEvent(uint64_t energyConsumedSinceFirstBoot);
     virtual void reportLocationSystemInfoEvent(const LocationSystemInfo& locationSystemInfo);
-
+    virtual void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
     virtual bool requestATL(int connHandle, LocAGpsType agps_type,
                             LocApnTypeMask apn_type_mask,
                             LocSubId sub_id=LOC_DEFAULT_SUB);
