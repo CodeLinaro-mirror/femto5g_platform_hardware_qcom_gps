@@ -88,6 +88,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**  Maximum number of satellites in an ephemeris report.  */
 #define GNSS_EPHEMERIS_LIST_MAX_SIZE_V02 32
 
+#define GNSS_MAX_NAME_LENGTH    (8)
+
 /** OEM DRE Data Blob size */
 #define LDT_LOC_OEM_DRE_DATA_BLOB_SIZE 4096
 
@@ -324,7 +326,7 @@ typedef enum {
     LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT            = (1<<17),
     // Modem supports SV Ephemeris for tightly coupled external
     // PPE engines. This is a Standalone Feature.
-    LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT            = (1<<18),
+    LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT             = (1<<18),
     // Modem supports GNSS Single Frequency feature. This is a
     // Standalone Feature.
     LOCATION_CAPABILITIES_QWES_GNSS_SINGLE_FREQUENCY        = (1<<19),
@@ -355,6 +357,7 @@ typedef enum {
     LOCATION_CAPABILITIES_QWES_QDR3                         = (1<<26),
     // This mask indicates DGNSS license bundle is enabled.
     LOCATION_CAPABILITIES_QWES_DGNSS                        = (1<<27),
+    LOCATION_CAPABILITIES_GNSS_BANDS_BIT                    = (1ULL<<34)
 } LocationCapabilitiesBits;
 
 typedef uint8_t LocationQwesFeatureType;
@@ -1473,7 +1476,39 @@ struct GnssMeasurementsNotification {
     GnssMeasurementsClock clock; // clock
     uint32_t count;        // number of valid meas in GnssMeasurements array
     GnssMeasurementsData measurements[GNSS_MEASUREMENTS_MAX];
+	bool isFullTracking;
 };
+
+typedef enum {
+    GNSS_MEASUREMENTS_CODE_TYPE_A       = 0,
+    GNSS_MEASUREMENTS_CODE_TYPE_B       = 1,
+    GNSS_MEASUREMENTS_CODE_TYPE_C       = 2,
+    GNSS_MEASUREMENTS_CODE_TYPE_I       = 3,
+    GNSS_MEASUREMENTS_CODE_TYPE_L       = 4,
+    GNSS_MEASUREMENTS_CODE_TYPE_M       = 5,
+    GNSS_MEASUREMENTS_CODE_TYPE_P       = 6,
+    GNSS_MEASUREMENTS_CODE_TYPE_Q       = 7,
+    GNSS_MEASUREMENTS_CODE_TYPE_S       = 8,
+    GNSS_MEASUREMENTS_CODE_TYPE_W       = 9,
+    GNSS_MEASUREMENTS_CODE_TYPE_X       = 10,
+    GNSS_MEASUREMENTS_CODE_TYPE_Y       = 11,
+    GNSS_MEASUREMENTS_CODE_TYPE_Z       = 12,
+    GNSS_MEASUREMENTS_CODE_TYPE_N       = 13,
+    GNSS_MEASUREMENTS_CODE_TYPE_OTHER   = 255,
+} GnssMeasurementsCodeType;
+
+typedef struct {
+    GnssSvType svType;
+    double carrierFrequencyHz;
+    GnssMeasurementsCodeType codeType;
+    char otherCodeTypeName[GNSS_MAX_NAME_LENGTH];
+} GnssMeasurementsSignalType;
+
+typedef struct {
+    uint32_t size;              // set to sizeof(GnssCapabilitiesNotification)
+    uint32_t count;             // number of SVs in the gnssSignalType array
+    GnssMeasurementsSignalType  gnssSignalType[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];
+} GnssCapabNotification;
 
 typedef uint32_t GnssSvId;
 
@@ -2534,6 +2569,13 @@ typedef std::function<void(
     LocationSystemInfo locationSystemInfo
 )> locationSystemInfoCallback;
 
+/* Informs the framework of the list of GnssSignalTypes the GNSS HAL implementation
+   supports, optional can be NULL
+ */
+typedef std::function<void(
+    const GnssCapabNotification& gnssCapabNotification
+)> gnssSignalTypesCallback;
+
 typedef std::function<void(
 )> locationApiDestroyCompleteCallback;
 
@@ -2568,7 +2610,8 @@ struct LocationCallbacks {
     batchingStatusCallback batchingStatusCb;         // optional
     locationSystemInfoCallback locationSystemInfoCb; // optional
     engineLocationsInfoCallback engineLocationsInfoCb;     // optional
-    gnssSvEphemerisCallback svEphemerisCb;          // optional
+    gnssSvEphemerisCallback svEphemerisCb;           // optional
+    gnssSignalTypesCallback gnssSignalTypesCb;       // optional
 };
 
 struct GnssLatencyInfo {
