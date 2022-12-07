@@ -211,6 +211,7 @@ public:
     virtual void reportLatencyInfoEvent(const GnssLatencyInfo& gnssLatencyInfo);
     virtual bool reportQwesCapabilities(
             const std::unordered_map<LocationQwesFeatureType, bool> &featureMap);
+    virtual void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
 };
 
 } // namespace loc_core
