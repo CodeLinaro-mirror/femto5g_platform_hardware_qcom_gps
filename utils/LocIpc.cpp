@@ -65,7 +65,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -201,8 +201,8 @@ ssize_t Sock::recvfrom(const LocIpcRecver& recver, const shared_ptr<ILocIpcListe
             auto iter = sSockToPayloadMap.find(key);
             size_t payLoadSize = nBytes - sizeof(LOC_IPC_HEAD);
             if (iter == sSockToPayloadMap.end()) {
-                size_t totalSize;
-                sscanf(msg.data() + sizeof(LOC_IPC_HEAD) - 9, "%x", &totalSize);
+                size_t totalSize = 0;
+                sscanf(msg.data() + sizeof(LOC_IPC_HEAD) - 9, "%zx", &totalSize);
                 sSockToPayloadMap[key] = std::make_pair(totalSize - payLoadSize,
                                                         string(totalSize, 0));
                 memcpy((char*) sSockToPayloadMap[key].second.data(), (char *)msg.data()+
