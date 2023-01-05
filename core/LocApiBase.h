@@ -73,12 +73,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <MsgTask.h>
 #include <LocSharedLock.h>
 #include <log_util.h>
-#ifdef NO_UNORDERED_SET_OR_MAP
-    #include <map>
-    #define unordered_map map
-#else
-    #include <unordered_map>
-#endif
+#include <unordered_map>
 #include <inttypes.h>
 #include <functional>
 
