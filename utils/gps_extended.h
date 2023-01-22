@@ -26,6 +26,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef GPS_EXTENDED_H
 #define GPS_EXTENDED_H
 
@@ -105,10 +110,8 @@ struct LocPosMode
     void logv() const;
 };
 
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
 #endif /* GPS_EXTENDED_H */
-
