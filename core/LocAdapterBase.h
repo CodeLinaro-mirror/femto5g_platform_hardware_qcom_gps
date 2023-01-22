@@ -26,6 +26,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef LOC_API_ADAPTER_BASE_H
 #define LOC_API_ADAPTER_BASE_H
 
@@ -112,6 +118,10 @@ public:
 
     inline void sendMsg(const LocMsg* msg) {
         mMsgTask->sendMsg(msg);
+    }
+
+    inline void sendMsg(const LocMsg* msg, uint32_t delayInMs = 0) const {
+        mMsgTask->sendMsg(msg, delayInMs);
     }
 
     inline void updateEvtMask(LOC_API_ADAPTER_EVENT_MASK_T event,
