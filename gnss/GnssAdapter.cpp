@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -101,7 +101,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define NMEA_MIN_THRESHOLD_MSEC (99)
 #define NMEA_MAX_THRESHOLD_MSEC (975)
 
-#define DGNSS_RANGE_UPDATE_TIME_10MIN_IN_MILLI  600000
+#define DGNSS_RANGE_UPDATE_TIME_10MIN_IN_SEC  600
 
 using namespace loc_core;
 
@@ -514,28 +514,28 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
 {
     out.size = sizeof(GnssLocationInfoNotification);
     if (GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT;
         out.altitudeMeanSeaLevel = locationExtended.altitudeMeanSeaLevel;
     }
     if (GPS_LOCATION_EXTENDED_HAS_EXT_DOP & locationExtended.flags) {
-        out.flags |= (GNSS_LOCATION_INFO_DOP_BIT|GNSS_LOCATION_INFO_EXT_DOP_BIT);
+        out.flags |= (LDT_GNSS_LOCATION_INFO_DOP_BIT|LDT_GNSS_LOCATION_INFO_EXT_DOP_BIT);
         out.pdop = locationExtended.extDOP.PDOP;
         out.hdop = locationExtended.extDOP.HDOP;
         out.vdop = locationExtended.extDOP.VDOP;
         out.gdop = locationExtended.extDOP.GDOP;
         out.tdop = locationExtended.extDOP.TDOP;
     } else if (GPS_LOCATION_EXTENDED_HAS_DOP & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_DOP_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_DOP_BIT;
         out.pdop = locationExtended.pdop;
         out.hdop = locationExtended.hdop;
         out.vdop = locationExtended.vdop;
     }
     if (GPS_LOCATION_EXTENDED_HAS_MAG_DEV & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_MAGNETIC_DEVIATION_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_MAGNETIC_DEVIATION_BIT;
         out.magneticDeviation = locationExtended.magneticDeviation;
     }
     if (GPS_LOCATION_EXTENDED_HAS_HOR_RELIABILITY & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_HOR_RELIABILITY_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_HOR_RELIABILITY_BIT;
         switch (locationExtended.horizontal_reliability) {
             case LOC_RELIABILITY_VERY_LOW:
                 out.horReliability = LOCATION_RELIABILITY_VERY_LOW;
@@ -555,7 +555,7 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
         }
     }
     if (GPS_LOCATION_EXTENDED_HAS_VERT_RELIABILITY & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_VER_RELIABILITY_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_VER_RELIABILITY_BIT;
         switch (locationExtended.vertical_reliability) {
             case LOC_RELIABILITY_VERY_LOW:
                 out.verReliability = LOCATION_RELIABILITY_VERY_LOW;
@@ -575,51 +575,51 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
         }
     }
     if (GPS_LOCATION_EXTENDED_HAS_HOR_ELIP_UNC_MAJOR & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_SEMI_MAJOR_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_SEMI_MAJOR_BIT;
         out.horUncEllipseSemiMajor = locationExtended.horUncEllipseSemiMajor;
     }
     if (GPS_LOCATION_EXTENDED_HAS_HOR_ELIP_UNC_MINOR & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_SEMI_MINOR_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_SEMI_MINOR_BIT;
         out.horUncEllipseSemiMinor = locationExtended.horUncEllipseSemiMinor;
     }
     if (GPS_LOCATION_EXTENDED_HAS_HOR_ELIP_UNC_AZIMUTH & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_AZIMUTH_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_AZIMUTH_BIT;
         out.horUncEllipseOrientAzimuth = locationExtended.horUncEllipseOrientAzimuth;
     }
     if (GPS_LOCATION_EXTENDED_HAS_NORTH_STD_DEV & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_NORTH_STD_DEV_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_NORTH_STD_DEV_BIT;
         out.northStdDeviation = locationExtended.northStdDeviation;
     }
     if (GPS_LOCATION_EXTENDED_HAS_EAST_STD_DEV & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_EAST_STD_DEV_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_EAST_STD_DEV_BIT;
         out.eastStdDeviation = locationExtended.eastStdDeviation;
     }
     if (GPS_LOCATION_EXTENDED_HAS_NORTH_VEL & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_NORTH_VEL_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_NORTH_VEL_BIT;
         out.northVelocity = locationExtended.northVelocity;
     }
     if (GPS_LOCATION_EXTENDED_HAS_NORTH_VEL_UNC & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_NORTH_VEL_UNC_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_NORTH_VEL_UNC_BIT;
         out.northVelocityStdDeviation = locationExtended.northVelocityStdDeviation;
     }
     if (GPS_LOCATION_EXTENDED_HAS_EAST_VEL & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_EAST_VEL_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_EAST_VEL_BIT;
         out.eastVelocity = locationExtended.eastVelocity;
     }
     if (GPS_LOCATION_EXTENDED_HAS_EAST_VEL_UNC & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_EAST_VEL_UNC_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_EAST_VEL_UNC_BIT;
         out.eastVelocityStdDeviation = locationExtended.eastVelocityStdDeviation;
     }
     if (GPS_LOCATION_EXTENDED_HAS_UP_VEL & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_UP_VEL_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_UP_VEL_BIT;
         out.upVelocity = locationExtended.upVelocity;
     }
     if (GPS_LOCATION_EXTENDED_HAS_UP_VEL_UNC & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_UP_VEL_UNC_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_UP_VEL_UNC_BIT;
         out.upVelocityStdDeviation = locationExtended.upVelocityStdDeviation;
     }
     if (GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_GNSS_SV_USED_DATA_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_GNSS_SV_USED_DATA_BIT;
         out.svUsedInPosition.gpsSvUsedIdsMask =
                 locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask;
         out.svUsedInPosition.gloSvUsedIdsMask =
@@ -633,7 +633,7 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
         out.svUsedInPosition.navicSvUsedIdsMask =
                 locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask;
 
-        out.flags |= GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT;
         out.numSvUsedInPosition = getNumSvUsed(out.svUsedInPosition.gpsSvUsedIdsMask,
                                                GPS_SV_PRN_MAX - GPS_SV_PRN_MIN + 1);
         out.numSvUsedInPosition += getNumSvUsed(out.svUsedInPosition.gloSvUsedIdsMask,
@@ -658,7 +658,7 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
         }
     }
     if (GPS_LOCATION_EXTENDED_HAS_NAV_SOLUTION_MASK & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_NAV_SOLUTION_MASK_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_NAV_SOLUTION_MASK_BIT;
         out.navSolutionMask = locationExtended.navSolutionMask;
     }
     if (GPS_LOCATION_EXTENDED_HAS_POS_DYNAMICS_DATA & locationExtended.flags) {
@@ -763,42 +763,42 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
     out.gnssSystemTime = locationExtended.gnssSystemTime;
 
     if (GPS_LOCATION_EXTENDED_HAS_LEAP_SECONDS & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_LEAP_SECONDS_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_BIT;
         out.leapSeconds = locationExtended.leapSeconds;
     }
 
     if (GPS_LOCATION_EXTENDED_HAS_CALIBRATION_CONFIDENCE & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_CALIBRATION_CONFIDENCE_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_CALIBRATION_CONFIDENCE_BIT;
         out.calibrationConfidence = locationExtended.calibrationConfidence;
     }
 
     if (GPS_LOCATION_EXTENDED_HAS_CALIBRATION_STATUS & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_CALIBRATION_STATUS_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_CALIBRATION_STATUS_BIT;
         out.calibrationStatus = locationExtended.calibrationStatus;
     }
 
     if (GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_OUTPUT_ENG_TYPE_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_OUTPUT_ENG_TYPE_BIT;
         out.locOutputEngType = locationExtended.locOutputEngType;
     }
 
     if (GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_MASK & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_OUTPUT_ENG_MASK_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_OUTPUT_ENG_MASK_BIT;
         out.locOutputEngMask = locationExtended.locOutputEngMask;
     }
 
     if (GPS_LOCATION_EXTENDED_HAS_CONFORMITY_INDEX & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_CONFORMITY_INDEX_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_CONFORMITY_INDEX_BIT;
         out.conformityIndex = locationExtended.conformityIndex;
     }
 
     if (GPS_LOCATION_EXTENDED_HAS_LLA_VRP_BASED & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_LLA_VRP_BASED_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_LLA_VRP_BASED_BIT;
         out.llaVRPBased = locationExtended.llaVRPBased;
     }
 
     if (GPS_LOCATION_EXTENDED_HAS_ENU_VELOCITY_LLA_VRP_BASED & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_ENU_VELOCITY_VRP_BASED_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_ENU_VELOCITY_VRP_BASED_BIT;
         // copy over east, north and up vrp based velocity
         out.enuVelocityVRPBased[0] = locationExtended.enuVelocityVRPBased[0];
         out.enuVelocityVRPBased[1] = locationExtended.enuVelocityVRPBased[1];
@@ -806,37 +806,37 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
     }
 
     if (GPS_LOCATION_EXTENDED_HAS_DR_SOLUTION_STATUS_MASK & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_DR_SOLUTION_STATUS_MASK_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_DR_SOLUTION_STATUS_MASK_BIT;
         out.drSolutionStatusMask = locationExtended.drSolutionStatusMask;
     }
 
     if (GPS_LOCATION_EXTENDED_HAS_ALTITUDE_ASSUMED & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_ALTITUDE_ASSUMED_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_ALTITUDE_ASSUMED_BIT;
         out.altitudeAssumed = locationExtended.altitudeAssumed;
     }
 
-    out.flags |= GNSS_LOCATION_INFO_SESSION_STATUS_BIT;
+    out.flags |= LDT_GNSS_LOCATION_INFO_SESSION_STATUS_BIT;
     out.sessionStatus = status;
 
     if (GPS_LOCATION_EXTENDED_HAS_INTEGRITY_RISK_USED & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_INTEGRITY_RISK_USED_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_INTEGRITY_RISK_USED_BIT;
         out.integrityRiskUsed = locationExtended.integrityRiskUsed;
     }
     if (GPS_LOCATION_EXTENDED_HAS_PROTECT_ALONG_TRACK & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_PROTECT_ALONG_TRACK_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_PROTECT_ALONG_TRACK_BIT;
         out.protectAlongTrack = locationExtended.protectAlongTrack;
     }
     if (GPS_LOCATION_EXTENDED_HAS_PROTECT_CROSS_TRACK & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT;
         out.protectCrossTrack = locationExtended.protectCrossTrack;
     }
     if (GPS_LOCATION_EXTENDED_HAS_PROTECT_VERTICAL & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT;
         out.protectVertical = locationExtended.protectVertical;
     }
 
     if (GPS_LOCATION_EXTENDED_HAS_DGNSS_STATION_ID & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
+        out.flags |= LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
         out.numOfDgnssStationId = locationExtended.numOfDgnssStationId;
         for (uint32_t i = 0; i < locationExtended.numOfDgnssStationId; i++) {
             out.dgnssStationId[i] = locationExtended.dgnssStationId[i];
@@ -4339,8 +4339,9 @@ bool GnssAdapter::needReportForClient(LocationAPI* client, enum loc_sess_status 
     return false;
 }
 
+/** Y2038- Compliant */
 bool GnssAdapter::needToGenerateNmeaReport(const uint32_t &gpsTimeOfWeekMs,
-        const struct timespec32_t &apTimeStamp)
+        const struct timespec64_t &apTimeStamp)
 {
     bool retVal = false;
     uint64_t currentTimeNsec = 0;
@@ -4358,7 +4359,7 @@ bool GnssAdapter::needToGenerateNmeaReport(const uint32_t &gpsTimeOfWeekMs,
                 ((0 != gpsTimeOfWeekMs) && (NMEA_MIN_THRESHOLD_MSEC >= (gpsTimeOfWeekMs % 1000)))) {
                 retVal = true;
             } else {
-                uint64_t timeDiffMsec = ((currentTimeNsec - mPrevNmeaRptTimeNsec) / 1000000);
+                int64_t timeDiffMsec = ((currentTimeNsec - mPrevNmeaRptTimeNsec) / 1000000);
                 // Send when the delta time becomes >= 1 sec
                 if (NMEA_MAX_THRESHOLD_MSEC <= timeDiffMsec) {
                     retVal = true;
@@ -4473,7 +4474,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                     GnssLocationInfoNotification engLocationsInfo[2];
                     engLocationsInfo[0] = locationInfo;
                     engLocationsInfo[0].locOutputEngType = LOC_OUTPUT_ENGINE_FUSED;
-                    engLocationsInfo[0].flags |= GNSS_LOCATION_INFO_OUTPUT_ENG_TYPE_BIT;
+                    engLocationsInfo[0].flags |= LDT_GNSS_LOCATION_INFO_OUTPUT_ENG_TYPE_BIT;
                     engLocationsInfo[1] = locationInfo;
                     it->second.engineLocationsInfoCb(2, engLocationsInfo);
                 } else if (nullptr != it->second.trackingCb) {
@@ -4515,9 +4516,9 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                 // If fix has sensor contribution, and it is fused fix with DRE engine
                 // contributing to the fix, inject to modem
                 if ((LOC_POS_TECH_MASK_SENSORS & techMask) &&
-                        (locationInfo.flags & GNSS_LOCATION_INFO_OUTPUT_ENG_TYPE_BIT) &&
+                        (locationInfo.flags & LDT_GNSS_LOCATION_INFO_OUTPUT_ENG_TYPE_BIT) &&
                         (locationInfo.locOutputEngType == LOC_OUTPUT_ENGINE_FUSED) &&
-                        (locationInfo.flags & GNSS_LOCATION_INFO_OUTPUT_ENG_MASK_BIT) &&
+                        (locationInfo.flags & LDT_GNSS_LOCATION_INFO_OUTPUT_ENG_MASK_BIT) &&
                         (locationInfo.locOutputEngMask & DEAD_RECKONING_ENGINE)) {
                     mLocApi->injectPosition(locationInfo, false);
                 }
@@ -6530,20 +6531,17 @@ GnssAdapter::getDataInformation(GnssDataNotification& data, int msInWeek)
         if ((!reports.mRfAndParams.empty()) && (!reports.mTimeAndClock.empty()) &&
             (abs(msInWeek - (int)reports.mTimeAndClock.back().mGpsTowMs) < 2000)) {
             int maxSig = std::min((int)GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES,
-                    (int)reports.mRfAndParams.back().mJammerData.size());
+                    (int)reports.mRfAndParams.back().mJammerInd.size());
             for (int sig = GNSS_LOC_SIGNAL_TYPE_GPS_L1CA; sig < maxSig; sig++) {
                 data.gnssDataMask[sig] = 0;
                 data.jammerInd[sig] = 0.0;
                 data.agc[sig] = 0.0;
                if (GNSS_INVALID_JAMMER_IND !=
-                       reports.mRfAndParams.back().mJammerData[sig].jammerInd) {
+                       reports.mRfAndParams.back().mJammerInd[sig]) {
                    data.jammerInd[sig] =
-                           (double)reports.mRfAndParams.back().mJammerData[sig].jammerInd;
-                   data.gnssDataMask[sig] |= GNSS_LOC_DATA_JAMMER_IND_BIT;
-               }
-               if (GNSS_INVALID_JAMMER_IND != reports.mRfAndParams.back().mJammerData[sig].agc) {
-                   data.agc[sig] = (double)reports.mRfAndParams.back().mJammerData[sig].agc;
-                   data.gnssDataMask[sig] |= GNSS_LOC_DATA_AGC_BIT;
+                           (double)reports.mRfAndParams.back().mJammerInd[sig];
+                   data.agc[sig] = -(double)reports.mRfAndParams.back().mJammerInd[sig];
+                   data.gnssDataMask[sig] |= (GNSS_LOC_DATA_JAMMER_IND_BIT | GNSS_LOC_DATA_AGC_BIT);
                }
             }
 
@@ -8014,10 +8012,10 @@ void GnssAdapter::enablePPENtripStreamCommand(const GnssNtripConnectionParams& p
 
 void GnssAdapter::handleEnablePPENtrip(const GnssNtripConnectionParams& params,
         bool enableRTKEngine) {
-    LOC_LOGd("%d %s %d %s %s %s %d mSendNmeaConsent %d",
+    LOC_LOGd("%d %s %d %s %s %s %d %d mSendNmeaConsent %d",
              params.useSSL, params.hostNameOrIp.data(), params.port,
              params.mountPoint.data(), params.username.data(), params.password.data(),
-             params.requiresNmeaLocation, mSendNmeaConsent);
+             params.requiresNmeaLocation, params.nmeaUpdateInterval, mSendNmeaConsent);
 
     GnssNtripConnectionParams* pNtripParams = &(mStartDgnssNtripParams.ntripParams);
 
@@ -8028,6 +8026,7 @@ void GnssAdapter::handleEnablePPENtrip(const GnssNtripConnectionParams& params,
             0 == pNtripParams->username.compare(params.username) &&
             0 == pNtripParams->password.compare(params.password) &&
             pNtripParams->requiresNmeaLocation == params.requiresNmeaLocation &&
+            pNtripParams->nmeaUpdateInterval == params.nmeaUpdateInterval &&
             mDgnssState & DGNSS_STATE_ENABLE_NTRIP_COMMAND) {
         LOC_LOGd("received same Ntrip param");
         return;
@@ -8083,8 +8082,8 @@ void GnssAdapter::checkUpdateDgnssNtrip(bool isLocationValid) {
                 mDgnssLastNmeaBootTimeMilli = curBootTime;
             }
         } else if ((mDgnssState & DGNSS_STATE_NTRIP_SESSION_STARTED) && isLocationValid &&
-            isDgnssNmeaRequired() &&
-            curBootTime - mDgnssLastNmeaBootTimeMilli > DGNSS_RANGE_UPDATE_TIME_10MIN_IN_MILLI ) {
+            isDgnssNmeaRequired() && curBootTime - mDgnssLastNmeaBootTimeMilli >
+            mStartDgnssNtripParams.ntripParams.nmeaUpdateInterval * ONE_SECOND_IN_MS) {
             mXtraObserver.updateNmeaToDgnssServer(mStartDgnssNtripParams.nmea);
             mDgnssLastNmeaBootTimeMilli = curBootTime;
         }
@@ -8154,7 +8153,7 @@ void GnssAdapter::readPPENtripConfig() {
         return;
     }
 
-    // A sample Ntrip_Params -> 199.106.116.10 5000 Avante_Ref CV2X 1234 0 0
+    // A sample Ntrip_Params -> 199.106.116.10 5000 Avante_Ref CV2X 1234 1 0 0 0
     static loc_param_s_type gpsConfParamTable[] = {
         {"Ntrip_Params", &NtripParamsString, nullptr, 's'}
     };
@@ -8189,11 +8188,15 @@ void GnssAdapter::readPPENtripConfig() {
     pNtripParams->requiresNmeaLocation = next.compare("0") ? true : false;
     GET_NEXT();
     pNtripParams->useSSL = next.compare("0") ? true : false;
+    GET_NEXT();
+    pNtripParams->nmeaUpdateInterval = std::stoi(next) ? std::stoi(next) :
+            DGNSS_RANGE_UPDATE_TIME_10MIN_IN_SEC;
 
-    LOC_LOGd("%d %s %d %s %s %s %d",
+    LOC_LOGd("%d %s %d %s %s %s %d %d",
              pNtripParams->useSSL, pNtripParams->hostNameOrIp.data(), pNtripParams->port,
              pNtripParams->mountPoint.data(), pNtripParams->username.data(),
-             pNtripParams->password.data(), pNtripParams->requiresNmeaLocation);
+             pNtripParams->password.data(), pNtripParams->requiresNmeaLocation,
+             pNtripParams->nmeaUpdateInterval);
 
     /* set up state*/
     mDgnssState |= DGNSS_STATE_ENABLE_NTRIP_COMMAND;
