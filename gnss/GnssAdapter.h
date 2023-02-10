@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2022 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -292,8 +292,7 @@ class GnssAdapter : public LocAdapterBase {
     /*==== CONVERSION ===================================================================*/
     static void convertOptions(LocPosMode& out, const TrackingOptions& trackingOptions);
     static void convertLocation(Location& out, const UlpLocation& ulpLocation,
-                                const GpsLocationExtended& locationExtended,
-                                const LocPosTechMask techMask);
+                                const GpsLocationExtended& locationExtended);
     static void convertLocationInfo(GnssLocationInfoNotification& out,
                                     const GpsLocationExtended& locationExtended,
                                     loc_sess_status status);

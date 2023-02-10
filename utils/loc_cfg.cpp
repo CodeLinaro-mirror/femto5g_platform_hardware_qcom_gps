@@ -90,15 +90,18 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *============================================================================*/
 
 /* Parameter data */
-static uint32_t DEBUG_LEVEL = 0xff;
+static uint32_t DEBUG_LEVEL = UINT32_MAX;
 static uint32_t TIMESTAMP = 0;
 static uint32_t DATUM_TYPE = 0;
+static uint32_t sLogBufferEnabled = 0;
 
 /* Parameter spec table */
 static const loc_param_s_type loc_param_table[] =
 {
-    {"DEBUG_LEVEL",        &DEBUG_LEVEL,        NULL,    'n'},
-    {"TIMESTAMP",          &TIMESTAMP,          NULL,    'n'},
+    {"DEBUG_LEVEL",             &DEBUG_LEVEL,        NULL, 'n'},
+    {"TIMESTAMP",               &TIMESTAMP,          NULL, 'n'},
+    {"DATUM_TYPE",              &DATUM_TYPE,         NULL, 'n'},
+    {"LOG_BUFFER_ENABLED",      &sLogBufferEnabled,  NULL, 'n'},
 };
 static const int loc_param_num = sizeof(loc_param_table) / sizeof(loc_param_s_type);
 
@@ -434,18 +437,23 @@ void loc_read_conf(const char* conf_file_name, const loc_param_s_type* config_ta
 {
     FILE *conf_fp = NULL;
 
-    if((conf_fp = fopen(conf_file_name, "r")) != NULL)
+    log_buffer_init(false);
+    if ((conf_fp = fopen(conf_file_name, "r")) != NULL)
     {
-        LOC_LOGD("%s: using %s", __FUNCTION__, conf_file_name);
-        if(table_length && config_table) {
+        LOC_LOGd("using %s", conf_file_name);
+        if (table_length && config_table) {
             loc_read_conf_r(conf_fp, config_table, table_length);
             rewind(conf_fp);
         }
-        loc_read_conf_r(conf_fp, loc_param_table, loc_param_num);
+        if (DEBUG_LEVEL == UINT32_MAX) {
+            /* Read default config entries*/
+            loc_read_conf_r(conf_fp, loc_param_table, loc_param_num);
+            /* Initialize logging mechanism with parsed data */
+            loc_logger_init(DEBUG_LEVEL, TIMESTAMP);
+            log_buffer_init(sLogBufferEnabled);
+        }
         fclose(conf_fp);
     }
-    /* Initialize logging mechanism with parsed data */
-    loc_logger_init(DEBUG_LEVEL, TIMESTAMP);
 }
 
 /*=============================================================================

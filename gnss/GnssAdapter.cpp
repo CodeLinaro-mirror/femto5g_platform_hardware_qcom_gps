@@ -260,8 +260,7 @@ GnssAdapter::checkAndSetSPEToRunforNHz(LocPosMode & out) {
 
 void
 GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
-                             const GpsLocationExtended& locationExtended,
-                             const LocPosTechMask techMask)
+                             const GpsLocationExtended& locationExtended)
 {
     memset(&out, 0, sizeof(Location));
     out.size = sizeof(Location);
@@ -299,37 +298,38 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
         out.bearingAccuracy = locationExtended.bearing_unc;
     }
     out.timestamp = ulpLocation.gpsLocation.timestamp;
-    if (LOC_POS_TECH_MASK_SATELLITE & techMask) {
+    if (LOC_POS_TECH_MASK_SATELLITE & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_GNSS_BIT;
     }
-    if (LOC_POS_TECH_MASK_CELLID & techMask) {
+    if (LOC_POS_TECH_MASK_CELLID & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_CELL_BIT;
     }
-    if (LOC_POS_TECH_MASK_WIFI & techMask) {
+    if (LOC_POS_TECH_MASK_WIFI & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_WIFI_BIT;
     }
-    if (LOC_POS_TECH_MASK_SENSORS & techMask) {
+    if (LOC_POS_TECH_MASK_SENSORS & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_SENSORS_BIT;
     }
-    if (LOC_POS_TECH_MASK_REFERENCE_LOCATION & techMask) {
+    if (LOC_POS_TECH_MASK_REFERENCE_LOCATION & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_REFERENCE_LOCATION_BIT;
     }
-    if (LOC_POS_TECH_MASK_INJECTED_COARSE_POSITION & techMask) {
+    if (LOC_POS_TECH_MASK_INJECTED_COARSE_POSITION & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_INJECTED_COARSE_POSITION_BIT;
     }
-    if (LOC_POS_TECH_MASK_AFLT & techMask) {
+    if (LOC_POS_TECH_MASK_AFLT & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_AFLT_BIT;
     }
-    if (LOC_POS_TECH_MASK_HYBRID & techMask) {
+
+    if (LOC_POS_TECH_MASK_HYBRID & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_HYBRID_BIT;
     }
-    if (LOC_POS_TECH_MASK_PPE & techMask) {
+    if (LOC_POS_TECH_MASK_PPE & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_PPE_BIT;
     }
-    if (LOC_POS_TECH_MASK_VEH & techMask) {
+    if (LOC_POS_TECH_MASK_VEH & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_VEH_BIT;
     }
-    if (LOC_POS_TECH_MASK_VIS & techMask) {
+    if (LOC_POS_TECH_MASK_VIS & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_VIS_BIT;
     }
 
@@ -2745,26 +2745,12 @@ GnssAdapter::notifyClientOfCachedLocationSystemInfo(
         LocationAPI* client, const LocationCallbacks& callbacks) {
 
     if (mLocSystemInfo.systemInfoMask) {
-        // client need to be notified if client has not yet previously registered
-        // for the info but now register for it.
-        bool notifyClientOfSystemInfo = false;
-        // check whether we need to notify client of cached location system info
-        //
-        // client need to be notified if client has not yet previously registered
-        // for the info but now register for it.
+        // notify client of cached location system info
         if (callbacks.locationSystemInfoCb) {
-            notifyClientOfSystemInfo = true;
             auto it = mClientData.find(client);
             if (it != mClientData.end()) {
-                LocationCallbacks oldCallbacks = it->second;
-                if (oldCallbacks.locationSystemInfoCb) {
-                    notifyClientOfSystemInfo = false;
-                }
+                callbacks.locationSystemInfoCb(mLocSystemInfo);
             }
-        }
-
-        if (notifyClientOfSystemInfo) {
-            callbacks.locationSystemInfoCb(mLocSystemInfo);
         }
     }
 }
@@ -3807,7 +3793,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
 
         GnssLocationInfoNotification locationInfo = {};
         convertLocationInfo(locationInfo, locationExtended, status);
-        convertLocation(locationInfo.location, ulpLocation, locationExtended, techMask);
+        convertLocation(locationInfo.location, ulpLocation, locationExtended);
         fillElapsedRealTime(locationExtended, locationInfo.location);
 
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
@@ -3854,7 +3840,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
         bool blank_fix = ((0 == ulpLocation.gpsLocation.latitude) &&
                           (0 == ulpLocation.gpsLocation.longitude) &&
                           (LOC_RELIABILITY_NOT_SET == locationExtended.horizontal_reliability));
-        uint8_t generate_nmea = (reportToAllClients && status != LOC_SESS_FAILURE && !blank_fix);
+        uint8_t generate_nmea = (reportToAllClients && LOC_SESS_SUCCESS == status  && !blank_fix);
         bool custom_nmea_gga = (1 == ContextBase::mGps_conf.CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED);
         std::vector<std::string> nmeaArraystr;
         loc_nmea_generate_pos(ulpLocation, locationExtended, mLocSystemInfo,
@@ -3897,8 +3883,7 @@ GnssAdapter::reportEnginePositions(unsigned int count,
                                 engLocation->sessionStatus);
             convertLocation(locationInfo[i].location,
                             engLocation->location,
-                            engLocation->locationExtended,
-                            engLocation->location.tech_mask);
+                            engLocation->locationExtended);
             fillElapsedRealTime(engLocation->locationExtended,
                                 locationInfo[i].location);
         }

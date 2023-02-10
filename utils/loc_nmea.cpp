@@ -62,42 +62,6 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_nmea"
 #include <loc_nmea.h>
@@ -180,6 +144,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SIGNAL_ID_NAVIC_SRS    4
 #define SIGNAL_ID_NAVIC_L1SPS  5
 
+static LocPosTechMask techMaskGnss = LOC_POS_TECH_MASK_SATELLITE | LOC_POS_TECH_MASK_HYBRID;
 
 typedef struct loc_nmea_sv_meta_s
 {
@@ -644,7 +609,8 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-static uint32_t loc_nmea_generate_GSA(const GpsLocationExtended &locationExtended,
+static uint32_t loc_nmea_generate_GSA(const UlpLocation &location,
+                              const GpsLocationExtended &locationExtended,
                               char* sentence,
                               int bufSize,
                               loc_nmea_sv_meta* sv_meta_p,
@@ -680,15 +646,16 @@ static uint32_t loc_nmea_generate_GSA(const GpsLocationExtended &locationExtende
         mask = mask >> 1;
     }
 
-    if (svUsedCount == 0)
+    if (svUsedCount == 0 && (locationExtended.tech_mask & techMaskGnss))
         return 0;
 
-    if (sv_meta_p->totalSvUsedCount == 0)
-        fixType = '1'; // no fix
-    else if (sv_meta_p->totalSvUsedCount <= 3)
-        fixType = '2'; // 2D fix
-    else
+    if (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ALTITUDE) {
         fixType = '3'; // 3D fix
+    } else if (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG) {
+        fixType = '2'; // 2D fix
+    } else {
+        fixType = '1'; // no fix
+    }
 
     // Start printing the sentence
     // Format: $--GSA,a,x,xx,xx,xx,xx,xx,xx,xx,xx,xx,xx,xx,xx,p.p,h.h,v.v,s*cc
@@ -728,15 +695,17 @@ static uint32_t loc_nmea_generate_GSA(const GpsLocationExtended &locationExtende
     }
 
     // Add the position/horizontal/vertical DOP values
-    if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_DOP)
-    {
+    if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_DOP) {
         length = snprintf(pMarker, lengthRemaining, "%.1f,%.1f,%.1f,",
                 locationExtended.pdop,
                 locationExtended.hdop,
                 locationExtended.vdop);
-    }
-    else
-    {   // no dop
+    } else if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_EXT_DOP) {
+        length = snprintf(pMarker, lengthRemaining, "%.1f,%.1f,%.1f,",
+                locationExtended.extDOP.PDOP,
+                locationExtended.extDOP.HDOP,
+                locationExtended.extDOP.VDOP);
+    } else {   // no dop
         length = snprintf(pMarker, lengthRemaining, ",,,");
     }
     pMarker += length;
@@ -1224,7 +1193,8 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                 if(locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask ? 1 : 0)
                     gnsModeIndicator[4] = 'A'; // A means autonomous
                 break;
-            } else if (LOC_POS_TECH_MASK_SENSORS & locationExtended.tech_mask){
+            } else if ((LOC_POS_TECH_MASK_SENSORS & locationExtended.tech_mask) ||
+                       (LOC_POS_TECH_MASK_PROPAGATED & locationExtended.tech_mask)){
                 ggaGpsQuality[0] = '6'; // 6 means estimated (dead reckoning)
                 rmcModeIndicator = 'E'; // E means estimated (dead reckoning)
                 vtgModeIndicator = 'E'; // E means estimated (dead reckoning)
@@ -1384,8 +1354,9 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         sv_cache_info.qzss_used_mask =
                 locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask;
     }
-
-    if (generate_nmea) {
+    // Generate valid NMEA strings only when utc Time stamp is set
+    // Output empty nmea sentence if utctime is zero
+    if (generate_nmea && (0 != utcPosTimestamp)) {
         char talker[3] = {'G', 'P', '\0'};
         uint32_t svUsedCount = 0;
         uint32_t count = 0;
@@ -1434,7 +1405,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             // ---$GPGSA/$GNGSA---
             // -------------------
 
-            count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
+            count = loc_nmea_generate_GSA(location, locationExtended, sentence, sizeof(sentence),
                             loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_GPS,
                             GNSS_SIGNAL_GPS_L1CA, true), nmeaArraystr);
             if (count > 0)
@@ -1448,7 +1419,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             // ---$GLGSA/$GNGSA---
             // -------------------
 
-            count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
+            count = loc_nmea_generate_GSA(location, locationExtended, sentence, sizeof(sentence),
                             loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_GLONASS,
                             GNSS_SIGNAL_GLONASS_G1, true), nmeaArraystr);
             if (count > 0)
@@ -1462,7 +1433,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             // ---$GAGSA/$GNGSA---
             // -------------------
 
-            count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
+            count = loc_nmea_generate_GSA(location, locationExtended, sentence, sizeof(sentence),
                             loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_GALILEO,
                             GNSS_SIGNAL_GALILEO_E1, true), nmeaArraystr);
             if (count > 0)
@@ -1475,7 +1446,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             // ----------------------------
             // ---$GBGSA/$GNGSA (BEIDOU)---
             // ----------------------------
-            count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
+            count = loc_nmea_generate_GSA(location, locationExtended, sentence, sizeof(sentence),
                             loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_BEIDOU,
                             GNSS_SIGNAL_BEIDOU_B1I, true), nmeaArraystr);
             if (count > 0)
@@ -1489,7 +1460,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             // ---$GQGSA/$GNGSA (QZSS)---
             // --------------------------
 
-            count = loc_nmea_generate_GSA(locationExtended, sentence, sizeof(sentence),
+            count = loc_nmea_generate_GSA(location, locationExtended, sentence, sizeof(sentence),
                             loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_QZSS,
                             GNSS_SIGNAL_QZSS_L1CA, true), nmeaArraystr);
             if (count > 0)
@@ -1499,9 +1470,9 @@ void loc_nmea_generate_pos(const UlpLocation &location,
                 talker[1] = sv_meta.talker[1];
             }
 
-            // if svUsedCount is 0, it means we do not generate any GSA sentence yet.
-            // in this case, generate an empty GSA sentence
-            if (svUsedCount == 0) {
+            // if svUsedCount is 0 and teckMask include GNSS, it means we do not generate any GSA
+            // sentence yet. in this case, generate an empty GSA sentence
+            if (svUsedCount == 0 && (locationExtended.tech_mask & techMaskGnss)) {
                 strlcpy(sentence, "$GPGSA,A,1,,,,,,,,,,,,,,,,", sizeof(sentence));
                 length = loc_nmea_put_checksum(sentence, sizeof(sentence));
                 nmeaArraystr.push_back(sentence);
@@ -1591,8 +1562,20 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             pMarker = sentence_RMC;
             lengthRemaining = sizeof(sentence_RMC);
 
-            length = snprintf(pMarker, lengthRemaining, "$%sRMC,%02d%02d%02d.%02d,A," ,
-                              talker, utcHours, utcMinutes, utcSeconds,utcMSeconds/10);
+            bool validFix = ((0 != sv_cache_info.gps_used_mask) ||
+                    (0 != sv_cache_info.glo_used_mask) ||
+                    (0 != sv_cache_info.gal_used_mask) ||
+                    (0 != sv_cache_info.qzss_used_mask) ||
+                    (0 != sv_cache_info.bds_used_mask) ||
+                    (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG));
+
+            if (validFix) {
+                length = snprintf(pMarker, lengthRemaining, "$%sRMC,%02d%02d%02d.%02d,A,",
+                                  talker, utcHours, utcMinutes, utcSeconds, utcMSeconds/10);
+            } else {
+                length = snprintf(pMarker, lengthRemaining, "$%sRMC,%02d%02d%02d.%02d,V,",
+                                  talker, utcHours, utcMinutes, utcSeconds, utcMSeconds/10);
+            }
 
             if (length < 0 || length >= lengthRemaining)
             {
@@ -1816,6 +1799,9 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_DOP) {
                 length = snprintf(pMarker, lengthRemaining, "%02d,%.1f,",
                                   svUsedCount, locationExtended.hdop);
+            } else if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_EXT_DOP) {
+                length = snprintf(pMarker, lengthRemaining, "%02d,%.1f,",
+                                  svUsedCount, locationExtended.extDOP.HDOP);
             }
             else {   // no hdop
                 length = snprintf(pMarker, lengthRemaining, "%02d,,",
@@ -1978,6 +1964,9 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             {
                 length = snprintf(pMarker, lengthRemaining, "%s,%02d,%.1f,",
                                   ggaGpsQuality, svUsedCount, locationExtended.hdop);
+            } else if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_EXT_DOP) {
+                length = snprintf(pMarker, lengthRemaining, "%s,%02d,%.1f,",
+                                  ggaGpsQuality, svUsedCount, locationExtended.extDOP.HDOP);
             }
             else
             {   // no hdop
