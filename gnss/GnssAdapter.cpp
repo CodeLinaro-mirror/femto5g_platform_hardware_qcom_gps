@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -101,7 +101,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define NMEA_MIN_THRESHOLD_MSEC (99)
 #define NMEA_MAX_THRESHOLD_MSEC (975)
 
-#define DGNSS_RANGE_UPDATE_TIME_10MIN_IN_MILLI  600000
+#define DGNSS_RANGE_UPDATE_TIME_10MIN_IN_SEC  600
 
 using namespace loc_core;
 
@@ -425,6 +425,9 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
     }
     if (LOC_POS_TECH_MASK_PDR & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_PDR_BIT;
+    }
+    if (LOC_POS_TECH_MASK_PROPAGATED & locationExtended.tech_mask) {
+        out.techMask |= LOCATION_TECHNOLOGY_PROPAGATED_BIT;
     }
 
     if (LOC_GPS_LOCATION_HAS_SPOOF_MASK & ulpLocation.gpsLocation.flags) {
@@ -4339,8 +4342,9 @@ bool GnssAdapter::needReportForClient(LocationAPI* client, enum loc_sess_status 
     return false;
 }
 
+/** Y2038- Compliant */
 bool GnssAdapter::needToGenerateNmeaReport(const uint32_t &gpsTimeOfWeekMs,
-        const struct timespec32_t &apTimeStamp)
+        const struct timespec64_t &apTimeStamp)
 {
     bool retVal = false;
     uint64_t currentTimeNsec = 0;
@@ -4358,7 +4362,7 @@ bool GnssAdapter::needToGenerateNmeaReport(const uint32_t &gpsTimeOfWeekMs,
                 ((0 != gpsTimeOfWeekMs) && (NMEA_MIN_THRESHOLD_MSEC >= (gpsTimeOfWeekMs % 1000)))) {
                 retVal = true;
             } else {
-                uint64_t timeDiffMsec = ((currentTimeNsec - mPrevNmeaRptTimeNsec) / 1000000);
+                int64_t timeDiffMsec = ((currentTimeNsec - mPrevNmeaRptTimeNsec) / 1000000);
                 // Send when the delta time becomes >= 1 sec
                 if (NMEA_MAX_THRESHOLD_MSEC <= timeDiffMsec) {
                     retVal = true;
@@ -6530,20 +6534,17 @@ GnssAdapter::getDataInformation(GnssDataNotification& data, int msInWeek)
         if ((!reports.mRfAndParams.empty()) && (!reports.mTimeAndClock.empty()) &&
             (abs(msInWeek - (int)reports.mTimeAndClock.back().mGpsTowMs) < 2000)) {
             int maxSig = std::min((int)GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES,
-                    (int)reports.mRfAndParams.back().mJammerData.size());
+                    (int)reports.mRfAndParams.back().mJammerInd.size());
             for (int sig = GNSS_LOC_SIGNAL_TYPE_GPS_L1CA; sig < maxSig; sig++) {
                 data.gnssDataMask[sig] = 0;
                 data.jammerInd[sig] = 0.0;
                 data.agc[sig] = 0.0;
                if (GNSS_INVALID_JAMMER_IND !=
-                       reports.mRfAndParams.back().mJammerData[sig].jammerInd) {
+                       reports.mRfAndParams.back().mJammerInd[sig]) {
                    data.jammerInd[sig] =
-                           (double)reports.mRfAndParams.back().mJammerData[sig].jammerInd;
-                   data.gnssDataMask[sig] |= GNSS_LOC_DATA_JAMMER_IND_BIT;
-               }
-               if (GNSS_INVALID_JAMMER_IND != reports.mRfAndParams.back().mJammerData[sig].agc) {
-                   data.agc[sig] = (double)reports.mRfAndParams.back().mJammerData[sig].agc;
-                   data.gnssDataMask[sig] |= GNSS_LOC_DATA_AGC_BIT;
+                           (double)reports.mRfAndParams.back().mJammerInd[sig];
+                   data.agc[sig] = -(double)reports.mRfAndParams.back().mJammerInd[sig];
+                   data.gnssDataMask[sig] |= (GNSS_LOC_DATA_JAMMER_IND_BIT | GNSS_LOC_DATA_AGC_BIT);
                }
             }
 
@@ -8014,10 +8015,10 @@ void GnssAdapter::enablePPENtripStreamCommand(const GnssNtripConnectionParams& p
 
 void GnssAdapter::handleEnablePPENtrip(const GnssNtripConnectionParams& params,
         bool enableRTKEngine) {
-    LOC_LOGd("%d %s %d %s %s %s %d mSendNmeaConsent %d",
+    LOC_LOGd("%d %s %d %s %s %s %d %d mSendNmeaConsent %d",
              params.useSSL, params.hostNameOrIp.data(), params.port,
              params.mountPoint.data(), params.username.data(), params.password.data(),
-             params.requiresNmeaLocation, mSendNmeaConsent);
+             params.requiresNmeaLocation, params.nmeaUpdateInterval, mSendNmeaConsent);
 
     GnssNtripConnectionParams* pNtripParams = &(mStartDgnssNtripParams.ntripParams);
 
@@ -8028,6 +8029,7 @@ void GnssAdapter::handleEnablePPENtrip(const GnssNtripConnectionParams& params,
             0 == pNtripParams->username.compare(params.username) &&
             0 == pNtripParams->password.compare(params.password) &&
             pNtripParams->requiresNmeaLocation == params.requiresNmeaLocation &&
+            pNtripParams->nmeaUpdateInterval == params.nmeaUpdateInterval &&
             mDgnssState & DGNSS_STATE_ENABLE_NTRIP_COMMAND) {
         LOC_LOGd("received same Ntrip param");
         return;
@@ -8083,8 +8085,8 @@ void GnssAdapter::checkUpdateDgnssNtrip(bool isLocationValid) {
                 mDgnssLastNmeaBootTimeMilli = curBootTime;
             }
         } else if ((mDgnssState & DGNSS_STATE_NTRIP_SESSION_STARTED) && isLocationValid &&
-            isDgnssNmeaRequired() &&
-            curBootTime - mDgnssLastNmeaBootTimeMilli > DGNSS_RANGE_UPDATE_TIME_10MIN_IN_MILLI ) {
+            isDgnssNmeaRequired() && curBootTime - mDgnssLastNmeaBootTimeMilli >
+            mStartDgnssNtripParams.ntripParams.nmeaUpdateInterval * ONE_SECOND_IN_MS) {
             mXtraObserver.updateNmeaToDgnssServer(mStartDgnssNtripParams.nmea);
             mDgnssLastNmeaBootTimeMilli = curBootTime;
         }
@@ -8154,7 +8156,7 @@ void GnssAdapter::readPPENtripConfig() {
         return;
     }
 
-    // A sample Ntrip_Params -> 199.106.116.10 5000 Avante_Ref CV2X 1234 0 0
+    // A sample Ntrip_Params -> 199.106.116.10 5000 Avante_Ref CV2X 1234 1 0 0 0
     static loc_param_s_type gpsConfParamTable[] = {
         {"Ntrip_Params", &NtripParamsString, nullptr, 's'}
     };
@@ -8189,11 +8191,15 @@ void GnssAdapter::readPPENtripConfig() {
     pNtripParams->requiresNmeaLocation = next.compare("0") ? true : false;
     GET_NEXT();
     pNtripParams->useSSL = next.compare("0") ? true : false;
+    GET_NEXT();
+    pNtripParams->nmeaUpdateInterval = std::stoi(next) ? std::stoi(next) :
+            DGNSS_RANGE_UPDATE_TIME_10MIN_IN_SEC;
 
-    LOC_LOGd("%d %s %d %s %s %s %d",
+    LOC_LOGd("%d %s %d %s %s %s %d %d",
              pNtripParams->useSSL, pNtripParams->hostNameOrIp.data(), pNtripParams->port,
              pNtripParams->mountPoint.data(), pNtripParams->username.data(),
-             pNtripParams->password.data(), pNtripParams->requiresNmeaLocation);
+             pNtripParams->password.data(), pNtripParams->requiresNmeaLocation,
+             pNtripParams->nmeaUpdateInterval);
 
     /* set up state*/
     mDgnssState |= DGNSS_STATE_ENABLE_NTRIP_COMMAND;
