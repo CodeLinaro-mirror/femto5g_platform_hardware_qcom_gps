@@ -64,7 +64,7 @@ ndk::ScopedAStatus Gnss::setCallback(const std::shared_ptr<IGnssCallback>& callb
     //Send the gps enable signal
     notifyGnssStatus();
     if (nullptr != sGnssStatusCbRef) {
-        mApi->gnssUpdateFlpCallbacks();
+        updateFlpCallbacksIfOpen();
     } else {
         mApi->gnssUpdateCallbacks(callback);
     }

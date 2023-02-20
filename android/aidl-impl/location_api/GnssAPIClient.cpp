@@ -101,9 +101,13 @@ void GnssAPIClient::setFlpCallbacks() {
     LOC_LOGd("Going to set Flp Callbacks...");
     LocationCallbacks locationCallbacks;
     memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
+    mTrackingOptions.qualityLevelAccepted = QUALITY_ANY_VALID_FIX;
     locationCallbacks.size = sizeof(LocationCallbacks);
     locationCallbacks.trackingCb = [this](Location location) {
         onTrackingCb(location);
+    };
+    locationCallbacks.gnssSvCb = [this](GnssSvNotification gnssSvNotification) {
+        onGnssSvCb(gnssSvNotification);
     };
     locAPISetCallbacks(locationCallbacks);
 }
