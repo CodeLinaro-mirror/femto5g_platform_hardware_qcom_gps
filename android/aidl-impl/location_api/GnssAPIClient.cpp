@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -97,6 +97,17 @@ GnssAPIClient::~GnssAPIClient() {
     }
 }
 
+void GnssAPIClient::setFlpCallbacks() {
+    LOC_LOGd("Going to set Flp Callbacks...");
+    LocationCallbacks locationCallbacks;
+    memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
+    locationCallbacks.size = sizeof(LocationCallbacks);
+    locationCallbacks.trackingCb = [this](Location location) {
+        onTrackingCb(location);
+    };
+    locAPISetCallbacks(locationCallbacks);
+}
+
 void GnssAPIClient::setCallbacks() {
     LocationCallbacks locationCallbacks;
     memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
@@ -117,6 +128,12 @@ void GnssAPIClient::gnssUpdateCallbacks(const shared_ptr<IGnssCallback>& gpsCb) 
 
     if (gpsCb != nullptr) {
         setCallbacks();
+    }
+}
+
+void GnssAPIClient::gnssUpdateFlpCallbacks() {
+    if (mGnssCbIface != nullptr) {
+        setFlpCallbacks();
     }
 }
 
