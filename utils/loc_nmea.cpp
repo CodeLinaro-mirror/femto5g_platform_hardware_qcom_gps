@@ -1322,6 +1322,13 @@ void loc_nmea_generate_pos(const UlpLocation &location,
     LocLla  ref_lla;
     LocLla  local_lla;
 
+    memset(&ecef_w84, 0, sizeof(ecef_w84));
+    memset(&ecef_p90, 0, sizeof(ecef_p90));
+    memset(&lla_w84, 0, sizeof(lla_w84));
+    memset(&lla_p90, 0, sizeof(lla_p90));
+    memset(&ref_lla, 0, sizeof(ref_lla));
+    memset(&local_lla, 0, sizeof(local_lla));
+
     if (inLsTransition) {
         // During leap second transition, we need to display the extra
         // leap second of hour, minute, second as (23:59:60)
@@ -1354,13 +1361,6 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         uint32_t count = 0;
         loc_nmea_sv_meta sv_meta;
 
-        memset(&ecef_w84, 0, sizeof(ecef_w84));
-        memset(&ecef_p90, 0, sizeof(ecef_p90));
-        memset(&lla_w84, 0, sizeof(lla_w84));
-        memset(&lla_p90, 0, sizeof(lla_p90));
-        memset(&ref_lla, 0, sizeof(ref_lla));
-        memset(&local_lla, 0, sizeof(local_lla));
-
         lla_w84.lat = location.gpsLocation.latitude / 180.0 * M_PI;
         lla_w84.lon = location.gpsLocation.longitude / 180.0 * M_PI;
         lla_w84.alt = location.gpsLocation.altitude;
@@ -1373,13 +1373,13 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         ref_lla.lon = location.gpsLocation.longitude;
         ref_lla.alt = location.gpsLocation.altitude;
 
-        switch (datum_type) {
-            case LOC_GNSS_DATUM_WGS84:
+        switch (mNmeaDatumType) {
+            case GEODETIC_TYPE_WGS_84:
                 local_lla.lat = location.gpsLocation.latitude;
                 local_lla.lon = location.gpsLocation.longitude;
                 local_lla.alt = location.gpsLocation.altitude;
                 break;
-            case LOC_GNSS_DATUM_PZ90:
+            case GEODETIC_TYPE_PZ_90:
                 local_lla.lat = lla_p90.lat / M_PI * 180.0;
                 local_lla.lon = lla_p90.lon / M_PI * 180.0;
                 local_lla.alt = lla_p90.alt;
