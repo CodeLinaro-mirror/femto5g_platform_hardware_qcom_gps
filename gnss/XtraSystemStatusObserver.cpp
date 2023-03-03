@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -178,9 +178,7 @@ XtraSystemStatusObserver::XtraSystemStatusObserver(GnssAdapter* adapter,
         mDgnssSender(LocIpc::getLocIpcLocalSender(LOC_IPC_DGNSS)),
         mRegisterForXtraStatus(false),
         mDelayLocTimer(*mXtraSender, *mDgnssSender) {
-#ifndef USE_FEATURE_TELSDK
     subscribe(true);
-#endif
     auto recver = LocIpc::getLocIpcLocalRecver(
             make_shared<XtraIpcListener>(sysStatObs, msgTask, *this),
             LOC_IPC_HAL);
