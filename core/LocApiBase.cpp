@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1090,12 +1090,8 @@ void ElapsedRealtimeEstimator::saveGpsTimeAndQtimerPairInPvtReport(
         const GpsLocationExtended& locationExtended) {
 
     // Use GPS timestamp and qtimer tick for 1Hz PVT report for association
-    if ((locationExtended.gnssSystemTime.hasAccurateGpsTime() == true) &&
-            (locationExtended.gnssSystemTime.u.gpsSystemTime.systemMsec % 1000 == 0) &&
-            (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK) &&
-            (locationExtended.systemTick != 0) &&
-            (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK_UNC) &&
-            (locationExtended.systemTickUnc != 0.0f)) {
+    if (locationExtended.isReportTimeAccurate() &&
+            (locationExtended.gnssSystemTime.u.gpsSystemTime.systemMsec % 1000 == 0)) {
         LOC_LOGv("save time association from PVT report with gps time %u %u",
                  locationExtended.gnssSystemTime.u.gpsSystemTime.systemWeek,
                  locationExtended.gnssSystemTime.u.gpsSystemTime.systemMsec);
@@ -1229,4 +1225,5 @@ bool ElapsedRealtimeEstimator::getCurrentTime(
     }
     return clockGetTimeSuccess;
 }
+
 } // namespace loc_core

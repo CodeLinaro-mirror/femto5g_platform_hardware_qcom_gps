@@ -18,6 +18,12 @@
  * limitations under the License.
  */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #define LOG_TAG "LocSvc_GnssInterface"
 #define LOG_NDEBUG 0
 
@@ -25,12 +31,15 @@
 #include <log_util.h>
 #include <android/binder_auto_utils.h>
 
+#define MAX_GNSS_ACCURACY_ALLOWED 10000
 namespace android {
 namespace hardware {
 namespace gnss {
 namespace aidl {
 namespace implementation {
 
+static Gnss* sGnss;
+static gnssStatusCb sGnssStatusCbRef = nullptr;
 void gnssCallbackDied(void* cookie) {
     LOC_LOGe("IGnssCallback AIDL service died");
     Gnss* iface = static_cast<Gnss*>(cookie);
@@ -52,11 +61,15 @@ ndk::ScopedAStatus Gnss::setCallback(const std::shared_ptr<IGnssCallback>& callb
         AIBinder_linkToDeath(callback->asBinder().get(), recipient, this);
     }
 
-    if (api != nullptr) {
-        api->gnssUpdateCallbacks(callback);
-        api->gnssEnable(LOCATION_TECHNOLOGY_TYPE_GNSS);
-        api->requestCapabilities();
+    //Send the gps enable signal
+    notifyGnssStatus();
+    if (nullptr != sGnssStatusCbRef) {
+        updateFlpCallbacksIfOpen();
+    } else {
+        mApi->gnssUpdateCallbacks(callback);
     }
+    api->gnssEnable(LOCATION_TECHNOLOGY_TYPE_GNSS);
+    api->requestCapabilities();
 
     return ndk::ScopedAStatus::ok();
 }
@@ -65,12 +78,28 @@ ndk::ScopedAStatus Gnss::close() {
     if (mApi != nullptr) {
         mApi->gnssDisable();
     }
+    // sGnssStatusCbRef will be NULL in case of Android OS,
+    // we need to retain mGnssCallback* for Andorid, for SUPL ES.
+    // When location is disabled, GPS locked,
+    // we need a way to callback to AFW to request for DBH.
+
+    // sGnssStatusCbRef will be NOT be NULL in case of non-Android OS,
+    // in such case we don't want to retain the mGnssCallback*, as DBH is
+    // handled internally, hence making below references as nullptr.
+    if (nullptr != sGnssStatusCbRef) {
+        mGnssCallback = nullptr;
+        //Send gnss disable signal
+        notifyGnssStatus();
+    }
     return ndk::ScopedAStatus::ok();
 }
 
 Gnss::Gnss(): mGnssCallback(nullptr) {
     memset(&mPendingConfig, 0, sizeof(GnssConfig));
     ENTRY_LOG_CALLFLOW();
+    if (sGnss == nullptr) {
+        sGnss = this;
+    }
 }
 
 Gnss::~Gnss() {
@@ -79,6 +108,8 @@ Gnss::~Gnss() {
         mApi->destroy();
         mApi = nullptr;
     }
+    sGnss = nullptr;
+    sGnssStatusCbRef = nullptr;
 }
 
 void Gnss::handleClientDeath() {
@@ -209,6 +240,31 @@ GnssAPIClient* Gnss::getApi() {
     }
 
     return mApi;
+}
+
+void Gnss::notifyGnssStatus() {
+    if (nullptr != sGnssStatusCbRef) {
+        sGnssStatusCbRef(mGnssCallback != nullptr);
+    }
+}
+
+void Gnss::updateFlpCallbacksIfOpen() {
+    if (nullptr != mGnssCallback && nullptr != sGnssStatusCbRef) {
+        mApi->gnssUpdateFlpCallbacks();
+    }
+}
+
+// Method that will register gnssStatusCallback,
+// only if the host FW is non-AFW and native NLP library
+// is available.
+void registerGnssStatusCallback(gnssStatusCb in) {
+    sGnssStatusCbRef = in;
+    if (nullptr != sGnssStatusCbRef && sGnss != nullptr) {
+        sGnss->updateFlpCallbacksIfOpen();
+        sGnss->notifyGnssStatus();
+    } else {
+        LOC_LOGe("Failed to register!!!");
+    }
 }
 }  // namespace implementation
 }  // namespace aidl

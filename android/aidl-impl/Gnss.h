@@ -18,6 +18,12 @@
  * limitations under the License.
  */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #ifndef ANDROID_HARDWARE_GNSS_AIDL_GNSS_H
 #define ANDROID_HARDWARE_GNSS_AIDL_GNSS_H
 
@@ -67,7 +73,8 @@ struct Gnss : public BnGnss {
     GnssAPIClient* getApi();
     ndk::ScopedAStatus updateConfiguration(GnssConfig& gnssConfig);
     void handleClientDeath();
-
+    void updateFlpCallbacksIfOpen();
+    void notifyGnssStatus();
 private:
     GnssAPIClient* mApi;
     shared_ptr<GnssConfiguration> mGnssConfiguration = nullptr;
@@ -79,6 +86,8 @@ private:
     shared_ptr<IGnssCallback> mGnssCallback = nullptr;
 };
 
+typedef std::function<void(bool)> gnssStatusCb;
+extern "C" void registerGnssStatusCallback(gnssStatusCb in);
 }  // namespace implementation
 }  // namespace aidl
 }  // namespace gnss
