@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -82,14 +82,21 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 #endif
 
-inline int64_t uptimeMillis()
+inline int64_t sysTimeMillis(int clock)
 {
-    struct timespec ts;
+    struct timespec ts = {};
     int64_t time_ms = 0;
-    clock_gettime(CLOCK_BOOTTIME, &ts);
+    clock_gettime(clock, &ts);
     time_ms += (ts.tv_sec * 1000000000LL);
     time_ms += ts.tv_nsec + 500000LL;
     return time_ms / 1000000LL;
+}
+
+inline int64_t uptimeMillis() {
+    return sysTimeMillis(CLOCK_MONOTONIC);
+}
+inline int64_t elapsedRealtime() {
+    return sysTimeMillis(CLOCK_BOOTTIME);
 }
 
 extern "C" {
