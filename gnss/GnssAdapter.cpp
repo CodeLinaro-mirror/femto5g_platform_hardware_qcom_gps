@@ -515,6 +515,7 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
                                  const GpsLocationExtended& locationExtended,
                                  enum loc_sess_status status)
 {
+    memset(&out, 0, sizeof(GnssLocationInfoNotification));
     out.size = sizeof(GnssLocationInfoNotification);
     if (GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL & locationExtended.flags) {
         out.flags |= LDT_GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT;
@@ -844,6 +845,72 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
         for (uint32_t i = 0; i < locationExtended.numOfDgnssStationId; i++) {
             out.dgnssStationId[i] = locationExtended.dgnssStationId[i];
         }
+    }
+
+    if (locationExtended.calibrationStatus & DR_TURN_CALIBRATION_LOW) {
+        out.calibrationStatus |= DR_TURN_CALIBRATION_LOW;
+    } else if (locationExtended.calibrationStatus & DR_TURN_CALIBRATION_MEDIUM) {
+        out.calibrationStatus |= DR_TURN_CALIBRATION_MEDIUM;
+    } else if (locationExtended.calibrationStatus & DR_TURN_CALIBRATION_HIGH) {
+        out.calibrationStatus |= DR_TURN_CALIBRATION_HIGH;
+    }
+
+    if (locationExtended.calibrationStatus & DR_LINEAR_ACCEL_CALIBRATION_LOW) {
+        out.calibrationStatus |= DR_LINEAR_ACCEL_CALIBRATION_LOW;
+    } else if (locationExtended.calibrationStatus & DR_LINEAR_ACCEL_CALIBRATION_MEDIUM) {
+        out.calibrationStatus |= DR_LINEAR_ACCEL_CALIBRATION_MEDIUM;
+    } else if (locationExtended.calibrationStatus & DR_LINEAR_ACCEL_CALIBRATION_HIGH) {
+        out.calibrationStatus |= DR_LINEAR_ACCEL_CALIBRATION_HIGH;
+    }
+
+    if (locationExtended.calibrationStatus & DR_LINEAR_MOTION_CALIBRATION_LOW) {
+        out.calibrationStatus |= DR_LINEAR_MOTION_CALIBRATION_LOW;
+    } else if (locationExtended.calibrationStatus & DR_LINEAR_MOTION_CALIBRATION_MEDIUM) {
+        out.calibrationStatus |= DR_LINEAR_MOTION_CALIBRATION_MEDIUM;
+    } else if (locationExtended.calibrationStatus & DR_LINEAR_MOTION_CALIBRATION_HIGH) {
+        out.calibrationStatus |= DR_LINEAR_MOTION_CALIBRATION_HIGH;
+    }
+
+    if (locationExtended.calibrationStatus & DR_STATIC_CALIBRATION_LOW) {
+        out.calibrationStatus |= DR_STATIC_CALIBRATION_LOW;
+    } else if (locationExtended.calibrationStatus & DR_STATIC_CALIBRATION_MEDIUM) {
+        out.calibrationStatus |= DR_STATIC_CALIBRATION_MEDIUM;
+    } else if (locationExtended.calibrationStatus & DR_STATIC_CALIBRATION_HIGH) {
+        out.calibrationStatus |= DR_STATIC_CALIBRATION_HIGH;
+    }
+
+    if (locationExtended.drSolutionStatusMask & DRE_ERROR_UNCALIBRATED) {
+        out.drSolutionStatusMask |= DRE_ERROR_UNCALIBRATED;
+    }
+    if (locationExtended.drSolutionStatusMask & DRE_ERROR_GNSS_QUALITY_INSUFFICIENT) {
+        out.drSolutionStatusMask |= DRE_ERROR_GNSS_QUALITY_INSUFFICIENT;
+    }
+    if (locationExtended.drSolutionStatusMask & DRE_ERROR_FERRY_DETECTED) {
+        out.drSolutionStatusMask |= DRE_ERROR_FERRY_DETECTED;
+    }
+    if (locationExtended.drSolutionStatusMask & DRE_ERROR_6DOF_SENSOR_UNAVAILABLE) {
+        out.drSolutionStatusMask |= DRE_ERROR_6DOF_SENSOR_UNAVAILABLE;
+    }
+    if (locationExtended.drSolutionStatusMask & DRE_ERROR_VEHICLE_SPEED_UNAVAILABLE) {
+        out.drSolutionStatusMask |= DRE_ERROR_VEHICLE_SPEED_UNAVAILABLE;
+    }
+    if (locationExtended.drSolutionStatusMask & DRE_ERROR_GNSS_EPH_UNAVAILABLE) {
+        out.drSolutionStatusMask |= DRE_ERROR_GNSS_EPH_UNAVAILABLE;
+    }
+    if (locationExtended.drSolutionStatusMask & DRE_ERROR_GNSS_MEAS_UNAVAILABLE) {
+        out.drSolutionStatusMask |= DRE_ERROR_GNSS_MEAS_UNAVAILABLE;
+    }
+    if (locationExtended.drSolutionStatusMask & DRE_ERROR_NO_STORED_POSITION) {
+        out.drSolutionStatusMask |= DRE_ERROR_NO_STORED_POSITION;
+    }
+    if (locationExtended.drSolutionStatusMask & DRE_ERROR_MOVING_AT_START) {
+        out.drSolutionStatusMask |= DRE_ERROR_MOVING_AT_START;
+    }
+    if (locationExtended.drSolutionStatusMask & DRE_ERROR_POSITON_UNRELIABLE) {
+        out.drSolutionStatusMask |= DRE_ERROR_POSITON_UNRELIABLE;
+    }
+    if (locationExtended.drSolutionStatusMask & DRE_ERROR_GENERIC) {
+        out.drSolutionStatusMask |= DRE_ERROR_GENERIC;
     }
 }
 
@@ -2825,6 +2892,7 @@ GnssAdapter::updateSystemPowerStateCommand(PowerStateType systemPowerState) {
             mSystemPowerState(systemPowerState) {}
         inline virtual void proc() const {
             mAdapter.updateSystemPowerState(mSystemPowerState);
+            mAdapter.mXtraObserver.updatePowerState(mSystemPowerState);
         }
     };
 
@@ -3043,7 +3111,7 @@ void
 GnssAdapter::handleEngineLockStatus(EngineLockState engineLockState) {
 
     GnssConfigGpsLock gpsLock = GNSS_CONFIG_GPS_LOCK_MO_AND_NI;
-    if (ENGINE_LOCK_STATE_ENABLED == engineLockState) {
+    if (ENGINE_LOCK_STATE_DISABLED != engineLockState) {
         for (auto msg: mPendingMsgs) {
             sendMsg(msg);
         }
@@ -3090,7 +3158,7 @@ GnssAdapter::handleEngineUpEvent()
             mAdapter.gnssSecondaryBandConfigUpdate();
             // restart sessions only when Lock state is enabled and in power state resume
             mAdapter.initGnssPowerStatistics();
-            if (ENGINE_LOCK_STATE_ENABLED == mApi.getEngineLockState()) {
+            if (ENGINE_LOCK_STATE_DISABLED != mApi.getEngineLockState()) {
                 for (auto msg: mAdapter.mPendingMsgs) {
                     mAdapter.sendMsg(msg);
                 }
@@ -3411,7 +3479,7 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, TrackingOptions& options)
                             [&mAdapter = mAdapter, mSessionId = mSessionId, mClient = mClient,
                             &mApi = mApi]
                             (LocationError err) {
-                        if (ENGINE_LOCK_STATE_ENABLED == mApi.getEngineLockState() &&
+                        if (ENGINE_LOCK_STATE_DISABLED != mApi.getEngineLockState() &&
                             LOCATION_ERROR_SUCCESS != err) {
                             mAdapter.eraseTrackingSession(mClient, mSessionId);
                         }
@@ -3531,7 +3599,7 @@ GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId,
     if (!checkAndSetSPEToRunforNHz(tempOptions)) {
         mLocApi->startTimeBasedTracking(tempOptions, new LocApiResponse(*getContext(),
                           [this, client, sessionId] (LocationError err) {
-                if (ENGINE_LOCK_STATE_ENABLED == mLocApi->getEngineLockState() &&
+                if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
                     LOCATION_ERROR_SUCCESS != err) {
                     eraseTrackingSession(client, sessionId);
                 } else {
@@ -3567,7 +3635,7 @@ GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
     if(!checkAndSetSPEToRunforNHz(tempOptions)) {
         mLocApi->startTimeBasedTracking(tempOptions, new LocApiResponse(*getContext(),
                           [this, client, sessionId, oldOptions] (LocationError err) {
-                if (ENGINE_LOCK_STATE_ENABLED == mLocApi->getEngineLockState() &&
+                if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
                     LOCATION_ERROR_SUCCESS != err) {
                     // restore the old LocationOptions
                     saveTrackingSession(client, sessionId, oldOptions);
@@ -6699,27 +6767,28 @@ GnssAdapter::nfwControlCommand(std::vector<std::string>& enabledNfws) {
                 return;
             }
 
-            GnssConfigGpsLock gpsLock;
+            if (mAdapter.mSupportNfwControl) {
+                GnssConfigGpsLock gpsLock;
 
-            uint32_t nfwControlBits;
-            nfwControlBits = mAdapter.getNfwControlBits(mEnabledNfws);
-            gpsLock = ContextBase::mGps_conf.GPS_LOCK;
-            gpsLock &= GNSS_CONFIG_GPS_LOCK_MO;
-            gpsLock |= nfwControlBits;
-            ContextBase::mGps_conf.GPS_LOCK = gpsLock;
+                uint32_t nfwControlBits;
+                nfwControlBits = mAdapter.getNfwControlBits(mEnabledNfws);
+                gpsLock = ContextBase::mGps_conf.GPS_LOCK;
+                gpsLock &= GNSS_CONFIG_GPS_LOCK_MO;
+                gpsLock |= nfwControlBits;
+                ContextBase::mGps_conf.GPS_LOCK = gpsLock;
 
-            LOC_LOGv("gpsLock = 0x%X nfwControlBits = 0x%X", gpsLock, nfwControlBits);
-            mApi.sendMsg(new LocApiMsg([&mApi = mApi, gpsLock]() {
-                         mApi.setGpsLockSync((GnssConfigGpsLock)gpsLock);
-            }));
+                LOC_LOGv("gpsLock = 0x%X nfwControlBits = 0x%X", gpsLock, nfwControlBits);
+                mApi.sendMsg(new LocApiMsg([&mApi = mApi, gpsLock]() {
+                             mApi.setGpsLockSync((GnssConfigGpsLock)gpsLock);
+                }));
+            } else {
+                LOC_LOGw("NFW control is not supported, do not use this for NFW status");
+            }
         }
     };
 
-    if (mSupportNfwControl) {
-        sendMsg(new MsgControlNfwLocationAccess(*this, *mLocApi, enabledNfws));
-    } else {
-        LOC_LOGw("NFW control is not supported, do not use this for NFW");
-    }
+    sendMsg(new MsgControlNfwLocationAccess(*this, *mLocApi, enabledNfws));
+
 }
 
 // Set tunc constrained mode, use 0 session id to indicate
