@@ -5333,12 +5333,15 @@ bool GnssAdapter::reportQwesCapabilities(
             mAdapter(adapter),
             mFeatureMap(std::move(featureMap)) {}
         inline virtual void proc() const {
-            LOC_LOGi("ReportQwesFeatureStatus before caps %" PRIx64 " ",
-                mAdapter.getCapabilities());
+            LocationCapabilitiesMask previousMask = mAdapter.getCapabilities();
+            LOC_LOGi("ReportQwesFeatureStatus before caps %" PRIx64 " ", previousMask);
             ContextBase::setQwesFeatureStatus(mFeatureMap);
-            LOC_LOGi("ReportQwesFeatureStatus After caps %" PRIx64 " ",
-                mAdapter.getCapabilities());
-            mAdapter.broadcastCapabilities(mAdapter.getCapabilities());
+            LocationCapabilitiesMask newMask = mAdapter.getCapabilities();
+            LOC_LOGi("ReportQwesFeatureStatus After caps %" PRIx64 " ", newMask);
+            // brodcast capabilities only if there is a change
+            if (newMask != previousMask) {
+                mAdapter.broadcastCapabilities(mAdapter.getCapabilities());
+            }
         }
     };
 
