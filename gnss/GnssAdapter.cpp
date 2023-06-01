@@ -334,6 +334,10 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
         out.bearingAccuracy = locationExtended.bearing_unc;
     }
     out.timestamp = ulpLocation.gpsLocation.timestamp;
+    if (GPS_LOCATION_EXTENDED_HAS_TIME_UNC & locationExtended.flags) {
+        out.flags |= LOCATION_HAS_TIME_UNC_BIT;
+        out.timeUncMs = locationExtended.timeUncMs;
+    }
     if (LOC_POS_TECH_MASK_SATELLITE & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_GNSS_BIT;
     }
@@ -694,11 +698,6 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
     if (GPS_LOCATION_EXTENDED_HAS_LEAP_SECONDS & locationExtended.flags) {
         out.flags |= GNSS_LOCATION_INFO_LEAP_SECONDS_BIT;
         out.leapSeconds = locationExtended.leapSeconds;
-    }
-
-    if (GPS_LOCATION_EXTENDED_HAS_TIME_UNC & locationExtended.flags) {
-        out.flags |= GNSS_LOCATION_INFO_TIME_UNC_BIT;
-        out.timeUncMs = locationExtended.timeUncMs;
     }
 
     if (GPS_LOCATION_EXTENDED_HAS_CALIBRATION_CONFIDENCE & locationExtended.flags) {
