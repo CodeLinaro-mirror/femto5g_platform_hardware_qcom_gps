@@ -24,6 +24,7 @@
 #include <android/hardware/gnss/1.1/IGnssMeasurement.h>
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
+#include "MeasurementAPIClient.h"
 
 namespace android {
 namespace hardware {
@@ -69,7 +70,9 @@ struct GnssMeasurement : public IGnssMeasurement {
 
     void handleClientDeath();
 
- private:
+    template <typename T>
+    Return<IGnssMeasurement::GnssMeasurementStatus> setCallback(
+            const sp<T>& callback, sp<T>& myCallback, GnssPowerMode powerMode);
     // this has to be a reference, not a copy
     // because the pointer is not set when mSelf is assigned
     const sp<GnssMeasurement>& mSelf;

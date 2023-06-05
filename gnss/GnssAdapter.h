@@ -706,7 +706,6 @@ public:
     void setSuplHostServer(const char* server, int port, LocServerType type);
     void notifyClientOfCachedLocationSystemInfo(LocationAPI* client,
                                                 const LocationCallbacks& callbacks);
-    LocationCapabilitiesMask getCapabilities();
     void updateSystemPowerStateCommand(PowerStateType systemPowerState);
     void setEsStatusCallbackCommand(std::function<void(bool)> esStatusCb);
     inline void setEsStatusCallback (std::function<void(bool)> esStatusCb) {
