@@ -246,11 +246,21 @@ GnssAdapter::GnssAdapter() :
             (DATUM_TYPE == 1) ? GEODETIC_TYPE_PZ_90 : GEODETIC_TYPE_WGS_84;
     loc_nmea_config_output_types(NMEA_TYPE_ALL, nmea_datum_type);
 
+    // Get the GNSS DEPLOYMENT setting which configured in gps.conf
+    uint32_t gnssDeployment = 0;
+    const loc_param_s_type gnss_deployment_conf_params[] = {
+        {"GNSS_DEPLOYMENT", &gnssDeployment, NULL, 'n'},
+    };
+    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gnss_deployment_conf_params);
+
     readConfigCommand();
     initDefaultAgpsCommand();
     initCDFWServiceCommand();
     initEngHubProxyCommand();
-    testLaunchQppeBringUp();
+    if (QCSR_SS5_ENABLED != gnssDeployment)
+    {
+       testLaunchQppeBringUp();
+    }
     // at last step, let us inform adapater base that we are done
     // with initialization, e.g.: ready to process handleEngineUpEvent
     doneInit();
