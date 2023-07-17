@@ -195,6 +195,10 @@ void GnssAPIClient::setCallbacks() {
         };
     }
 
+    locationCallbacks.gnssRequestTimeCb = [this]() {
+        onGnssRequestTimeCb();
+    };
+
     locationCallbacks.gnssMeasurementsCb = nullptr;
 
     locAPISetCallbacks(locationCallbacks);
@@ -576,6 +580,21 @@ void GnssAPIClient::onEngineLocationsInfoCb(uint32_t count,
         onTrackingCb(locPtr->location);
     }
 }
+
+void GnssAPIClient::onGnssRequestTimeCb() {
+    LOC_LOGd("]");
+    mMutex.lock();
+    auto gnssCbIface(mGnssCbIface);
+    mMutex.unlock();
+
+    if (gnssCbIface != nullptr) {
+    auto r = gnssCbIface->gnssRequestTimeCb();
+         if (!r.isOk()) {
+            LOC_LOGe("] Error from gnssRequestTimeCb");
+         }
+    }
+}
+
 void GnssAPIClient::onStartTrackingCb(LocationError error) {
     LOC_LOGd("]: (%d)", error);
     mMutex.lock();

@@ -180,6 +180,7 @@ void GnssMeasurementInterface::startTracking(
     locationCallbacks.gnssNiCb = nullptr;
     locationCallbacks.gnssSvCb = nullptr;
     locationCallbacks.gnssNmeaCb = nullptr;
+    locationCallbacks.gnssRequestTimeCb = nullptr;
 
     locationCallbacks.gnssMeasurementsCb = nullptr;
     if (nullptr != mGnssMeasurementCbIface) {
