@@ -107,7 +107,6 @@ GnssAPIClient::GnssAPIClient(const shared_ptr<IGnssCallback>& gpsCb) :
     LocationAPIClientBase(),
     mControlClient(new LocationAPIControlClient()),
     mTracking(false),
-    mReportSpeOnly(true),
     mLocationCapabilitiesMask(0),
     mLocationCapabilitiesCached(false),
     mSvStatusEnabled(false),
@@ -115,10 +114,6 @@ GnssAPIClient::GnssAPIClient(const shared_ptr<IGnssCallback>& gpsCb) :
     mGnssCbIface(gpsCb) {
     LOC_LOGd("]: (%p)", &gpsCb);
     initLocationOptions();
-    loc_param_s_type izatConfParamTable[] = {
-        {"ANDROID_REPORT_SPE_ONLY",      &mReportSpeOnly,       nullptr, 'n'},
-    };
-    UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izatConfParamTable);
 }
 
 GnssAPIClient::~GnssAPIClient() {
@@ -152,29 +147,11 @@ void GnssAPIClient::setCallbacks() {
     memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
     locationCallbacks.size = sizeof(LocationCallbacks);
 
-    /*-------------------|-------------    PVT received --------------------|
-     | Technology used   | By trackingCb     | By engineLocationInfoCallback|
-     |-------------------|-------------------|------------------------------|
-     |Modem PE only      | SPE               | SPE                          |
-     |-------------------|-------------------|----------------------------  |
-     |Modem + HLOS Boeing| Aggregated        | SPE and Aggregated           |
-     |----------------------------------------------------------------------|
-     * By default always register with engineLocationsInfoCb, drop
-     * aggreated PVTs(if received), so this call back only report SPE no
-     * matter what the techonolgy is used;
-     * When config is set to 0, register with trackingCb, this is the call back
-     * which will report aggregated PVT to Android GNSS API*/
-    if (0 == mReportSpeOnly) {
-        locationCallbacks.trackingCb = [this](Location location) {
-            onTrackingCb(location);
-        };
-    } else {
-        locationCallbacks.engineLocationsInfoCb = nullptr;
-        locationCallbacks.engineLocationsInfoCb = [this](uint32_t count,
-                GnssLocationInfoNotification* engineLocationInfoNotification) {
-            onEngineLocationsInfoCb(count, engineLocationInfoNotification);
-        };
-    }
+    locationCallbacks.engineLocationsInfoCb = nullptr;
+    locationCallbacks.engineLocationsInfoCb = [this](uint32_t count,
+            GnssLocationInfoNotification* engineLocationInfoNotification) {
+        onEngineLocationsInfoCb(count, engineLocationInfoNotification);
+    };
 
     locationCallbacks.batchingCb = nullptr;
     locationCallbacks.geofenceBreachCb = nullptr;
@@ -287,9 +264,6 @@ bool GnssAPIClient::gnssSetPositionMode(IGnss::GnssPositionMode mode,
     mTrackingOptions.powerMode = powerMode;
     mTrackingOptions.tbm = timeBetweenMeasurement;
     mTrackingOptions.locReqEngTypeMask = LOC_REQ_ENGINE_SPE_BIT;
-    if (0 == mReportSpeOnly) {
-        mTrackingOptions.locReqEngTypeMask = LOC_REQ_ENGINE_FUSED_BIT;
-    }
     locAPIUpdateTrackingOptions(mTrackingOptions);
     return retVal;
 }
