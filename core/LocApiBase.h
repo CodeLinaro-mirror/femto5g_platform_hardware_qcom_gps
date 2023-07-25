@@ -140,6 +140,7 @@ public:
     inline LocApiProxyBase() {}
     inline virtual ~LocApiProxyBase() {}
     inline virtual void* getSibling2() { return NULL; }
+    inline virtual float getGeoidalSeparation(double latitude, double longitude) { return 0.0; }
 };
 
 class LocApiBase {
