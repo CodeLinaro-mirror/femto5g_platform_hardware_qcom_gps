@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022- 2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -83,6 +83,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define LOC_NI_NO_RESPONSE_TIME 20
 #define LOC_GPS_NI_RESPONSE_IGNORE 4
 #define ODCPI_EXPECTED_INJECTION_TIME_MS 10000
+#define LOC_WAIT_TIME_MILLI_SEC 400
+
 
 class GnssAdapter;
 
@@ -113,6 +115,29 @@ private:
 
     GnssAdapter* mAdapter;
     bool mActive;
+};
+
+class halResponseTimer : public LocTimer {
+
+public:
+    halResponseTimer(GnssAdapter* hal, LocationError err,
+            uint32_t sessionID) :
+            LocTimer(),
+            mHal(hal),
+            mErr(err),
+            mSessionID(sessionID){}
+
+    inline void startHalResponseTimer(LocationError errorStatus, uint32_t id, uint32_t timeout) {
+        mErr = errorStatus;
+        mSessionID = id;
+        start(timeout, false);
+    }
+    void timeOutCallback() override;
+
+private:
+    GnssAdapter* mHal;
+    LocationError mErr;
+    uint32_t mSessionID;
 };
 
 typedef struct {
@@ -328,6 +353,7 @@ class GnssAdapter : public LocAdapterBase {
     void checkUpdateDgnssNtrip(bool isLocationValid);
     void stopDgnssNtrip();
     uint64_t   mDgnssLastNmeaBootTimeMilli;
+    halResponseTimer mResponseTimer;
 
 public:
     GnssAdapter();
@@ -507,6 +533,9 @@ public:
     bool initEngHubProxy();
     void odcpiTimerExpireEvent();
     void initCDFWService();
+    inline void halResponseTimerStart(LocationError err, uint32_t id, uint32_t timeout) {
+        mResponseTimer.startHalResponseTimer(err, id, timeout);
+    }
 
     /* ==== REPORTS ======================================================================== */
     /* ======== EVENTS ====(Called from QMI/EngineHub Thread)===================================== */
