@@ -183,7 +183,8 @@ GnssAdapter::GnssAdapter() :
     mSendNmeaConsent(false),
     mDgnssState(0),
     mDgnssLastNmeaBootTimeMilli(0),
-    mElapsedRealTimeCal(30000000)
+    mElapsedRealTimeCal(30000000),
+    mResponseTimer(this, (LocationError)0, (uint32_t)0)
 {
     LOC_LOGD("%s]: Constructor %p", __func__, this);
     mLocPositionMode.mode = LOC_POSITION_MODE_INVALID;
@@ -2452,6 +2453,7 @@ GnssAdapter::updatePowerState(PowerStateType powerState) {
     if (POWER_STATE_UNKNOWN != powerState) {
         mPowerState = powerState;
         mLocApi->updatePowerState(mPowerState);
+        mEngHubProxy->sendPowerStateInfo(mPowerState);
     }
 }
 
@@ -6242,6 +6244,10 @@ uint32_t GnssAdapter::configDeadReckoningEngineParamsCommand(
     return sessionId;
 }
 
+void halResponseTimer:: timeOutCallback() {
+    mHal->reportResponse(mErr, mSessionID);
+}
+
 uint32_t GnssAdapter::configEngineRunStateCommand(
         PositioningEngineMask engType, LocEngineRunState engState) {
 
@@ -6274,7 +6280,15 @@ uint32_t GnssAdapter::configEngineRunStateCommand(
                     err = LOCATION_ERROR_SUCCESS;
                 }
             }
-            mAdapter.reportResponse(err, mSessionId);
+            if (LOC_ENGINE_RUN_STATE_PAUSE_RETAIN == mEngState ||
+                    LOC_ENGINE_RUN_STATE_PAUSE == mEngState) {
+               /** wait for 400msec before sending Pause/ Pause-retain acknowledgement
+                *  This allows engines to do all cleanup operations and go to pause state
+                *  On timer expiry, acknowledgement shall be sent out */
+                mAdapter.halResponseTimerStart(err, mSessionId, LOC_WAIT_TIME_MILLI_SEC);
+            } else {
+                mAdapter.reportResponse(err, mSessionId);
+            }
         }
     };
 

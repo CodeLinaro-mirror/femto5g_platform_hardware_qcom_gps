@@ -26,10 +26,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -172,6 +173,10 @@ public:
         (void) integrityRisk;
         return false;
     }
+    inline virtual bool sendPowerStateInfo(uint8_t powerState) {
+       (void)powerState;
+       return false;
+   }
 };
 
 typedef std::function<void(int count, EngineLocationInfo* locationArr)>
