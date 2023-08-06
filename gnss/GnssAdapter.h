@@ -89,6 +89,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ODCPI_EXPECTED_INJECTION_TIME_MS 10000
 #define DELETE_AIDING_DATA_EXPECTED_TIME_MS 5000
 #define ONE_SECOND_IN_MS  1000
+#define LOC_WAIT_TIME_MILLI_SEC 400
 
 class GnssAdapter;
 
@@ -122,6 +123,29 @@ private:
 
     GnssAdapter* mAdapter;
     bool mActive;
+};
+
+class halResponseTimer : public LocTimer {
+
+public:
+    halResponseTimer(GnssAdapter* hal, LocationError err,
+            uint32_t sessionID) :
+            LocTimer(),
+            mHal(hal),
+            mErr(err),
+            mSessionID(sessionID){}
+
+    inline void startHalResponseTimer(LocationError errorStatus, uint32_t id, uint32_t timeout) {
+        mErr = errorStatus;
+        mSessionID = id;
+        start(timeout, false);
+    }
+    void timeOutCallback() override;
+
+private:
+    GnssAdapter* mHal;
+    LocationError mErr;
+    uint32_t mSessionID;
 };
 
 typedef struct {
@@ -361,6 +385,7 @@ class GnssAdapter : public LocAdapterBase {
     void checkUpdateDgnssNtrip(bool isLocationValid);
     void stopDgnssNtrip();
     uint64_t   mDgnssLastNmeaBootTimeMilli;
+    halResponseTimer mResponseTimer;
 
 protected:
 
@@ -547,6 +572,9 @@ public:
     bool initEngHubProxy();
     void initCDFWService();
     void odcpiTimerExpireEvent();
+    inline void halResponseTimerStart(LocationError err, uint32_t id, uint32_t timeout) {
+        mResponseTimer.startHalResponseTimer(err, id, timeout);
+    }
 
     /* ==== REPORTS ======================================================================== */
     /* ======== EVENTS ====(Called from QMI/EngineHub Thread)===================================== */
