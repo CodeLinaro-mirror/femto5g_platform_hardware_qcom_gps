@@ -7321,8 +7321,11 @@ GnssAdapter::initEngHubProxy() {
                     // check if this is DRE-INT engine
                     if (strncmp(processInfoList[i].args[1], "DRE-INT", sizeof("DRE-INT")) == 0) {
                         mEngServiceInfo.dreIntEnabled = true;
-                    } else if (strncmp(processInfoList[i].args[1], "PPE", sizeof("PPE")) == 0 ||
-                               strncmp(processInfoList[i].args[1], "PPE-INT", sizeof("PPE-INT")) == 0 ) {
+                    } else if (strncmp(processInfoList[i].args[1], "PPE", sizeof("PPE")) == 0) {
+                        mEngServiceInfo.ppeEnabled = true;
+                    } else if (strncmp(processInfoList[i].args[1], "PPE-INT", sizeof("PPE-INT"))
+                               == 0) {
+                        mEngServiceInfo.ppeIntEnabled = true;
                         mEngServiceInfo.ppeEnabled = true;
                     }
                 }

@@ -2110,6 +2110,7 @@ typedef enum {
 struct EngineServiceInfo {
     bool dreIntEnabled;
     bool ppeEnabled;
+    bool ppeIntEnabled;
 };
 
 typedef struct {
