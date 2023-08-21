@@ -223,6 +223,7 @@ public:
                           const char* url3, const int maxlength);
     void reportLocationSystemInfo(const LocationSystemInfo& locationSystemInfo);
     void reportDcMessage(const GnssDcReportInfo& dcReport);
+    void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
     void requestXtraData();
     void requestTime();
     void requestLocation();
@@ -262,6 +263,7 @@ public:
     void reportLocations(Location* locations, size_t count, BatchingMode batchingMode);
     void reportCompletedTrips(uint32_t accumulated_distance);
     void handleBatchStatusEvent(BatchingStatus batchStatus);
+    void reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask);
 
     // downward calls
     virtual void* getSibling();

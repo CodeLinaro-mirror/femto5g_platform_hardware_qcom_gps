@@ -85,7 +85,7 @@ LocAdapterBase::LocAdapterBase(const LOC_API_ADAPTER_EVENT_MASK_T mask,
     mLocApi(context->getLocApi()), mLocAdapterProxyBase(adapterProxyBase),
     mMsgTask(context->getMsgTask()),
     mIsEngineCapabilitiesKnown(ContextBase::sIsEngineCapabilitiesKnown),
-    mDlpFeatureStatusMask(0)
+    mPpFeatureStatusMask(0)
 {
     LOC_LOGd("waitForDoneInit: %d", waitForDoneInit);
     if (!waitForDoneInit) {
@@ -172,6 +172,10 @@ DEFAULT_IMPL(false)
 
 void LocAdapterBase::
     reportLocationSystemInfoEvent(const LocationSystemInfo& /*locationSystemInfo*/)
+DEFAULT_IMPL()
+
+void LocAdapterBase::
+    reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& /*mask*/)
 DEFAULT_IMPL()
 
 bool LocAdapterBase::
@@ -365,15 +369,15 @@ LocAdapterBase::getCapabilities()
         if (ContextBase::isAntennaInfoAvailable()) {
             mask |= LOCATION_CAPABILITIES_ANTENNA_INFO;
         }
-        if (mDlpFeatureStatusMask & DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
+        if (mPpFeatureStatusMask & DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
             mask |= LOCATION_CAPABILITIES_PRECISE_LIB_PRESENT;
         }
         if (ContextBase::isAntennaInfoAvailable()) {
             mask |= LOCATION_CAPABILITIES_ANTENNA_INFO;
         }
-        //Get QWES feature status mask
-        mask |= ContextBase::getQwesFeatureStatus();
-
+        if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_GNSS_BANDS_SUPPORTED)) {
+            mask |= LOCATION_CAPABILITIES_GNSS_BANDS_BIT;
+        }
     } else {
         LOC_LOGe("attempt to get capabilities before they are known.");
     }
@@ -497,5 +501,9 @@ DEFAULT_IMPL()
 
 void LocAdapterBase::
     reportDcMessage(const GnssDcReportInfo& /*dcReport*/)
+DEFAULT_IMPL()
+
+void LocAdapterBase::
+    reportSignalTypeCapabilities(const GnssCapabNotification& /*gnssCapabNotification*/)
 DEFAULT_IMPL()
 } // namespace loc_core
