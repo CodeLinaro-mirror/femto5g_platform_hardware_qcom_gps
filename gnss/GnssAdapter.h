@@ -211,17 +211,14 @@ typedef std::function<void(
     uint64_t gnssEnergyConsumedFromFirstBoot
 )> GnssEnergyConsumedCallback;
 
-typedef void* QDgnssListenerHDL;
-typedef std::function<void(
-    bool    sessionActive
-)> QDgnssSessionActiveCb;
-
 struct CdfwInterface {
-    void (*startDgnssApiService)(const MsgTask& msgTask);
+    void (*startDgnssApiService)(const MsgTask& msgTask,
+            QDgnssModem3GppAvailCb modem3GppAvailCb);
     QDgnssListenerHDL (*createUsableReporter)(
             QDgnssSessionActiveCb sessionActiveCb);
     void (*destroyUsableReporter)(QDgnssListenerHDL handle);
     void (*reportUsable)(QDgnssListenerHDL handle, bool usable);
+    void (*updateTrackingStatus)(bool trackingActive);
 };
 
 typedef uint16_t  DGnssStateBitMask;
@@ -261,6 +258,7 @@ class GnssAdapter : public LocAdapterBase {
     LocationControlCallbacks mControlCallbacks;
     uint32_t mAfwControlId;
     uint32_t mNmeaMask;
+    LocReqEngineTypeMask mNmeaReqEngTypeMask;
     uint64_t mPrevNmeaRptTimeNsec;
     GnssSvIdConfig mGnssSvIdConfig;
     GnssSvTypeConfig mGnssSeconaryBandConfig;
@@ -298,7 +296,9 @@ class GnssAdapter : public LocAdapterBase {
     const CdfwInterface* mCdfwInterface;
     bool mDGnssNeedReport;
     bool mDGnssDataUsage;
+    QDgnss3GppSourceBitMask m3GppSourceMask;
     void reportDGnssDataUsable(const GnssSvMeasurementSet &svMeasurementSet);
+    void updateModme3GppSourceStatus(QDgnss3GppSourceBitMask modem3GppSourceMask);
 
     /* ==== ODCPI ========================================================================== */
     typedef uint8_t OdcpiStateMask;
@@ -384,6 +384,9 @@ class GnssAdapter : public LocAdapterBase {
     void stopDgnssNtrip();
     uint64_t   mDgnssLastNmeaBootTimeMilli;
     bool mQppeResp;
+
+    /*==== Qesdk Feature Status ========================================================*/
+    std::string mAppHash;
 
 protected:
 
@@ -543,7 +546,11 @@ public:
     uint32_t configEngineRunStateCommand(PositioningEngineMask engType,
                                          LocEngineRunState engState);
     uint32_t configOutputNmeaTypesCommand(GnssNmeaTypesMask enabledNmeaTypes,
-                                          GnssGeodeticDatumType nmeaDatumType);
+                                          GnssGeodeticDatumType nmeaDatumType,
+                                          LocReqEngineTypeMask nmeaReqEngTypeMask);
+    inline void setNmeaReqEngTypeMask (LocReqEngineTypeMask nmeaReqEngTypeMask) {
+        mNmeaReqEngTypeMask = nmeaReqEngTypeMask;
+    }
     void powerIndicationInitCommand(const powerIndicationCb powerIndicationCallback);
     void powerIndicationRequestCommand();
     uint32_t configEngineIntegrityRiskCommand(PositioningEngineMask engType,
@@ -575,9 +582,9 @@ public:
     virtual bool isInSession() { return !mTimeBasedTrackingSessions.empty(); }
     void initDefaultAgps();
     bool initEngHubProxy();
-    inline bool isPreciseEnabled(DlpFeatureStatusMask bits = DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
-        return (mDlpFeatureStatusMask & bits) &&
-                (mDlpFeatureStatusMask &
+    inline bool isPreciseEnabled(PpFeatureStatusMask bits = DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
+        return (mPpFeatureStatusMask & bits) &&
+                (mPpFeatureStatusMask &
                 (DLP_FEATURE_ENABLED_BY_DEFAULT | DLP_FEATURE_ENABLED_BY_QESDK));
     }
     inline bool isQppeEnabled() {
@@ -586,7 +593,14 @@ public:
     inline bool isQfeEnabled() {
         return isPreciseEnabled(DLP_FEATURE_STATUS_QFE_LIBRARY_PRESENT);
     }
+    inline bool isMlpEnabled() {
+        return mPpFeatureStatusMask &
+            (MLP_FEATURE_ENABLED_BY_DEFAULT | MLP_FEATURE_ENABLED_BY_QESDK);
+    }
+    bool isStandAloneCDParserPELib();
+    bool isEngineServiceEnable();
     void initCDFWService();
+
     void odcpiTimerExpireEvent();
 
     /* ==== REPORTS ======================================================================== */
@@ -617,6 +631,8 @@ public:
     virtual bool reportGnssEngEnergyConsumedEvent(uint64_t energyConsumedSinceFirstBoot);
     virtual void reportLocationSystemInfoEvent(const LocationSystemInfo& locationSystemInfo);
     virtual void reportDcMessage(const GnssDcReportInfo& dcReport);
+    virtual void reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask);
+    virtual void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
 
     virtual bool requestATL(int connHandle, LocAGpsType agps_type,
                             LocApnTypeMask apn_type_mask,
@@ -649,19 +665,29 @@ public:
     /** Y2038- Compliant */
     bool needToGenerateNmeaReport(const uint32_t &gpsTimeOfWeekMs,
             const struct timespec64_t &apTimeStamp);
+    bool needReportEnginePosition();
     void notifyPreciseLocation();
 
     void reportPosition(const UlpLocation &ulpLocation,
                         const GpsLocationExtended &locationExtended,
                         enum loc_sess_status status,
                         LocPosTechMask techMask);
+    void reportPositionNmea(const UlpLocation& ulpLocation,
+                            const GpsLocationExtended& locationExtended,
+                            enum loc_sess_status status,
+                            LocPosTechMask techMask);
+    void reportNmeaArray(std::vector<std::string>& nmeaArrayStr,
+                         LocOutputEngineType engineType,
+                         bool isSvNmea);
     bool reportEnginePositions(unsigned int count,
                                const EngineLocationInfo* locationArr);
     bool reportSpeAsEnginePosition(const UlpLocation& ulpLocation,
                                    const GpsLocationExtended& locationExtended,
                                    enum loc_sess_status status);
     void reportSv(GnssSvNotification& svNotify);
-    void reportNmea(const char* nmea, size_t length);
+    void reportNmea(const char* nmea, size_t length,
+                    LocOutputEngineType engineType = LOC_OUTPUT_ENGINE_FUSED,
+                    bool isSvNmea = false);
     void reportData(GnssDataNotification& dataNotify);
     bool requestNiNotify(const GnssNiNotification& notify, const void* data,
                          const bool bInformNiAccept);
