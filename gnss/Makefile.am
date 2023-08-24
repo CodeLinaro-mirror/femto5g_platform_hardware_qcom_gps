@@ -5,6 +5,7 @@ AM_CFLAGS = \
      $(LOCHAL_CFLAGS) \
      $(GPSUTILS_CFLAGS) \
      $(LOCCORE_CFLAGS) \
+     $(LIBXML_CFLAGS) \
      -I./ \
      -I../location \
      -std=c++14
@@ -14,10 +15,15 @@ libgnss_la_SOURCES = \
     GnssAdapter.cpp \
     XtraSystemStatusObserver.cpp \
     Agps.cpp \
+    XmlFileParser.cpp \
     NativeAgpsHandler.cpp
 
 if USE_FEATURE_AUTOMOTIVE
 AM_CFLAGS += -DFEATURE_AUTOMOTIVE
+endif
+
+if USE_TELSDK
+AM_CFLAGS += -DUSE_FEATURE_TELSDK
 endif
 
 if USE_GLIB

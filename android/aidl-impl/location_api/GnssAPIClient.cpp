@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -134,10 +134,16 @@ void GnssAPIClient::setFlpCallbacks() {
     LocationCallbacks locationCallbacks;
     memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
     locationCallbacks.size = sizeof(LocationCallbacks);
+    mTrackingOptions.qualityLevelAccepted = QUALITY_ANY_VALID_FIX;
 
     locationCallbacks.trackingCb = [this](const Location& location) {
         onTrackingCb(location);
     };
+
+    locationCallbacks.gnssSvCb = [this](GnssSvNotification gnssSvNotification) {
+        onGnssSvCb(gnssSvNotification);
+    };
+
     locAPISetCallbacks(locationCallbacks);
 }
 
@@ -209,7 +215,6 @@ void GnssAPIClient::gnssUpdateFlpCallbacks() {
 
 void GnssAPIClient::initLocationOptions() {
     // set default LocationOptions.
-    memset(&mTrackingOptions, 0, sizeof(TrackingOptions));
     mTrackingOptions.size = sizeof(TrackingOptions);
     mTrackingOptions.minInterval = 1000;
     mTrackingOptions.minDistance = 0;
@@ -260,7 +265,6 @@ bool GnssAPIClient::gnssSetPositionMode(IGnss::GnssPositionMode mode,
         minIntervalMs = 1000;
     }
 
-    memset(&mTrackingOptions, 0, sizeof(TrackingOptions));
     mTrackingOptions.size = sizeof(TrackingOptions);
     mTrackingOptions.minInterval = minIntervalMs;
     if (IGnss::GnssPositionMode::MS_ASSISTED == mode ||
@@ -280,10 +284,8 @@ bool GnssAPIClient::gnssSetPositionMode(IGnss::GnssPositionMode mode,
         LOC_LOGd("]: invalid GnssPositionMode: %d", (int)mode);
         retVal = false;
     }
-    if (GNSS_POWER_MODE_INVALID != powerMode) {
-        mTrackingOptions.powerMode = powerMode;
-        mTrackingOptions.tbm = timeBetweenMeasurement;
-    }
+    mTrackingOptions.powerMode = powerMode;
+    mTrackingOptions.tbm = timeBetweenMeasurement;
     mTrackingOptions.locReqEngTypeMask = LOC_REQ_ENGINE_SPE_BIT;
     if (0 == mReportSpeOnly) {
         mTrackingOptions.locReqEngTypeMask = LOC_REQ_ENGINE_FUSED_BIT;
@@ -388,7 +390,7 @@ void GnssAPIClient::gnssConfigurationUpdate(const GnssConfig& gnssConfig) {
 
 // callbacks
 void GnssAPIClient::onCapabilitiesCb(LocationCapabilitiesMask capabilitiesMask) {
-    LOC_LOGd("mLocationCapabilitiesMask=%02x capabilitiesMask=%02x",
+    LOC_LOGd("mLocationCapabilitiesMask=0x%" PRIx64 ", capabilitiesMask=0x%" PRIx64 ".",
              mLocationCapabilitiesMask, capabilitiesMask);
 
     updateCapabilities(capabilitiesMask, false);
@@ -439,6 +441,7 @@ void GnssAPIClient::updateCapabilities(LocationCapabilitiesMask capabilitiesMask
         data |= IGnssCallback::CAPABILITY_SATELLITE_BLOCKLIST;
     }
     if (capabilitiesMask & LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT) {
+        data |= IGnssCallback::CAPABILITY_MEASUREMENT_CORRECTIONS;
         data |= IGnssCallback::CAPABILITY_MEASUREMENT_CORRECTIONS_FOR_DRIVING;
     }
     if (capabilitiesMask & LOCATION_CAPABILITIES_ANTENNA_INFO) {

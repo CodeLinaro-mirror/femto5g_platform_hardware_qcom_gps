@@ -146,6 +146,7 @@ typedef enum {
     LOCATION_TECHNOLOGY_DGNSS_BIT                    = (1<<11), // DGNSS
     LOCATION_TECHNOLOGY_HYBRID_ALE_BIT               = (1<<12), // HYBRID using ALE POS
     LOCATION_TECHNOLOGY_PDR_BIT                      = (1<<13), // PED mode
+    LOCATION_TECHNOLOGY_PROPAGATED_BIT               = (1<<14), //using cached measures
 } LocationTechnologyBits;
 
 typedef uint32_t LocationSpoofMask;
@@ -326,7 +327,7 @@ typedef enum {
     // support measurement corrections
     LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT       = (1<<13),
     // support Robust Location
-    LOCATION_CAPABILITIES_CONFORMITY_INDEX_BIT               = (1<<14),
+    LOCATION_CAPABILITIES_CONFORMITY_INDEX_BIT              = (1<<14),
     // support precise location edgnss
     LOCATION_CAPABILITIES_EDGNSS_BIT                        = (1<<15),
     // Modem supports Carrier Phase for Precise Positioning
@@ -337,7 +338,7 @@ typedef enum {
     LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT            = (1<<17),
     // Modem supports SV Ephemeris for tightly coupled external
     // PPE engines. This is a Standalone Feature.
-    LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT            = (1<<18),
+    LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT             = (1<<18),
     // Modem supports GNSS Single Frequency feature. This is a
     // Standalone Feature.
     LOCATION_CAPABILITIES_QWES_GNSS_SINGLE_FREQUENCY        = (1<<19),
@@ -371,7 +372,11 @@ typedef enum {
     // This mask indicates Antenna info is enabled.
     LOCATION_CAPABILITIES_ANTENNA_INFO                      = (1<<28),
     // This mask indicates qppe or qfe library is presented.
-    LOCATION_CAPABILITIES_PRECISE_LIB_PRESENT               = (1<<29)
+    LOCATION_CAPABILITIES_PRECISE_LIB_PRESENT               = (1<<29),
+    // This mask indicates modem 3GPP source is available.
+    LOCATION_CAPABILITIES_MODEM_3GPP_AVAIL                  = (1<<30),
+    // support GNSS bands
+    LOCATION_CAPABILITIES_GNSS_BANDS_BIT                    = (1ULL<<34)
 } LocationCapabilitiesBits;
 
 typedef uint8_t LocationQwesFeatureType;
@@ -416,6 +421,12 @@ typedef enum {
     // This indicates DLP feature is enabled by QESDK APP
     // license
     LOCATION_QWES_FEATURE_TYPE_DLP_QESDK,
+    // This indicates MLP feature is enabled by QESDK APP
+    // license
+    LOCATION_QWES_FEATURE_TYPE_MLP_QESDK,
+    // This indicates EP can do SSR2OSR correction data
+    // parseing
+    LOCATION_FEATURE_TYPE_CORR_DATA_PARSER,
     // Max value
     LOCATION_QWES_FEATURE_TYPE_MAX
 } LocationQwesFeatureTypes;
@@ -1002,7 +1013,7 @@ typedef struct {
     PositioningEngineMask posEngineMask;     // engines to perform the delete operation on.
 } GnssAidingData;
 
-typedef uint16_t DrCalibrationStatusMask;
+typedef uint32_t DrCalibrationStatusMask;
 typedef enum {
     // Indicate that roll calibration is needed. Need to take more turns on level ground
     DR_ROLL_CALIBRATION_NEEDED  = (1<<0),
@@ -1013,7 +1024,31 @@ typedef enum {
     // Indicate that odo calibration is needed. Need to accelerate in a straight line
     DR_ODO_CALIBRATION_NEEDED   = (1<<3),
     // Indicate that gyro calibration is needed. Need to take more turns on level ground
-    DR_GYRO_CALIBRATION_NEEDED  = (1<<4)
+    DR_GYRO_CALIBRATION_NEEDED  = (1<<4),
+    // Lot more turns on level ground needed
+    DR_TURN_CALIBRATION_LOW     = (1<<5),
+    // Some more turns on level ground needed
+    DR_TURN_CALIBRATION_MEDIUM  = (1<<6),
+    // Sufficient turns on level ground observed
+    DR_TURN_CALIBRATION_HIGH  =   (1<<7),
+    // Lot more accelerations in straight line needed
+    DR_LINEAR_ACCEL_CALIBRATION_LOW  = (1<<8),
+    // Some more accelerations in straight line needed
+    DR_LINEAR_ACCEL_CALIBRATION_MEDIUM  =  (1<<9),
+    // Sufficient acceleration events in straight line observed
+    DR_LINEAR_ACCEL_CALIBRATION_HIGH  =    (1<<10),
+    // Lot more motion in straight line needed
+    DR_LINEAR_MOTION_CALIBRATION_LOW  =    (1<<11),
+    // Some more motion in straight line needed
+    DR_LINEAR_MOTION_CALIBRATION_MEDIUM  = (1<<12),
+    // Sufficient motion events in straight line observed
+    DR_LINEAR_MOTION_CALIBRATION_HIGH  =   (1<<13),
+    // Lot more stationary events on level ground needed
+    DR_STATIC_CALIBRATION_LOW  =           (1<<14),
+    // Some more stationary events on level ground needed
+    DR_STATIC_CALIBRATION_MEDIUM  =        (1<<15),
+    // Sufficient stationary events on level ground observed
+    DR_STATIC_CALIBRATION_HIGH  =          (1<<16)
 } DrCalibrationStatusBits;
 
 typedef enum {
@@ -1098,12 +1133,12 @@ struct LocationOptions {
 };
 
 typedef enum {
-    GNSS_POWER_MODE_INVALID = 0,
-    GNSS_POWER_MODE_M1,  /* Improved Accuracy Mode */
-    GNSS_POWER_MODE_M2,  /* Normal Mode */
-    GNSS_POWER_MODE_M3,  /* Background Mode */
-    GNSS_POWER_MODE_M4,  /* Background Mode */
-    GNSS_POWER_MODE_M5   /* Background Mode */
+    GNSS_POWER_MODE_M1 = 1,  /* Improved Accuracy Mode */
+    GNSS_POWER_MODE_M2,      /* Normal Mode */
+    GNSS_POWER_MODE_M3,      /* Background Mode */
+    GNSS_POWER_MODE_M4,      /* Background Mode */
+    GNSS_POWER_MODE_M5,      /* Background Mode */
+    GNSS_POWER_MODE_DEFAULT = GNSS_POWER_MODE_M2
 } GnssPowerMode;
 
 typedef enum {
@@ -1119,14 +1154,34 @@ struct TrackingOptions : LocationOptions {
     SpecialReqType specialReq; /* Special Request type */
 
     inline TrackingOptions() :
-            LocationOptions(), powerMode(GNSS_POWER_MODE_INVALID), tbm(0),
+            LocationOptions(), powerMode(GNSS_POWER_MODE_DEFAULT), tbm(0),
             specialReq(SPECIAL_REQ_INVALID){}
-    inline TrackingOptions(uint32_t s, GnssPowerMode m, uint32_t t) :
-            LocationOptions(), powerMode(m), tbm(t),
-            specialReq(SPECIAL_REQ_INVALID){ LocationOptions::size = s; }
     inline TrackingOptions(const LocationOptions& options) :
-            LocationOptions(options), powerMode(GNSS_POWER_MODE_INVALID), tbm(0),
+            LocationOptions(options), powerMode(GNSS_POWER_MODE_DEFAULT), tbm(0),
             specialReq(SPECIAL_REQ_INVALID){}
+    inline bool equalsInTimeBasedRequest(const TrackingOptions& other) const {
+        return minInterval == other.minInterval && powerMode == other.powerMode &&
+                tbm == other.tbm && qualityLevelAccepted == other.qualityLevelAccepted;
+    }
+    inline bool multiplexWithForTimeBasedRequest(const TrackingOptions& other) {
+        bool updated = false;
+        if (other.minInterval < minInterval) {
+            updated = true;
+            minInterval = other.minInterval;
+        }
+        if (other.powerMode < powerMode) {
+            updated = true;
+            powerMode = other.powerMode;
+        }
+        if (other.tbm < tbm) {
+            updated = true;
+            tbm = other.tbm;
+        }
+        if (other.qualityLevelAccepted > qualityLevelAccepted) {
+            qualityLevelAccepted = other.qualityLevelAccepted;
+        }
+        return updated;
+    }
     inline void setLocationOptions(const LocationOptions& options) {
         size = sizeof(TrackingOptions);
         minInterval = options.minInterval;
@@ -1376,8 +1431,22 @@ typedef struct {
 } GnssSystemTime;
 
 typedef uint32_t DrSolutionStatusMask;
-#define VEHICLE_SENSOR_SPEED_INPUT_DETECTED (1<<0)
-#define VEHICLE_SENSOR_SPEED_INPUT_USED     (1<<1)
+#define VEHICLE_SENSOR_SPEED_INPUT_DETECTED    (1<<0)
+#define VEHICLE_SENSOR_SPEED_INPUT_USED        (1<<1)
+#define DRE_WARNING_UNCALIBRATED               (1<<2)
+#define DRE_WARNING_GNSS_QUALITY_INSUFFICIENT  (1<<3)
+#define DRE_WARNING_FERRY_DETECTED             (1<<4)
+#define DRE_ERROR_6DOF_SENSOR_UNAVAILABLE      (1<<5)
+#define DRE_ERROR_VEHICLE_SPEED_UNAVAILABLE    (1<<6)
+#define DRE_ERROR_GNSS_EPH_UNAVAILABLE         (1<<7)
+#define DRE_ERROR_GNSS_MEAS_UNAVAILABLE        (1<<8)
+#define DRE_WARNING_INIT_POSITION_INVALID      (1<<9)
+#define DRE_WARNING_INIT_POSITION_UNRELIABLE   (1<<10)
+#define DRE_WARNING_POSITON_UNRELIABLE         (1<<11)
+#define DRE_ERROR_GENERIC                      (1<<12)
+#define DRE_WARNING_SENSOR_TEMP_OUT_OF_RANGE   (1<<13)
+#define DRE_WARNING_USER_DYNAMICS_INSUFFICIENT (1<<14)
+#define DRE_WARNING_FACTORY_DATA_INCONSISTENT  (1<<15)
 
 typedef struct {
     double latitude;  // in degree
@@ -1736,8 +1805,10 @@ typedef struct {
 typedef struct {
     uint32_t size;         // set to sizeof(GnssNmeaNotification)
     uint64_t timestamp;  // timestamp
+    LocOutputEngineType locOutputEngType; // engine type
     const char* nmea;    // nmea text
     uint32_t length;       // length of the nmea text
+    bool isSvNmea;         //  is NMEA from SV report or not
 } GnssNmeaNotification;
 
 typedef struct {
@@ -1759,9 +1830,17 @@ typedef struct {
     uint32_t count;        // number of items in GnssMeasurements array
     GnssMeasurementsData measurements[GNSS_MEASUREMENTS_MAX];
     GnssMeasurementsClock clock; // clock
+    bool isFullTracking;
     uint32_t agcCount;     // number of items in GnssMeasurementsAgc array
     GnssMeasurementsAgc gnssAgc[GNSS_BANDS_MAX];
 } GnssMeasurementsNotification;
+
+typedef struct {
+    uint32_t size;              // set to sizeof(GnssCapabilitiesNotification)
+    uint32_t count;             // number of SVs in the gnssSignalType array
+    GnssMeasurementsSignalType  gnssSignalType[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];
+    GnssSignalTypeMask gnssSupportedSignals; // GNSS Supported Signals
+} GnssCapabNotification;
 
 typedef uint32_t GnssSvId;
 
@@ -2729,6 +2808,13 @@ typedef std::function<void(
    const GnssDcReportInfo& dcReportInfo
 )> gnssDcReportCallback;
 
+/* Informs the framework of the list of GnssSignalTypes the GNSS HAL implementation
+   supports, optional can be NULL
+ */
+typedef std::function<void(
+    const GnssCapabNotification& gnssCapabNotification
+)> gnssSignalTypesCallback;
+
 typedef std::function<void(
 )> locationApiDestroyCompleteCallback;
 
@@ -2804,6 +2890,8 @@ typedef struct {
     locationSystemInfoCallback locationSystemInfoCb; // optional
     engineLocationsInfoCallback engineLocationsInfoCb; // optional
     gnssDcReportCallback gnssDcReportCb;               // optional
+    gnssNmeaCallback engineNmeaCb; // optional
+    gnssSignalTypesCallback gnssSignalTypesCb;          // optional
 } LocationCallbacks;
 
 typedef struct {
@@ -2864,11 +2952,90 @@ enum PowerStateType {
     POWER_STATE_UNKNOWN = 0,
     POWER_STATE_SUSPEND = 1,
     POWER_STATE_RESUME  = 2,
-    POWER_STATE_SHUTDOWN = 3
+    POWER_STATE_SHUTDOWN = 3,
+    POWER_STATE_DEEP_SLEEP_ENTRY = 4,
+    POWER_STATE_DEEP_SLEEP_EXIT = 5
 };
 
 typedef uint64_t NetworkHandle;
 #define NETWORK_HANDLE_UNKNOWN  ~0
 #define MAX_NETWORK_HANDLES 10
+
+/* enum OSNMA New Public Key Type (NPKT) */
+typedef enum {
+    MGP_OSNMA_NPKT_RESERVED0    = 0, /* reserved 0 */
+    MGP_OSNMA_NPKT_ECDSA_P_256  = 1, /* 1: ECDSA P-256, key length shall be 264 */
+    MGP_OSNMA_NPKT_RESERVED2    = 2, /* reserved 2 */
+    MGP_OSNMA_NPKT_ECDSA_P_521  = 3, /* 3: ECDSA P-521, key length shall be 536 */
+    MGP_OSNMA_NPKT_ALERT        = 4  /* OSNMA Alert Message (OAM) */
+} mgpOsnmaNpktEnumTypeVal;
+typedef uint8_t mgpOsnmaNpktEnumType;
+
+/* Tree Node structure */
+typedef struct {
+    uint8_t uj; /* the height of the node in the Merkle Tree */
+    uint8_t ui; /* the position of the node in the Merkle Tree level */
+    uint16_t wLengthInBits; /*  the length in bits of the hash in the x_ji element;
+                         shall be 256 */
+    uint8_t uHash[32]; /* Hash of Merkle tree nodes */
+} mgpOsnmaTreeNodeT;
+
+/* public key structure */
+typedef struct {
+    uint8_t uFlag; /* 1: valid, 0: invalid */
+    mgpOsnmaNpktEnumType eNpkt; /* Public key type */
+    uint8_t  uNpkId; /* public key ID */
+    uint16_t wKeyLen; /* in bits */
+    uint8_t  uKey[67]; /* max key length is 536 = 8 * 67 */
+    mgpOsnmaTreeNodeT zNodes[4]; /* required Merkle tree nodes at level 0, 1, 2, 3
+                                 zNodes[0] is at level 0;
+                                 zNodes[3] is at level 3 */
+} mgpOsnmaPublicKeyT;
+
+/* Hash Function (HF) */
+typedef enum {
+    MGP_OSNMA_HF_SHA_256   = 0, /* 0: SHA-256 */
+    MGP_OSNMA_HF_RESERVED1 = 1, /* 1: reserved */
+    MGP_OSNMA_HF_SHA3_256  = 2, /* 2: SHA3-256 */
+    MGP_OSNMA_HF_RESERVED3 = 3, /* 3: reserved */
+} mgpOsnmaHfEnumTypeVal;
+typedef uint8_t mgpOsnmaHfEnumType;
+
+/* Merkle Tree Nodes */
+typedef struct {
+    uint8_t uFlag; /* 1: valid; 0: invalid */
+    mgpOsnmaHfEnumType eHfType;
+    mgpOsnmaTreeNodeT zRootNode; /* Root Node */
+} mgpOsnmaMerkleTreeT;
+
+typedef struct {
+    mgpOsnmaPublicKeyT   zPublicKey;  /* public key */
+    mgpOsnmaMerkleTreeT  zMerkleTree; /* Merkle Tree Nodes */
+} mgpOsnmaPublicKeyAndMerkleTreeStruct;
+
+enum {
+    MODEM_QESDK_FEATURE_CARRIER_PHASE     = (1<<0),
+    MODEM_QESDK_FEATURE_SV_POLYNOMIALS    = (1<<1),
+    MODEM_QESDK_FEATURE_DGNSS             = (1<<2),
+    MODEM_QESDK_FEATURE_ROBUST_LOCATION   = (1<<3)
+} ModemGnssQesdkFeatureBits;
+
+typedef uint64_t ModemGnssQesdkFeatureMask;
+
+typedef void* QDgnssListenerHDL;
+
+typedef std::function<void(
+    bool    sessionActive
+)> QDgnssSessionActiveCb;
+
+typedef uint16_t QDgnss3GppSourceBitMask;
+#define QDGNSS_3GPP_SOURCE_UNKNOWN          0X00
+#define QDGNSS_3GPP_EP_PARSER_AVAIL         0X01
+#define QDGNSS_3GPP_SOURCE_AVAIL            0X02
+#define QDGNSS_3GPP_SOURCE_ACTIVE           0X04
+
+typedef std::function<void(
+    QDgnss3GppSourceBitMask    modem3GppSourceMask
+)> QDgnssModem3GppAvailCb;
 
 #endif /* LOCATIONDATATYPES_H */

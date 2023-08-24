@@ -30,7 +30,7 @@
  /*
  Changes from Qualcomm Innovation Center are provided under the following license:
 
- Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted (subject to the limitations in the
@@ -223,6 +223,7 @@ public:
                           const char* url3, const int maxlength);
     void reportLocationSystemInfo(const LocationSystemInfo& locationSystemInfo);
     void reportDcMessage(const GnssDcReportInfo& dcReport);
+    void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
     void requestXtraData();
     void requestTime();
     void requestLocation();
@@ -262,6 +263,7 @@ public:
     void reportLocations(Location* locations, size_t count, BatchingMode batchingMode);
     void reportCompletedTrips(uint32_t accumulated_distance);
     void handleBatchStatusEvent(BatchingStatus batchStatus);
+    void reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask);
 
     // downward calls
     virtual void* getSibling();
@@ -402,6 +404,9 @@ public:
 
     virtual void configPrecisePositioning(uint32_t featureId, bool enable,
             std::string appHash, LocApiResponse* adapterResponse=nullptr);
+    virtual void configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* merkleTree,
+            LocApiResponse* adapterResponse=nullptr);
+    virtual void configOsnmaEnablement(bool enable, LocApiResponse* adapterResponse=nullptr);
 };
 
 class ElapsedRealtimeEstimator {
