@@ -4650,7 +4650,7 @@ GnssAdapter::reportDGnssDataUsable(const GnssSvMeasurementSet &svMeasurementSet)
 void
 GnssAdapter::reportSvMeasurementEvent(GnssSvMeasurementSet &svMeasurementSet)
 {
-    LOC_LOGD("%s]: ", __func__);
+     LOC_LOGD("%s]: isNhz = %d", __func__, svMeasurementSet.isNhz);
 
     struct MsgReportSvMeasurement : public LocMsg {
         GnssAdapter& mAdapter;
@@ -4664,7 +4664,7 @@ GnssAdapter::reportSvMeasurementEvent(GnssSvMeasurementSet &svMeasurementSet)
         inline virtual void proc() const {
             // save the association of GPS timestamp and qtimer tick cnt
             mAdapter.mElapsedRealTimeCal.saveGpsTimeAndQtimerPairInMeasReport(mSvMeasurementSet);
-            if (mAdapter.mDGnssNeedReport) {
+            if (false == mSvMeasurementSet.isNhz && mAdapter.mDGnssNeedReport) {
                 mAdapter.reportDGnssDataUsable(mSvMeasurementSet);
             }
         }
