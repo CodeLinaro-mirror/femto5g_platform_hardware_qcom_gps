@@ -86,7 +86,7 @@ typedef void createQesdkHandle();
 using GnssAidl = ::android::hardware::gnss::aidl::implementation::Gnss;
 
 
-#define GNSS_AUTO_POWER_LIBNAME  "libgnssauto_power.so"
+#define GNSS_AUTO_POWER_LIBNAME  "libgnss_car_aidl_powerpolicy.so"
 #define GNSS_WEAR_POWER_LIBNAME  "libgnsswear_power.so"
 
 typedef const void* (*gnssPowerHandler)(void);
