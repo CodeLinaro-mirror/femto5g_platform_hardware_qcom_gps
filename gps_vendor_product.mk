@@ -46,6 +46,11 @@ PRODUCT_PACKAGES += libgnssauto_power
 PRODUCT_PACKAGES += libgnss_car_powerpolicy
 endif #TARGET_BOARD_AUTO
 
+ifeq ($(strip $(TARGET_BUILD_2W)),true)
+PRODUCT_PACKAGES += libgnssauto_power
+PRODUCT_PACKAGES += libgnss_car_powerpolicy
+endif #TARGET_BUILD_2W
+
 PRODUCT_PACKAGES += android.hardware.gnss@2.1-impl-qti
 PRODUCT_PACKAGES += android.hardware.gnss@2.1-service-qti
 

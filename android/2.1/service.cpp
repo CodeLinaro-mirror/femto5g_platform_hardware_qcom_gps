@@ -92,15 +92,15 @@ typedef int vendorEnhancedServiceMain(int /* argc */, char* /* argv */ []);
 #define GNSS_POWER_LIBNAME  "/vendor/lib64/libgnssauto_power.so"
 #endif
 
-typedef const void* (*gnssAutoPowerHandler)(void);
+typedef void (gnssAutoPowerHandler)(void);
 
 void initializeGnssPowerHandler() {
 
     void * handle = nullptr;
     const char* error = nullptr;
-    gnssAutoPowerHandler getter = nullptr;
+    gnssAutoPowerHandler* getter = nullptr;
 
-    getter = (gnssAutoPowerHandler) dlGetSymFromLib(handle, GNSS_POWER_LIBNAME,
+    getter = (gnssAutoPowerHandler*) dlGetSymFromLib(handle, GNSS_POWER_LIBNAME,
                                                     "initGnssAutoPowerHandler");
 
     if (nullptr == getter) {
@@ -116,6 +116,7 @@ void initializeGnssPowerHandler() {
 #endif
     }
 }
+
 
 int main() {
 
