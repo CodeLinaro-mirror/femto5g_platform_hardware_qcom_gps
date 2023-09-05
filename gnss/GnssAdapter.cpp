@@ -169,7 +169,8 @@ GnssAdapter::GnssAdapter() :
     mGnssMbSvIdUsedInPosition{},
     mGnssMbSvIdUsedInPosAvail(false),
     mPowerState(POWER_STATE_UNKNOWN),
-    mGnssLatencyInfo{}
+    mGnssLatencyInfo{},
+    mElapsedRealTimeCal(30000000)
 {
     LOC_LOGD("%s]: Constructor %p", __func__, this);
     mLocPositionMode.mode = LOC_POSITION_MODE_INVALID;
@@ -380,6 +381,20 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
                     locationExtended.vert_unc < 0.05) {
                     out.qualityType = LOCATION_FIXED_QUALITY_TYPE;
             }
+        }
+    }
+}
+
+void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtended,
+                                      Location& out) {
+    if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GPS_TIME) {
+        int64_t elapsedTimeNs = 0;
+        float elapsedTimeUncMsec = 0.0;
+        if (mElapsedRealTimeCal.getElapsedRealtimeForGpsTime(
+                locationExtended.gpsTime, elapsedTimeNs, elapsedTimeUncMsec)) {
+            out.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
+            out.elapsedRealTime = elapsedTimeNs;
+            out.elapsedRealTimeUnc = (int64_t) (elapsedTimeUncMsec * 1000000);
         }
     }
 }
@@ -2667,6 +2682,7 @@ GnssAdapter::suspendSessions()
         // inform engine hub that GNSS session has stopped
         mEngHubProxy->gnssStopFix();
         mLocApi->stopFix(nullptr);
+        mElapsedRealTimeCal.reset();
         mSPEAlreadyRunningAtHighestInterval = false;
     }
 }
@@ -3392,6 +3408,8 @@ GnssAdapter::stopTracking(LocationAPI* client, uint32_t id)
         reportResponse(client, err, id);
     }));
 
+    mElapsedRealTimeCal.reset();
+
     mSPEAlreadyRunningAtHighestInterval = false;
 }
 
@@ -3724,6 +3742,8 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
                 }
             }
 
+            // save the association of GPS timestamp and qtimer tick cnt in PVT report
+            mAdapter.mElapsedRealTimeCal.saveGpsTimeAndQtimerPairInPvtReport(mLocationExtended);
             if (true == mAdapter.initEngHubProxy()){
                 // report out all SPE fix if it is not propagated, even for failed fix
                 if (false == mUlpLocation.unpropagatedPosition) {
@@ -3933,6 +3953,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
         convertLocationInfo(locationInfo, locationExtended, status);
         convertLocation(locationInfo.location, ulpLocation, locationExtended);
         logLatencyInfo();
+        fillElapsedRealTime(locationExtended, locationInfo.location);
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
             if (reportToAllClients || needReportForClient(it->first, status)) {
                 if ((nullptr != it->second.engineLocationsInfoCb) &&
@@ -4049,7 +4070,8 @@ GnssAdapter::reportEnginePositions(unsigned int count,
             convertLocation(locationInfo[i].location,
                             engLocation->location,
                             engLocation->locationExtended);
-
+            fillElapsedRealTime(engLocation->locationExtended,
+                                locationInfo[i].location);
         }
     }
 
@@ -4605,14 +4627,14 @@ GnssAdapter::reportGnssMeasurementData(const GnssMeasurementsNotification& measu
 }
 
 void
-GnssAdapter::reportDGnssDataUsable(GnssSvMeasurementSet &svMeasurementSet)
+GnssAdapter::reportDGnssDataUsable(const GnssSvMeasurementSet &svMeasurementSet)
 {
     uint32_t i;
     bool preDGnssDataUsage = mDGnssDataUsage;
 
     mDGnssDataUsage = false;
     for (i = 0; i < svMeasurementSet.svMeasCount; i++) {
-        Gnss_SVMeasurementStructType& svMeas = svMeasurementSet.svMeas[i];
+        const Gnss_SVMeasurementStructType& svMeas = svMeasurementSet.svMeas[i];
         if (svMeas.dgnssSvMeas.dgnssMeasStatus) {
             mDGnssDataUsage = true;
             break;
@@ -4629,13 +4651,30 @@ void
 GnssAdapter::reportSvMeasurementEvent(GnssSvMeasurementSet &svMeasurementSet)
 {
     LOC_LOGD("%s]: ", __func__);
-    // some position engine requires the QMI order of PVT report and SV measurement
-    // report to be preserved. So, send out both SV measurement report and PVT report
-    // directly to engine hub
+
+    struct MsgReportSvMeasurement : public LocMsg {
+        GnssAdapter& mAdapter;
+        GnssSvMeasurementSet mSvMeasurementSet;
+
+        inline MsgReportSvMeasurement(GnssAdapter& adapter,
+                                      GnssSvMeasurementSet &svMeasurementSet) :
+            LocMsg(),
+            mAdapter(adapter),
+            mSvMeasurementSet(svMeasurementSet) {}
+        inline virtual void proc() const {
+            // save the association of GPS timestamp and qtimer tick cnt
+            mAdapter.mElapsedRealTimeCal.saveGpsTimeAndQtimerPairInMeasReport(mSvMeasurementSet);
+            if (mAdapter.mDGnssNeedReport) {
+                mAdapter.reportDGnssDataUsable(mSvMeasurementSet);
+            }
+        }
+        inline virtual void log() const {
+            LOC_LOGd("MsgReportSvMeasurement");
+        }
+    };
+
     mEngHubProxy->gnssReportSvMeasurement(svMeasurementSet);
-    if (mDGnssNeedReport) {
-        reportDGnssDataUsable(svMeasurementSet);
-    }
+    sendMsg(new MsgReportSvMeasurement(*this, svMeasurementSet));
 }
 
 void
