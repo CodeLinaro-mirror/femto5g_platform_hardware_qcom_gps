@@ -26,11 +26,10 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -81,7 +80,6 @@ namespace loc_util {
 
 class LocIpcRecver;
 class LocIpcSender;
-class LocIpcRunnable;
 
 class ILocIpcListener {
 protected:
@@ -125,7 +123,7 @@ public:
 
 class LocIpc {
 public:
-    inline LocIpc() : mRunnable(nullptr) {}
+    inline LocIpc() = default;
     inline virtual ~LocIpc() {
         stopNonBlockingListening();
     }
@@ -187,7 +185,6 @@ public:
 
 private:
     LocThread mThread;
-    LocIpcRunnable *mRunnable;
 };
 
 /* this is only when client needs to implement Sender / Recver that are not already provided by

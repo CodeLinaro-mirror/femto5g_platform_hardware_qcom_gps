@@ -195,7 +195,7 @@ LocApiBase::LocApiBase(LOC_API_ADAPTER_EVENT_MASK_T excludedMask,
     memset(mLocAdapters, 0, sizeof(mLocAdapters));
 
     if (nullptr == mMsgTask) {
-        mMsgTask = new MsgTask("LocApiMsgTask", false);
+        mMsgTask = new MsgTask("LocApiMsgTask");
     }
 }
 
