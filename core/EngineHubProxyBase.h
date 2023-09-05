@@ -63,6 +63,8 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <loc_pla.h>
+
 #ifndef ENGINE_HUB_PROXY_BASE_H
 #define ENGINE_HUB_PROXY_BASE_H
 #ifdef NO_UNORDERED_SET_OR_MAP
@@ -184,6 +186,7 @@ typedef std::function<void(const std::unordered_map<LocationQwesFeatureType, boo
 typedef EngineHubProxyBase* (getEngHubProxyFn)(
         const MsgTask * msgTask,
         IOsObserver* osObserver,
+        EngineServiceInfo& engServiceInfo,
         GnssAdapterReportEnginePositionsEventCb positionEventCb,
         GnssAdapterReqAidingDataCb reqAidingDataCb,
         GnssAdapterUpdateNHzRequirementCb updateNHzRequirementCb,

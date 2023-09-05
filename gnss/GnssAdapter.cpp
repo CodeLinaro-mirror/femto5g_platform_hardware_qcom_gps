@@ -364,6 +364,23 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
         out.flags |= LOCATION_HAS_SPOOF_MASK;
         out.spoofMask = ulpLocation.gpsLocation.spoof_mask;
     }
+    out.qualityType = LOCATION_STANDALONE_QUALITY_TYPE;
+    if (GPS_LOCATION_EXTENDED_HAS_NAV_SOLUTION_MASK & locationExtended.flags) {
+        if (LOC_NAV_MASK_DGNSS_CORRECTION == locationExtended.navSolutionMask) {
+            out.qualityType = LOCATION_DGNSS_QUALITY_TYPE;
+        } else if (LOC_NAV_MASK_RTK_CORRECTION == locationExtended.navSolutionMask) {
+            out.qualityType = LOCATION_FLOAT_QUALITY_TYPE;
+        } else if (LOC_NAV_MASK_RTK_FIXED_CORRECTION == locationExtended.navSolutionMask) {
+            out.qualityType = LOCATION_FIXED_QUALITY_TYPE;
+        } else if (LOC_NAV_MASK_PPP_CORRECTION == locationExtended.navSolutionMask) {
+            //If HEPE<5cm, we shall claim ‘FIXED’; otherwise, ‘FLOAT’
+            out.qualityType = LOCATION_FLOAT_QUALITY_TYPE;
+            if (GPS_LOCATION_EXTENDED_HAS_VERT_UNC & locationExtended.flags &&
+                    locationExtended.vert_unc < 0.05) {
+                    out.qualityType = LOCATION_FIXED_QUALITY_TYPE;
+            }
+        }
+    }
 }
 
 /* This is utility routine that computes number of SV used
@@ -6179,6 +6196,7 @@ GnssAdapter::initEngHubProxy() {
             break;
         }
 
+        EngineServiceInfo engServiceInfo = {};
         bool pluginDaemonEnabled = false;
         // go over the conf table to see whether any plugin daemon is enabled
         for (unsigned int i = 0; i < processListLength; i++) {
@@ -6191,6 +6209,11 @@ GnssAdapter::initEngHubProxy() {
                     if (strncmp(processInfoList[i].args[1], "DRE-INT", sizeof("DRE-INT")) == 0) {
                         mDreIntEnabled = true;
                     } else if (strncmp(processInfoList[i].args[1], "PPE", sizeof("PPE")) == 0) {
+                        mPpeEnabled = true;
+                    } else if (strncmp(processInfoList[i].args[1], "PPE-INT",
+                                       sizeof("PPE-INT")) == 0) {
+                        // check if this is PPE-INT engine
+                        engServiceInfo.ppeIntEnabled = true;
                         mPpeEnabled = true;
                     }
                 }
@@ -6254,10 +6277,8 @@ GnssAdapter::initEngHubProxy() {
             // Wait for the script(rootdir/etc/init.qcom.rc) to create socket folder
             locUtilWaitForDir(SOCKET_DIR_EHUB);
             EngineHubProxyBase* hubProxy = (*getter) (mMsgTask, mSystemStatus->getOsObserver(),
-                                                      reportPositionEventCb,
-                                                      reqAidingDataCb,
-                                                      updateNHzRequirementCb,
-													  updateQwesFeatureStatusCb);
+                      engServiceInfo, reportPositionEventCb, reqAidingDataCb,
+                      updateNHzRequirementCb, updateQwesFeatureStatusCb);
             if (hubProxy != nullptr) {
                 mEngHubProxy = hubProxy;
                 engHubLoadSuccessful = true;
