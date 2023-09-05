@@ -26,6 +26,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
@@ -124,6 +125,7 @@ const char LOC_PATH_XTWIFI_CONF[] = LOC_PATH_XTWIFI_CONF_STR;
 const char LOC_PATH_QUIPC_CONF[] = LOC_PATH_QUIPC_CONF_STR;
 const char LOC_PATH_SLIM_CONF[] = LOC_PATH_SLIM_CONF_STR;
 const char LOC_PATH_VPE_CONF[] = LOC_PATH_VPE_CONF_STR;
+const char LOC_PATH_QPPE_CONF[] = LOC_PATH_QPPE_CONF_STR;
 
 /*===========================================================================
 FUNCTION loc_set_config_entry

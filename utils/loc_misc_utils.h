@@ -319,4 +319,22 @@ inline uint64_t qTimerTicksToNanos(double qTimer) {
     return (uint64_t((qTimer * double(10000ull)) / (double)192ull));
 }
 
+/*===========================================================================
+FUNCTION locUtilWaitForDir
+
+DESCRIPTION
+   This function will block until the directory specified in
+   dirName has been created
+
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+    N/A
+
+SIDE EFFECTS
+   N/A
+===========================================================================*/
+void locUtilWaitForDir(const char* dirName);
+
 #endif //_LOC_MISC_UTILS_H_
