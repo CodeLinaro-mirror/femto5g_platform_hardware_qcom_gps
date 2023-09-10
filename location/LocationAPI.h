@@ -648,6 +648,19 @@ public:
     virtual void injectLocation(double latitude, double longitude, float accuracy) override;
 
      /** @brief
+        Inject Time
+
+        @param
+        timeMs : UTC time received from the NTP server, Starting since January 1, 1970.
+        timeReferenceMs : Corresponding value of SystemClock.elapsedRealtime()
+                          when NTP response was received timeMs.
+        uncertaintyMs : Uncertainty associated with timeMs.
+    */
+    virtual void injectTime(int64_t timeMs, int64_t timeReferenceMs,
+                            int32_t uncertaintyMs) override;
+
+
+     /** @brief
         Request to open AGPS Data Connection
 
         @param

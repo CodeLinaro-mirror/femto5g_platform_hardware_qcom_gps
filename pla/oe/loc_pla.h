@@ -72,6 +72,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <inttypes.h>
 #include <sys/time.h>
 #include <time.h>
+#include <linux/version.h>
 #if !defined(OPENWRT_BUILD) && !defined(OFF_TARGET)
 #include <glib.h>
 #endif
@@ -180,6 +181,7 @@ static inline size_t memscpy (void *p_Dest, size_t q_DestSize, const void *p_Src
 static inline int loc_boot_kpi_marker(const char * pFmt, ...)
 {
     int result = 0;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
     int32_t errRet = -1;
     struct stat nodeStat;
 
@@ -198,6 +200,14 @@ static inline int loc_boot_kpi_marker(const char * pFmt, ...)
         }
         va_end(ap);
     }
+#else
+    char buf[MAX_COMMAND_STR_LEN] = {};
+    va_list ap;
+    va_start(ap, pFmt);
+    vsnprintf(&buf[0], sizeof(buf), pFmt, ap);
+    ALOGE("boot_kpi: %s", buf);
+    va_end(ap);
+#endif
     return result;
 }
 

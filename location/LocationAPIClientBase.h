@@ -281,6 +281,7 @@ public:
             const GnssMeasurementsNotification &/*gnssMeasurementsNotification*/) {}
     inline virtual void onGnssNHzMeasurementsCb(
             const GnssMeasurementsNotification &/*gnssMeasurementsNotification*/) {}
+    inline virtual void onGnssRequestTimeCb() {}
     inline virtual void onTrackingCb(const Location &/*location*/) {}
     inline virtual void onGnssSvCb(const GnssSvNotification& /*gnssSvNotification*/) {}
     inline virtual void onStartTrackingCb(LocationError /*error*/) {}
