@@ -193,11 +193,13 @@ static bool isGnssClient(LocationCallbacks& locationCallbacks)
             locationCallbacks.engineLocationsInfoCb != nullptr ||
             locationCallbacks.gnssSvCb != nullptr ||
             locationCallbacks.gnssNmeaCb != nullptr ||
+            locationCallbacks.engineNmeaCb != nullptr ||
             locationCallbacks.gnssDataCb != nullptr ||
             locationCallbacks.gnssMeasurementsCb != nullptr ||
             locationCallbacks.gnssNHzMeasurementsCb != nullptr ||
             locationCallbacks.locationSystemInfoCb != nullptr ||
-            locationCallbacks.gnssDcReportCb != nullptr);
+            locationCallbacks.gnssDcReportCb != nullptr ||
+            locationCallbacks.gnssSignalTypesCb != nullptr);
 }
 
 static bool isBatchingClient(LocationCallbacks& locationCallbacks)
@@ -1054,14 +1056,16 @@ uint32_t LocationControlAPI::setOptInStatus(bool userConsent) {
 
 uint32_t LocationControlAPI::configOutputNmeaTypes(
             GnssNmeaTypesMask enabledNmeaTypes,
-            GnssGeodeticDatumType nmeaDatumType) {
+            GnssGeodeticDatumType nmeaDatumType,
+            LocReqEngineTypeMask locReqEngTypeMask) {
 
     uint32_t id = 0;
     pthread_mutex_lock(&gDataMutex);
 
     if (gData.gnssInterface != NULL) {
         id = gData.gnssInterface->configOutputNmeaTypes(enabledNmeaTypes,
-                                                        nmeaDatumType);
+                                                        nmeaDatumType,
+                                                        locReqEngTypeMask);
     } else {
         LOC_LOGe("No gnss interface available for Location Control API");
     }
