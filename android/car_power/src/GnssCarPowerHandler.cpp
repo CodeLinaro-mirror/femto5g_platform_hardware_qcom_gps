@@ -110,12 +110,12 @@ bool GnssCARPowerHandler::hasLocationComponent(
 
 GnssCARPowerHandler::GnssCARPowerHandler() :
       mLocationControlApi(LocationControlAPI::getInstance()) {
-      LOC_LOGv("Entry");
+      LOC_LOGd("Entry");
 }
 
 ::ndk::ScopedAStatus GnssCARPowerHandler::onPolicyChanged(const CarPowerPolicy& powerPolicy) {
 
-    LOC_LOGv("Entry");
+    LOC_LOGd("Entry");
 
     if (hasLocationComponent(powerPolicy.enabledComponents)) {
         // Resume GNSS Session.
@@ -123,7 +123,7 @@ GnssCARPowerHandler::GnssCARPowerHandler() :
              mLocationControlApi = LocationControlAPI::getInstance();
          }
          if (NULL != mLocationControlApi) {
-            LOC_LOGv("Resume");
+            LOC_LOGd("Resume");
             mLocationControlApi->powerStateEvent(POWER_STATE_RESUME);
          }
          return ::ndk::ScopedAStatus::ok();
@@ -134,7 +134,7 @@ GnssCARPowerHandler::GnssCARPowerHandler() :
          }
 
          if (NULL != mLocationControlApi) {
-            LOC_LOGv("Suspend");
+            LOC_LOGd("Suspend");
             mLocationControlApi->powerStateEvent(POWER_STATE_SUSPEND);
          }
          return ::ndk::ScopedAStatus::ok();
@@ -144,7 +144,7 @@ GnssCARPowerHandler::GnssCARPowerHandler() :
 
 
 bool GnssCARPowerHandler::initialize() {
-    LOC_LOGv("Entry");
+    LOC_LOGd("Entry");
     // Get power policy daemon binder.
     ndk::SpAIBinder binder(AServiceManager_getService(kPowerPolicyDaemon));
     if (binder.get() == nullptr) {
@@ -181,9 +181,8 @@ bool GnssCARPowerHandler::initialize() {
 
 };
 
-
 extern "C" void initGnssAutoPowerHandler(void) {
-    LOC_LOGv("Entry");
+    LOC_LOGd("Entry");
 
     if (false == gnssCPM::isInitPowerPolicy) {
 
@@ -209,5 +208,5 @@ extern "C" void initGnssAutoPowerHandler(void) {
        gnssCPM::isInitPowerPolicy = true;
     }
 
-    LOC_LOGv("Exit");
+    LOC_LOGd("Exit");
 }
