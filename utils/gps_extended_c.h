@@ -535,6 +535,12 @@ typedef enum {
     LOC_RELIABILITY_HIGH = 4
 }LocReliability;
 
+typedef enum {
+    LOC_IN_EMERGENCY_UNKNOWN = 0,
+    LOC_IN_EMERGENCY_SET = 1,
+    LOC_IN_EMERGENCY_NOT_SET = 2
+}LocInEmergency;
+
 typedef struct {
     /** Y2038-Compliant */
     struct timespec64_t apTimeStamp;
@@ -2299,6 +2305,12 @@ typedef enum {
  * @param status Will be of type AGnssExtStatusIpV4.
  */
 typedef void (*AgnssStatusIpV4Cb)(AGnssExtStatusIpV4 status);
+
+typedef bool(*IsInEmergencySession)(void);
+
+typedef struct {
+    void* isInEmergencySession;
+} NfwCbInfo;
 
 /*
  * Callback with AGNSS(IpV6) status information.
