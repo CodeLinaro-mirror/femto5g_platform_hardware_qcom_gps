@@ -2696,6 +2696,13 @@ typedef std::function<void(
     GnssNmeaNotification gnssNmeaNotification
 )> gnssNmeaCallback;
 
+/* Gives NTP Time data, optional can be NULL
+    gnssTimeRequest is called only during a session
+    broadcasted to all clients, no matter if a session has started by client */
+typedef std::function<void(
+)> gnssRequestTimeCallback;
+
+
 /* Gives GNSS data, optional can be NULL
     gnssDataCallback is called only during a tracking session
     broadcasted to all clients, no matter if a session has started by client */
@@ -2805,6 +2812,7 @@ typedef struct {
     locationSystemInfoCallback locationSystemInfoCb; // optional
     engineLocationsInfoCallback engineLocationsInfoCb; // optional
     gnssDcReportCallback gnssDcReportCb;               // optional
+    gnssRequestTimeCallback gnssRequestTimeCb;       // optional
 } LocationCallbacks;
 
 typedef struct {

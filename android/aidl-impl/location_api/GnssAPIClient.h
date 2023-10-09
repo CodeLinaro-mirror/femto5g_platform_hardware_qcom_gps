@@ -120,6 +120,7 @@ public:
 
     void onStartTrackingCb(LocationError error) final;
     void onStopTrackingCb(LocationError error) final;
+    void onGnssRequestTimeCb() final;
 
 private:
     void setCallbacks();

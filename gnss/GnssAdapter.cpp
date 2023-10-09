@@ -97,6 +97,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #else
 #define MIN_TRACKING_INTERVAL (1000) // 1 sec
 #endif //FEATURE_AUTOMOTIVE
+#define MIN_TRACKING_INTERVAL_SIRF (100) // 100 msec
 #define BILLION_NSEC (1000000000ULL)
 #define NMEA_MIN_THRESHOLD_MSEC (99)
 #define NMEA_MAX_THRESHOLD_MSEC (975)
@@ -257,8 +258,7 @@ GnssAdapter::GnssAdapter() :
     initDefaultAgpsCommand();
     initCDFWServiceCommand();
     initEngHubProxyCommand();
-    if (QCSR_SS5_ENABLED != gnssDeployment)
-    {
+    if (QCSR_SS5_ENABLED != gnssDeployment) {
        testLaunchQppeBringUp();
     }
     // at last step, let us inform adapater base that we are done
@@ -330,8 +330,9 @@ GnssAdapter::checkAndSetSPEToRunforNHz(TrackingOptions & out) {
     // If SPE session is already set to highest interval, no need to start it again.
 
     bool isSPERunningAtHighestInterval = false;
-
-    if (!mNHzNeeded) {
+    if (true == isSS5HWEnabled()) {
+        LOC_LOGd("GNSS SIRF is enabled.");
+    } else if (!mNHzNeeded) {
         LOC_LOGd("No nHz session needed.");
     } else if (mSPEAlreadyRunningAtHighestInterval) {
         LOC_LOGd("SPE is already running at highest interval.");
@@ -2977,6 +2978,11 @@ GnssAdapter::updateClientsEventMask()
         if (it->second.gnssDcReportCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_DISASTER_CRISIS_REPORT;
         }
+
+        if ((IS_SS5_HW_ENABLED == ContextBase::mGps_conf.GNSS_DEPLOYMENT) &&
+           (nullptr != it->second.gnssRequestTimeCb)) {
+           mask |= LOC_API_ADAPTER_BIT_REQUEST_TIME_SYNC;
+        }
     }
 
     /*
@@ -3409,7 +3415,11 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, TrackingOptions& options)
             } else if (0 == mOptions.size) {
                 err = LOCATION_ERROR_INVALID_PARAMETER;
             } else {
-                if (mOptions.minInterval < MIN_TRACKING_INTERVAL) {
+                if (true ==  mAdapter.isSS5HWEnabled()) {
+                    if (mOptions.minInterval < MIN_TRACKING_INTERVAL_SIRF) {
+                          mOptions.minInterval = MIN_TRACKING_INTERVAL_SIRF;
+                    }
+                } else if (mOptions.minInterval < MIN_TRACKING_INTERVAL) {
                     mOptions.minInterval = MIN_TRACKING_INTERVAL;
                 }
                 if (mOptions.minDistance > 0 &&
@@ -5171,6 +5181,33 @@ GnssAdapter::reportDcMessage(const GnssDcReportInfo& dcReport) {
     };
 
     sendMsg(new MsgDcReport(*this, dcReport));
+}
+
+bool
+GnssAdapter::requestTime() {
+
+    struct MsgRequestTime : public LocMsg {
+        GnssAdapter& mAdapter;
+        inline MsgRequestTime(GnssAdapter& adapter) :
+            LocMsg(),
+            mAdapter(adapter) {}
+        inline virtual void proc() const {
+            mAdapter.requestTimeInternal();
+        }
+    };
+
+    sendMsg(new MsgRequestTime(*this));
+    return true;
+}
+
+void
+GnssAdapter::requestTimeInternal() {
+
+    for (auto it = mClientData.begin(); it != mClientData.end(); ++it) {
+        if (nullptr != it->second.gnssRequestTimeCb) {
+            it->second.gnssRequestTimeCb();
+        }
+    }
 }
 
 static void* niThreadProc(void *args)

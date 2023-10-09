@@ -281,6 +281,11 @@ ScopedAStatus Gnss::stopNmea() {
 }
 ScopedAStatus Gnss::injectTime(int64_t timeMs, int64_t timeReferenceMs,
             int32_t uncertaintyMs) {
+    ENTRY_LOG_CALLFLOW();
+    ILocationControlAPI* pCtrlApi = getLocationControlApi();
+    if (pCtrlApi != nullptr) {
+        pCtrlApi->injectTime(timeMs, timeReferenceMs, uncertaintyMs);
+    }
     return ScopedAStatus::ok();
 }
 ScopedAStatus Gnss::injectLocation(const GnssLocation& location) {
