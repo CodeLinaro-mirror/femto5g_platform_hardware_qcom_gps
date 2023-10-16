@@ -319,9 +319,11 @@ bool XtraSystemStatusObserver::updatePowerState(const PowerStateType powerState)
         case POWER_STATE_UNKNOWN:
             pState = 0;
             break;
+        case POWER_STATE_DEEP_SLEEP_ENTRY:
         case POWER_STATE_SUSPEND:
             pState = 1;
             break;
+        case POWER_STATE_DEEP_SLEEP_EXIT:
         case POWER_STATE_RESUME:
             pState = 2;
             break;
@@ -470,6 +472,7 @@ bool XtraSystemStatusObserver::updateXtraConfig(bool enable, const XtraConfigPar
         ss << configParams.xtraIntegrityDownloadEnable << endl;
         ss << configParams.xtraIntegrityDownloadIntervalMinute << endl;
         ss << configParams.xtraDaemonDebugLogLevel << endl;
+        ss << configParams.ntsKeServerURL << endl;
     }
 
     string s = ss.str();

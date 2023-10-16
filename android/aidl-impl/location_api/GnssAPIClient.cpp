@@ -215,7 +215,6 @@ void GnssAPIClient::gnssUpdateFlpCallbacks() {
 
 void GnssAPIClient::initLocationOptions() {
     // set default LocationOptions.
-    memset(&mTrackingOptions, 0, sizeof(TrackingOptions));
     mTrackingOptions.size = sizeof(TrackingOptions);
     mTrackingOptions.minInterval = 1000;
     mTrackingOptions.minDistance = 0;
@@ -266,7 +265,6 @@ bool GnssAPIClient::gnssSetPositionMode(IGnss::GnssPositionMode mode,
         minIntervalMs = 1000;
     }
 
-    memset(&mTrackingOptions, 0, sizeof(TrackingOptions));
     mTrackingOptions.size = sizeof(TrackingOptions);
     mTrackingOptions.minInterval = minIntervalMs;
     if (IGnss::GnssPositionMode::MS_ASSISTED == mode ||
@@ -286,10 +284,8 @@ bool GnssAPIClient::gnssSetPositionMode(IGnss::GnssPositionMode mode,
         LOC_LOGd("]: invalid GnssPositionMode: %d", (int)mode);
         retVal = false;
     }
-    if (GNSS_POWER_MODE_INVALID != powerMode) {
-        mTrackingOptions.powerMode = powerMode;
-        mTrackingOptions.tbm = timeBetweenMeasurement;
-    }
+    mTrackingOptions.powerMode = powerMode;
+    mTrackingOptions.tbm = timeBetweenMeasurement;
     mTrackingOptions.locReqEngTypeMask = LOC_REQ_ENGINE_SPE_BIT;
     if (0 == mReportSpeOnly) {
         mTrackingOptions.locReqEngTypeMask = LOC_REQ_ENGINE_FUSED_BIT;
@@ -473,7 +469,7 @@ void GnssAPIClient::updateCapabilities(LocationCapabilitiesMask capabilitiesMask
             }
         }
     }
-    LOC_LOGV("%s:%d] set_system_info_cb (%d)", __FUNCTION__, __LINE__, gnssInfo.yearOfHw);
+    LOC_LOGd("set_system_info_cb yearOfHw:%d", gnssInfo.yearOfHw);
 
     if (gnssCbIface != nullptr) {
         auto r = gnssCbIface->gnssSetCapabilitiesCb(data);
@@ -504,8 +500,7 @@ void GnssAPIClient::onTrackingCb(const Location& location) {
         convertGnssLocation(location, gnssLocation);
         auto r = gnssCbIface->gnssLocationCb(gnssLocation);
         if (!r.isOk()) {
-            LOC_LOGe("%s] Error from gnssLocationCb",
-                __func__);
+            LOC_LOGe("Error from gnssLocationCb");
         }
     } else {
         LOC_LOGw("] No GNSS Interface ready for gnssLocationCb ");
@@ -524,8 +519,7 @@ void GnssAPIClient::onGnssSvCb(const GnssSvNotification& gnssSvNotification) {
         convertGnssSvStatus(gnssSvNotification, svInfoList);
         auto r = gnssCbIface->gnssSvStatusCb(svInfoList);
         if (!r.isOk()) {
-            LOC_LOGe("%s] Error from gnssSvStatusCb",
-                __func__);
+            LOC_LOGe("Error from gnssSvStatusCb");
         }
     }
 }
@@ -547,8 +541,8 @@ void GnssAPIClient::onGnssNmeaCb(GnssNmeaNotification gnssNmeaNotification) {
                 auto r = gnssCbIface->gnssNmeaCb(
                         static_cast<long>(gnssNmeaNotification.timestamp), nmeaString);
                 if (!r.isOk()) {
-                    LOC_LOGe("%s] Error from gnssCbIface nmea=%s length=%u",
-                             __func__, gnssNmeaNotification.nmea, gnssNmeaNotification.length);
+                    LOC_LOGe("Error from gnssCbIface nmea=%s length=%u",
+                             gnssNmeaNotification.nmea, gnssNmeaNotification.length);
                 }
             }
         }

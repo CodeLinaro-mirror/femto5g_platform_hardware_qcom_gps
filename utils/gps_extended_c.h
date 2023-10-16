@@ -151,6 +151,11 @@ typedef uint32_t LocPosTechMask;
 #define LOC_POS_TECH_MASK_PDR ((LocPosTechMask)0x00001000)
 #define LOC_POS_TECH_MASK_PROPAGATED ((LocPosTechMask)0x00002000)
 
+#define QESDK_FEATURE_ID_EDGNSS        2641
+#define QESDK_FEATURE_ID_RTK           2642
+#define QESDK_FEATURE_ID_GTP           2643
+#define QESDK_FEATURE_ID_PRECISE_GTP   2644
+#define QESDK_FEATURE_ID_RL            2645
 
 enum loc_registration_mask_status {
     LOC_REGISTRATION_MASK_ENABLED,
@@ -200,7 +205,9 @@ typedef enum {
     /**< Support the feature to report engine debug data */
     LOC_SUPPORTED_FEATURE_ENGINE_DEBUG_DATA,
     /**< Support the feature to report feature update in QMI_LOC_EVENT_REPORT_IND */
-    LOC_SUPPORTED_FEATURE_DYNAMIC_FEATURE_STATUS
+    LOC_SUPPORTED_FEATURE_DYNAMIC_FEATURE_STATUS,
+    /**<  Support the feature to report Supported GNSS Bands */
+    LOC_SUPPORTED_FEATURE_GNSS_BANDS_SUPPORTED
 } loc_supported_feature_enum;
 
 typedef struct {
@@ -852,7 +859,7 @@ typedef enum {
 // if necessary.
 #define DEFAULT_IMPL(rtv)                                     \
 {                                                             \
-    LOC_LOGD("%s: default implementation invoked", __func__); \
+    LOC_LOGA("%s: default implementation invoked", __func__); \
     return rtv;                                               \
 }
 
@@ -919,6 +926,7 @@ enum loc_api_adapter_event_index {
     LOC_API_ADAPTER_ENGINE_LOCK_STATE_DATA_REPORT,     // Engine lock state data report
     LOC_API_ADAPTER_FEATURE_STATUS_UPDATE,             // Dynamic feature status update
     LOC_API_ADAPTER_REQUEST_ASSISTANCE_TIME,           // NTP time download request
+    LOC_API_ADAPTER_GNSS_BANDS_SUPPORTED,              // GNSS bands supported
     LOC_API_ADAPTER_EVENT_MAX
 };
 
@@ -967,6 +975,8 @@ enum loc_api_adapter_event_index {
 #define LOC_API_ADAPTER_BIT_FEATURE_STATUS_UPDATE            (1ULL<<LOC_API_ADAPTER_FEATURE_STATUS_UPDATE)
 #define LOC_API_ADAPTER_BIT_ASSISTANCE_TIME_REQUEST \
         (1ULL<<LOC_API_ADAPTER_REQUEST_ASSISTANCE_TIME)
+#define LOC_API_ADAPTER_BIT_GNSS_BANDS_SUPPORTED \
+        (1ULL<<LOC_API_ADAPTER_GNSS_BANDS_SUPPORTED)
 
 typedef uint64_t LOC_API_ADAPTER_EVENT_MASK_T;
 
@@ -1265,6 +1275,19 @@ typedef struct {
   /**<  Pseudo Range rate correction in meters per second. */
 } Gnss_LocDgnssSVMeasurement;
 
+typedef struct {
+  uint8_t prMlInferValid;
+  /**<   Indicates whether the ML Inference Pseudorange correction in meters
+     field contains valid information. \n
+     - 0x01 (TRUE)  -- Valid \n
+     - 0x00 (FALSE) -- Invalid
+  */
+
+  float prMlInfer;
+  /**<   ML Inference, per SV measurement PR correction data in meters.
+  */
+} Gnss_MlInferSVMeasurementStruct;
+
 typedef struct
 {
     uint32_t                          size;
@@ -1328,6 +1351,8 @@ typedef struct
     Gnss_LocSVTimeSpeedStructType   svTimeSpeed;
     /**< Unfiltered SV Time and Speed information
     */
+    uint8_t dopplerAccelValid;
+    /**<   Validity for Doppler acceleration. */
     float                           dopplerAccel;
     /**< Satellite Doppler Accelertion\n
          - Units: Hz/s \n
@@ -1400,6 +1425,9 @@ typedef struct
 
     /** < DGNSS Measurements Report for SVs */
     Gnss_LocDgnssSVMeasurement   dgnssSvMeas;
+
+    /** <  ML Inference, per SV measurement PR correction data */
+    Gnss_MlInferSVMeasurementStruct mlInferSvMeasurement;
 } Gnss_SVMeasurementStructType;
 
 
@@ -2255,7 +2283,8 @@ typedef enum {
     LOC_ON_PRECISE_TRACKING_START = 1 << 2,
     LOC_ON_TRACKING_START = 1 << 3,
     LOC_ON_EMERGENCY = 1 << 4,
-    LOC_ON_NTRIP_START =  1 << 5
+    LOC_ON_NTRIP_START =  1 << 5,
+    LOC_ON_NLP_SESSION_START = 1 << 6,
 } LocLaunchTriggerEvents;
 
 /* Process subscribed for dynamic launch
