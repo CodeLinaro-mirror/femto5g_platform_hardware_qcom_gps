@@ -5492,9 +5492,6 @@ GnssAdapter::reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurement
             mAdapter.mPositionElapsedRealTimeCal.saveGpsTimeAndQtimerPairInMeasReport(
                     mGnssMeasurements.gnssSvMeasurementSet);
             mAdapter.reportGnssMeasurementData(mGnssMeasurements.gnssMeasNotification);
-            if (mAdapter.mDGnssNeedReport) {
-                mAdapter.reportDGnssDataUsable(mGnssMeasurements.gnssSvMeasurementSet);
-            }
         }
     };
 
@@ -5504,6 +5501,9 @@ GnssAdapter::reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurement
     // report to be preserved. So, send out both SV measurement report and PVT report
     // directly to engine hub
     mEngHubProxy->gnssReportSvMeasurement(gnssMeasurements.gnssSvMeasurementSet);
+    if (mDGnssNeedReport) {
+        reportDGnssDataUsable(gnssMeasurements.gnssSvMeasurementSet);
+    }
 }
 
 void
