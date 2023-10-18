@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -62,6 +62,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
 #include <loc_pla.h>
 
 #ifndef ENGINE_HUB_PROXY_BASE_H
@@ -170,6 +171,11 @@ public:
 
     inline virtual bool configPrecisePositioning(uint32_t featureId,
             bool enable, const std::string& appHash) { return false;}
+
+    inline virtual bool sendPowerStateInfo(uint8_t powerState) {
+       (void)powerState;
+       return false;
+    }
 };
 
 typedef std::function<void(int count, EngineLocationInfo* locationArr)>
@@ -198,7 +204,7 @@ typedef EngineHubProxyBase* (getEngHubProxyFn)(
         GnssAdapterReqAidingDataCb reqAidingDataCb,
         GnssAdapterUpdateNHzRequirementCb updateNHzRequirementCb,
         GnssAdapterUpdateQwesFeatureStatusCb updateQwesFeatureStatusCb,
-        std::function<bool()> preciseEnabled);
+        std::function<bool()> engineServiceEnabled);
 
 } // namespace loc_core
 

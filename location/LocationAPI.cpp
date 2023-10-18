@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022, 2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -193,11 +193,13 @@ static bool isGnssClient(LocationCallbacks& locationCallbacks)
             locationCallbacks.engineLocationsInfoCb != nullptr ||
             locationCallbacks.gnssSvCb != nullptr ||
             locationCallbacks.gnssNmeaCb != nullptr ||
+            locationCallbacks.engineNmeaCb != nullptr ||
             locationCallbacks.gnssDataCb != nullptr ||
             locationCallbacks.gnssMeasurementsCb != nullptr ||
             locationCallbacks.gnssNHzMeasurementsCb != nullptr ||
             locationCallbacks.locationSystemInfoCb != nullptr ||
-            locationCallbacks.gnssDcReportCb != nullptr);
+            locationCallbacks.gnssDcReportCb != nullptr ||
+            locationCallbacks.gnssSignalTypesCb != nullptr);
 }
 
 static bool isBatchingClient(LocationCallbacks& locationCallbacks)
@@ -1054,14 +1056,16 @@ uint32_t LocationControlAPI::setOptInStatus(bool userConsent) {
 
 uint32_t LocationControlAPI::configOutputNmeaTypes(
             GnssNmeaTypesMask enabledNmeaTypes,
-            GnssGeodeticDatumType nmeaDatumType) {
+            GnssGeodeticDatumType nmeaDatumType,
+            LocReqEngineTypeMask locReqEngTypeMask) {
 
     uint32_t id = 0;
     pthread_mutex_lock(&gDataMutex);
 
     if (gData.gnssInterface != NULL) {
         id = gData.gnssInterface->configOutputNmeaTypes(enabledNmeaTypes,
-                                                        nmeaDatumType);
+                                                        nmeaDatumType,
+                                                        locReqEngTypeMask);
     } else {
         LOC_LOGe("No gnss interface available for Location Control API");
     }
@@ -1109,7 +1113,8 @@ uint32_t LocationControlAPI::updateCallbacks(LocationControlCallbacks& callbacks
     retVal = 1;
 
     if (callbacks.odcpiReqCb) {
-        gData.gnssInterface->odcpiInit(callbacks.odcpiReqCb, ODCPI_HANDLER_PRIORITY_DEFAULT);
+        gData.gnssInterface->odcpiInit(callbacks.odcpiReqCb, ODCPI_HANDLER_PRIORITY_DEFAULT,
+                (EMERGENCY_ODCPI | NON_EMERGENCY_ODCPI));
     } else if (callbacks.agpsStatusIpV4Cb) {
         AgpsCbInfo cbInfo {callbacks.agpsStatusIpV4Cb,
                            AGPS_ATL_TYPE_SUPL | AGPS_ATL_TYPE_SUPL_ES, AGPS_CB_PRIORITY_LOW};
