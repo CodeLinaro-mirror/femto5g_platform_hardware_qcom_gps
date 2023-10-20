@@ -153,6 +153,7 @@ static uint32_t configXtraParams(bool enable, const XtraConfigParams& configPara
 static uint32_t getXtraStatus();
 static uint32_t registerXtraStatusUpdate(bool registerUpdate);
 static void configPrecisePositioning(uint32_t featureId, bool enable, std::string appHash);
+static bool isSS5HWEnabled();
 
 static const GnssInterface gGnssInterface = {
     sizeof(GnssInterface),
@@ -223,6 +224,7 @@ static const GnssInterface gGnssInterface = {
     getXtraStatus,
     registerXtraStatusUpdate,
     configPrecisePositioning,
+    isSS5HWEnabled,
 };
 
 #ifndef DEBUG_X86
@@ -593,6 +595,13 @@ static uint32_t getAntennaInfo(AntennaInfoCallback* antennaInfoCallback) {
     } else {
         return LOCATION_ERROR_GENERAL_FAILURE;
     }
+}
+
+static bool isSS5HWEnabled() {
+    if (NULL != gGnssAdapter) {
+        return gGnssAdapter->isSS5HWEnabled();
+    }
+    return false;
 }
 
 static uint32_t configRobustLocation(bool enable, bool enableForE911){

@@ -232,6 +232,10 @@ void GnssAPIClient::setCallbacks()
         onGnssNmeaCb(gnssNmeaNotification);
     };
 
+    locationCallbacks.gnssRequestTimeCb = [this]() {
+        onGnssRequestTimeCb();
+    };
+
     locationCallbacks.gnssMeasurementsCb = nullptr;
 
     locAPISetCallbacks(locationCallbacks);
@@ -778,6 +782,39 @@ void GnssAPIClient::onEngineLocationsInfoCb(uint32_t count,
     }
     if (foundSPE) {
         onTrackingCb(locPtr->location);
+    }
+}
+
+void GnssAPIClient::onGnssRequestTimeCb()
+{
+    LOC_LOGD("%s] ", __FUNCTION__);
+
+    mMutex.lock();
+    auto gnssCbIface(mGnssCbIface);
+    auto gnssCbIface_2_0(mGnssCbIface_2_0);
+    auto gnssCbIface_2_1(mGnssCbIface_2_1);
+    mMutex.unlock();
+
+    if (gnssCbIface_2_1 != nullptr) {
+        auto r = gnssCbIface_2_1->gnssRequestTimeCb();
+        if (!r.isOk()) {
+            LOC_LOGE("%s] Error from gnssCbIface_2_1 gnssRequestTimeCb description=%s",
+                __func__, r.description().c_str());
+        }
+    }
+    else if (gnssCbIface_2_0 != nullptr) {
+        auto r = gnssCbIface_2_0->gnssRequestTimeCb();
+        if (!r.isOk()) {
+            LOC_LOGE("%s] Error from gnssCbIface_2_0 gnssRequestTimeCb description=%s",
+                __func__, r.description().c_str());
+        }
+    }
+    else if (gnssCbIface != nullptr) {
+        auto r = gnssCbIface->gnssRequestTimeCb();
+        if (!r.isOk()) {
+            LOC_LOGE("%s] Error from gnssRequestTimeCb description=%s",
+                __func__, r.description().c_str());
+        }
     }
 }
 

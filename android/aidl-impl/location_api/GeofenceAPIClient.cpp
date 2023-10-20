@@ -78,6 +78,7 @@ GeofenceAPIClient::GeofenceAPIClient(const shared_ptr<IGnssGeofenceCallback>& ca
     locationCallbacks.gnssSvCb = nullptr;
     locationCallbacks.gnssNmeaCb = nullptr;
     locationCallbacks.gnssMeasurementsCb = nullptr;
+    locationCallbacks.gnssRequestTimeCb = nullptr;
 
     locAPISetCallbacks(locationCallbacks);
 }

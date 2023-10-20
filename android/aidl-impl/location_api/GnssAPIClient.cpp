@@ -72,6 +72,10 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocContext.h>
 #include "LocationUtil.h"
 
+#define QCSR_SS5_ENABLED  1
+#define MIN_TRACKING_INTERVAL 1000
+#define MIN_TRACKING_INTERVAL_SIRF 100
+
 namespace android {
 namespace hardware {
 namespace gnss {
@@ -195,6 +199,10 @@ void GnssAPIClient::setCallbacks() {
         };
     }
 
+    locationCallbacks.gnssRequestTimeCb = [this]() {
+        onGnssRequestTimeCb();
+    };
+
     locationCallbacks.gnssMeasurementsCb = nullptr;
 
     locAPISetCallbacks(locationCallbacks);
@@ -263,7 +271,18 @@ bool GnssAPIClient::gnssSetPositionMode(IGnss::GnssPositionMode mode,
     bool retVal = true;
 
     if (0 == minIntervalMs) {
-        minIntervalMs = 1000;
+        // Get the GNSS DEPLOYMENT setting which configured in gps.conf
+        uint32_t gnssDeployment = 0;
+        const loc_param_s_type gnss_deployment_conf_params[] = {
+            {"GNSS_DEPLOYMENT", &gnssDeployment, NULL, 'n'},
+        };
+        UTIL_READ_CONF(LOC_PATH_GPS_CONF, gnss_deployment_conf_params);
+
+        if (QCSR_SS5_ENABLED == gnssDeployment) {
+            minIntervalMs = MIN_TRACKING_INTERVAL_SIRF;
+        } else {
+            minIntervalMs = MIN_TRACKING_INTERVAL;
+        }
     }
 
     memset(&mTrackingOptions, 0, sizeof(TrackingOptions));
@@ -576,6 +595,21 @@ void GnssAPIClient::onEngineLocationsInfoCb(uint32_t count,
         onTrackingCb(locPtr->location);
     }
 }
+
+void GnssAPIClient::onGnssRequestTimeCb() {
+    LOC_LOGd("]");
+    mMutex.lock();
+    auto gnssCbIface(mGnssCbIface);
+    mMutex.unlock();
+
+    if (gnssCbIface != nullptr) {
+    auto r = gnssCbIface->gnssRequestTimeCb();
+         if (!r.isOk()) {
+            LOC_LOGe("] Error from gnssRequestTimeCb");
+         }
+    }
+}
+
 void GnssAPIClient::onStartTrackingCb(LocationError error) {
     LOC_LOGd("]: (%d)", error);
     mMutex.lock();

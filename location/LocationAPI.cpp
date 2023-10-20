@@ -1177,6 +1177,20 @@ void LocationControlAPI::injectLocation(double latitude, double longitude, float
     pthread_mutex_unlock(&gDataMutex);
 }
 
+void LocationControlAPI::injectTime(int64_t timeMs, int64_t timeReferenceMs,
+       int32_t uncertaintyMs) {
+    pthread_mutex_lock(&gDataMutex);
+
+    if (NULL != gData.gnssInterface) {
+        gData.gnssInterface->injectTime(timeMs, timeReferenceMs, uncertaintyMs);
+    }
+    else {
+        LOC_LOGe("No gnss interface available for Location Control API");
+    }
+
+    pthread_mutex_unlock(&gDataMutex);
+}
+
 void LocationControlAPI::agpsDataConnOpen(AGpsType agpsType, const char* apnName,
         int apnLen, int ipType) {
 
