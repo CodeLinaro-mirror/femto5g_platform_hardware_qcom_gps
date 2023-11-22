@@ -2480,7 +2480,7 @@ bool isInEmergencySession() {
 void
 GnssAdapter::updateClientsEventMask()
 {
-    LOC_API_ADAPTER_EVENT_MASK_T mask = 0;
+    LOC_API_ADAPTER_EVENT_MASK_T mask = LOC_API_ADAPTER_BIT_FEATURE_STATUS_UPDATE;
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
         if (it->second.trackingCb != nullptr ||
             it->second.gnssLocationInfoCb != nullptr ||
