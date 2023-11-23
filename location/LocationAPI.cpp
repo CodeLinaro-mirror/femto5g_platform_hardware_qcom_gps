@@ -26,10 +26,9 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
-
+Copyright (c) 2022, 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
 disclaimer below) provided that the following conditions are met:
@@ -139,7 +138,8 @@ static bool isGnssClient(LocationCallbacks& locationCallbacks)
             locationCallbacks.gnssDataCb != nullptr ||
             locationCallbacks.gnssMeasurementsCb != nullptr ||
             locationCallbacks.gnssNHzMeasurementsCb != nullptr ||
-            locationCallbacks.locationSystemInfoCb != nullptr);
+            locationCallbacks.locationSystemInfoCb != nullptr ||
+            locationCallbacks.svEphemerisCb != nullptr);
 }
 
 static bool isFlpClient(LocationCallbacks& locationCallbacks)
