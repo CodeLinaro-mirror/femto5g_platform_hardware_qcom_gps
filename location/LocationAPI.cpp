@@ -660,19 +660,12 @@ LocationControlAPI::createInstance(LocationControlCallbacks& locationControlCall
 {
     LocationControlAPI* controlAPI = NULL;
     pthread_mutex_lock(&gDataMutex);
-    void *handle = nullptr;
 
-    if (NULL == gData.controlAPI) {
-        getLocationIntegrationApiImpl getter =
-             (getLocationIntegrationApiImpl)dlGetSymFromLib(handle,
-            "libloc_integration_api.impl.so", "getLocationIntegrationApiImpl");
-        if (nullptr == getter) {
-            LOC_LOGi("Failed to load LocationIntegrationApi implementation.");
+    if (NULL != gData.controlAPI) {
+        controlAPI = gData.controlAPI;
+    } else {
+        if (nullptr != locationControlCallbacks.responseCb && NULL == gData.controlAPI) {
             loadLibGnss();
-
-            if (NULL != gData.gnssInterface) {
-                gData.controlAPI = new LocationControlAPI();
-            }
             if (NULL != gData.gnssInterface) {
                 gData.controlAPI = new LocationControlAPI();
                 gData.controlCallbacks = locationControlCallbacks;
