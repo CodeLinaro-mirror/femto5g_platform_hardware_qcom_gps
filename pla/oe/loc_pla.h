@@ -36,7 +36,7 @@
 #include <inttypes.h>
 #include <sys/time.h>
 #include <time.h>
-
+#include <glib.h>
 
 #if defined(__GNUC__) && defined(__GNUC_PREREQ)
 #if __GNUC_PREREQ(6,0)
