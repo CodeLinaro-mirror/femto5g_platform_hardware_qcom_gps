@@ -95,11 +95,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define DEG2RAD    (M_PI / 180.0)
 #define PROCESS_NAME_ENGINE_SERVICE "engine-service"
 #define PROCESS_NAME_SAP_MAP        "hmacdaemon"
-#if defined (FEATURE_AUTOMOTIVE) || defined (FEATURE_NHZ_ENABLED)
 #define MIN_TRACKING_INTERVAL (100) // 100 msec
-#else
-#define MIN_TRACKING_INTERVAL (1000) // 1 sec
-#endif //FEATURE_AUTOMOTIVE
+#define NHZ_ENABLED_MIN_TRACKING_INTERVAL (100) // 100 msec
+#define NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL (1000) // 1 sec
 #define BILLION_NSEC (1000000000ULL)
 #define NMEA_MIN_THRESHOLD_MSEC (99)
 #define NMEA_MAX_THRESHOLD_MSEC (975)
@@ -192,6 +190,7 @@ GnssAdapter::GnssAdapter() :
     mPowerConnectState(POWER_CONNECT_UNKNOWN),
     mBlockCPIInfo{},
     mEsStatusCb(nullptr),
+    mEngHubLoadSuccessful(false),
     mEngServiceInfo{},
     mPowerOn(false),
     mNativeAgpsHandler(mSystemStatus->getOsObserver(), *this),
@@ -212,7 +211,8 @@ GnssAdapter::GnssAdapter() :
     mHmacConfig(HMAC_CONFIG_UNKNOWN),
     mNmeaReqEngTypeMask(LOC_REQ_ENGINE_FUSED_BIT),
     mAppHash(""),
-    m3GppSourceMask(QDGNSS_3GPP_SOURCE_UNKNOWN)
+    m3GppSourceMask(QDGNSS_3GPP_SOURCE_UNKNOWN),
+    mResponseTimer(this, (LocationError)0, (uint32_t)0)
 {
     LOC_LOGd("Constructor %p", this);
     mLocPositionMode.mode = LOC_POSITION_MODE_INVALID;
@@ -2825,9 +2825,9 @@ GnssAdapter::updateSystemPowerState(PowerStateType systemPowerState) {
             default:
                 break;
         } // switch
-
         mLocApi->updateSystemPowerState(mSystemPowerState);
         mContext->getLBSProxyBase()->notifyPowerState(systemPowerState);
+        mEngHubProxy->sendPowerStateInfo(mSystemPowerState);
     }
 }
 
@@ -3458,9 +3458,18 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, TrackingOptions& options)
             } else if (0 == mOptions.size) {
                 err = LOCATION_ERROR_INVALID_PARAMETER;
             } else {
-                if (mOptions.minInterval < MIN_TRACKING_INTERVAL) {
-                    mOptions.minInterval = MIN_TRACKING_INTERVAL;
+
+                uint32_t minIntervalToSet = NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL;
+                bool nHzStatus = mAdapter.getCapabilities() & LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
+                if (nHzStatus) {
+                    minIntervalToSet = NHZ_ENABLED_MIN_TRACKING_INTERVAL;
                 }
+                if (mOptions.minInterval < minIntervalToSet) {
+                    mOptions.minInterval = minIntervalToSet;
+                }
+                LOC_LOGd("Updated min Interval: %d, nHzEnabled: %s",
+                        mOptions.minInterval, nHzStatus ? "true" : "false");
+
                 if (mOptions.minDistance > 0 &&
                         ContextBase::isMessageSupported(
                         LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_TRACKING)) {
@@ -3561,6 +3570,16 @@ void
 GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId,
         const TrackingOptions& trackingOptions)
 {
+    //Don't allow session start in SUSPEND/SHUTDOWN state
+    if ((POWER_STATE_SUSPEND == mSystemPowerState) ||
+        (POWER_STATE_DEEP_SLEEP_ENTRY == mSystemPowerState) ||
+        POWER_STATE_SHUTDOWN == mSystemPowerState) {
+
+        LOC_LOGe("Not allowed in powerstate %d, return!", mSystemPowerState);
+        reportResponse(client, LOCATION_ERROR_NOT_SUPPORTED, sessionId);
+        return;
+    }
+
     LOC_LOGd("minInterval %u minDistance %u mode %u powermode %u tbm %u",
             trackingOptions.minInterval, trackingOptions.minDistance,
             trackingOptions.mode, trackingOptions.powerMode, trackingOptions.tbm);
@@ -3683,9 +3702,17 @@ GnssAdapter::updateTrackingOptionsCommand(LocationAPI* client, uint32_t id,
                             mOptions.tbm, TRACKING_TBM_THRESHOLD_MILLIS);
                     mOptions.powerMode = GNSS_POWER_MODE_M2;
                 }
-                if (mOptions.minInterval < MIN_TRACKING_INTERVAL) {
-                    mOptions.minInterval = MIN_TRACKING_INTERVAL;
+                uint32_t minIntervalToSet = NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL;
+                bool nHzStatus = mAdapter.getCapabilities() & LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
+                if (nHzStatus) {
+                    minIntervalToSet = NHZ_ENABLED_MIN_TRACKING_INTERVAL;
                 }
+                if (mOptions.minInterval < minIntervalToSet) {
+                    mOptions.minInterval = minIntervalToSet;
+                }
+                LOC_LOGd("Updated min Interval: %d, nHzEnabled: %s",
+                        mOptions.minInterval, nHzStatus ? "true" : "false");
+
                 // Now update session as required
                 if (isTimeBased && mOptions.minDistance > 0) {
                     // switch from time based to distance based
@@ -7213,6 +7240,7 @@ GnssAdapter::configLeverArm(uint32_t sessionId,
                             const LeverArmConfigInfo& configInfo) {
 
     LocationError err = LOCATION_ERROR_NOT_SUPPORTED;
+
     // save the lever ARM config info for translating SPE positions from
     // GNSS antenna based to VRP based
     if (configInfo.leverArmValidMask & LEVER_ARM_TYPE_GNSS_TO_VRP_BIT) {
@@ -7222,10 +7250,12 @@ GnssAdapter::configLeverArm(uint32_t sessionId,
         err = LOCATION_ERROR_SUCCESS;
     }
 
-    if (configInfo.leverArmValidMask & LEVER_ARM_TYPE_DR_IMU_TO_GNSS_BIT) {
-        if (mEngServiceInfo.dreIntEnabled && mEngHubProxy->configLeverArm(configInfo)) {
-        err = LOCATION_ERROR_SUCCESS;
-    }
+    if (true == mEngHubLoadSuccessful) {
+        if (false == mEngHubProxy->configLeverArm(configInfo)) {
+            err = LOCATION_ERROR_GENERAL_FAILURE;
+        } else {
+            err = LOCATION_ERROR_SUCCESS;
+        }
     }
 
     reportResponse(err, sessionId);
@@ -7530,6 +7560,10 @@ uint32_t GnssAdapter::configDeadReckoningEngineParamsCommand(
     return sessionId;
 }
 
+void halResponseTimer:: timeOutCallback() {
+    mHal->reportResponse(mErr, mSessionID);
+}
+
 uint32_t GnssAdapter::configEngineRunStateCommand(
     PositioningEngineMask engType, LocEngineRunState engState) {
 
@@ -7562,7 +7596,15 @@ uint32_t GnssAdapter::configEngineRunStateCommand(
                     err = LOCATION_ERROR_SUCCESS;
                 }
             }
-            mAdapter.reportResponse(err, mSessionId);
+            if (LOC_ENGINE_RUN_STATE_PAUSE_RETAIN == mEngState ||
+                    LOC_ENGINE_RUN_STATE_PAUSE == mEngState) {
+               /** wait for 400msec before sending Pause/ Pause-retain acknowledgement
+                *  This allows engines to do all cleanup operations and go to pause state
+                *  On timer expiry, acknowledgement shall be sent out */
+                mAdapter.halResponseTimerStart(err, mSessionId, LOC_WAIT_TIME_MILLI_SEC);
+            } else {
+                mAdapter.reportResponse(err, mSessionId);
+            }
         }
     };
 
@@ -8007,7 +8049,6 @@ GnssAdapter::initEngHubProxyCommand() {
 bool
 GnssAdapter::initEngHubProxy() {
     static bool firstTime = true;
-    static bool engHubLoadSuccessful = false;
 
     const char *error = nullptr;
     unsigned int processListLength = 0;
@@ -8083,19 +8124,22 @@ GnssAdapter::initEngHubProxy() {
 
         GnssAdapterUpdateNHzRequirementCb updateNHzRequirementCb =
             [this] (bool nHzNeeded, bool nHzMeasNeeded) {
+            // External engines can subscribe to Nhz Meas OR PVT report
+            // only if SPE supports NHz
+            if ((this->getCapabilities() & LOCATION_CAPABILITIES_QWES_GNSS_NHZ)) {
+                if (nHzMeasNeeded &&
+                        (!checkMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT))) {
+                    updateEvtMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT,
+                        LOC_REGISTRATION_MASK_ENABLED);
+                } else if (checkMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT)) {
+                    updateEvtMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT,
+                        LOC_REGISTRATION_MASK_DISABLED);
+                }
 
-            if (nHzMeasNeeded &&
-                    (!checkMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT))) {
-                updateEvtMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT,
-                    LOC_REGISTRATION_MASK_ENABLED);
-            } else if (checkMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT)) {
-                updateEvtMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT,
-                    LOC_REGISTRATION_MASK_DISABLED);
-            }
-
-            if (mNHzNeeded != nHzNeeded) {
-                mNHzNeeded = nHzNeeded;
-                checkAndRestartSPESession();
+                if (mNHzNeeded != nHzNeeded) {
+                    mNHzNeeded = nHzNeeded;
+                    checkAndRestartSPESession();
+                }
             }
         };
 
@@ -8115,7 +8159,7 @@ GnssAdapter::initEngHubProxy() {
                       [ this ] { return isEngineServiceEnable(); });
             if (hubProxy != nullptr) {
                 mEngHubProxy = hubProxy;
-                engHubLoadSuccessful = true;
+                mEngHubLoadSuccessful = true;
             }
         }
         else {
@@ -8123,7 +8167,7 @@ GnssAdapter::initEngHubProxy() {
         }
 
         LOC_LOGd("first time initialization %d, returned %d",
-                 firstTime, engHubLoadSuccessful);
+                 firstTime, mEngHubLoadSuccessful);
 
     } while (0);
 
@@ -8133,7 +8177,7 @@ GnssAdapter::initEngHubProxy() {
     }
 
     firstTime = false;
-    return engHubLoadSuccessful;
+    return mEngHubLoadSuccessful;
 }
 
 std::vector<double>
