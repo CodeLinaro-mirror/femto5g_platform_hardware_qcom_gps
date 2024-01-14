@@ -95,11 +95,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define DEG2RAD    (M_PI / 180.0)
 #define PROCESS_NAME_ENGINE_SERVICE "engine-service"
 #define PROCESS_NAME_SAP_MAP        "hmacdaemon"
-#if defined (FEATURE_AUTOMOTIVE) || defined (FEATURE_NHZ_ENABLED)
 #define MIN_TRACKING_INTERVAL (100) // 100 msec
-#else
-#define MIN_TRACKING_INTERVAL (1000) // 1 sec
-#endif //FEATURE_AUTOMOTIVE
+#define NHZ_ENABLED_MIN_TRACKING_INTERVAL (100) // 100 msec
+#define NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL (1000) // 1 sec
 #define BILLION_NSEC (1000000000ULL)
 #define NMEA_MIN_THRESHOLD_MSEC (99)
 #define NMEA_MAX_THRESHOLD_MSEC (975)
@@ -112,7 +110,7 @@ static int loadEngHubForExternalEngine = 0;
 static int sUseZppInDBH = 0;
 static loc_param_s_type izatConfParamTable[] = {
     {"LOAD_ENGHUB_FOR_EXTERNAL_ENGINE", &loadEngHubForExternalEngine, nullptr, 'n'},
-    {"USE_ZPP_IN_DBH", &sUseZppInDBH, nullptr,'n'}
+    {"USE_ZPP_IN_DBH", &sUseZppInDBH, nullptr, 'n'}
 };
 
 /* Method to fetch status cb from loc_net_iface library */
@@ -465,37 +463,52 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
 }
 
 void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtended,
-                                      Location& out) {
+                                      GnssLocationInfoNotification& out) {
     if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GPS_TIME) {
         int64_t elapsedTimeNs = 0;
         float elapsedTimeUncMsec = 0.0;
-        if (mPositionElapsedRealTimeCal.getElapsedRealtimeForGpsTime(
-                locationExtended, elapsedTimeNs, elapsedTimeUncMsec)) {
-            out.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
-            out.elapsedRealTime = elapsedTimeNs;
-            out.elapsedRealTimeUnc = (int64_t) (elapsedTimeUncMsec * 1000000);
+        uint64_t elapsedgPTPTimeNsec = 0;
+        bool gptpTimeValid = false;
+        if (mPositionElapsedRealTimeCal.fillAdditionalTimestamps(
+                locationExtended, elapsedTimeNs, elapsedTimeUncMsec,
+                elapsedgPTPTimeNsec, gptpTimeValid)) {
+            out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
+            out.location.elapsedRealTime = elapsedTimeNs;
+            out.location.elapsedRealTimeUnc = (int64_t) (elapsedTimeUncMsec * 1000000);
+
+            if (gptpTimeValid) {
+                out.flags |= LDT_GNSS_LOCATION_INFO_GPTP_TIME_BIT;
+                out.elapsedgPTPTime = elapsedgPTPTimeNsec;
+                out.flags |= LDT_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT;
+                out.elapsedgPTPTimeUnc = 0;
+            } else {
+                out.elapsedgPTPTime = 0;
+                out.elapsedgPTPTimeUnc = 0;
+            }
         }
 #ifndef FEATURE_AUTOMOTIVE
-        else if ((out.timestamp > 0) &&
+        else if ((out.location.timestamp > 0) &&
                  (locationExtended.gpsTime.gpsWeek != UNKNOWN_GPS_WEEK_NUM)) {
-            int64_t locationTimeNanos = (int64_t)out.timestamp * 1000000;
-            bool isCurDataTimeTrustable = (out.timestamp % mLocPositionMode.min_interval == 0);
+            int64_t locationTimeNanos = (int64_t)out.location.timestamp * 1000000;
+            bool isCurDataTimeTrustable =
+                    (out.location.timestamp % mLocPositionMode.min_interval == 0);
             int64_t elapsedRealTime = mPositionElapsedRealTimeCal.getElapsedRealtimeEstimateNanos(
                     locationTimeNanos, isCurDataTimeTrustable,
                     (int64_t)mLocPositionMode.min_interval * 1000000);
 
             if (elapsedRealTime != -1) {
-                out.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
-                out.elapsedRealTime = elapsedRealTime;
-                out.elapsedRealTimeUnc = mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+                out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
+                out.location.elapsedRealTime = elapsedRealTime;
+                out.location.elapsedRealTimeUnc =
+                        mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
             }
         }
 #endif //FEATURE_AUTOMOTIVE
     }
 #ifndef FEATURE_AUTOMOTIVE
-    if (!(out.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT)) {
-        out.elapsedRealTime = getBootTimeMilliSec() * 1000000;
-        out.elapsedRealTimeUnc = mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+    if (!(out.location.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT)) {
+        out.location.elapsedRealTime = getBootTimeMilliSec() * 1000000;
+        out.location.elapsedRealTimeUnc = mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
     }
 #endif //FEATURE_AUTOMOTIVE
 }
@@ -2034,7 +2047,7 @@ GnssAdapter::convertToGnssSvIdConfig(
             uint64_t* svMaskPtr = NULL;
             GnssSvId initialSvId = 0;
             uint16_t svIndexOffset = 0;
-            switch(source.constellation) {
+            switch (source.constellation) {
             case GNSS_SV_TYPE_GLONASS:
                 svMaskPtr = &config.gloBlacklistSvMask;
                 initialSvId = GNSS_SV_CONFIG_GLO_INITIAL_SV_ID;
@@ -3460,9 +3473,18 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, TrackingOptions& options)
             } else if (0 == mOptions.size) {
                 err = LOCATION_ERROR_INVALID_PARAMETER;
             } else {
-                if (mOptions.minInterval < MIN_TRACKING_INTERVAL) {
-                    mOptions.minInterval = MIN_TRACKING_INTERVAL;
+
+                uint32_t minIntervalToSet = NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL;
+                bool nHzStatus = mAdapter.getCapabilities() & LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
+                if (nHzStatus) {
+                    minIntervalToSet = NHZ_ENABLED_MIN_TRACKING_INTERVAL;
                 }
+                if (mOptions.minInterval < minIntervalToSet) {
+                    mOptions.minInterval = minIntervalToSet;
+                }
+                LOC_LOGd("Updated min Interval: %d, nHzEnabled: %s",
+                        mOptions.minInterval, nHzStatus ? "true" : "false");
+
                 if (mOptions.minDistance > 0 &&
                         ContextBase::isMessageSupported(
                         LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_TRACKING)) {
@@ -3632,7 +3654,7 @@ GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
     // use a local copy of TrackingOptions as the TBF may get modified in the
     // checkAndSetSPEToRunforNHz function
     TrackingOptions tempOptions(updatedOptions);
-    if(!checkAndSetSPEToRunforNHz(tempOptions)) {
+    if (!checkAndSetSPEToRunforNHz(tempOptions)) {
         mLocApi->startTimeBasedTracking(tempOptions, new LocApiResponse(*getContext(),
                           [this, client, sessionId, oldOptions] (LocationError err) {
                 if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
@@ -3695,9 +3717,17 @@ GnssAdapter::updateTrackingOptionsCommand(LocationAPI* client, uint32_t id,
                             mOptions.tbm, TRACKING_TBM_THRESHOLD_MILLIS);
                     mOptions.powerMode = GNSS_POWER_MODE_M2;
                 }
-                if (mOptions.minInterval < MIN_TRACKING_INTERVAL) {
-                    mOptions.minInterval = MIN_TRACKING_INTERVAL;
+                uint32_t minIntervalToSet = NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL;
+                bool nHzStatus = mAdapter.getCapabilities() & LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
+                if (nHzStatus) {
+                    minIntervalToSet = NHZ_ENABLED_MIN_TRACKING_INTERVAL;
                 }
+                if (mOptions.minInterval < minIntervalToSet) {
+                    mOptions.minInterval = minIntervalToSet;
+                }
+                LOC_LOGd("Updated min Interval: %d, nHzEnabled: %s",
+                        mOptions.minInterval, nHzStatus ? "true" : "false");
+
                 // Now update session as required
                 if (isTimeBased && mOptions.minDistance > 0) {
                     // switch from time based to distance based
@@ -4425,7 +4455,8 @@ bool GnssAdapter::needToGenerateNmeaReport(const uint32_t &gpsTimeOfWeekMs,
     bool retVal = false;
     uint64_t currentTimeNsec = 0;
 
-    if (NMEA_PROVIDER_AP == ContextBase::mGps_conf.NMEA_PROVIDER && !mTimeBasedTrackingSessions.empty()) {
+    if (NMEA_PROVIDER_AP == ContextBase::mGps_conf.NMEA_PROVIDER &&
+            !mTimeBasedTrackingSessions.empty()) {
         currentTimeNsec = (apTimeStamp.tv_sec * BILLION_NSEC + apTimeStamp.tv_nsec);
         if ((GNSS_NMEA_REPORT_RATE_NHZ == ContextBase::sNmeaReportRate) ||
                 (GPS_DEFAULT_FIX_INTERVAL_MS <= mLocPositionMode.min_interval)) {
@@ -4645,7 +4676,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
         list<trackingCallback> cbRunnables;
         convertLocationInfo(locationInfo, locationExtended, status);
         convertLocation(locationInfo.location, ulpLocation, locationExtended);
-        fillElapsedRealTime(locationExtended, locationInfo.location);
+        fillElapsedRealTime(locationExtended, locationInfo);
         logLatencyInfo();
 
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
@@ -4788,7 +4819,7 @@ GnssAdapter::reportEnginePositions(unsigned int count,
                                 engLocation->location,
                                 engLocation->locationExtended);
                 fillElapsedRealTime(engLocation->locationExtended,
-                                    locationInfo[i].location);
+                                    locationInfo[i]);
             }
 
             reportPositionNmea(engLocation->location,
@@ -6037,7 +6068,7 @@ GnssAdapter::invokeGnssEnergyConsumedCallback(uint64_t energyConsumedSinceFirstB
         mBootReferenceEnergy = energyConsumedSinceFirstBoot;
         if (NULL != (fp = fopen("/data/vendor/location/energy.conf", "a+b"))) {
             rewind(fp);
-            if (ElapsedRealtimeEstimator::getCurrentTime(currentTime, sinceBootTimeNanos)) {
+            if (RealtimeEstimator::getCurrentTime(currentTime, sinceBootTimeNanos)) {
                 LOC_LOGv("sinceBootTimeNanos: %" PRIu64 " ", sinceBootTimeNanos);
                 if ((uint32_t)(sinceBootTimeNanos / 1000000000) > 30) {
                     int fr = fread(&mBootReferenceEnergy, sizeof(mBootReferenceEnergy), 1, fp);
@@ -6532,7 +6563,7 @@ void GnssAdapter::convertSatelliteInfo(std::vector<GnssDebugSatelliteInfo>& out,
     }
 
     // extract each sv info from systemstatus report
-    for(uint32_t i=0; i<svid_num && (svid_idx+i)<SV_ALL_NUM; i++) {
+    for (uint32_t i=0; i<svid_num && (svid_idx+i)<SV_ALL_NUM; i++) {
 
         GnssDebugSatelliteInfo s = {};
         s.size = sizeof(s);
@@ -6595,7 +6626,7 @@ bool GnssAdapter::getDebugReport(GnssDebugReport& r)
 
     // location block
     r.mLocation.size = sizeof(r.mLocation);
-    if(!reports.mLocation.empty() && reports.mLocation.back().mValid) {
+    if (!reports.mLocation.empty() && reports.mLocation.back().mValid) {
         r.mLocation.mValid = true;
         r.mLocation.mLocation.latitude =
             reports.mLocation.back().mLocation.gpsLocation.latitude;
@@ -6620,7 +6651,7 @@ bool GnssAdapter::getDebugReport(GnssDebugReport& r)
         r.mLocation.mUtcReported =
             reports.mLocation.back().mUtcReported;
     }
-    else if(!reports.mBestPosition.empty() && reports.mBestPosition.back().mValid) {
+    else if (!reports.mBestPosition.empty() && reports.mBestPosition.back().mValid) {
         r.mLocation.mValid = true;
         r.mLocation.mLocation.latitude =
                 (double)(reports.mBestPosition.back().mBestLat) * RAD2DEG;
@@ -6646,7 +6677,7 @@ bool GnssAdapter::getDebugReport(GnssDebugReport& r)
 
     // time block
     r.mTime.size = sizeof(r.mTime);
-    if(!reports.mTimeAndClock.empty() && reports.mTimeAndClock.back().mTimeValid) {
+    if (!reports.mTimeAndClock.empty() && reports.mTimeAndClock.back().mTimeValid) {
         r.mTime.mValid = true;
         r.mTime.timeEstimate =
             (((int64_t)(reports.mTimeAndClock.back().mGpsWeek)*7 +
@@ -7225,6 +7256,7 @@ GnssAdapter::configLeverArm(uint32_t sessionId,
                             const LeverArmConfigInfo& configInfo) {
 
     LocationError err = LOCATION_ERROR_NOT_SUPPORTED;
+
     // save the lever ARM config info for translating SPE positions from
     // GNSS antenna based to VRP based
     if (configInfo.leverArmValidMask & LEVER_ARM_TYPE_GNSS_TO_VRP_BIT) {
@@ -7237,6 +7269,8 @@ GnssAdapter::configLeverArm(uint32_t sessionId,
     if (true == mEngHubLoadSuccessful) {
         if (false == mEngHubProxy->configLeverArm(configInfo)) {
             err = LOCATION_ERROR_GENERAL_FAILURE;
+        } else {
+            err = LOCATION_ERROR_SUCCESS;
         }
     }
 
@@ -8106,19 +8140,22 @@ GnssAdapter::initEngHubProxy() {
 
         GnssAdapterUpdateNHzRequirementCb updateNHzRequirementCb =
             [this] (bool nHzNeeded, bool nHzMeasNeeded) {
+            // External engines can subscribe to Nhz Meas OR PVT report
+            // only if SPE supports NHz
+            if ((this->getCapabilities() & LOCATION_CAPABILITIES_QWES_GNSS_NHZ)) {
+                if (nHzMeasNeeded &&
+                        (!checkMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT))) {
+                    updateEvtMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT,
+                        LOC_REGISTRATION_MASK_ENABLED);
+                } else if (checkMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT)) {
+                    updateEvtMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT,
+                        LOC_REGISTRATION_MASK_DISABLED);
+                }
 
-            if (nHzMeasNeeded &&
-                    (!checkMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT))) {
-                updateEvtMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT,
-                    LOC_REGISTRATION_MASK_ENABLED);
-            } else if (checkMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT)) {
-                updateEvtMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT,
-                    LOC_REGISTRATION_MASK_DISABLED);
-            }
-
-            if (mNHzNeeded != nHzNeeded) {
-                mNHzNeeded = nHzNeeded;
-                checkAndRestartSPESession();
+                if (mNHzNeeded != nHzNeeded) {
+                    mNHzNeeded = nHzNeeded;
+                    checkAndRestartSPESession();
+                }
             }
         };
 
@@ -8129,7 +8166,7 @@ GnssAdapter::initEngHubProxy() {
         };
 
         getEngHubProxyFn* getter = (getEngHubProxyFn*) dlsym(handle, "getEngHubProxy");
-        if(getter != nullptr) {
+        if (getter != nullptr) {
             // Wait for the script(rootdir/etc/init.qcom.rc) to create socket folder
             locUtilWaitForDir(SOCKET_DIR_EHUB);
             EngineHubProxyBase* hubProxy = (*getter) (mMsgTask, mSystemStatus->getOsObserver(),

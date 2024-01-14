@@ -267,6 +267,8 @@ typedef uint64_t GnssLocationInfoFlagMask;
 #define LDT_GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT (1ULL<<35) // Cross-track protection level
 #define LDT_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT (1ULL<<36) // vertical protection level
 #define LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT (1ULL<<37) // dgnss station id
+#define LDT_GNSS_LOCATION_INFO_GPTP_TIME_BIT        (1ULL<<38) // GPTP time validity
+#define LDT_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT    (1ULL<<39) // GPTP time Uncertainity validity
 
 typedef enum {
     GEOFENCE_BREACH_ENTER = 0,
@@ -379,15 +381,17 @@ typedef uint64_t LocationCapabilitiesMask;
 // enabled by QWES license.
 #define   LOCATION_CAPABILITIES_QWES_WIFI_RTT_POSITIONING             (1ULL<<31)
 // This mask indicates wifi RSSI positioning is supported.
-#define   LOCATION_CAPABILITIES_WIFI_RSSI_POSITIONING                          (1ULL<<32)
+#define   LOCATION_CAPABILITIES_WIFI_RSSI_POSITIONING                 (1ULL<<32)
 // This mask indicates wifi RTT positioning is supported.
-#define   LOCATION_CAPABILITIES_WIFI_RTT_POSITIONING                           (1ULL<<33)
+#define   LOCATION_CAPABILITIES_WIFI_RTT_POSITIONING                  (1ULL<<33)
 // support GNSS bands
-#define   LOCATION_CAPABILITIES_GNSS_BANDS_BIT                   (1ULL<<34)
+#define   LOCATION_CAPABILITIES_GNSS_BANDS_BIT                        (1ULL<<34)
 // This mask indicates modem 3GPP source is available.
-#define   LOCATION_CAPABILITIES_MODEM_3GPP_AVAIL                 (1ULL<<35)
+#define   LOCATION_CAPABILITIES_MODEM_3GPP_AVAIL                      (1ULL<<35)
 // This mask indicates PR ML inference is present
-#define   LOCATION_CAPABILITIES_NLOS_ML20                          (1ULL<<36)
+#define   LOCATION_CAPABILITIES_NLOS_ML20                             (1ULL<<36)
+// This mask indicates if NHz is enableD
+#define   LOCATION_CAPABILITIES_QWES_GNSS_NHZ                         (1ULL<<37)
 
 typedef uint8_t LocationQwesFeatureType;
 typedef enum {
@@ -396,57 +400,59 @@ typedef enum {
     LOCATION_QWES_FEATURE_TYPE_CARRIER_PHASE                 = 1,
     // Modem supports SV Polynomial for tightly coupled external
     // DR support. This is a Standalone Feature.
-    LOCATION_QWES_FEATURE_TYPE_SV_POLYNOMIAL,
+    LOCATION_QWES_FEATURE_TYPE_SV_POLYNOMIAL                 = 2,
     // Modem supports SV Ephemeris for tightly coupled external
     // PPE support. This is a Standalone Feature.
-    LOCATION_QWES_FEATURE_TYPE_SV_EPH,
+    LOCATION_QWES_FEATURE_TYPE_SV_EPH                        = 3,
     // Modem supports GNSS Single Frequency feature. This is a
     // Standalone Feature.
-    LOCATION_QWES_FEATURE_TYPE_GNSS_SINGLE_FREQUENCY,
+    LOCATION_QWES_FEATURE_TYPE_GNSS_SINGLE_FREQUENCY         = 4,
     // Modem supports GNSS Multi Frequency feature. Multi Frequency
     // enables Single frequency also.
-    LOCATION_QWES_FEATURE_TYPE_GNSS_MULTI_FREQUENCY,
+    LOCATION_QWES_FEATURE_TYPE_GNSS_MULTI_FREQUENCY          = 5,
     // This indicates Time and Frequency status.
-    LOCATION_QWES_FEATURE_TYPE_TIME_FREQUENCY,
+    LOCATION_QWES_FEATURE_TYPE_TIME_FREQUENCY                = 6,
     // This indicates Time Uncertainty  status.
-    LOCATION_QWES_FEATURE_TYPE_TIME_UNCERTAINTY,
+    LOCATION_QWES_FEATURE_TYPE_TIME_UNCERTAINTY              = 7,
     // This indicates Clock Estimate status.
-    LOCATION_QWES_FEATURE_TYPE_CLOCK_ESTIMATE,
+    LOCATION_QWES_FEATURE_TYPE_CLOCK_ESTIMATE                = 8,
     // This mask indicates that PPE (Precise Positioning Engine)
     // library is enabled or Precise Positioning Framework (PPF)
     // is available. This bundle includes features for Carrier
     // Phase and SV Ephermeris.
-    LOCATION_QWES_FEATURE_TYPE_PPE,
+    LOCATION_QWES_FEATURE_TYPE_PPE                           = 9,
     // This indicates QDR2_C license bundle is enabled. This
     // bundle includes features for SV Polynomial.
-    LOCATION_QWES_FEATURE_TYPE_QDR2,
+    LOCATION_QWES_FEATURE_TYPE_QDR2                          = 10,
     // This indicates QDR3_C license bundle is enabled. This
     // bundle includes features for SV Polynomial.
-    LOCATION_QWES_FEATURE_TYPE_QDR3,
+    LOCATION_QWES_FEATURE_TYPE_QDR3                          = 11,
     // This indicates VEPP license bundle is enabled. VEPP
     // bundle include Carrier Phase and SV Polynomial features.
-    LOCATION_QWES_FEATURE_TYPE_VPE,
+    LOCATION_QWES_FEATURE_TYPE_VPE                           = 12,
     // This indicates DGNSS license is enabled.
-    LOCATION_QWES_FEATURE_TYPE_DGNSS,
+    LOCATION_QWES_FEATURE_TYPE_DGNSS                         = 13,
     // This indicates DLP feature is enabled by QESDK APP
     // license
-    LOCATION_QWES_FEATURE_TYPE_DLP_QESDK,
+    LOCATION_QWES_FEATURE_TYPE_DLP_QESDK                     = 14,
     // This indicates MLP feature is enabled by QESDK APP
     // license
-    LOCATION_QWES_FEATURE_TYPE_MLP_QESDK,
+    LOCATION_QWES_FEATURE_TYPE_MLP_QESDK                     = 15,
     // This indicates EP can do SSR2OSR correction data
     // parseing
-    LOCATION_FEATURE_TYPE_CORR_DATA_PARSER,
+    LOCATION_FEATURE_TYPE_CORR_DATA_PARSER                   = 16,
     // This indicates PR meas ML infernece is enabled
-    LOCATION_QWES_FEATURE_NLOS_ML20,
+    LOCATION_QWES_FEATURE_NLOS_ML20                          = 17,
     // This indicates wifi RSSI positioning is
     // enabled by QWES license.
-    LOCATION_QWES_FEATURE_TYPE_RSSI_POSITIONING,
+    LOCATION_QWES_FEATURE_TYPE_RSSI_POSITIONING              = 18,
     // This indicates wifi RTT positioning is
     // enabled by QWES license.
-    LOCATION_QWES_FEATURE_TYPE_RTT_POSITIONING,
+    LOCATION_QWES_FEATURE_TYPE_RTT_POSITIONING               = 19,
+    // This indicates if NHz feature is supported
+    LOCATION_QWES_FEATURE_STATUS_GNSS_NHZ                    = 20,
     // Max value
-    LOCATION_QWES_FEATURE_TYPE_MAX
+    LOCATION_QWES_FEATURE_TYPE_MAX                           = 21
 } LocationQwesFeatureTypes;
 
 typedef uint64_t LocationHwCapabilitiesMask;
@@ -795,6 +801,9 @@ typedef enum {
     GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_UNCERTAINTY_BIT            = (1<<7),
     GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT = (1<<8),
     GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT            = (1<<9),
+    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT        = (1<<10),
+    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT            = (1<<11),
+    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT        = (1<<12),
 } GnssMeasurementsClockFlagsBits;
 
 typedef uint32_t GnssAidingDataSvMask;
@@ -809,9 +818,9 @@ typedef enum {
     GNSS_AIDING_DATA_SV_SA_DATA_BIT      = (1<<7), // sensitivity assistance data
     GNSS_AIDING_DATA_SV_NO_EXIST_BIT     = (1<<8), // SV does not exist
     GNSS_AIDING_DATA_SV_IONOSPHERE_BIT   = (1<<9), // ionosphere correction
-    GNSS_AIDING_DATA_SV_TIME_BIT         = (1<<10),// reset satellite time
-    GNSS_AIDING_DATA_SV_MB_DATA          = (1<<11),// delete multiband data
-    GNSS_AIDING_DATA_SV_POLY_BIT         = (1<<12),// poly
+    GNSS_AIDING_DATA_SV_TIME_BIT         = (1<<10), // reset satellite time
+    GNSS_AIDING_DATA_SV_MB_DATA          = (1<<11), // delete multiband data
+    GNSS_AIDING_DATA_SV_POLY_BIT         = (1<<12), // poly
 } GnssAidingDataSvBits;
 
 typedef uint32_t GnssAidingDataSvTypeMask;
@@ -907,8 +916,7 @@ typedef enum {
      GNSS_SIGNAL_NAVIC_L5 | GNSS_SIGNAL_BEIDOU_B2AQ | GNSS_SIGNAL_BEIDOU_B2BI |\
      GNSS_SIGNAL_BEIDOU_B2BQ)
 
-typedef enum
-{
+typedef enum {
     GNSS_LOC_SV_SYSTEM_UNKNOWN                = 0,
     /** unknown sv system. */
     GNSS_LOC_SV_SYSTEM_MIN                    = 1,
@@ -1383,7 +1391,8 @@ typedef struct {
          due to possible discontinuities.
          Unit: Millisecond */
     uint32_t refFCount;
-    /** Number of clock resets/discontinuities detected, affecting the local hardware counter value. */
+    /** Number of clock resets/discontinuities detected,
+        affecting the local hardware counter value. */
     uint32_t numClockResets;
 
     inline bool hasAccurateTime() const {
@@ -1427,7 +1436,8 @@ typedef struct {
         due to possible discontinuities.
         Unit: Millisecond */
     uint32_t  refFCount;
-    /** Number of clock resets/discontinuities detected, affecting the local hardware counter value. */
+    /** Number of clock resets/discontinuities detected,
+        affecting the local hardware counter value. */
     uint32_t numClockResets;
     /** GLONASS four year number from 1996. Refer to GLONASS ICD.
         Applicable only for GLONASS and shall be ignored for other constellations.
@@ -1576,6 +1586,11 @@ typedef struct {
     //   - Monitoring station -- 1000-2023 (Station ID biased by 1000).
     //   - Other values reserved.
     uint16_t dgnssStationId[DGNSS_STATION_ID_MAX];
+    // GPTP time field in ns
+    uint64_t elapsedgPTPTime;
+    // GPTP time Unc
+    uint64_t elapsedgPTPTimeUnc;
+
 } GnssLocationInfoNotification;
 
 // Indicate the API that is called to generate the location report
@@ -1829,6 +1844,8 @@ typedef struct {
     GnssMeasurementsSignalType referenceSignalTypeForIsb;
     uint64_t elapsedRealTime;    // in ns
     uint64_t elapsedRealTimeUnc; // in ns
+    uint64_t elapsedgPTPTime;    // in ns
+    uint64_t elapsedgPTPTimeUnc; // in ns
 } GnssMeasurementsClock;
 
 typedef struct {
