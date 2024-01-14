@@ -95,9 +95,11 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define DEG2RAD    (M_PI / 180.0)
 #define PROCESS_NAME_ENGINE_SERVICE "engine-service"
 #define PROCESS_NAME_SAP_MAP        "hmacdaemon"
+#if defined (FEATURE_AUTOMOTIVE) || defined (FEATURE_NHZ_ENABLED)
 #define MIN_TRACKING_INTERVAL (100) // 100 msec
-#define NHZ_ENABLED_MIN_TRACKING_INTERVAL (100) // 100 msec
-#define NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL (1000) // 1 sec
+#else
+#define MIN_TRACKING_INTERVAL (1000) // 1 sec
+#endif //FEATURE_AUTOMOTIVE
 #define BILLION_NSEC (1000000000ULL)
 #define NMEA_MIN_THRESHOLD_MSEC (99)
 #define NMEA_MAX_THRESHOLD_MSEC (975)
@@ -3458,18 +3460,9 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, TrackingOptions& options)
             } else if (0 == mOptions.size) {
                 err = LOCATION_ERROR_INVALID_PARAMETER;
             } else {
-
-                uint32_t minIntervalToSet = NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL;
-                bool nHzStatus = mAdapter.getCapabilities() & LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
-                if (nHzStatus) {
-                    minIntervalToSet = NHZ_ENABLED_MIN_TRACKING_INTERVAL;
+                if (mOptions.minInterval < MIN_TRACKING_INTERVAL) {
+                    mOptions.minInterval = MIN_TRACKING_INTERVAL;
                 }
-                if (mOptions.minInterval < minIntervalToSet) {
-                    mOptions.minInterval = minIntervalToSet;
-                }
-                LOC_LOGd("Updated min Interval: %d, nHzEnabled: %s",
-                        mOptions.minInterval, nHzStatus ? "true" : "false");
-
                 if (mOptions.minDistance > 0 &&
                         ContextBase::isMessageSupported(
                         LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_TRACKING)) {
@@ -3702,17 +3695,9 @@ GnssAdapter::updateTrackingOptionsCommand(LocationAPI* client, uint32_t id,
                             mOptions.tbm, TRACKING_TBM_THRESHOLD_MILLIS);
                     mOptions.powerMode = GNSS_POWER_MODE_M2;
                 }
-                uint32_t minIntervalToSet = NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL;
-                bool nHzStatus = mAdapter.getCapabilities() & LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
-                if (nHzStatus) {
-                    minIntervalToSet = NHZ_ENABLED_MIN_TRACKING_INTERVAL;
+                if (mOptions.minInterval < MIN_TRACKING_INTERVAL) {
+                    mOptions.minInterval = MIN_TRACKING_INTERVAL;
                 }
-                if (mOptions.minInterval < minIntervalToSet) {
-                    mOptions.minInterval = minIntervalToSet;
-                }
-                LOC_LOGd("Updated min Interval: %d, nHzEnabled: %s",
-                        mOptions.minInterval, nHzStatus ? "true" : "false");
-
                 // Now update session as required
                 if (isTimeBased && mOptions.minDistance > 0) {
                     // switch from time based to distance based
@@ -8121,22 +8106,19 @@ GnssAdapter::initEngHubProxy() {
 
         GnssAdapterUpdateNHzRequirementCb updateNHzRequirementCb =
             [this] (bool nHzNeeded, bool nHzMeasNeeded) {
-            // External engines can subscribe to Nhz Meas OR PVT report
-            // only if SPE supports NHz
-            if ((this->getCapabilities() & LOCATION_CAPABILITIES_QWES_GNSS_NHZ)) {
-                if (nHzMeasNeeded &&
-                        (!checkMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT))) {
-                    updateEvtMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT,
-                        LOC_REGISTRATION_MASK_ENABLED);
-                } else if (checkMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT)) {
-                    updateEvtMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT,
-                        LOC_REGISTRATION_MASK_DISABLED);
-                }
 
-                if (mNHzNeeded != nHzNeeded) {
-                    mNHzNeeded = nHzNeeded;
-                    checkAndRestartSPESession();
-                }
+            if (nHzMeasNeeded &&
+                    (!checkMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT))) {
+                updateEvtMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT,
+                    LOC_REGISTRATION_MASK_ENABLED);
+            } else if (checkMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT)) {
+                updateEvtMask(LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT,
+                    LOC_REGISTRATION_MASK_DISABLED);
+            }
+
+            if (mNHzNeeded != nHzNeeded) {
+                mNHzNeeded = nHzNeeded;
+                checkAndRestartSPESession();
             }
         };
 
