@@ -199,7 +199,7 @@ extern "C" void initGnssAutoPowerHandler(void) {
         // Create and initialize a power policy client.
        std::shared_ptr<gnssCPM::GnssCARPowerHandler> powerPolicyClient =
             ndk::SharedRefBase::make<gnssCPM::GnssCARPowerHandler>();
-       if (!powerPolicyClient->initialize()) {
+       if ((nullptr != powerPolicyClient)&&(!powerPolicyClient->initialize())) {
            LOC_LOGw("Failed to initialize power policy client");
            sleep(2);
            return;
