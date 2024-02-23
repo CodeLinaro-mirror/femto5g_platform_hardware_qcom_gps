@@ -790,6 +790,14 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
             out.dgnssStationId[i] = locationExtended.dgnssStationId[i];
         }
     }
+    if (GPS_LOCATION_EXTENDED_HAS_BASE_LINE_LENGTH & locationExtended.flags) {
+        out.flags |= GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT;
+        out.baseLineLength = locationExtended.baseLineLength;
+    }
+    if (GPS_LOCATION_EXTENDED_HAS_AGE_OF_CORRECTION & locationExtended.flags) {
+        out.flags |= GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT;
+        out.ageMsecOfCorrections = locationExtended.ageMsecOfCorrections;
+    }
 }
 
 inline uint32_t
@@ -4057,6 +4065,7 @@ GnssAdapter::reportEnginePositions(unsigned int count,
     }
 
     GnssLocationInfoNotification locationInfo[LOC_OUTPUT_ENGINE_COUNT] = {};
+    memset(locationInfo, 0, sizeof(locationInfo));
     for (unsigned int i = 0; i < count; i++) {
         const EngineLocationInfo* engLocation = (locationArr+i);
         // if it is fused/default location, call reportPosition maintain legacy behavior

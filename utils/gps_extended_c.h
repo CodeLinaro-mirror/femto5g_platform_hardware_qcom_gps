@@ -474,6 +474,10 @@ typedef uint64_t GpsLocationExtendedFlags;
 /** GpsLocationExtended has valid numOfdgnssStationId and
  *  dgnssStationId. */
 #define GPS_LOCATION_EXTENDED_HAS_DGNSS_STATION_ID               0x100000000000000
+/* Distance between base station and receiver */
+#define GPS_LOCATION_EXTENDED_HAS_BASE_LINE_LENGTH               0x200000000000000
+/* Age of Corrections */
+#define GPS_LOCATION_EXTENDED_HAS_AGE_OF_CORRECTION              0x400000000000000
 
 typedef uint32_t LocNavSolutionMask;
 /* Bitmask to specify whether SBAS ionospheric correction is used  */
@@ -981,6 +985,10 @@ typedef struct {
     uint64_t systemTick;
     /** Uncertainty for System Tick at GPS Time in milliseconds   */
     float systemTickUnc;
+    /** Distance to baseStation. Unit - meters */
+    double baseLineLength;
+    /** Age of corrections - Unit - milli-seconds */
+    uint64_t ageMsecOfCorrections;
 } GpsLocationExtended;
 
 // struct that contains complete position info from engine

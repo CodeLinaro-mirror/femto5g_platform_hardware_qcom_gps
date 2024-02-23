@@ -252,6 +252,8 @@ typedef enum {
     GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT    = (1ULL<<35), // Cross-track protection level
     GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT       = (1ULL<<36), // vertical protection level
     GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT       = (1ULL<<37), // dgnss station id
+    GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT       = (1ULL<<38), // base station & receiver distance
+    GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT      = (1ULL<<39), // Age of Corrections
 } GnssLocationInfoFlagBits;
 
 enum GeofenceBreachType {
@@ -1304,6 +1306,13 @@ struct GnssLocationInfoNotification {
     //   - Monitoring station -- 1000-2023 (Station ID biased by 1000).
     //   - Other values reserved.
     uint16_t dgnssStationId[DGNSS_STATION_ID_MAX];
+    // Distance between the base station and the receiver
+    // Unit - meters
+    double baseLineLength;
+    // Difference in time between the fix timestamp using the
+    // correction and the time of the correction
+    // Unit - milli-seconds
+    uint64_t ageMsecOfCorrections;
 };
 
 struct GnssNiNotification {
