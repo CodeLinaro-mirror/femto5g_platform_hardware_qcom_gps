@@ -541,13 +541,13 @@ void LocApiBase::reportDcMessage(const GnssDcReportInfo& dcReport) {
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportDcMessage(dcReport));
 }
 
-void LocApiBase::reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask) {
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportModemGnssQesdkFeatureStatus(mask));
-}
-
 void LocApiBase::reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification) {
     // loop through adapters, and deliver to all adapters.
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportSignalTypeCapabilities(gnssCapabNotification));
+}
+
+void LocApiBase::reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask) {
+    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportModemGnssQesdkFeatureStatus(mask));
 }
 
 void LocApiBase::reportQwesCapabilities
@@ -555,6 +555,8 @@ void LocApiBase::reportQwesCapabilities
     const std::unordered_map<LocationQwesFeatureType, bool> &featureMap
 )
 {
+    //Set Qwes feature status map in ContextBase
+    ContextBase::setQwesFeatureStatus(featureMap);
     // loop through adapters, and deliver to all adapters.
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportQwesCapabilities(featureMap));
 }
@@ -972,7 +974,8 @@ DEFAULT_IMPL()
 void LocApiBase::
     configRobustLocation(bool /*enabled*/,
                          bool /*enableForE911*/,
-                         LocApiResponse* /*adapterResponse*/)
+                         LocApiResponse* /*adapterResponse*/,
+                         bool /*enableForE911Valid*/)
 DEFAULT_IMPL()
 
 void LocApiBase::
@@ -1010,7 +1013,7 @@ void LocApiBase::setTribandState(bool /*enabled*/)
 DEFAULT_IMPL()
 
 void LocApiBase::
-    configPrecisePositioning(uint32_t featureId, bool enable, std::string appHash,
+    configPrecisePositioning(uint32_t featureId, bool enable, const std::string& appHash,
             LocApiResponse* /*adpterResponse*/)
 DEFAULT_IMPL()
 

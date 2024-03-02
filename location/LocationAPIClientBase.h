@@ -60,6 +60,10 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/*
+Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef LOCATION_API_CLINET_BASE_H
 #define LOCATION_API_CLINET_BASE_H
 
@@ -159,10 +163,10 @@ public:
     LocationAPIRequest* getRequestBySessionArrayPtr(uint32_t* sessionArrayPtr);
 
     // LocationControlAPI
-    uint32_t locAPIGnssDeleteAidingData(GnssAidingData& data);
+    uint32_t locAPIGnssDeleteAidingData(const GnssAidingData& data);
     uint32_t locAPIEnable(LocationTechnologyType techType);
     void locAPIDisable();
-    uint32_t locAPIGnssUpdateConfig(GnssConfig config);
+    uint32_t locAPIGnssUpdateConfig(const GnssConfig& config);
     uint32_t locAPIGnssGetConfig(GnssConfigFlagsMask config);
     inline ILocationControlAPI* getControlAPI() { return mLocationControlAPI; }
 
@@ -244,9 +248,9 @@ public:
     LocationAPIRequest* getRequestBySession(uint32_t session);
 
     // LocationAPI
-    uint32_t locAPIStartTracking(TrackingOptions& trackingOptions);
+    uint32_t locAPIStartTracking(const TrackingOptions& trackingOptions);
     void locAPIStopTracking();
-    void locAPIUpdateTrackingOptions(TrackingOptions& trackingOptions);
+    void locAPIUpdateTrackingOptions(const TrackingOptions& trackingOptions);
 
     int32_t locAPIGetBatchSize();
     uint32_t locAPIStartSession(
@@ -255,6 +259,7 @@ public:
     uint32_t locAPIUpdateSessionOptions(
             uint32_t id, uint32_t sessionMode, TrackingOptions&& trackingOptions);
     uint32_t locAPIGetBatchedLocations(uint32_t id, size_t count);
+    void locAPIRemoveAllSessions();
 
     uint32_t locAPIAddGeofences(size_t count, uint32_t* ids,
             GeofenceOption* options, GeofenceInfo* data);
@@ -272,10 +277,10 @@ public:
     void onResponseCb(LocationError error, uint32_t id);
     void onCollectiveResponseCb(size_t count, LocationError* errors, uint32_t* ids);
 
-    void beforeGeofenceBreachCb(GeofenceBreachNotification geofenceBreachNotification);
+    void beforeGeofenceBreachCb(const GeofenceBreachNotification& geofenceBreachNotification);
 
     inline virtual void onCapabilitiesCb(LocationCapabilitiesMask /*capabilitiesMask*/) {}
-    inline virtual void onGnssNmeaCb(GnssNmeaNotification /*gnssNmeaNotification*/) {}
+    inline virtual void onGnssNmeaCb(const GnssNmeaNotification& /*gnssNmeaNotification*/) {}
     inline virtual void onGnssDataCb(const GnssDataNotification &/*gnssDataNotification*/) {}
     inline virtual void onGnssMeasurementsCb(
             const GnssMeasurementsNotification &/*gnssMeasurementsNotification*/) {}
@@ -291,11 +296,11 @@ public:
             const GnssLocationInfoNotification &/*gnssLocationInfoNotification*/) {}
 
     inline virtual void onBatchingCb(size_t /*count*/, Location* /*location*/,
-            BatchingOptions /*batchingOptions*/) {}
-    inline virtual void onBatchingStatusCb(BatchingStatusInfo /*batchingStatus*/,
+            const BatchingOptions& /*batchingOptions*/) {}
+    inline virtual void onBatchingStatusCb(const BatchingStatusInfo& /*batchingStatus*/,
             std::list<uint32_t> &/*listOfCompletedTrips*/) {}
-    void beforeBatchingStatusCb(BatchingStatusInfo batchStatus,
-            std::list<uint32_t> & tripCompletedList);
+    void beforeBatchingStatusCb(const BatchingStatusInfo& batchStatus,
+            const std::list<uint32_t> & tripCompletedList);
     inline virtual void onStartBatchingCb(LocationError /*error*/) {}
     inline virtual void onStopBatchingCb(LocationError /*error*/) {}
     inline virtual void onUpdateBatchingOptionsCb(LocationError /*error*/) {}
@@ -304,7 +309,7 @@ public:
     inline virtual void onGeofenceBreachCb(
             const GeofenceBreachNotification& /*geofenceBreachNotification*/) {}
     inline virtual void onGeofenceStatusCb(
-            GeofenceStatusNotification /*geofenceStatusNotification*/) {}
+            const GeofenceStatusNotification& /*geofenceStatusNotification*/) {}
     inline virtual void onAddGeofencesCb(
             size_t /*count*/, LocationError* /*errors*/, uint32_t* /*ids*/) {}
     inline virtual void onRemoveGeofencesCb(
@@ -320,7 +325,7 @@ public:
             const GnssNiNotification &/*gnssNiNotification*/) {}
     inline virtual void onGnssNiResponseCb(LocationError /*error*/) {}
 
-    inline virtual void onLocationSystemInfoCb(LocationSystemInfo /*locationSystemInfo*/) {}
+    inline virtual void onLocationSystemInfoCb(const LocationSystemInfo& /*locationSystemInfo*/) {}
 
 protected:
     virtual ~LocationAPIClientBase();

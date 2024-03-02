@@ -969,4 +969,5 @@ int32_t NlpSessionStartedDataItem::copyFrom(IDataItemCore* src) {
     EXIT_LOG("%d", result);
     return result;
 }
+
 } //namespace loc_core

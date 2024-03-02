@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -71,6 +71,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <list>
 #include <string.h>
 #include <string>
+#include <time.h>
 
 #define GNSS_NI_REQUESTOR_MAX  (256)
 #define GNSS_NI_MESSAGE_ID_MAX (2048)
@@ -127,6 +128,9 @@ typedef enum {
     LOCATION_HAS_QUALITY_TYPE_BIT      = (1<<11), // location has valid quality type
     LOCATION_HAS_TECH_MASK_BIT         = (1<<12), // location has valid tech mask
     LOCATION_HAS_TIME_UNC_BIT          = (1<<13), // location has timeUncMs
+    LOCATION_HAS_SYSTEM_TICK_BIT       = (1<<14), // location has system Tick for qtimer tick count
+    LOCATION_HAS_GPTP_TIME_BIT         = (1<<15), // location has valid GPTP time
+    LOCATION_HAS_GPTP_TIME_UNC_BIT     = (1<<16), // location has valid GPTP time Uncertainity
 } LocationFlagsBits;
 
 typedef uint16_t LocationTechnologyMask;
@@ -267,8 +271,6 @@ typedef uint64_t GnssLocationInfoFlagMask;
 #define LDT_GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT (1ULL<<35) // Cross-track protection level
 #define LDT_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT (1ULL<<36) // vertical protection level
 #define LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT (1ULL<<37) // dgnss station id
-#define LDT_GNSS_LOCATION_INFO_GPTP_TIME_BIT        (1ULL<<38) // GPTP time validity
-#define LDT_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT    (1ULL<<39) // GPTP time Uncertainity validity
 
 typedef enum {
     GEOFENCE_BREACH_ENTER = 0,
@@ -304,7 +306,7 @@ typedef uint64_t LocationCapabilitiesMask;
 // supports startBatching API with minInterval param
 #define   LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT           (1<<1)
 // supports startTracking API with minDistance param
-#define  LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT       (1<<2)
+#define  LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT        (1<<2)
 // supports startBatching API with minDistance param
 #define   LOCATION_CAPABILITIES_DISTANCE_BASED_BATCHING_BIT       (1<<3)
 // supports addGeofences API
@@ -376,10 +378,10 @@ typedef uint64_t LocationCapabilitiesMask;
 #define   LOCATION_CAPABILITIES_PRECISE_LIB_PRESENT              (1<<29)
 // This mask indicates wifi RSSI positioning is
 // enabled by QWES license.
-#define   LOCATION_CAPABILITIES_QWES_WIFI_RSSI_POSITIONING            (1ULL<<30)
+#define   LOCATION_CAPABILITIES_QWES_WIFI_RSSI_POSITIONING       (1ULL<<30)
 // This mask indicates wifi RTT positioning is
 // enabled by QWES license.
-#define   LOCATION_CAPABILITIES_QWES_WIFI_RTT_POSITIONING             (1ULL<<31)
+#define   LOCATION_CAPABILITIES_QWES_WIFI_RTT_POSITIONING        (1ULL<<31)
 // This mask indicates wifi RSSI positioning is supported.
 #define   LOCATION_CAPABILITIES_WIFI_RSSI_POSITIONING                 (1ULL<<32)
 // This mask indicates wifi RTT positioning is supported.
@@ -1133,6 +1135,11 @@ typedef struct {
     float timeUncMs;             // Time uncertainty in milliseconds
                                  // SPE report: confidence level is 99%
                                  // Other engine report: confidence not unspecified
+    uint64_t systemTick;        // System Tick at GPS Time
+    // GPTP time field in ns
+    uint64_t elapsedgPTPTime;
+    // GPTP time Unc
+    uint64_t elapsedgPTPTimeUnc;
 } Location;
 
 typedef enum {
@@ -1401,9 +1408,6 @@ typedef struct {
                 // 65535 GPS week from modem means unknown
                 (systemWeek != UNKNOWN_GPS_WEEK_NUM) &&
                 (validityMask & GNSS_SYSTEM_TIME_WEEK_MS_VALID) &&
-                (validityMask & GNSS_SYSTEM_CLK_TIME_BIAS_VALID) &&
-                (systemClkTimeBias != 0.0f) &&
-                (systemClkTimeBias < REAL_TIME_ESTIMATOR_TIME_UNC_THRESHOLD_MSEC) &&
                 (validityMask & GNSS_SYSTEM_CLK_TIME_BIAS_UNC_VALID) &&
                 (systemClkTimeUncMs != 0.0f) &&
                 (systemClkTimeUncMs < REAL_TIME_ESTIMATOR_TIME_UNC_THRESHOLD_MSEC)) {
@@ -1586,11 +1590,6 @@ typedef struct {
     //   - Monitoring station -- 1000-2023 (Station ID biased by 1000).
     //   - Other values reserved.
     uint16_t dgnssStationId[DGNSS_STATION_ID_MAX];
-    // GPTP time field in ns
-    uint64_t elapsedgPTPTime;
-    // GPTP time Unc
-    uint64_t elapsedgPTPTimeUnc;
-
 } GnssLocationInfoNotification;
 
 // Indicate the API that is called to generate the location report
@@ -2778,11 +2777,11 @@ typedef std::function<void(
 typedef std::function<void(
     uint32_t count,      // number of locations in array
     Location* location, // array of locations
-    BatchingOptions batchingOptions // Batching options
+    const BatchingOptions& batchingOptions // Batching options
 )> batchingCallback;
 
 typedef std::function<void(
-    BatchingStatusInfo batchingStatus, // batch status
+    const BatchingStatusInfo& batchingStatus, // batch status
     std::list<uint32_t> & listOfCompletedTrips
 )> batchingStatusCallback;
 
@@ -2816,7 +2815,7 @@ typedef std::function<void(
 /* Used for addGeofences API, optional can be NULL
        geofenceStatusCallback is called when any number of geofences have a status change */
 typedef std::function<void(
-    GeofenceStatusNotification geofenceStatusNotification
+    const GeofenceStatusNotification& geofenceStatusNotification
 )> geofenceStatusCallback;
 
 /* Network Initiated request, optional can be NULL
@@ -2837,7 +2836,7 @@ typedef std::function<void(
     gnssNmeaCallback is called only during a tracking session
     broadcasted to all clients, no matter if a session has started by client */
 typedef std::function<void(
-    GnssNmeaNotification gnssNmeaNotification
+   const GnssNmeaNotification& gnssNmeaNotification
 )> gnssNmeaCallback;
 
 /* Gives GNSS data, optional can be NULL
@@ -2864,7 +2863,7 @@ typedef std::function<void(
    system information update. optional, can be NULL.
 */
 typedef std::function<void(
-    LocationSystemInfo locationSystemInfo
+    const LocationSystemInfo& locationSystemInfo
 )> locationSystemInfoCallback;
 
 /* LocationSystemInfoCb is for receiving rare occuring location
@@ -2921,7 +2920,7 @@ struct AntennaInfoCallback {
 * Callback with NFW information.
 */
 typedef std::function<void(
-    GnssNfwNotification notification
+    const GnssNfwNotification& notification
 )> nfwStatusCallback;
 
 typedef std::function<bool(
@@ -2938,26 +2937,26 @@ typedef std::function<void(
 
 typedef struct {
     uint32_t size; // set to sizeof(LocationCallbacks)
-    capabilitiesCallback capabilitiesCb;             // mandatory
-    responseCallback responseCb;                     // mandatory
-    collectiveResponseCallback collectiveResponseCb; // mandatory
-    trackingCallback trackingCb;                     // optional
-    batchingCallback batchingCb;                     // optional
-    geofenceBreachCallback geofenceBreachCb;         // optional
-    geofenceStatusCallback geofenceStatusCb;         // optional
-    gnssLocationInfoCallback gnssLocationInfoCb;     // optional
-    gnssNiCallback gnssNiCb;                         // optional
-    gnssSvCallback gnssSvCb;                         // optional
-    gnssNmeaCallback gnssNmeaCb;                     // optional
-    gnssDataCallback gnssDataCb;                     // optional
-    gnssMeasurementsCallback gnssMeasurementsCb;     // optional
-    gnssMeasurementsCallback gnssNHzMeasurementsCb;  // optional
-    batchingStatusCallback batchingStatusCb;         // optional
-    locationSystemInfoCallback locationSystemInfoCb; // optional
-    engineLocationsInfoCallback engineLocationsInfoCb; // optional
-    gnssDcReportCallback gnssDcReportCb;               // optional
-    gnssNmeaCallback engineNmeaCb; // optional
+    capabilitiesCallback capabilitiesCb;                // mandatory
+    responseCallback responseCb;                        // mandatory
+    collectiveResponseCallback collectiveResponseCb;    // mandatory
+    trackingCallback trackingCb;                        // optional
+    batchingCallback batchingCb;                        // optional
+    geofenceBreachCallback geofenceBreachCb;            // optional
+    geofenceStatusCallback geofenceStatusCb;            // optional
+    gnssLocationInfoCallback gnssLocationInfoCb;        // optional
+    gnssNiCallback gnssNiCb;                            // optional
+    gnssSvCallback gnssSvCb;                            // optional
+    gnssNmeaCallback gnssNmeaCb;                        // optional
+    gnssDataCallback gnssDataCb;                        // optional
+    gnssMeasurementsCallback gnssMeasurementsCb;        // optional
+    gnssMeasurementsCallback gnssNHzMeasurementsCb;     // optional
+    batchingStatusCallback batchingStatusCb;            // optional
+    locationSystemInfoCallback locationSystemInfoCb;    // optional
+    engineLocationsInfoCallback engineLocationsInfoCb;  // optional
+    gnssDcReportCallback gnssDcReportCb;                // optional
     gnssSignalTypesCallback gnssSignalTypesCb;          // optional
+    gnssNmeaCallback engineNmeaCb;                      // optional
 } LocationCallbacks;
 
 typedef struct {
@@ -3027,6 +3026,22 @@ typedef uint64_t NetworkHandle;
 #define NETWORK_HANDLE_UNKNOWN  ~0
 #define MAX_NETWORK_HANDLES 10
 
+enum {
+    NON_EMERGENCY_ODCPI = (1<<0),
+    EMERGENCY_ODCPI =     (1<<1)
+} OdcpiCallbackTypeMaskBits;
+
+typedef uint16_t OdcpiCallbackTypeMask;
+
+enum {
+    MODEM_QESDK_FEATURE_CARRIER_PHASE     = (1<<0),
+    MODEM_QESDK_FEATURE_SV_POLYNOMIALS    = (1<<1),
+    MODEM_QESDK_FEATURE_DGNSS             = (1<<2),
+    MODEM_QESDK_FEATURE_ROBUST_LOCATION   = (1<<3)
+} ModemGnssQesdkFeatureBits;
+
+typedef uint64_t ModemGnssQesdkFeatureMask;
+
 /* enum OSNMA New Public Key Type (NPKT) */
 typedef enum {
     MGP_OSNMA_NPKT_RESERVED0    = 0, /* reserved 0 */
@@ -3079,15 +3094,6 @@ typedef struct {
     mgpOsnmaMerkleTreeT  zMerkleTree; /* Merkle Tree Nodes */
 } mgpOsnmaPublicKeyAndMerkleTreeStruct;
 
-enum {
-    MODEM_QESDK_FEATURE_CARRIER_PHASE     = (1<<0),
-    MODEM_QESDK_FEATURE_SV_POLYNOMIALS    = (1<<1),
-    MODEM_QESDK_FEATURE_DGNSS             = (1<<2),
-    MODEM_QESDK_FEATURE_ROBUST_LOCATION   = (1<<3)
-} ModemGnssQesdkFeatureBits;
-
-typedef uint64_t ModemGnssQesdkFeatureMask;
-
 typedef void* QDgnssListenerHDL;
 
 typedef std::function<void(
@@ -3103,12 +3109,5 @@ typedef uint16_t QDgnss3GppSourceBitMask;
 typedef std::function<void(
     QDgnss3GppSourceBitMask    modem3GppSourceMask
 )> QDgnssModem3GppAvailCb;
-
-enum {
-    NON_EMERGENCY_ODCPI = (1<<0),
-    EMERGENCY_ODCPI =     (1<<1)
-} OdcpiCallbackTypeMaskBits;
-
-typedef uint16_t OdcpiCallbackTypeMask;
 
 #endif /* LOCATIONDATATYPES_H */

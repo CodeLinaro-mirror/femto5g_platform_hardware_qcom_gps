@@ -968,7 +968,7 @@ public:
             bool inSessionOnly = true) const;
     bool setDefaultGnssEngineStates(void);
     bool eventConnectionStatus(bool connected, int8_t type,
-                               bool roaming, NetworkHandle networkHandle, string& apn);
+                               bool roaming, NetworkHandle networkHandle, const string& apn);
     bool updatePowerConnectState(bool charging);
     void resetNetworkInfo();
     bool eventOptInStatus(bool userConsent);
@@ -977,9 +977,9 @@ public:
     bool eventSetTracking(bool tracking, bool updateSysStatusTrkState);
     bool eventNtripStarted(bool ntripStarted);
     bool eventPreciseLocation(bool preciseLocation);
-    bool eventGpsEnabled(bool gpsEnabled);
     bool eventLocFeatureStatus(std::unordered_set<int> fids);
     bool eventNlpSessionStatus(bool nlpStarted);
+    bool eventGpsEnabled(bool gpsEnabled);
 };
 
 } // namespace loc_core

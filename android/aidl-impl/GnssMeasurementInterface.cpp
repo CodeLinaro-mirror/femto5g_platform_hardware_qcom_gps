@@ -235,6 +235,7 @@ void GnssMeasurementInterface::convertGnssData(
             out.gnssAgcs.push_back(gnssAgc0);
         }
     }
+    out.isFullTracking = in.isFullTracking;
 }
 
 void GnssMeasurementInterface::convertGnssMeasurement(

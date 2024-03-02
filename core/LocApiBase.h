@@ -30,7 +30,7 @@
  /*
  Changes from Qualcomm Innovation Center are provided under the following license:
 
- Copyright (c) 2022, 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted (subject to the limitations in the
@@ -138,6 +138,8 @@ public:
             GnssSvMeasurementHeader& svMeasSetHeader,
             GnssMeasurementsData& measurementData) { return false; }
     inline virtual float getGeoidalSeparation(double latitude, double longitude) { return 0.0; }
+    inline virtual bool checkFeatureStatus(int* fids, LocFeatureStatus* status,
+            uint32_t idCount, bool directQwesCall = false) {return false;}
 };
 
 class LocApiBase {
@@ -181,6 +183,9 @@ public:
         if (nullptr != mMsgTask) {
             mMsgTask->sendMsg(msg);
         }
+    }
+    inline MsgTask* getMsgTask() const {
+        return mMsgTask;
     }
     inline void destroy() {
         close();
@@ -376,7 +381,8 @@ public:
     virtual void updatePowerConnectState(bool connected);
 
     virtual void configRobustLocation(bool enable, bool enableForE911,
-                                      LocApiResponse* adapterResponse=nullptr);
+                                      LocApiResponse* adapterResponse = nullptr,
+                                      bool enableForE911Valid = false);
     virtual void getRobustLocationConfig(uint32_t sessionId, LocApiResponse* adapterResponse);
     virtual void configMinGpsWeek(uint16_t minGpsWeek,
                                   LocApiResponse* adapterResponse=nullptr);
@@ -401,7 +407,7 @@ public:
     virtual void setTribandState(bool enabled);
 
     virtual void configPrecisePositioning(uint32_t featureId, bool enable,
-            std::string appHash, LocApiResponse* adapterResponse=nullptr);
+            const std::string& appHash, LocApiResponse* adapterResponse=nullptr);
     virtual void configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* merkleTree,
             LocApiResponse* adapterResponse=nullptr);
     virtual void configOsnmaEnablement(bool enable, LocApiResponse* adapterResponse=nullptr);
