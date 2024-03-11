@@ -40,10 +40,8 @@ LOCAL_SHARED_LIBRARIES := \
     libutils \
     android.hardware.gnss@1.0 \
     android.hardware.gnss@1.1 \
-    android.hardware.health-V1-ndk \
     android.hardware.health@1.0 \
     android.hardware.health@2.0 \
-    android.hardware.health@2.1 \
     android.hardware.power@1.2 \
     libbase
 
@@ -84,7 +82,6 @@ LOCAL_SHARED_LIBRARIES := \
     libbase \
     libutils \
     libgps.utils \
-    libqti_vndfwk_detect_vendor \
 
 LOCAL_SHARED_LIBRARIES += \
     libhidlbase \

@@ -90,7 +90,7 @@ public:
     // for GpsMeasurementInterface
     template <typename T>
     Return<IGnssMeasurement::GnssMeasurementStatus> measurementSetCallback(
-            const sp<T>& callback, GnssPowerMode powerMode = GNSS_POWER_MODE_INVALID) {
+            const sp<T>& callback, GnssPowerMode powerMode = GNSS_POWER_MODE_DEFAULT) {
         mMutex.lock();
         setCallbackLocked(callback);
         mMutex.unlock();

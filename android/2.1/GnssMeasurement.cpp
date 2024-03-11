@@ -72,7 +72,7 @@ void GnssMeasurement::handleClientDeath() {
 // Methods from ::android::hardware::gnss::V1_0::IGnssMeasurement follow.
 Return<GnssMeasurement::GnssMeasurementStatus> GnssMeasurement::setCallback(
         const sp<V1_0::IGnssMeasurementCallback>& callback)  {
-    return setCallback(callback, mGnssMeasurementCbIface, GNSS_POWER_MODE_INVALID);
+    return setCallback(callback, mGnssMeasurementCbIface, GNSS_POWER_MODE_DEFAULT);
 }
 
 template <typename T>

@@ -65,4 +65,5 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 typedef void (* battery_status_change_fn_t)(bool);
 void loc_extn_battery_properties_listener_init(battery_status_change_fn_t fn);
+void loc_extn_battery_properties_listener_deinit();
 bool loc_extn_battery_properties_is_charging();

@@ -14,10 +14,10 @@ cc_library_static {
         "libbinder_ndk",
         "libcutils",
         "libutils",
-        "android.hardware.health-V1-ndk",
         "android.hardware.health@1.0",
         "android.hardware.health@2.0",
         "android.hardware.health@2.1",
+        "android.hardware.power@1.2",
         "libbase",
     ],
 

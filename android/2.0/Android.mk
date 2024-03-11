@@ -51,7 +51,6 @@ LOCAL_SHARED_LIBRARIES := \
     android.hardware.gnss@2.0 \
     android.hardware.gnss.measurement_corrections@1.0 \
     android.hardware.gnss.visibility_control@1.0 \
-    android.hardware.health-V1-ndk \
     android.hardware.health@1.0 \
     android.hardware.health@2.0 \
     android.hardware.health@2.1 \
@@ -93,7 +92,6 @@ LOCAL_SHARED_LIBRARIES := \
     libbase \
     libutils \
     libgps.utils \
-    libqti_vndfwk_detect_vendor \
 
 LOCAL_SHARED_LIBRARIES += \
     libhidlbase \
