@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -79,6 +79,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <loc_misc_utils.h>
 #include <queue>
 #include <NativeAgpsHandler.h>
+#include <unordered_map>
 
 #define MAX_URL_LEN 256
 #define NMEA_SENTENCE_MAX_LENGTH 200
@@ -89,6 +90,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ODCPI_EXPECTED_INJECTION_TIME_MS 10000
 #define DELETE_AIDING_DATA_EXPECTED_TIME_MS 5000
 #define ONE_SECOND_IN_MS  1000
+#define LOC_WAIT_TIME_MILLI_SEC 400
 
 class GnssAdapter;
 
@@ -122,6 +124,29 @@ private:
 
     GnssAdapter* mAdapter;
     bool mActive;
+};
+
+class halResponseTimer : public LocTimer {
+
+public:
+    halResponseTimer(GnssAdapter* hal, LocationError err,
+            uint32_t sessionID) :
+            LocTimer(),
+            mHal(hal),
+            mErr(err),
+            mSessionID(sessionID){}
+
+    inline void startHalResponseTimer(LocationError errorStatus, uint32_t id, uint32_t timeout) {
+        mErr = errorStatus;
+        mSessionID = id;
+        start(timeout, false);
+    }
+    void timeOutCallback() override;
+
+private:
+    GnssAdapter* mHal;
+    LocationError mErr;
+    uint32_t mSessionID;
 };
 
 typedef struct {
@@ -285,7 +310,7 @@ class GnssAdapter : public LocAdapterBase {
     powerIndicationCb mPowerIndicationCb;
     bool mGnssPowerStatisticsInit;
     uint64_t mBootReferenceEnergy;
-    ElapsedRealtimeEstimator mPowerElapsedRealTimeCal;
+    RealtimeEstimator mPowerElapsedRealTimeCal;
 
     /* ==== Measurement Corrections========================================================= */
     bool mIsMeasCorrInterfaceOpen;
@@ -311,6 +336,7 @@ class GnssAdapter : public LocAdapterBase {
     OdcpiPrioritytype mCallbackPriority;
     OdcpiTimer mOdcpiTimer;
     OdcpiRequestInfo mOdcpiRequest;
+    std::unordered_map<OdcpiPrioritytype, odcpiRequestCallback> mNonEsOdcpiReqCbMap;
     void odcpiTimerExpire();
 
     std::function<void(const Location&)> mAddressRequestCb;
@@ -336,8 +362,9 @@ class GnssAdapter : public LocAdapterBase {
     bool mPowerOn;
     std::queue<GnssLatencyInfo> mGnssLatencyInfoQueue;
     GnssReportLoggerUtil mLogger;
+    bool mEngHubLoadSuccessful;
     EngineServiceInfo mEngServiceInfo;
-    ElapsedRealtimeEstimator mPositionElapsedRealTimeCal;
+    RealtimeEstimator mPositionElapsedRealTimeCal;
     typedef enum {
         HMAC_CONFIG_UNKNOWN = 0,
         HMAC_CONFIG_DISABLED,
@@ -363,15 +390,39 @@ class GnssAdapter : public LocAdapterBase {
     static uint16_t getNumSvUsed(uint64_t svUsedIdsMask,
                                  int totalSvCntInThisConstellation);
 
+    static bool isEphNetworkBased(const GnssEphCommon& commanEphRpt);
+    static void convertGpsEphemeris(const GpsEphemerisResponse& ephRpt,
+            GpsEphemerisResponse& halEph);
+    static void convertGalEphemeris(const GalileoEphemerisResponse& ephRpt,
+            GalileoEphemerisResponse& halEph);
+    static void convertGloEphemeris(const GlonassEphemerisResponse& ephRpt,
+            GlonassEphemerisResponse& halEph);
+    static void convertBdsEphemeris(const BdsEphemerisResponse& ephRpt,
+            BdsEphemerisResponse& halEph);
+    static void convertQzssEphemeris(const QzssEphemerisResponse& ephRpt,
+            QzssEphemerisResponse& halEph);
+    static void convertNavicEphemeris(const NavicEphemerisResponse& ephRpt,
+            NavicEphemerisResponse& halEph);
+    static void convertEphReportInfo(const GnssSvEphemerisReport& svEphemeris,
+            GnssSvEphemerisReport& ephInfo, bool& needToReportEph);
+
     /* ======== UTILITIES ================================================================== */
-    inline void initOdcpi(const odcpiRequestCallback& callback, OdcpiPrioritytype priority);
+    inline void initOdcpi(const odcpiRequestCallback& callback,
+                          OdcpiPrioritytype priority,
+                          OdcpiCallbackTypeMask typeMask);
+    inline void deRegisterOdcpi(OdcpiPrioritytype priority, OdcpiCallbackTypeMask typeMask) {
+        if (typeMask & NON_EMERGENCY_ODCPI) {
+            mNonEsOdcpiReqCbMap.erase(priority);
+        }
+    }
     inline void injectOdcpi(const Location& location);
+    void fireOdcpiRequest(const OdcpiRequestInfo& request);
     inline void setAddressRequestCb(const std::function<void(const Location&)>& addressRequestCb)
     { mAddressRequestCb = addressRequestCb;}
     inline void injectLocationAndAddr(const Location& location, const GnssCivicAddress& addr)
     { mLocApi->injectPositionAndCivicAddress(location, addr);}
     void fillElapsedRealTime(const GpsLocationExtended& locationExtended,
-                             Location& out);
+                             GnssLocationInfoNotification& out);
     void combineBlacklistSvs(const GnssSvIdConfig& blacklistSvs,
             const GnssSvTypeConfig& constellationConfig,
             GnssSvIdConfig& combinedBlacklistSvs);
@@ -395,6 +446,7 @@ protected:
     virtual void stopClientSessions(LocationAPI* client, bool eraseSession = true);
     inline void setNmeaReportRateConfig();
     void logLatencyInfo();
+    halResponseTimer mResponseTimer;
 
 public:
     GnssAdapter();
@@ -566,7 +618,10 @@ public:
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
-    void initOdcpiCommand(const odcpiRequestCallback& callback, OdcpiPrioritytype priority);
+    void initOdcpiCommand(const odcpiRequestCallback& callback,
+                          OdcpiPrioritytype priority,
+                          OdcpiCallbackTypeMask typeMask);
+    void deRegisterOdcpiCommand(OdcpiPrioritytype priority, OdcpiCallbackTypeMask typeMask);
     void injectOdcpiCommand(const Location& location);
     void setAddressRequestCbCommand(const std::function<void(const Location&)>& addressRequestCb);
     void injectLocationAndAddrCommand(const Location& location, const GnssCivicAddress& addr);
@@ -600,13 +655,16 @@ public:
     bool isStandAloneCDParserPELib();
     bool isEngineServiceEnable();
     void initCDFWService();
+    inline void halResponseTimerStart(LocationError err, uint32_t id, uint32_t timeout) {
+        mResponseTimer.startHalResponseTimer(err, id, timeout);
+    }
 
     void odcpiTimerExpireEvent();
 
     /* ==== REPORTS ======================================================================== */
     virtual void handleEngineLockStatusEvent(EngineLockState engineLockState);
     void handleEngineLockStatus(EngineLockState engineLockState);
-    /* ======== EVENTS ====(Called from QMI/EngineHub Thread)===================================== */
+    /* ======== EVENTS ====(Called from QMI/EngineHub Thread)================================== */
     virtual void reportPositionEvent(const UlpLocation& ulpLocation,
                                      const GpsLocationExtended& locationExtended,
                                      enum loc_sess_status status,
@@ -704,6 +762,7 @@ public:
             mControlCallbacks.nfwStatusCb(notification);
         }
     }
+    void reportSvEphemerisData (const GnssSvEphemerisReport& svEphemeris);
     inline bool getE911State(GnssNiType niType) {
         if (NULL != mControlCallbacks.isInEmergencyStatusCb) {
             return mControlCallbacks.isInEmergencyStatusCb();
