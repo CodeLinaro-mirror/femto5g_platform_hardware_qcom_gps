@@ -477,12 +477,16 @@ typedef uint64_t GpsLocationExtendedFlags;
 /** GpsLocationExtended has valid numOfdgnssStationId and
  *  dgnssStationId. */
 #define GPS_LOCATION_EXTENDED_HAS_DGNSS_STATION_ID               0x100000000000000
-/* Distance between base station and receiver */
-#define GPS_LOCATION_EXTENDED_HAS_BASE_LINE_LENGTH               0x200000000000000
-/* Age of Corrections */
-#define GPS_LOCATION_EXTENDED_HAS_AGE_OF_CORRECTION              0x400000000000000
+/*  GpsLocationExtended has valid engine Calculated BaseLineLength */
+#define GPS_LOCATION_EXTENDED_HAS_CALCULATED_BASE_LINE_LENGTH    0x200000000000000
+/*  GpsLocationExtended has valid engine Calculated Age */
+#define GPS_LOCATION_EXTENDED_HAS_CALCULATED_CORR_AGE            0x400000000000000
+/*  GpsLocationExtended has valid raw base station ECEF's */
+#define GPS_LOCATION_EXTENDED_HAS_RAW_RTK_BASE_STATION_ECEF      0x800000000000000
+/*  GpsLocationExtended has valid raw Age Timestamp of corrections */
+#define GPS_LOCATION_EXTENDED_HAS_RAW_RTK_CORR_AGE_TIMESTAMP     0x1000000000000000
 /** GpsLocationExtended has extendedData payload. */
-#define GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA                  0x800000000000000
+#define GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA                  0x2000000000000000
 
 typedef uint32_t LocNavSolutionMask;
 /* Bitmask to specify whether SBAS ionospheric correction is used  */
@@ -773,6 +777,12 @@ typedef struct {
     float carrierPhasAmbiguity;
 } GpsMeasUsageInfo;
 
+/** Correction Age Timestamp */
+typedef struct corrTimeStamp {
+    uint16_t gpsWeek;
+    uint32_t gpsWeekMs;
+};
+
 #define COV_MATRIX_SIZE 12
 /** Represents gps location extended. */
 typedef struct {
@@ -991,9 +1001,13 @@ typedef struct {
     /** Uncertainty for System Tick at GPS Time in milliseconds   */
     float systemTickUnc;
     /** Distance to baseStation. Unit - meters */
-    double baseLineLength;
+    double calculatedBaseLineLength;
     /** Age of corrections - Unit - milli-seconds */
-    uint64_t ageMsecOfCorrections;
+    uint64_t calculatedAgeMsecOfCorrections;
+    /** Raw Base station ECEF's */
+     double refStationECEF[3];
+    /** Raw Correction age Timestamp */
+    corrTimeStamp corrTimeStamp;
     /** Must be set to # of elements in extendedData */
     uint32_t extendedDataLen;
     /**   Data blob payload  */

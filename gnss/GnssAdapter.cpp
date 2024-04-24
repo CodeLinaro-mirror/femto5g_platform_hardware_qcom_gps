@@ -790,13 +790,13 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
             out.dgnssStationId[i] = locationExtended.dgnssStationId[i];
         }
     }
-    if (GPS_LOCATION_EXTENDED_HAS_BASE_LINE_LENGTH & locationExtended.flags) {
+    if (GPS_LOCATION_EXTENDED_HAS_CALCULATED_BASE_LINE_LENGTH  & locationExtended.flags) {
         out.flags |= GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT;
-        out.baseLineLength = locationExtended.baseLineLength;
+        out.baseLineLength = locationExtended.calculatedBaseLineLength;
     }
-    if (GPS_LOCATION_EXTENDED_HAS_AGE_OF_CORRECTION & locationExtended.flags) {
+    if (GPS_LOCATION_EXTENDED_HAS_CALCULATED_CORR_AGE & locationExtended.flags) {
         out.flags |= GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT;
-        out.ageMsecOfCorrections = locationExtended.ageMsecOfCorrections;
+        out.ageMsecOfCorrections = locationExtended.calculatedAgeMsecOfCorrections;
 
     }
     if (GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA & locationExtended.flags) {
@@ -807,7 +807,6 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
                     locationExtended.extendedData,
                     locationExtended.extendedDataLen);
         }
-
     }
 }
 
