@@ -183,7 +183,6 @@ GnssAdapter::GnssAdapter() :
     mPpeEnabled(false),
     mLocSystemInfo{},
     mPowerOn(false),
-    mAllowFlpNetworkFixes(0),
     mGnssEnergyConsumedCb(nullptr),
     mPowerStateCb(nullptr),
     mGnssMbSvIdUsedInPosition{},
@@ -4045,10 +4044,7 @@ GnssAdapter::needReportForGnssClient(const UlpLocation& ulpLocation,
 bool
 GnssAdapter::needReportForFlpClient(enum loc_sess_status status,
                                     LocPosTechMask techMask) {
-    if (((LOC_SESS_INTERMEDIATE == status) && !(techMask & LOC_POS_TECH_MASK_SENSORS) &&
-        (!(getAllowFlpNetworkFixes() ||
-        (sUseZppInDBH && mOdcpiRequest.isEmergencyMode && mOdcpiRequestActive)))) ||
-        (LOC_SESS_FAILURE == status)) {
+    if (LOC_SESS_FAILURE == status) {
         return false;
     } else {
         return true;
