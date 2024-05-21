@@ -106,6 +106,13 @@ public:
     //  This method is used for timeout calling back to client. This method
     //  should be short enough (eg: send a message to your own thread).
     virtual void timeOutCallback() = 0;
+
+    // Each timer client shall have their own copy of below variables
+    // These shall help in synchronize timer start, stop and expiry events.
+    // Variable to check if client is active. Shall be set to true on start() and false on stop()
+    bool mIsClientRunning;
+    // Mutex to synchronize, start, expiry and stop events.
+    static pthread_mutex_t mtx;
 };
 
 } // namespace loc_util
