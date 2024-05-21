@@ -26,6 +26,41 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #include <unistd.h>
 #include <stdio.h>
@@ -49,6 +84,9 @@
 #endif
 
 namespace loc_util {
+
+// Mutex for clients to sync their start, stop and expiry events.
+pthread_mutex_t LocTimer::mtx = PTHREAD_MUTEX_INITIALIZER;
 
 /*
 There are implementations of 5 classes in this file:
@@ -519,18 +557,31 @@ void LocTimerDelegate::expire() {
     // when timeOutCallback() is called at the end of this
     // method, *this* obj may be already deleted.
     LocTimer* client = mClient;
-    // force a stop, which will lead to delete of this obj
-    if (client && client->stop()) {
-        // calling client callback with a pointer save on the stack
-        // only if stop() returns true, i.e. it hasn't been stopped
-        // already.
-        client->timeOutCallback();
+    // In a scenario where, Timer expiry and stop Timer events are very close to each other
+    // We need to synchronize timeOutCallback()& ~LocTimer(). Since timeOutCallback() and
+    // timer stop are called from dfiffrent threads, we have a possibility that ~LocTimer()
+    // is called and implemetation of timeOutCallback() won't exist, causing a possible error
+    // of calling a pure virtual function
+    if (client) {
+        pthread_mutex_lock(&client->mtx);
+        if (!client->mIsClientRunning) {
+            pthread_mutex_unlock(&client->mtx);
+            return;
+        } else {
+            // force a stop, which will lead to delete of this obj
+            if (client->stop()) {
+                // calling client callback with a pointer save on the stack
+                // only if stop() returns true, i.e. it hasn't been stopped
+                // already.
+                client->timeOutCallback();
+            }
+        }
+        pthread_mutex_unlock(&client->mtx);
     }
 }
 
-
 /***************************LocTimer methods***************************/
-LocTimer::LocTimer() : mTimer(NULL), mLock(new LocSharedLock()) {
+LocTimer::LocTimer() : mTimer(NULL), mLock(new LocSharedLock()), mIsClientRunning(false) {
 }
 
 LocTimer::~LocTimer() {
@@ -545,6 +596,8 @@ bool LocTimer::start(unsigned int timeOutInMs, bool wakeOnExpire) {
     bool success = false;
     mLock->lock();
     if (!mTimer) {
+        // Timer client is active and running
+        mIsClientRunning = true;
         struct timespec futureTime = {};
         clock_gettime(CLOCK_BOOTTIME, &futureTime);
         futureTime.tv_sec += timeOutInMs / 1000;
@@ -570,6 +623,8 @@ bool LocTimer::stop() {
     bool success = false;
     mLock->lock();
     if (mTimer) {
+        // Timer object willl be destroyed.
+        mIsClientRunning = false;
         LocTimerDelegate* timer = mTimer;
         mTimer = NULL;
         if (timer) {
@@ -598,6 +653,7 @@ public:
     void destroy() {
         pthread_mutex_lock(&mMutex);
         if (NULL != mCb && this == mMe) {
+            // Will call destructor of LocTimerWrapper and LocTimer
             delete this;
         }
         pthread_mutex_unlock(&mMutex);
@@ -631,7 +687,10 @@ void* loc_timer_start(uint64_t msec, loc_timer_callback cb_func,
         locTimerWrapper = new LocTimerWrapper(cb_func, caller_data);
 
         if (locTimerWrapper) {
+            // LocTimer Client is registered and active. Base Class of LocWrapper
+            pthread_mutex_lock(&locTimerWrapper->mtx);
             locTimerWrapper->start(msec, wake_on_expire);
+            pthread_mutex_unlock(&locTimerWrapper->mtx);
         }
     }
 
@@ -642,7 +701,13 @@ void loc_timer_stop(void*&  handle)
 {
     if (handle) {
         LocTimerWrapper* locTimerWrapper = (LocTimerWrapper*)(handle);
+        // LocTimer Client is going to unregister. Destructure will be called for LocTimer.
+        pthread_mutex_lock(&locTimerWrapper->mtx);
+        // This will call destructor for both LocTimer and LocTimerWrapper. Need to synchronize
+        // with timeoutCallback() called from polling thread. If timer stop and expiry are very
+        // close to each other, we may end up calling a pure virtual function.
         locTimerWrapper->destroy();
         handle = NULL;
+        pthread_mutex_unlock(&locTimerWrapper->mtx);
     }
 }
