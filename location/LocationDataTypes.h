@@ -115,7 +115,7 @@ enum LocationError {
 };
 
 // Flags to indicate which values are valid in a Location
-typedef uint16_t LocationFlagsMask;
+typedef uint32_t LocationFlagsMask;
 enum LocationFlagsBits {
     LOCATION_HAS_LAT_LONG_BIT          = (1<<0), // location has valid latitude and longitude
     LOCATION_HAS_ALTITUDE_BIT          = (1<<1), // location has valid altitude
@@ -133,6 +133,7 @@ enum LocationFlagsBits {
     LOCATION_HAS_TIME_UNC_BIT          = (1<<13), // location has timeUncMs
     LOCATION_HAS_GPTP_TIME_BIT         = (1<<14), // location has valid GPTP time
     LOCATION_HAS_GPTP_TIME_UNC_BIT     = (1<<15), // location has valid GPTP time Uncertainity
+    LOCATION_HAS_SESSION_STATUS_BIT    = (1<<16), // location has session status
 };
 
 typedef uint16_t LocationTechnologyMask;
@@ -273,6 +274,7 @@ typedef uint64_t GnssLocationInfoFlagMask;
 #define LDT_GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT (1ULL<<35) // Cross-track protection level
 #define LDT_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT (1ULL<<36) // vertical protection level
 #define LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT (1ULL<<37) // dgnss station id
+#define LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT (1ULL<<40) // Leap Second Uncertainity
 
 enum GeofenceBreachType {
     GEOFENCE_BREACH_ENTER = 0,
@@ -908,6 +910,8 @@ enum GnssSignalTypeBits {
     GNSS_SIGNAL_BEIDOU_B2BI         = (1<<22),
     /** BEIDOU B2B_Q RF Band */
     GNSS_SIGNAL_BEIDOU_B2BQ         = (1<<23),
+    /** NAVIC L1 RF Band */
+    GNSS_SIGNAL_NAVIC_L1            = (1<<24),
 };
 
 #define GNSS_SIGNAL_TYPE_MASK_ALL\
@@ -918,7 +922,7 @@ enum GnssSignalTypeBits {
      GNSS_SIGNAL_BEIDOU_B2AI | GNSS_SIGNAL_QZSS_L1CA | GNSS_SIGNAL_QZSS_L1S |\
      GNSS_SIGNAL_QZSS_L2| GNSS_SIGNAL_QZSS_L5 | GNSS_SIGNAL_SBAS_L1 |\
      GNSS_SIGNAL_NAVIC_L5 | GNSS_SIGNAL_BEIDOU_B2AQ | GNSS_SIGNAL_BEIDOU_B2BI |\
-     GNSS_SIGNAL_BEIDOU_B2BQ)
+     GNSS_SIGNAL_BEIDOU_B2BQ | GNSS_SIGNAL_NAVIC_L1)
 
 enum Gnss_LocSvSystemEnumType {
     GNSS_LOC_SV_SYSTEM_UNKNOWN                = 0,
@@ -966,7 +970,8 @@ enum Gnss_LocSignalEnumType {
     GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2A_Q = 19,     /**<  BEIDOU B2A_Q RF Band  */
     GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2B_I = 20,     /**<  BeiDou B2B_I RF band (data) */
     GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2B_Q = 21,     /**< BeiDou B2B_Q RF band (Pilot)*/
-    GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES = 22    /**<  Maximum number of signal types */
+    GNSS_LOC_SIGNAL_TYPE_NAVIC_L1 = 22,         /**<  NAVIC L1 RF Band */
+    GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES = 23    /**<  Maximum number of signal types */
 };
 
 typedef uint32_t PositioningEngineMask;
@@ -1003,9 +1008,27 @@ enum LocEngineRunState {
 typedef uint64_t GnssDataMask;
 enum GnssDataBits {
     // Jammer Indicator is available
-    GNSS_LOC_DATA_JAMMER_IND_BIT = (1ULL << 0),
+    GNSS_LOC_DATA_JAMMER_IND_BIT    = (1ULL << 0),
     // AGC is available
-    GNSS_LOC_DATA_AGC_BIT = (1ULL << 1)
+    GNSS_LOC_DATA_AGC_BIT           = (1ULL << 1),
+    // AGC status for L1 band is available.
+    GNSS_LOC_DATA_AGC_STATUS_L1_BIT = (1ULL << 2),
+    // AGC status for L2 band is available.
+    GNSS_LOC_DATA_AGC_STATUS_L2_BIT = (1ULL << 3),
+    // AGC status for L5 band is available.
+    GNSS_LOC_DATA_AGC_STATUS_L5_BIT = (1ULL << 4),
+};
+
+/** Indicate RF Automatic Gain Control Status <br/>   */
+enum AgcStatus {
+    /**< AGC status is unknown <br/> */
+    AGC_STATUS_UNKNOWN                              = 0,
+    /**< AGC status is No saturation <br/> */
+    AGC_STATUS_NO_SATURATION                        = 1,
+    /**< AGC status is Front end gain maximum saturation <br/> */
+    AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION    = 2,
+    /**< AGC status is Front end gain minimum saturation <br/> */
+    AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION    = 3,
 };
 
 typedef uint32_t GnssSystemTimeStructTypeFlags;
@@ -1110,10 +1133,16 @@ enum LocationQualityType {
     LOCATION_FIXED_QUALITY_TYPE = 3,
 };
 
+enum loc_sess_status {
+    LOC_SESS_SUCCESS,
+    LOC_SESS_INTERMEDIATE,
+    LOC_SESS_FAILURE
+};
 
 struct Location {
     uint32_t size;           // set to sizeof(Location)
     LocationFlagsMask flags; // bitwise OR of LocationFlagsBits to mark which params are valid
+    loc_sess_status sessionStatus; // location session status
     uint64_t timestamp;      // UTC timestamp for location fix, milliseconds since January 1, 1970
     double latitude;         // in degrees
     double longitude;        // in degrees
@@ -1137,10 +1166,8 @@ struct Location {
     float timeUncMs;             // Time uncertainty in milliseconds
                                  // SPE report: confidence level is 99%
                                  // Other engine report: confidence not unspecified
-    // GPTP time field in ns
-    uint64_t elapsedgPTPTime;
-    // GPTP time Unc
-    uint64_t elapsedgPTPTimeUnc;
+    uint64_t elapsedgPTPTime;    // GPTP time field in ns
+    uint64_t elapsedgPTPTimeUnc; // GPTP time Unc
 };
 
 enum LocReqEngineTypeMask {
@@ -1505,12 +1532,6 @@ struct LLAInfo {
     float altitude;  // altitude wrt to ellipsoid
 };
 
-enum loc_sess_status {
-    LOC_SESS_SUCCESS,
-    LOC_SESS_INTERMEDIATE,
-    LOC_SESS_FAILURE
-};
-
 struct GnssLocationInfoNotification {
     uint32_t size;                      // set to sizeof(GnssLocationInfo)
     Location location;                  // basic locaiton info, latitude, longitude, and etc
@@ -1591,6 +1612,9 @@ struct GnssLocationInfoNotification {
     //   - Monitoring station -- 1000-2023 (Station ID biased by 1000).
     //   - Other values reserved.
     uint16_t dgnssStationId[DGNSS_STATION_ID_MAX];
+    /** Uncertainty for the GNSS leap second.
+     *  Units -- Seconds */
+    uint8_t leapSecondsUnc;
 };
 
 // Indicate the API that is called to generate the location report
@@ -1653,6 +1677,7 @@ struct GnssNiNotification {
 #define QZSS_L5_Q_CARRIER_FREQUENCY     (1176450000.0)
 #define SBAS_L1_CA_CARRIER_FREQUENCY    (1575420000.0)
 #define NAVIC_L5_CARRIER_FREQUENCY      (1176450000.0)
+#define NAVIC_L1_CARRIER_FREQUENCY      (1575420000.0)
 
 struct GnssSv {
     uint32_t size;       // set to sizeof(GnssSv)
@@ -1664,7 +1689,7 @@ struct GnssSv {
     //    - For QZSS:    193 to 197
     //    - For BDS:     201 to 263
     //    - For GAL:     301 to 336
-    //    - For NAVIC:   401 to 414
+    //    - For NAVIC:   401 to 420
     uint16_t svId;
     GnssSvType type;   // type of SV (GPS, SBAS, GLONASS, QZSS, BEIDOU, GALILEO, NAVIC)
     float cN0Dbhz;     // signal strength
@@ -1869,6 +1894,9 @@ struct GnssDataNotification {
     GnssDataMask  gnssDataMask[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];  // bitwise OR of GnssDataBits
     double        jammerInd[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];     // Jammer Indication
     double        agc[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];           // Automatic gain control
+    AgcStatus     agcStatusL1; // RF Automatic gain control status for L1 band.
+    AgcStatus     agcStatusL2; // RF Automatic gain control status for L2 band.
+    AgcStatus     agcStatusL5; // RF Automatic gain control status for L5 band.
 };
 
 struct GnssMeasurementsAgc {
@@ -1883,6 +1911,9 @@ struct GnssMeasurementsNotification {
     uint32_t count;        // number of items in GnssMeasurements array
     GnssMeasurementsData measurements[GNSS_MEASUREMENTS_MAX];
     GnssMeasurementsClock clock; // clock
+    AgcStatus     agcStatusL1; // RF Automatic gain control status for L1 band.
+    AgcStatus     agcStatusL2; // RF Automatic gain control status for L2 band.
+    AgcStatus     agcStatusL5; // RF Automatic gain control status for L5 band.
     bool isFullTracking;
     uint32_t agcCount;     // number of items in GnssMeasurementsAgc array
     GnssMeasurementsAgc gnssAgc[GNSS_BANDS_MAX];
