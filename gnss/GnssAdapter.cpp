@@ -506,6 +506,14 @@ void GnssAdapter::fillElapsedRealTime(const UlpLocation& ulpLocation,
         }
 #endif //FEATURE_AUTOMOTIVE
     }
+
+#ifndef FEATURE_AUTOMOTIVE
+    if (!(out.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT)) {
+        out.elapsedRealTime = getBootTimeMilliSec() * 1000000;
+        out.elapsedRealTimeUnc = mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+        out.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
+    }
+#endif //FEATURE_AUTOMOTIVE
 }
 
 /* This is utility routine that computes number of SV used
