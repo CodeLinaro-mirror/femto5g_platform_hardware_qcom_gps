@@ -353,10 +353,15 @@ GnssAdapter::checkAndSetSPEToRunforNHz(TrackingOptions & out) {
 
 void
 GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
-                             const GpsLocationExtended& locationExtended)
+                             const GpsLocationExtended& locationExtended,
+                             loc_sess_status status)
 {
     memset(&out, 0, sizeof(Location));
     out.size = sizeof(Location);
+
+    out.flags |= LOCATION_HAS_SESSION_STATUS_BIT;
+    out.sessionStatus = status;
+
     if (LOC_GPS_LOCATION_HAS_LAT_LONG & ulpLocation.gpsLocation.flags) {
         out.flags |= LOCATION_HAS_LAT_LONG_BIT;
         out.latitude = ulpLocation.gpsLocation.latitude;
@@ -885,6 +890,11 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
             out.dgnssStationId[i] = locationExtended.dgnssStationId[i];
         }
     }
+    if (GPS_LOCATION_EXTENDED_HAS_LEAP_SECONDS_UNC & locationExtended.flags) {
+        out.flags |= LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
+        out.leapSecondsUnc = locationExtended.leapSecondsUnc;
+    }
+
 }
 
 inline uint32_t
@@ -4270,13 +4280,6 @@ GnssAdapter::computeVRPBasedLla(const UlpLocation& loc, GpsLocationExtended& loc
     double lla[3];
 
     uint16_t locFlags = loc.gpsLocation.flags;
-    uint64_t locExtFlags = locExt.flags;
-
-    // check for SPE fix
-    if (!((locExtFlags & GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE) &&
-          (locExt.locOutputEngType == LOC_OUTPUT_ENGINE_SPE))){
-        return;
-    }
 
     // we can only do translation if we have VRP based lever ARM info
     LeverArmTypeMask leverArmFlags = leverArmConfigInfo.leverArmValidMask;
@@ -4381,6 +4384,10 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
                     mAdapter.mGnssMbSvIdUsedInPosition = mLocationExtended.gnss_mb_sv_used_ids;
                 }
             }
+
+            // obtain the VRP based latitude/longitude/altitude for SPE fix
+            mAdapter.computeVRPBasedLla(mUlpLocation,
+                    mLocationExtended, mAdapter.mLocConfigInfo.leverArmConfigInfo);
 
             if (GPS_LOCATION_DESIRED_FLAGS ==
                     (mUlpLocation.gpsLocation.flags & (GPS_LOCATION_DESIRED_FLAGS)) &&
@@ -4768,7 +4775,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
         GnssLocationInfoNotification locationInfo = {};
         list<trackingCallback> cbRunnables;
         convertLocationInfo(locationInfo, locationExtended, status);
-        convertLocation(locationInfo.location, ulpLocation, locationExtended);
+        convertLocation(locationInfo.location, ulpLocation, locationExtended, status);
         fillElapsedRealTime(locationExtended, locationInfo);
         logLatencyInfo();
 
@@ -4878,10 +4885,6 @@ GnssAdapter::reportSpeAsEnginePosition(const UlpLocation& ulpLocation,
         engLocationInfo.locationExtended = locationExtended;
         engLocationInfo.sessionStatus = status;
 
-        // obtain the VRP based latitude/longitude/altitude for SPE fix
-        computeVRPBasedLla(engLocationInfo.location,
-                           engLocationInfo.locationExtended,
-                           mLocConfigInfo.leverArmConfigInfo);
         enginePositionReported = reportEnginePositions(1, &engLocationInfo);
     }
     return enginePositionReported;
@@ -4910,7 +4913,8 @@ GnssAdapter::reportEnginePositions(unsigned int count,
                                     engLocation->sessionStatus);
                 convertLocation(locationInfo[i].location,
                                 engLocation->location,
-                                engLocation->locationExtended);
+                                engLocation->locationExtended,
+                                engLocation->sessionStatus);
                 fillElapsedRealTime(engLocation->locationExtended,
                                     locationInfo[i]);
             }
