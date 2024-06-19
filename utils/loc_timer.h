@@ -27,15 +27,27 @@
  *
  */
 
+/*
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef __LOC_DELAY_H__
 #define __LOC_DELAY_H__
+
+#ifdef GLIB_VER_2_72_3
+#include <loc_pla.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 #include <stddef.h>
 #include <stdint.h>
+#ifndef GLIB_VER_2_72_3
 #include <loc_pla.h>
+#endif
 /*
     user_data: client context pointer, passthrough. Originally received
                from calling client when loc_timer_start() is called.
