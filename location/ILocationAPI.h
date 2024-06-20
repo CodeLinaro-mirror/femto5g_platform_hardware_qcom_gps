@@ -215,24 +215,6 @@ public:
     /** @brief stopNetworkLocation stops the ongoing tracking session for
        network location request */
     virtual void stopNetworkLocation(trackingCallback* callback) {}
-
-    /** @brief Get energy consumed info of modem GNSS engine */
-    virtual void getGnssEnergyConsumed(gnssEnergyConsumedCallback gnssEnergyConsumedCb,
-            responseCallback responseCb) {}
-
-    /** @brief Retrieve single-shot terrestrial position using the set of
-        specified terrestrial technologies. */
-    virtual void getSingleTerrestrialPosition(uint32_t timeoutMsec,
-            TerrestrialTechMask techMask,
-            float horQoS, trackingCallback terrestrialPositionCallback,
-            responseCallback responseCb) {}
-
-    /** @brief  Register/update listener to receive location system info
-        that are not tied with positioning session, e.g.: next leap
-        second event. */
-    virtual void updateLocationSystemInfoListener(
-            locationSystemInfoCallback locationSystemInfoCb,
-            responseCallback responseCb) {}
 };
 
 class ILocationControlAPI
