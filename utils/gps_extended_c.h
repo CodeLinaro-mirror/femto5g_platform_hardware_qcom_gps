@@ -516,6 +516,8 @@ typedef uint32_t LocNavSolutionMask;
 #define LOC_NAV_MASK_RTK_FIXED_CORRECTION ((LocNavSolutionMask)0x0080)
 /**<  Bitmask specifying whether only SBAS corrected SVs are used for the fix */
 #define LOC_NAV_MASK_ONLY_SBAS_CORRECTED_SV_USED ((LocNavSolutionMask)0x0100)
+/**<  Bitmask specifying whether MMF Aiding is used for the fix */
+#define LOC_NAV_MASK_MMF_AIDED_POSITION ((LocNavSolutionMask)0x0200)
 
 typedef uint32_t LocPosDataMask;
 /* Bitmask to specify whether Navigation data has Forward Acceleration  */
@@ -927,6 +929,7 @@ enum loc_api_adapter_event_index {
     LOC_API_ADAPTER_FEATURE_STATUS_UPDATE,             // Dynamic feature status update
     LOC_API_ADAPTER_REQUEST_ASSISTANCE_TIME,           // NTP time download request
     LOC_API_ADAPTER_GNSS_BANDS_SUPPORTED,              // GNSS bands supported
+    LOC_API_ADAPTER_NTN_CONFIG_UPDATE,                 // NTN config update
     LOC_API_ADAPTER_EVENT_MAX
 };
 
@@ -977,6 +980,8 @@ enum loc_api_adapter_event_index {
         (1ULL<<LOC_API_ADAPTER_REQUEST_ASSISTANCE_TIME)
 #define LOC_API_ADAPTER_BIT_GNSS_BANDS_SUPPORTED \
         (1ULL<<LOC_API_ADAPTER_GNSS_BANDS_SUPPORTED)
+#define LOC_API_ADAPTER_BIT_NTN_CONFIG_UPDATE \
+        (1ULL<<LOC_API_ADAPTER_NTN_CONFIG_UPDATE)
 
 typedef uint64_t LOC_API_ADAPTER_EVENT_MASK_T;
 

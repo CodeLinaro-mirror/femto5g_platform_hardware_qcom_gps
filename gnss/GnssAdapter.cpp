@@ -157,6 +157,42 @@ inline void GnssReportLoggerUtil::log(const GnssLatencyInfo& gnssLatencyMeasInfo
     }
 }
 
+class LocNvParams
+{
+public:
+
+    enum LocNvParamId {
+       LEVER_ARM_GNSS_TO_VRP = 0, // Blob for LeverArmParams
+       MAX_NUM_OF_LOC_NV_PARAMS,
+       NV_PARAM_E_SIZE   = 0x10000000      // force enum to be 32-bit
+    };
+
+    static const char* getParamName (LocNvParamId nvId);
+
+};
+
+
+const char* LocNvParamNameTable[] =
+{
+    "LEVER_ARM_GNSS_TO_VRP", // 0 LeverArmParams blob
+};
+
+const char* LocNvParams::getParamName(LocNvParamId nvId)
+{
+    int paramNameCnt = 0;
+    const char* paramName = NULL;
+
+    paramNameCnt = sizeof (LocNvParamNameTable)/ sizeof (char*);
+
+    if ((nvId < MAX_NUM_OF_LOC_NV_PARAMS) && (nvId < paramNameCnt)) {
+        paramName = LocNvParamNameTable[nvId];
+    } else {
+        LOC_LOGw("getParamName: name for nv item id %d not set", nvId);
+    }
+
+    return paramName;
+}
+
 GnssAdapter::GnssAdapter() :
     LocAdapterBase(0,
                    LocContext::getLocContext(LocContext::mLocationHalName),
@@ -216,10 +252,13 @@ GnssAdapter::GnssAdapter() :
     mAddressRequestCb(nullptr),
     mHmacConfig(HMAC_CONFIG_UNKNOWN),
     mGnssCapabNotification{},
+    mNvParamMgr(NvParamMgr::getInstance()),
     mAppHash(""),
     m3GppSourceMask(QDGNSS_3GPP_SOURCE_UNKNOWN),
     mNmeaReqEngTypeMask(LOC_REQ_ENGINE_FUSED_BIT),
-    mResponseTimer(this, (LocationError)0, (uint32_t)0)
+    mResponseTimer(this, (LocationError)0, (uint32_t)0),
+    mIsNtnStatusValid(false),
+    mNtnSignalTypeConfigMask(GNSS_SIGNAL_GPS_L1CA|GNSS_SIGNAL_GPS_L5)
 {
     LOC_LOGd("Constructor %p", this);
     mLocPositionMode.mode = LOC_POSITION_MODE_INVALID;
@@ -266,10 +305,89 @@ GnssAdapter::GnssAdapter() :
     initLocGlinkCommand();
     testLaunchQppeBringUp();
     mXtraObserver.init();
+    restoreConfigFromNvm();
     // at last step, let us inform adapater base that we are done
     // with initialization, e.g.: ready to process handleEngineUpEvent
     doneInit();
 
+}
+
+void GnssAdapter::restoreConfigFromNvm()
+{
+
+    LOC_LOGd("restoreConfigFromNvm");
+    struct MsgReadNvmData : public LocMsg {
+        GnssAdapter&       mAdapter;
+
+        inline MsgReadNvmData(GnssAdapter& adapter) :
+            LocMsg(),
+            mAdapter(adapter) {}
+        inline virtual void proc() const {
+            //Read GNSS VRP data
+            LeverArmConfigInfo configInfo = mAdapter.readVrpDataFromNvm();
+            LOC_LOGi("0x%x %f %f %f", configInfo.leverArmValidMask,
+                configInfo.gnssToVRP.forwardOffsetMeters,
+                configInfo.gnssToVRP.sidewaysOffsetMeters,
+                configInfo.gnssToVRP.upOffsetMeters);
+            if (configInfo.leverArmValidMask) {
+                if (true == mAdapter.mEngHubLoadSuccessful) {
+                    if (false == mAdapter.mEngHubProxy->configLeverArm(configInfo)) {
+                        LOC_LOGe("configLeverArm Failed");
+                    } else {
+                        LOC_LOGd("configLeverArm Success");
+                    }
+                }
+            }
+        }
+    };
+    sendMsg(new MsgReadNvmData(*this));
+}
+
+LeverArmConfigInfo GnssAdapter::readVrpDataFromNvm()
+{
+    //Retrieve those parameters from back up NV memory
+    LeverArmConfigInfo configInfo = {};
+
+    const char* paramName = NULL;
+    nv_param_err_code errorCode = NV_PARAM_ERR_NO_ERR;
+    unsigned int size = sizeof(LeverArmConfigInfo);
+    paramName = LocNvParams::getParamName(LocNvParams::LEVER_ARM_GNSS_TO_VRP);
+    unsigned char* leverArmBlob = reinterpret_cast<unsigned char*>(&configInfo);
+    if ((nullptr != leverArmBlob) && (nullptr != mNvParamMgr)) {
+        errorCode = mNvParamMgr->getBlobParam(paramName, leverArmBlob, size);
+        if (NV_PARAM_ERR_NO_ERR == errorCode) {
+            LeverArmConfigInfo* leverArmConfig =
+                  reinterpret_cast<LeverArmConfigInfo*>(leverArmBlob);
+            if (nullptr != leverArmConfig) {
+                configInfo = *leverArmConfig;
+            }
+        }
+    }
+    return configInfo;
+}
+
+bool GnssAdapter::storeVrpData2Nvm(const LeverArmConfigInfo& configInfo)
+{
+    bool retVal = false;
+    nv_param_err_code errorCode = NV_PARAM_ERR_NO_ERR;
+    LOC_LOGi("0x%x %f %f %f", configInfo.leverArmValidMask,
+            configInfo.gnssToVRP.forwardOffsetMeters,
+            configInfo.gnssToVRP.sidewaysOffsetMeters,
+            configInfo.gnssToVRP.upOffsetMeters);
+    if (configInfo.leverArmValidMask & LEVER_ARM_TYPE_GNSS_TO_VRP_BIT) {
+        const char* paramName = NULL;
+        nv_param_err_code errorCode = NV_PARAM_ERR_NO_ERR;
+        unsigned int size = sizeof(LeverArmConfigInfo);
+        if (nullptr != mNvParamMgr) {
+            paramName = LocNvParams::getParamName(LocNvParams::LEVER_ARM_GNSS_TO_VRP);
+            errorCode = mNvParamMgr->saveBlobParam(paramName,
+                    (const unsigned char*)&configInfo, size);
+        }
+    }
+    if (NV_PARAM_ERR_NO_ERR == errorCode) {
+        retVal = true;
+    }
+    return retVal;
 }
 
 void
@@ -299,6 +417,13 @@ GnssAdapter::setControlCallbacksCommand(LocationControlCallbacks& controlCallbac
             }
             if (mControlCallbacks.xtraStatusCb != NULL) {
                 mAdapter.mControlCallbacks.xtraStatusCb = mControlCallbacks.xtraStatusCb;
+            }
+            if (mControlCallbacks.ntnConfigRespCb != NULL) {
+                mAdapter.mControlCallbacks.ntnConfigRespCb = mControlCallbacks.ntnConfigRespCb;
+            }
+            if (mControlCallbacks.ntnConfigChangedCb != NULL) {
+                mAdapter.mControlCallbacks.ntnConfigChangedCb =
+                    mControlCallbacks.ntnConfigChangedCb;
             }
         }
     };
@@ -525,6 +650,7 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
     if (!(out.location.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT)) {
         out.location.elapsedRealTime = getBootTimeMilliSec() * 1000000;
         out.location.elapsedRealTimeUnc = mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+        out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
     }
 #endif //FEATURE_AUTOMOTIVE
 }
@@ -3237,6 +3363,10 @@ GnssAdapter::handleEngineUpEvent()
                     POWER_STATE_SHUTDOWN != mAdapter.mSystemPowerState) {
                     mAdapter.restartSessions(true);
                 }
+            }
+            //Set NTN status config to Modem if valid
+            if (mAdapter.mIsNtnStatusValid) {
+                mAdapter.mLocApi->setNtnConfigSignalMask(mAdapter.mNtnSignalTypeConfigMask);
             }
         }
     };
@@ -7621,6 +7751,8 @@ GnssAdapter::configLeverArmCommand(const LeverArmConfigInfo& configInfo) {
             mConfigInfo(configInfo) {}
         inline virtual void proc() const {
             mAdapter.configLeverArm(mSessionId, mConfigInfo);
+            //Save it to NVM
+            mAdapter.storeVrpData2Nvm(mConfigInfo);
         }
     };
 
@@ -7990,6 +8122,37 @@ uint32_t GnssAdapter::configOutputNmeaTypesCommand(GnssNmeaTypesMask enabledNmea
     return sessionId;
 }
 
+uint32_t GnssAdapter::gnssInjectMmfDataCommand(const GnssMapMatchedData& data) {
+
+    // generated session id will be none-zero
+    uint32_t sessionId = generateSessionId();
+    LOC_LOGd("session id %u", sessionId);
+
+    struct MsgInjectMmfData : public LocMsg {
+        GnssAdapter&       mAdapter;
+        uint32_t           mSessionId;
+        const GnssMapMatchedData& mMmfData;
+
+        inline MsgInjectMmfData(GnssAdapter& adapter,
+                                 uint32_t sessionId,
+                                 const GnssMapMatchedData& mmfData) :
+            LocMsg(),
+            mAdapter(adapter),
+            mSessionId(sessionId),
+            mMmfData(mmfData) {}
+        inline virtual void proc() const {
+            LocationError err = LOCATION_ERROR_NOT_SUPPORTED;
+            if (true == mAdapter.mEngHubProxy->gnssInjectMmfData(mMmfData)) {
+                err =  LOCATION_ERROR_SUCCESS;
+            }
+            mAdapter.reportResponse(err, mSessionId);
+        }
+    };
+
+    sendMsg(new MsgInjectMmfData(*this, sessionId, data));
+    return sessionId;
+
+}
 void GnssAdapter::powerIndicationInitCommand(const powerIndicationCb powerIndicationCallback) {
     LOC_LOGi("GnssAdapter::powerIndicationInitCommand");
 
@@ -8082,6 +8245,53 @@ void GnssAdapter::reportXtraMpDisabledEvent() {
     };
 
     sendMsg(new MsgReportXtraMpDisabled(*this));
+}
+
+void GnssAdapter::reportNtnStatusEvent(LocationError status,
+        const GnssSignalTypeMask& gpsSignalTypeConfigMask, bool isSetResponse) {
+    struct MsgReportNtnStatus : public LocMsg {
+        GnssAdapter& mAdapter;
+        LocationError mStatus;
+        GnssSignalTypeMask mMask;
+        bool mIsSetResponse;
+
+        inline MsgReportNtnStatus(GnssAdapter& adapter, LocationError status, uint32_t mask,
+                bool isSetResponse) :
+            LocMsg(), mAdapter(adapter), mStatus(status),
+            mMask(mask), mIsSetResponse(isSetResponse) {}
+        inline virtual void proc() const {
+            if (mAdapter.mControlCallbacks.ntnConfigRespCb != NULL) {
+                mAdapter.mControlCallbacks.ntnConfigRespCb(mStatus, mMask);
+            } else {
+                LOC_LOGd("no ntnConfigRespCb registered");
+            }
+            if (mIsSetResponse) {
+                //This response is for setNtnConfigSignalTypeMask
+                //We need to save this status in GnssAdapter for Modem SSR case handling
+                mAdapter.mIsNtnStatusValid = true;
+                mAdapter.mNtnSignalTypeConfigMask = mMask;
+            }
+        }
+    };
+    sendMsg(new MsgReportNtnStatus(*this, status, gpsSignalTypeConfigMask, isSetResponse));
+}
+
+void GnssAdapter::reportNtnConfigUpdateEvent(const GnssSignalTypeMask& gpsSignalTypeConfigMask) {
+    struct MsgReportNtnConfigUpdate : public LocMsg {
+        GnssAdapter& mAdapter;
+        GnssSignalTypeMask mMask;
+
+        inline MsgReportNtnConfigUpdate(GnssAdapter& adapter, uint32_t mask) :
+            LocMsg(), mAdapter(adapter), mMask(mask) {}
+        inline virtual void proc() const {
+            if (mAdapter.mControlCallbacks.ntnConfigChangedCb != NULL) {
+                mAdapter.mControlCallbacks.ntnConfigChangedCb(mMask);
+            } else {
+                LOC_LOGd("no ntnConfigChangedCb registered");
+            }
+        }
+    };
+    sendMsg(new MsgReportNtnConfigUpdate(*this, gpsSignalTypeConfigMask));
 }
 
 uint32_t GnssAdapter::configXtraParamsCommand(bool enable,
@@ -8334,6 +8544,85 @@ uint32_t GnssAdapter::configOsnmaEnablementCommand(bool enable) {
 
     sendMsg(new MsgConfigOsnmaEnablementParams(*this, *mLocApi, sessionId, enable));
     return sessionId;
+}
+
+void GnssAdapter::set3rdPartyNtnCapabilityCommand(bool isCapable) {
+    struct MsgSet3rdPartyNtnCapability : public LocMsg {
+        GnssAdapter& mAdapter;
+        bool mIsCapable;
+
+        inline MsgSet3rdPartyNtnCapability(GnssAdapter& adapter, bool isCapable) :
+                LocMsg(), mAdapter(adapter), mIsCapable(isCapable) {}
+        inline ~MsgSet3rdPartyNtnCapability() {}
+        inline virtual void proc() const {
+            LOC_LOGd("set3rdPartyNtnCapability: %d", mIsCapable);
+            mAdapter.mXtraObserver.set3rdPartyNtnCapability(mIsCapable);
+        }
+    };
+    sendMsg(new MsgSet3rdPartyNtnCapability(*this, isCapable));
+}
+
+void GnssAdapter::getNtnConfigSignalMaskCommand() {
+    // generated session id will be none-zero
+    uint32_t sessionId = generateSessionId();
+    LOC_LOGd("session id %u", sessionId);
+    struct MsgGetNtnConfig : public LocMsg {
+        GnssAdapter&     mAdapter;
+        LocApiBase&      mApi;
+        uint32_t         mSessionId;
+
+        inline MsgGetNtnConfig(GnssAdapter& adapter, LocApiBase& api,
+                uint32_t sessionId) :
+                LocMsg(), mAdapter(adapter), mApi(api), mSessionId(sessionId) {}
+        inline ~MsgGetNtnConfig() {}
+        inline virtual void proc() const {
+            LocApiResponse* locApiResponse = new LocApiResponse(*mAdapter.getContext(),
+                    [&mAdapter = mAdapter, mSessionId = mSessionId] (LocationError err) mutable {
+                mAdapter.reportResponse(err, mSessionId);
+            });
+            if (!locApiResponse) {
+                LOC_LOGE("MsgSetNtnConfig: memory alloc failed");
+                mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
+            } else {
+                mApi.getNtnConfigSignalMask(locApiResponse);
+            }
+        }
+    };
+
+    sendMsg(new MsgGetNtnConfig(*this, *mLocApi, sessionId));
+}
+
+void GnssAdapter::setNtnConfigSignalMaskCommand(GnssSignalTypeMask gpsSignalTypeConfigMask) {
+    // generated session id will be none-zero
+    uint32_t sessionId = generateSessionId();
+    LOC_LOGd("session id %u, gpsSignalTypeConfigMask %d", sessionId, gpsSignalTypeConfigMask);
+    struct MsgSetNtnConfig : public LocMsg {
+        GnssAdapter&        mAdapter;
+        LocApiBase&         mApi;
+        uint32_t            mSessionId;
+        GnssSignalTypeMask  mMask;
+
+        inline MsgSetNtnConfig(GnssAdapter& adapter, LocApiBase& api,
+                uint32_t sessionId, uint32_t mask) :
+                LocMsg(), mAdapter(adapter), mApi(api), mSessionId(sessionId), mMask(mask) {}
+        inline ~MsgSetNtnConfig() {}
+        inline virtual void proc() const {
+            LocApiResponse* locApiResponse = new LocApiResponse(*mAdapter.getContext(),
+                    [&mAdapter = mAdapter, mSessionId = mSessionId] (LocationError err) mutable {
+                mAdapter.reportResponse(err, mSessionId);
+            });
+            if (!locApiResponse) {
+                LOC_LOGE("MsgSetNtnConfig: memory alloc failed");
+                mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
+            } else {
+                mAdapter.updateEvtMask(LOC_API_ADAPTER_BIT_NTN_CONFIG_UPDATE,
+                        LOC_REGISTRATION_MASK_ENABLED);
+                mApi.setNtnConfigSignalMask(mMask, locApiResponse);
+            }
+        }
+    };
+
+    sendMsg(new MsgSetNtnConfig(*this, *mLocApi, sessionId, gpsSignalTypeConfigMask));
 }
 
 void GnssAdapter::reportGnssConfigEvent(uint32_t sessionId, const GnssConfig& gnssConfig)
@@ -8945,11 +9234,17 @@ void GnssAdapter::handleDisablePPENtrip() {
 }
 
 void GnssAdapter::checkUpdateDgnssNtrip(bool isLocationValid) {
-    LOC_LOGd("isInSession %d mDgnssState 0x%x isLocationValid %d isMlpEnabled %d",
-            isInSession(), mDgnssState, isLocationValid, isMlpEnabled());
-    //Enable edgnss -daemon when isInSession and isMlpEnabled.
-    //isMlpEnabled is true when RTK or edgnss feature is enabled.
-    if (isInSession() && isMlpEnabled()) {
+    LOC_LOGd("isInSession %d mDgnssState 0x%x isLocationValid %d "
+             "isMlpEnabled %d mSystemPowerState %d",
+            isInSession(), mDgnssState, isLocationValid, isMlpEnabled(), mSystemPowerState);
+    //1. Enable edgnss-daemon when isInSession and isMlpEnabled.
+    // isMlpEnabled is true when RTK or edgnss feature is enabled.
+    //2. Modem sometimes send PVT very closely right after power is suspended
+    // so need to check power is not in suspend or shutdown state
+    if (isInSession() && isMlpEnabled() &&
+            (POWER_STATE_SUSPEND != mSystemPowerState) &&
+            (POWER_STATE_DEEP_SLEEP_ENTRY != mSystemPowerState) &&
+            (POWER_STATE_SHUTDOWN != mSystemPowerState)) {
         uint64_t curBootTime = getBootTimeMilliSec();
         if (mDgnssState == (DGNSS_STATE_ENABLE_NTRIP_COMMAND | DGNSS_STATE_NO_NMEA_PENDING)) {
             mDgnssState |= DGNSS_STATE_NTRIP_SESSION_STARTED;

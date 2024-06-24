@@ -81,6 +81,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <queue>
 #include <NativeAgpsHandler.h>
 #include <unordered_map>
+#include <base_util/nvparam_mgr.h>
 
 #define MAX_URL_LEN 256
 #define NMEA_SENTENCE_MAX_LENGTH 200
@@ -95,6 +96,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class GnssAdapter;
 
+using namespace qc_loc_fw;
 typedef std::map<LocationSessionKey, LocationOptions> LocationSessionMap;
 typedef std::map<LocationSessionKey, TrackingOptions> TrackingOptionsMap;
 
@@ -374,6 +376,7 @@ class GnssAdapter : public LocAdapterBase {
         HMAC_CONFIG_TEST_MODE,
     } HmacConfigType;
     HmacConfigType mHmacConfig;
+    NvParamMgr*   mNvParamMgr;
 
     /* === NativeAgpsHandler ======================================================== */
     NativeAgpsHandler mNativeAgpsHandler;
@@ -445,6 +448,10 @@ class GnssAdapter : public LocAdapterBase {
     /*==== Qesdk Feature Status ========================================================*/
     std::string mAppHash;
 
+    /*==== 3rd party NTN status ========================================================*/
+    bool mIsNtnStatusValid;
+    GnssSignalTypeMask mNtnSignalTypeConfigMask;
+
 protected:
 
     /* ==== CLIENT ========================================================================= */
@@ -456,7 +463,11 @@ protected:
 
 public:
     GnssAdapter();
-    virtual inline ~GnssAdapter() { }
+    virtual inline ~GnssAdapter() {
+        if (nullptr != mNvParamMgr) {
+            mNvParamMgr->releaseInstance();
+        }
+    }
 
     /* ==== SSR ============================================================================ */
     /* ======== EVENTS ====(Called from QMI Thread)========================================= */
@@ -518,7 +529,7 @@ public:
     void configLeverArm(uint32_t sessionId, const LeverArmConfigInfo& configInfo);
     void configRobustLocation(uint32_t sessionId, bool enable, bool enableForE911);
     void configMinGpsWeek(uint32_t sessionId, uint16_t minGpsWeek);
-
+    void injectMmfData(uint32_t sessionId, const GnssMapMatchedData& mapData);
     /* ==== NI ============================================================================= */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
     void gnssNiResponseCommand(LocationAPI* client, uint32_t id, GnssNiResponse response);
@@ -621,6 +632,10 @@ public:
             const std::string& appHash);
     uint32_t configMerkleTreeCommand(const char * merkleTreeConfigBuffer, int bufferLength);
     uint32_t configOsnmaEnablementCommand(bool enable);
+    uint32_t gnssInjectMmfDataCommand(const GnssMapMatchedData& data);
+    void set3rdPartyNtnCapabilityCommand(bool isCapable);
+    void getNtnConfigSignalMaskCommand();
+    void setNtnConfigSignalMaskCommand(GnssSignalTypeMask gpsSignalTypeConfigMask);
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
@@ -719,6 +734,9 @@ public:
     void reportPdnTypeFromWds(int pdnType, AGpsExtType agpsType, std::string apnName,
             AGpsBearerType bearerType);
     void reportXtraMpDisabledEvent();
+    void reportNtnStatusEvent(LocationError status,
+            const GnssSignalTypeMask& gpsSignalTypeConfigMask, bool isSetResponse);
+    void reportNtnConfigUpdateEvent(const GnssSignalTypeMask& gpsSignalTypeConfigMask);
 
     /* ======== UTILITIES ================================================================= */
     bool needReportForAllClients(const UlpLocation& ulpLocation,
@@ -878,6 +896,9 @@ public:
     // This function can only be called from Engine Hub
     void handleQesdkQwesStatusFromEHub(
             const std::unordered_map<LocationQwesFeatureType, bool> &featureMap);
+    void restoreConfigFromNvm();
+    LeverArmConfigInfo readVrpDataFromNvm();
+    bool storeVrpData2Nvm(const LeverArmConfigInfo& configInfo);
 
 };
 
