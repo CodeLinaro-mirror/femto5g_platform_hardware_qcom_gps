@@ -1033,6 +1033,16 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
         out.flags |= LDT_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT;
         out.posReportingInterval = locationExtended.posReportingInterval;
     }
+
+    if (GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA & locationExtended.flags) {
+        out.flags |= LDT_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT;
+        out.extendedDataLen = locationExtended.extendedDataLen;
+        if (locationExtended.extendedDataLen <= sizeof(out.extendedData)) {
+            memscpy(out.extendedData, locationExtended.extendedDataLen,
+                    locationExtended.extendedData,
+                    locationExtended.extendedDataLen);
+        }
+    }
 }
 
 inline uint32_t
