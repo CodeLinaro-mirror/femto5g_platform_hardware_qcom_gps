@@ -797,6 +797,17 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
     if (GPS_LOCATION_EXTENDED_HAS_AGE_OF_CORRECTION & locationExtended.flags) {
         out.flags |= GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT;
         out.ageMsecOfCorrections = locationExtended.ageMsecOfCorrections;
+
+    }
+    if (GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA & locationExtended.flags) {
+        out.flags |= GNSS_LOCATION_INFO_EXTENDED_DATA_BIT;
+        out.extendedDataLen = locationExtended.extendedDataLen;
+        if (locationExtended.extendedDataLen <= sizeof(out.extendedData)) {
+            memscpy(out.extendedData, locationExtended.extendedDataLen,
+                    locationExtended.extendedData,
+                    locationExtended.extendedDataLen);
+        }
+
     }
 }
 

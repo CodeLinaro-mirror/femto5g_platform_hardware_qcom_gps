@@ -136,6 +136,9 @@ typedef uint32_t LocSvInfoSource;
 /* TBM Threshold for tracking in background power mode : in millis */
 #define TRACKING_TBM_THRESHOLD_MILLIS 480000
 
+/***/
+#define LOC_OEM_DRE_DATA_BLOB_SIZE (4096)
+
 typedef uint32_t LocPosTechMask;
 #define LOC_POS_TECH_MASK_DEFAULT ((LocPosTechMask)0x00000000)
 #define LOC_POS_TECH_MASK_SATELLITE ((LocPosTechMask)0x00000001)
@@ -478,6 +481,8 @@ typedef uint64_t GpsLocationExtendedFlags;
 #define GPS_LOCATION_EXTENDED_HAS_BASE_LINE_LENGTH               0x200000000000000
 /* Age of Corrections */
 #define GPS_LOCATION_EXTENDED_HAS_AGE_OF_CORRECTION              0x400000000000000
+/** GpsLocationExtended has extendedData payload. */
+#define GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA                  0x800000000000000
 
 typedef uint32_t LocNavSolutionMask;
 /* Bitmask to specify whether SBAS ionospheric correction is used  */
@@ -989,6 +994,10 @@ typedef struct {
     double baseLineLength;
     /** Age of corrections - Unit - milli-seconds */
     uint64_t ageMsecOfCorrections;
+    /** Must be set to # of elements in extendedData */
+    uint32_t extendedDataLen;
+    /**   Data blob payload  */
+    uint8_t extendedData[LOC_OEM_DRE_DATA_BLOB_SIZE];
 } GpsLocationExtended;
 
 // struct that contains complete position info from engine

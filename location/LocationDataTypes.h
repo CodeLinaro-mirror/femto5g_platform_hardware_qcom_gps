@@ -88,6 +88,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**  Maximum number of satellites in an ephemeris report.  */
 #define GNSS_EPHEMERIS_LIST_MAX_SIZE_V02 32
 
+/** OEM DRE Data Blob size */
+#define LDT_LOC_OEM_DRE_DATA_BLOB_SIZE 4096
+
 enum LocationError {
     LOCATION_ERROR_SUCCESS = 0,
     LOCATION_ERROR_GENERAL_FAILURE,
@@ -254,6 +257,7 @@ typedef enum {
     GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT       = (1ULL<<37), // dgnss station id
     GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT       = (1ULL<<38), // base station & receiver distance
     GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT      = (1ULL<<39), // Age of Corrections
+    GNSS_LOCATION_INFO_EXTENDED_DATA_BIT           = (1ULL<<40), // Gnss Extended Data
 } GnssLocationInfoFlagBits;
 
 enum GeofenceBreachType {
@@ -1313,6 +1317,10 @@ struct GnssLocationInfoNotification {
     // correction and the time of the correction
     // Unit - milli-seconds
     uint64_t ageMsecOfCorrections;
+    /** Must be set to # of elements in extendedData */
+    uint32_t extendedDataLen;
+    /**   Data blob payload  */
+    uint8_t extendedData[LDT_LOC_OEM_DRE_DATA_BLOB_SIZE];
 };
 
 struct GnssNiNotification {
