@@ -494,6 +494,8 @@ typedef uint64_t GpsLocationExtendedFlags;
 /** GpsLocationExtended has valid numOfdgnssStationId and
  *  dgnssStationId. */
 #define GPS_LOCATION_EXTENDED_HAS_DGNSS_STATION_ID               0x80000000000000
+/** GpsLocationExtended has valid leapSecondsUnc */
+#define GPS_LOCATION_EXTENDED_HAS_LEAP_SECONDS_UNC               0x1000000000000000
 
 typedef uint32_t LocNavSolutionMask;
 /* Bitmask to specify whether SBAS ionospheric correction is used  */
@@ -514,6 +516,8 @@ typedef uint32_t LocNavSolutionMask;
 #define LOC_NAV_MASK_RTK_FIXED_CORRECTION ((LocNavSolutionMask)0x0080)
 /**<  Bitmask specifying whether only SBAS corrected SVs are used for the fix */
 #define LOC_NAV_MASK_ONLY_SBAS_CORRECTED_SV_USED ((LocNavSolutionMask)0x0100)
+/**<  Bitmask specifying whether MMF Aiding is used for the fix */
+#define LOC_NAV_MASK_MMF_AIDED_POSITION ((LocNavSolutionMask)0x0200)
 
 typedef uint32_t LocPosDataMask;
 /* Bitmask to specify whether Navigation data has Forward Acceleration  */
@@ -558,7 +562,7 @@ typedef uint32_t GnssAdditionalSystemInfoMask;
 #define GAL_SV_PRN_MIN      301
 #define GAL_SV_PRN_MAX      336
 #define NAVIC_SV_PRN_MIN    401
-#define NAVIC_SV_PRN_MAX    414
+#define NAVIC_SV_PRN_MAX    420
 #define GLO_SV_PRN_SLOT_UNKNOWN 255
 
 /* Checking svIdOneBase can be set to the corresponding bit in mask */
@@ -625,6 +629,7 @@ typedef struct {
     uint64_t sbas_l1_sv_used_ids_mask;      // SBAS L1
     uint64_t bds_b2aq_sv_used_ids_mask;     // BDS B2AQ
     uint64_t navic_l5_sv_used_ids_mask;     // NAVIC L5
+    uint64_t navic_l1_sv_used_ids_mask;     // NAVIC L1
 } GnssSvMbUsedInPosition;
 
 /* Body Frame parameters */
