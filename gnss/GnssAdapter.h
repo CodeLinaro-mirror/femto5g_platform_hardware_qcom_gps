@@ -169,10 +169,6 @@ typedef struct {
     uint32_t reqIDCounter;
 } NiData;
 
-typedef enum {
-    NMEA_PROVIDER_AP = 0, // Application Processor Provider of NMEA
-    NMEA_PROVIDER_MP      // Modem Processor Provider of NMEA
-} NmeaProviderType;
 typedef struct {
     GnssSvType svType;
     const char* talker;
@@ -292,6 +288,8 @@ class GnssAdapter : public LocAdapterBase {
     GnssSvIdConfig mGnssSvIdConfig;
     GnssSvTypeConfig mGnssSeconaryBandConfig;
     GnssSvTypeConfigCallback mGnssSvTypeConfigCb;
+    // Holds the original input of constellation enablement/disablement
+    // from XTRA, SV config via Location SDK has been deprecated
     GnssConstellationConfig mGnssSvTypeConfigs[SV_TYPE_CONFIG_MAX_SOURCE];
     bool mSupportNfwControl;
     LocIntegrationConfigInfo mLocConfigInfo;
@@ -357,6 +355,8 @@ class GnssAdapter : public LocAdapterBase {
     XtraSystemStatusObserver mXtraObserver;
     bool mMpXtraEnabled;
     LocationSystemInfo mLocSystemInfo;
+    // original input of blacklisted SVs from Android framework
+    // via: adb shell settings put global gnss_satellite_blocklist
     std::vector<GnssSvIdSource> mBlacklistedSvIds;
     PowerStateType mSystemPowerState;
     PowerConnectState mPowerConnectState;
@@ -451,6 +451,10 @@ class GnssAdapter : public LocAdapterBase {
     /*==== 3rd party NTN status ========================================================*/
     bool mIsNtnStatusValid;
     GnssSignalTypeMask mNtnSignalTypeConfigMask;
+
+    /*==== WakeLock acquire/release based on TBF ==================================*/
+    bool mIsWakeLockActive;
+    uint32_t mWakeLockEnableTbfThreshold;
 
 protected:
 
@@ -569,12 +573,7 @@ public:
 
     /* ==== UTILITIES ====================================================================== */
     LocationError gnssSvIdConfigUpdateSync(const std::vector<GnssSvIdSource>& blacklistedSvIds);
-    LocationError gnssSvIdConfigUpdateSync();
-    void gnssSvIdConfigUpdate(const std::vector<GnssSvIdSource>& blacklistedSvIds);
-    void gnssSvIdConfigUpdate();
-    void gnssSvTypeConfigUpdate(const GnssSvTypeConfig& currentConfig,
-                                const GnssSvTypeConfig& newConfig);
-    void gnssSvTypeConfigUpdate();
+    LocationError gnssSvConfigUpdate();
     bool gnssSetSvTypeConfig(const GnssSvTypeConfig& config, GnssSvTypeConfigSource source);
     GnssSvTypeConfig gnssCombineSvTypeConfigs();
     inline void gnssSetSvTypeConfigCallback(GnssSvTypeConfigCallback callback)
@@ -691,19 +690,16 @@ public:
                                      const GpsLocationExtended& locationExtended,
                                      enum loc_sess_status status,
                                      LocPosTechMask techMask,
-                                     GnssDataNotification* pDataNotify = nullptr,
-                                     int msInWeek = -1);
+                                     GnssDataNotification* pDataNotify = nullptr);
     void reportEnginePositionsEvent(unsigned int count,
                                     EngineLocationInfo* locationArr);
     virtual void reportPropogatedPuncEvent(LocGpsLocation gpsLocation);
 
     virtual void reportSvEvent(const GnssSvNotification& svNotify);
-    virtual void reportNmeaEvent(const char* nmea, size_t length);
-    virtual void reportDataEvent(const GnssDataNotification& dataNotify, int msInWeek);
+    virtual void reportDataEvent(const GnssDataNotification& dataNotify);
     virtual bool requestNiNotifyEvent(const GnssNiNotification& notify, const void* data,
                                       const LocInEmergency emergencyState);
-    virtual void reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurements,
-                                                int msInWeek);
+    virtual void reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurements);
     virtual void reportSvPolynomialEvent(GnssSvPolynomial &svPolynomial);
     virtual void reportSvEphemerisEvent(GnssSvEphemerisReport & svEphemeris);
     virtual void reportGnssSvIdConfigEvent(const GnssSvIdConfig& config);
@@ -832,7 +828,6 @@ public:
     static uint32_t convertAGloProt(const GnssConfigAGlonassPositionProtocolMask);
     static uint32_t convertSuplMode(const GnssConfigSuplModeMask suplModeMask);
     static void convertSatelliteInfo(std::vector<GnssDebugSatelliteInfo>& out,
-                                     const GnssSvType& in_constellation,
                                      const SystemStatusReports& in);
     static bool convertToGnssSvIdConfig(
             const std::vector<GnssSvIdSource>& blacklistedSvIds, GnssSvIdConfig& config);
@@ -883,7 +878,6 @@ public:
     void disablePPENtripStreamCommand();
     void handleEnablePPENtrip(const GnssNtripConnectionParams& params, bool enableRTKEngine);
     void handleDisablePPENtrip();
-    void reportGGAToNtrip(const char* nmea);
     inline bool isDgnssNmeaRequired() { return mSendNmeaConsent &&
             mStartDgnssNtripParams.ntripParams.requiresNmeaLocation;}
     void readPPENtripConfig();
