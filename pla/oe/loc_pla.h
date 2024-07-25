@@ -26,9 +26,10 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
 
-Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -99,6 +100,17 @@ inline int64_t uptimeMillis()
     return time_ms / 1000000LL;
 }
 
+#ifdef GLIB_VER_2_72_3
+#ifndef OFF_TARGET
+#include <glib.h>
+#define strlcat g_strlcat
+#define strlcpy g_strlcpy
+#else
+#define strlcat strncat
+#define strlcpy strncpy
+#endif
+#endif
+
 extern "C" {
 #endif
 
@@ -121,6 +133,7 @@ extern "C" {
 #include <stdarg.h>
 #define MAX_COMMAND_STR_LEN (255)
 #define BOOT_KPI_FILE "/sys/kernel/debug/bootkpi/kpi_values"
+#ifndef GLIB_VER_2_72_3
 #ifndef OFF_TARGET
 #include <glib.h>
 #define strlcat g_strlcat
@@ -128,6 +141,7 @@ extern "C" {
 #else
 #define strlcat strncat
 #define strlcpy strncpy
+#endif
 #endif
 
 #define UID_GPS (1021)
