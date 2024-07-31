@@ -190,7 +190,9 @@ enum GnssLocationNavSolutionBits {
     // Posiiton Report is RTF fixed corrected
     LOCATION_NAV_CORRECTION_RTK_FIXED_BIT  = (1<<7),
     // Position report is computed with only SBAS corrected SVs.
-    LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT = (1<<8)
+    LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT = (1<<8),
+    /** Postion report is MMF Aided */
+    LOCATION_NAV_MMF_AIDED_POSITION    = (1<<9)
 };
 
 typedef uint32_t GnssLocationPosDataMask;
@@ -274,6 +276,7 @@ typedef uint64_t GnssLocationInfoFlagMask;
 #define LDT_GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT (1ULL<<35) // Cross-track protection level
 #define LDT_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT (1ULL<<36) // vertical protection level
 #define LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT (1ULL<<37) // dgnss station id
+#define LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT (1ULL<<40) // Leap Second Uncertainity
 
 enum GeofenceBreachType {
     GEOFENCE_BREACH_ENTER = 0,
@@ -1524,6 +1527,9 @@ typedef uint32_t DrSolutionStatusMask;
 #define DRE_WARNING_SENSOR_TEMP_OUT_OF_RANGE   (1<<13)
 #define DRE_WARNING_USER_DYNAMICS_INSUFFICIENT (1<<14)
 #define DRE_WARNING_FACTORY_DATA_INCONSISTENT  (1<<15)
+#define DRE_WARNING_MMF_UNAVAILABLE            (1<<16)
+#define DRE_WARNING_MMF_NOT_USABLE             (1<<17)
+
 
 struct LLAInfo {
     double latitude;  // in degree
@@ -1611,6 +1617,9 @@ struct GnssLocationInfoNotification {
     //   - Monitoring station -- 1000-2023 (Station ID biased by 1000).
     //   - Other values reserved.
     uint16_t dgnssStationId[DGNSS_STATION_ID_MAX];
+    /** Uncertainty for the GNSS leap second.
+     *  Units -- Seconds */
+    uint8_t leapSecondsUnc;
 };
 
 // Indicate the API that is called to generate the location report
@@ -1940,6 +1949,10 @@ inline bool operator ==(GnssSvIdSource const& left, GnssSvIdSource const& right)
 struct GnssSvIdConfig {
     uint32_t size; // set to sizeof(GnssSvIdConfig)
 
+    // GPS - SV 1 maps to bit 0
+#define GNSS_SV_CONFIG_GPS_INITIAL_SV_ID 1
+    uint64_t gpsBlacklistSvMask;
+
     // GLONASS - SV 65 maps to bit 0
 #define GNSS_SV_CONFIG_GLO_INITIAL_SV_ID 65
     uint64_t gloBlacklistSvMask;
@@ -1969,6 +1982,7 @@ struct GnssSvIdConfig {
 
     inline bool equals(const GnssSvIdConfig& inConfig) {
         if ((inConfig.size == size) &&
+                (inConfig.gpsBlacklistSvMask == gpsBlacklistSvMask) &&
                 (inConfig.gloBlacklistSvMask == gloBlacklistSvMask) &&
                 (inConfig.bdsBlacklistSvMask == bdsBlacklistSvMask) &&
                 (inConfig.qzssBlacklistSvMask == qzssBlacklistSvMask) &&
@@ -3626,5 +3640,71 @@ enum OdcpiCallbackTypeMaskBits {
 };
 
 typedef uint16_t OdcpiCallbackTypeMask;
+
+enum {
+    LDT_MMF_DATA_VALID_UTC_TIME     = (1<<0),
+    LDT_MMF_DATA_VALID_LAT_DIFF     = (1<<1),
+    LDT_MMF_DATA_VALID_LONG_DIFF    = (1<<2),
+    LDT_MMF_DATA_VALID_TUNNEL       = (1<<3),
+    LDT_MMF_DATA_VALID_BEARING      = (1<<4),
+    LDT_MMF_DATA_VALID_ALTITUDE     = (1<<5),
+    LDT_MMF_DATA_VALID_HOR_ACC      = (1<<6),
+    LDT_MMF_DATA_VALID_ALT_ACC      = (1<<7),
+    LDT_MMF_DATA_VALID_BEARING_ACC  = (1<<8),
+} GnssMmfDataValidity;
+
+struct GnssMapMatchedData {
+    /** Validity fields for MMF data fields to follow
+     *  Flags defined uisng enum GnssMmfDataValidity */
+    uint64_t validityMask;
+
+    /** Unix epoch time of the location fix for which map-match
+     *  feedback is being sent, since the start of the Unix epoch
+     *  (00:00:00 January 1, 1970 UTC).
+     *  Unit: Milli-seconds */
+    uint64_t utcTimestampMs;
+
+    /** Latitude difference = map matched latitude - reported latitude
+     *  Unit: Degrees
+     *  Range: [-90.0, 90.0] */
+    double mapMatchedLatitudeDifference;
+
+    /** Longitude difference = map matched longitude - reported longitude
+     *  Unit: Degrees
+     *  Range: [-180.0, 180.0] */
+    double mapMatchedLongitudeDifference;
+
+    /** Bearing: The horizontal direction of travel of the device with
+     *  respect to north and is unrelated to the device orientation.
+     *  Unit: Degrees
+     *  range: [0, 360) */
+    float bearing;
+
+    /** Absolute Altitude above the WGS 84 reference ellipsoid
+        Unit: meters */
+    double altitude;
+
+    /** Horizontal accuracy radius defined with the
+     *  68th percentile confidence level.
+     *  Unit: meter
+     *  Range: 0 or greater */
+    float horizontalAccuracy;
+
+    /** Altitude accuracy. Defined with 68% confidence level.
+     *  Unit:meter
+     *  Range: 0 or greater */
+    float altitudeAccuracy;
+
+    /** Estimated bearing accuracy defined with
+     *  68 percentile confidence level (1 sigma).
+     *  Unit: Degrees
+     *  Range [0, 360) */
+    float bearingAccuracy;
+
+    /** Road Type. Decision to use the MMF data depends on isTunnel
+     *  Value: True or False */
+    bool isTunnel;
+
+};
 
 #endif /* LOCATIONDATATYPES_H */
