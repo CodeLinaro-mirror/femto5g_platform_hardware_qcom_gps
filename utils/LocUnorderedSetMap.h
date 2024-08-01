@@ -26,6 +26,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef __LOC_UNORDERDED_SETMAP_H__
 #define __LOC_UNORDERDED_SETMAP_H__
 
@@ -143,8 +149,11 @@ public:
                              unordered_set<KEY>* goneKeys, unordered_set<VAL>* goneVals) {
         for (auto key : keys) {
             auto iter = mMap.find(key);
-            if (iter != mMap.end() && trimOrRemove(iter, rVals, goneVals) && nullptr != goneKeys) {
-                goneKeys->insert(iter->first);
+            if (iter != mMap.end()) {
+                KEY goneKey = iter->first;
+                if (trimOrRemove(iter, rVals, goneVals) && nullptr != goneKeys) {
+                    goneKeys->insert(goneKey);
+                }
             }
         }
     }
