@@ -26,6 +26,16 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+<<<<<<< HEAD   (264042 Remove race condition while mSupportNfwControl read)
+=======
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022, 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
+>>>>>>> CHANGE (f20d3f Avoid access of deprecated LocUnorderedSetMap entry)
 #ifndef __LOC_UNORDERDED_SETMAP_H__
 #define __LOC_UNORDERDED_SETMAP_H__
 
@@ -143,8 +153,11 @@ public:
                              unordered_set<KEY>* goneKeys, unordered_set<VAL>* goneVals) {
         for (auto key : keys) {
             auto iter = mMap.find(key);
-            if (iter != mMap.end() && trimOrRemove(iter, rVals, goneVals) && nullptr != goneKeys) {
-                goneKeys->insert(iter->first);
+            if (iter != mMap.end()) {
+                KEY goneKey = iter->first;
+                if (trimOrRemove(iter, rVals, goneVals) && nullptr != goneKeys) {
+                    goneKeys->insert(goneKey);
+                }
             }
         }
     }
