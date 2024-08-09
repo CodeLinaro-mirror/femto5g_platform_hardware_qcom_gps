@@ -7194,6 +7194,7 @@ bool GnssAdapter::measCorrSetCorrectionsCommand(const GnssMeasurementCorrections
                 }
             }
             char mapDataTestMode[LOC_MAX_PARAM_STRING];
+            memset(mapDataTestMode, 0, sizeof(mapDataTestMode));
             loc_param_s_type izatMapDataTable[] =
             {
                 { "MAP_DATA_TEST_MODE", &mapDataTestMode, NULL, 's' },
