@@ -28,41 +28,6 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-/*
  * Changes from Qualcomm Technologies, Inc. are provided under the following license:
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
@@ -112,10 +77,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace loc_core;
 
 static int loadEngHubForExternalEngine = 0;
-static int sUseZppInDBH = 0;
+
 static loc_param_s_type izatConfParamTable[] = {
     {"LOAD_ENGHUB_FOR_EXTERNAL_ENGINE", &loadEngHubForExternalEngine, nullptr, 'n'},
-    {"USE_ZPP_IN_DBH", &sUseZppInDBH, nullptr, 'n'}
 };
 
 /* Method to fetch status cb from loc_net_iface library */
@@ -9118,39 +9082,3 @@ void GnssAdapter::readPPENtripConfig() {
     }
 }
 
-bool GnssAdapter::reportZppBestAvailableFix(LocGpsLocation &zppLoc,
-            GpsLocationExtended &location_extended, LocPosTechMask tech_mask) {
-    if (sUseZppInDBH && mOdcpiRequest.isEmergencyMode && (mOdcpiStateMask & ODCPI_REQ_ACTIVE)
-            && zppLoc.timestamp != 0) {
-        LOC_LOGv("report valid ZPP fix to Flp client in DBH");
-
-        struct MsgReportZppPosition : public LocMsg {
-            GnssAdapter& mAdapter;
-            mutable UlpLocation mUlpLoc;
-            mutable GpsLocationExtended mLocationExtended;
-            enum loc_sess_status mStatus;
-
-            inline MsgReportZppPosition(GnssAdapter& adapter,
-                                        const LocGpsLocation& zppLoc,
-                                        const GpsLocationExtended& locationExtended,
-                                        enum loc_sess_status status,
-                                        LocPosTechMask techMask) :
-                    LocMsg(),
-                    mAdapter(adapter),
-                    mLocationExtended(locationExtended),
-                    mStatus(status) {
-                memset(&mUlpLoc, 0, sizeof(UlpLocation));
-                mUlpLoc.size = sizeof(mUlpLoc);
-                mUlpLoc.tech_mask = techMask;
-                memcpy(&(mUlpLoc.gpsLocation), &zppLoc, sizeof(LocGpsLocation));
-            }
-            inline virtual void proc() const {
-                mAdapter.reportPosition(mUlpLoc, mLocationExtended, mStatus, mUlpLoc.tech_mask);
-            }
-        };
-
-        sendMsg(new MsgReportZppPosition(*this,
-                    zppLoc, location_extended, LOC_SESS_INTERMEDIATE, tech_mask));
-    }
-    return true;
-}
