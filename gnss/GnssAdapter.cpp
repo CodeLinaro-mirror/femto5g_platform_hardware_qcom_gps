@@ -108,10 +108,8 @@ using namespace loc_core;
 
 static int loadEngHubForExternalEngine = 0;
 static int loadLocSlatePUNCModel = 0;
-static int sUseZppInDBH = 0;
 static loc_param_s_type izatConfParamTable[] = {
     {"LOAD_ENGHUB_FOR_EXTERNAL_ENGINE", &loadEngHubForExternalEngine, nullptr, 'n'},
-    {"USE_ZPP_IN_DBH", &sUseZppInDBH, nullptr, 'n'}
 };
 
 static loc_param_s_type izatConfLocGlinkParamTable[] = {
@@ -9054,39 +9052,3 @@ void GnssAdapter::readPPENtripConfig() {
     }
 }
 
-bool GnssAdapter::reportZppBestAvailableFix(LocGpsLocation &zppLoc,
-            GpsLocationExtended &location_extended, LocPosTechMask tech_mask) {
-    if (sUseZppInDBH && mOdcpiRequest.isEmergencyMode && (mOdcpiStateMask & ODCPI_REQ_ACTIVE)
-            && zppLoc.timestamp != 0) {
-        LOC_LOGv("report valid ZPP fix to Flp client in DBH");
-
-        struct MsgReportZppPosition : public LocMsg {
-            GnssAdapter& mAdapter;
-            mutable UlpLocation mUlpLoc;
-            mutable GpsLocationExtended mLocationExtended;
-            enum loc_sess_status mStatus;
-
-            inline MsgReportZppPosition(GnssAdapter& adapter,
-                                        const LocGpsLocation& zppLoc,
-                                        const GpsLocationExtended& locationExtended,
-                                        enum loc_sess_status status,
-                                        LocPosTechMask techMask) :
-                    LocMsg(),
-                    mAdapter(adapter),
-                    mLocationExtended(locationExtended),
-                    mStatus(status) {
-                memset(&mUlpLoc, 0, sizeof(UlpLocation));
-                mUlpLoc.size = sizeof(mUlpLoc);
-                mUlpLoc.tech_mask = techMask;
-                memcpy(&(mUlpLoc.gpsLocation), &zppLoc, sizeof(LocGpsLocation));
-            }
-            inline virtual void proc() const {
-                mAdapter.reportPosition(mUlpLoc, mLocationExtended, mStatus, mUlpLoc.tech_mask);
-            }
-        };
-
-        sendMsg(new MsgReportZppPosition(*this,
-                    zppLoc, location_extended, LOC_SESS_INTERMEDIATE, tech_mask));
-    }
-    return true;
-}
