@@ -857,10 +857,6 @@ public:
             mStartDgnssNtripParams.ntripParams.requiresNmeaLocation;}
     void readPPENtripConfig();
 
-    // Zpp related
-    virtual bool reportZppBestAvailableFix(LocGpsLocation &zppLoc,
-            GpsLocationExtended &location_extended, LocPosTechMask tech_mask) override;
-
     // QESDK feature manange related
     // This function can only be called from Engine Hub
     void handleQesdkQwesStatusFromEHub(
