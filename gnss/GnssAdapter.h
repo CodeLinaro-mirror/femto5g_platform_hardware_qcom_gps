@@ -422,7 +422,6 @@ class GnssAdapter : public LocAdapterBase {
     void checkUpdateDgnssNtrip(bool isLocationValid);
     void stopDgnssNtrip();
     uint64_t   mDgnssLastNmeaBootTimeMilli;
-    bool mQppeResp;
 
     /*==== Signal type capabilities ====================================================*/
     GnssCapabNotification mGnssCapabNotification;
@@ -846,7 +845,6 @@ public:
     inline void setEsStatusCallback (std::function<void(bool)> esStatusCb) {
             mEsStatusCb = esStatusCb; }
     void setTribandState();
-    void testLaunchQppeBringUp();
     /*==== DGnss Usable Report Flag ====================================================*/
     inline void setDGnssUsableFLag(bool dGnssNeedReport) { mDGnssNeedReport = dGnssNeedReport;}
     inline bool isNMEAPrintEnabled() {
