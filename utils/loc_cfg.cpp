@@ -250,7 +250,7 @@ SIDE EFFECTS
    N/A
 ===========================================================================*/
 int loc_fill_conf_item(char* input_buf,
-                       const loc_param_s_type config_table[],
+                       const loc_param_s_type* config_table,
                        uint32_t table_length, uint16_t string_len = LOC_MAX_PARAM_STRING)
 {
     int ret = 0;
@@ -328,12 +328,13 @@ RETURN VALUE
 SIDE EFFECTS
    N/A
 ===========================================================================*/
-int loc_read_conf_r_long(FILE *conf_fp, const loc_param_s_type config_table[],
+int loc_read_conf_r_long(FILE *conf_fp, const loc_param_s_type* config_table,
                          uint32_t table_length, uint16_t string_len)
 {
     int ret=0;
     char input_buf[string_len];  /* declare a char array */
     unsigned int num_params=table_length;
+    const loc_param_s_type* table = config_table;
 
     if(conf_fp == NULL) {
         LOC_LOGE("%s:%d]: ERROR: File pointer is NULL\n", __func__, __LINE__);
@@ -341,14 +342,22 @@ int loc_read_conf_r_long(FILE *conf_fp, const loc_param_s_type config_table[],
         goto err;
     }
 
+    if (table_length > LOC_MAX_CONFIG_PARAM) {
+      LOC_LOGE("%s:%d]: ERROR: %d Configuration Parameters are more than MAX CONFIG PARAM\n",
+         __func__, __LINE__, table_length);
+      table_length = LOC_MAX_CONFIG_PARAM;
+    }
+
     /* Clear all validity bits */
     for(uint32_t i = 0; NULL != config_table && i < table_length; i++)
     {
-        if(NULL != config_table[i].param_set)
+        if(NULL != config_table->param_set)
         {
-            *(config_table[i].param_set) = 0;
+            *(config_table->param_set) = 0;
         }
+        config_table++;
     }
+    config_table = table;
 
     LOC_LOGD("%s:%d]: num_params: %d\n", __func__, __LINE__, num_params);
     while(num_params)
@@ -392,7 +401,7 @@ SIDE EFFECTS
    N/A
 ===========================================================================*/
 int loc_update_conf_long(const char* conf_data, int32_t length,
-                         const loc_param_s_type config_table[],
+                         const loc_param_s_type* config_table,
                          uint32_t table_length, uint16_t string_len)
 {
     int ret = -1;
@@ -449,7 +458,7 @@ RETURN VALUE
 SIDE EFFECTS
    N/A
 ===========================================================================*/
-void loc_read_conf_long(const char* conf_file_name, const loc_param_s_type config_table[],
+void loc_read_conf_long(const char* conf_file_name, const loc_param_s_type* config_table,
                         uint32_t table_length, uint16_t string_len)
 {
     FILE *conf_fp = NULL;
