@@ -241,43 +241,6 @@ bool LocApiBase::isInSession()
     return inSession;
 }
 
-bool LocApiBase::needReport(const UlpLocation& ulpLocation,
-                            enum loc_sess_status status,
-                            LocPosTechMask techMask)
-{
-    bool reported = false;
-
-    if (LOC_SESS_INTERMEDIATE == ContextBase::mGps_conf.INTERMEDIATE_POS) {
-        // if intermediate fix is allowed, we will report out intermediate or final fixes
-        // when one of below two conditions are met:
-        // 1: if accuracy level is do not care, report out all intermediate or final fixes
-        // 2: otherwise, the accuracy level will need to be valid and less than threshold
-        if (LOC_SESS_FAILURE != status) {
-            if ((ContextBase::mGps_conf.ACCURACY_THRES != 0) &&
-                    (((ulpLocation.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ACCURACY) == 0) ||
-                     (ulpLocation.gpsLocation.accuracy >= ContextBase::mGps_conf.ACCURACY_THRES))) {
-                reported = false;
-            } else {
-                reported = true;
-            }
-        }
-    } else {
-        // intermediate fix is not allowed, only can report out final fixes
-        if (LOC_SESS_SUCCESS == status) {
-            // this is a final fix with satellite and/or sensor contribution
-            LocPosTechMask mask =
-                LOC_POS_TECH_MASK_SATELLITE | LOC_POS_TECH_MASK_SENSORS;
-#ifndef __ANDROID__
-            // Include propagated GPS fix if not on Android target
-            mask |=  LOC_POS_TECH_MASK_PROPAGATED;
-#endif
-            reported = (mask & techMask);
-        }
-    }
-
-    return reported;
-}
-
 void LocApiBase::addAdapter(LocAdapterBase* adapter)
 {
     for (int i = 0; i < MAX_ADAPTERS && mLocAdapters[i] != adapter; i++) {

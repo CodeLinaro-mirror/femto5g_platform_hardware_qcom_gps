@@ -4565,21 +4565,6 @@ GnssAdapter::reportEnginePositionsEvent(unsigned int count,
     }
 }
 
-bool
-GnssAdapter::needReportForAllClients(const UlpLocation& ulpLocation,
-                                     enum loc_sess_status status,
-                                     LocPosTechMask techMask) {
-    bool reported = false;
-
-#ifdef USE_GLIB
-    if (true == isPreciseEnabled()) {
-        reported = true;
-    }
-#endif
-
-    return reported || LocApiBase::needReport(ulpLocation, status, techMask);
-}
-
 bool GnssAdapter::needReportForClient(LocationAPI* client, enum loc_sess_status status) {
     if (LOC_SESS_SUCCESS == status || (client == nullptr && LOC_SESS_INTERMEDIATE == status &&
                 mDistanceBasedTrackingSessions.size() > 0)) {
@@ -4745,7 +4730,6 @@ void GnssAdapter::reportPositionNmea(const UlpLocation& ulpLocation,
                                      const GpsLocationExtended& locationExtended,
                                      enum loc_sess_status status,
                                      LocPosTechMask techMask) {
-    bool reportToAllClients = needReportForAllClients(ulpLocation, status, techMask);
     bool needReportEngineNmea = false;
     bool needReportGnssNmea = false;
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
@@ -4768,7 +4752,7 @@ void GnssAdapter::reportPositionNmea(const UlpLocation& ulpLocation,
         bool blank_fix = ((0 == ulpLocation.gpsLocation.latitude) &&
                           (0 == ulpLocation.gpsLocation.longitude) &&
                           (LOC_RELIABILITY_NOT_SET == locationExtended.horizontal_reliability));
-        uint8_t generate_nmea = (reportToAllClients && LOC_SESS_SUCCESS == status && !blank_fix);
+        uint8_t generate_nmea = (LOC_SESS_SUCCESS == status && !blank_fix);
         bool custom_nmea_gga = (1 == ContextBase::mIzat_conf.CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED);
         bool isTagBlockGroupingEnabled =
                 (1 == ContextBase::mGps_conf.NMEA_TAG_BLOCK_GROUPING_ENABLED);
@@ -4819,15 +4803,12 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                             enum loc_sess_status status,
                             LocPosTechMask techMask)
 {
-    bool reportToAllClients = needReportForAllClients(ulpLocation, status, techMask);
     bool reportToAnyClient = needReportForAnyClient(status);
 
-    LOC_LOGd("reportToAllClients %d, reportToAnyClient %d, status %d, eng type %d, "
-             "precise location enabled %d",
-             reportToAllClients, reportToAnyClient, status,
-             locationExtended.locOutputEngType, isPreciseEnabled());
+    LOC_LOGd("reportToAnyClient %d, status %d, eng type %d, precise location enabled %d",
+             reportToAnyClient, status, locationExtended.locOutputEngType, isPreciseEnabled());
 
-    if (reportToAllClients || reportToAnyClient) {
+    if (reportToAnyClient) {
         GnssLocationInfoNotification locationInfo = {};
         list<trackingCallback> cbRunnables;
         convertLocationInfo(locationInfo, locationExtended, status);
@@ -4836,7 +4817,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
         logLatencyInfo();
 
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
-            if (reportToAllClients || needReportForClient(it->first, status)) {
+            if (needReportForClient(it->first, status)) {
                 if (nullptr != it->second.gnssLocationInfoCb) {
                     it->second.gnssLocationInfoCb(locationInfo);
                 } else if ((nullptr != it->second.engineLocationsInfoCb) &&
@@ -4872,19 +4853,17 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                 });
         }
 
-        if (reportToAllClients) {
-            // if PACE is enabled
-            if ((true == mLocConfigInfo.paceConfigInfo.isValid) &&
-                (true == mLocConfigInfo.paceConfigInfo.enable)) {
-                // If fix has sensor contribution, and it is fused fix with DRE engine
-                // contributing to the fix, inject to modem
-                if ((LOC_POS_TECH_MASK_SENSORS & techMask) &&
-                        (locationInfo.flags & LDT_GNSS_LOCATION_INFO_OUTPUT_ENG_TYPE_BIT) &&
-                        (locationInfo.locOutputEngType == LOC_OUTPUT_ENGINE_FUSED) &&
-                        (locationInfo.flags & LDT_GNSS_LOCATION_INFO_OUTPUT_ENG_MASK_BIT) &&
-                        (locationInfo.locOutputEngMask & DEAD_RECKONING_ENGINE)) {
-                    mLocApi->injectPosition(locationInfo, false);
-                }
+        // if PACE is enabled
+        if ((true == mLocConfigInfo.paceConfigInfo.isValid) &&
+            (true == mLocConfigInfo.paceConfigInfo.enable)) {
+            // If fix has sensor contribution, and it is fused fix with DRE engine
+            // contributing to the fix, inject to modem
+            if ((LOC_POS_TECH_MASK_SENSORS & techMask) &&
+                    (locationInfo.flags & LDT_GNSS_LOCATION_INFO_OUTPUT_ENG_TYPE_BIT) &&
+                    (locationInfo.locOutputEngType == LOC_OUTPUT_ENGINE_FUSED) &&
+                    (locationInfo.flags & LDT_GNSS_LOCATION_INFO_OUTPUT_ENG_MASK_BIT) &&
+                    (locationInfo.locOutputEngMask & DEAD_RECKONING_ENGINE)) {
+                mLocApi->injectPosition(locationInfo, false);
             }
         }
     }

@@ -80,8 +80,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    they must all be 32 bit fields. */
 typedef struct loc_gps_cfg_s
 {
-    uint32_t       INTERMEDIATE_POS;
-    uint32_t       ACCURACY_THRES;
     uint32_t       SUPL_VER;
     uint32_t       SUPL_MODE;
     uint32_t       SUPL_ES;
