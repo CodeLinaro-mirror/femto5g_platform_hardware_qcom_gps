@@ -360,7 +360,6 @@ public:
                                       uint64_t &gptpTime, bool &gPTPValidity);
     void saveGpsTimeAndQtimerPairInPvtReport(const GpsLocationExtended& locationExtended,
             enum loc_sess_status status);
-    void saveGpsTimeAndQtimerPairInMeasReport(const GnssSvMeasurementSet& svMeasurementSet);
 };
 
 typedef LocApiBase* (getLocApi_t)(LOC_API_ADAPTER_EVENT_MASK_T exMask,

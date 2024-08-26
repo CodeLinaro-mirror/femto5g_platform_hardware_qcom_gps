@@ -5251,8 +5251,6 @@ GnssAdapter::reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurement
         }
 
         inline virtual void proc() const {
-            mAdapter.mPositionElapsedRealTimeCal.saveGpsTimeAndQtimerPairInMeasReport(
-                    mGnssMeasurements.gnssSvMeasurementSet);
             mAdapter.fillElapsedRealTimeForMeas(mGnssMeasurements);
             mAdapter.reportGnssMeasurementData(mGnssMeasurements.gnssMeasNotification);
             if ((false == mGnssMeasurements.gnssSvMeasurementSet.isNhz) &&

@@ -874,31 +874,6 @@ void RealtimeEstimator::saveGpsTimeAndQtimerPairInPvtReport(
     }
 }
 
-void RealtimeEstimator::saveGpsTimeAndQtimerPairInMeasReport(
-        const GnssSvMeasurementSet& svMeasurementSet) {
-
-    const GnssSvMeasurementHeader& svMeasSetHeader = svMeasurementSet.svMeasSetHeader;
-
-    // Use 1Hz measurement report timestamp and qtimer tick for association
-    if ((svMeasurementSet.isNhz == false) &&
-            (svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_GPS_SYSTEM_TIME) &&
-            (svMeasSetHeader.gpsSystemTime.hasAccurateTime() == true) &&
-            (svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS) &&
-            (svMeasurementSet.svMeasSetHeader.refCountTicks != 0) &&
-            (svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS_UNC) &&
-            (svMeasurementSet.svMeasSetHeader.refCountTicksUnc != 0.0f)) {
-        LOC_LOGv("save time association from meas report with gps time %u %u, "
-                 "qtimer %" PRIi64 " %f ",
-                 svMeasSetHeader.gpsSystemTime.systemWeek,
-                 svMeasSetHeader.gpsSystemTime.systemMsec,
-                 svMeasurementSet.svMeasSetHeader.refCountTicks,
-                 svMeasurementSet.svMeasSetHeader.refCountTicksUnc);
-            mTimePairMeasReport.gpsTime.gpsWeek = svMeasSetHeader.gpsSystemTime.systemWeek;
-            mTimePairMeasReport.gpsTime.gpsTimeOfWeekMs = svMeasSetHeader.gpsSystemTime.systemMsec;
-            mTimePairMeasReport.qtimerTick = svMeasurementSet.svMeasSetHeader.refCountTicks;
-            mTimePairMeasReport.timeUncMsec = svMeasurementSet.svMeasSetHeader.refCountTicksUnc;
-        }
-    }
 
 bool RealtimeEstimator::fillAdditionalTimestamps(
         const GPSTimeStruct& gpsTimeAtOrigin,
@@ -912,10 +887,7 @@ bool RealtimeEstimator::fillAdditionalTimestamps(
     GpsTimeQtimerTickPair timePair;
 
     // We have valid association
-    if (mTimePairMeasReport.gpsTime.gpsWeek != 0) {
-        timePair = mTimePairMeasReport;
-        LOC_LOGv("use meas time association");
-    } else if (mTimePairPVTReport.gpsTime.gpsWeek != 0) {
+   if (mTimePairPVTReport.gpsTime.gpsWeek != 0) {
         LOC_LOGv("use PVT time association");
         timePair = mTimePairPVTReport;
     } else {
