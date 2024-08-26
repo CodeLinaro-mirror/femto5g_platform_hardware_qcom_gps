@@ -407,7 +407,6 @@ public:
     bool getElapsedRealtimeForGpsTime(const GpsLocationExtended& locationExtended,
                                       int64_t &elapsedTime, float & elpasedTimeUnc);
     void saveGpsTimeAndQtimerPairInPvtReport(const GpsLocationExtended& locationExtended);
-    void saveGpsTimeAndQtimerPairInMeasReport(const GnssSvMeasurementSet& svMeasurementSet);
     static bool getCurrentTime(struct timespec& currentTime, int64_t& sinceBootTimeNanos);
 };
 
