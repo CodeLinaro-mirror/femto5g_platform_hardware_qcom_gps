@@ -531,7 +531,6 @@ typedef struct {
     char baseband[LOC_MAX_PARAM_STRING];
     char low_ram_targets[LOC_MAX_PARAM_STRING];
     char soc_id_list[LOC_MAX_PARAM_STRING];
-    unsigned int sglte_target;
     char feature_gtp_mode[LOC_MAX_PARAM_STRING];
     char feature_gtp_waa[LOC_MAX_PARAM_STRING];
     char feature_odcpi[LOC_MAX_PARAM_STRING];
@@ -545,11 +544,6 @@ typedef struct {
 
 /* process configuration parameters */
 static loc_launcher_conf conf;
-
-/* gps.conf Parameter spec table */
-static const loc_param_s_type gps_conf_parameter_table[] = {
-    {"SGLTE_TARGET",        &conf.sglte_target,           NULL, 'n'},
-};
 
 /* location feature conf, e.g.: izat.conf feature mode table*/
 static const loc_param_s_type loc_feature_conf_table[] = {
@@ -630,9 +624,6 @@ int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_p
     if (process_count_ptr == NULL || process_info_table_ptr == NULL) {
         return -1;
     }
-
-    //Read gps.conf and fill parameter table
-    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_parameter_table);
 
     //Form argument strings
     strlcat(arg_gtp_waa, LOC_FEATURE_GTP_WAA, LOC_PROCESS_MAX_ARG_STR_LENGTH-3);
@@ -929,14 +920,6 @@ int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_p
                 if (strcmp(baseband_name, split_strings[i]) == 0) {
                     LOC_LOGD("%s:%d]: Matched baseband: %s\n",
                              __func__, __LINE__, split_strings[i]);
-                    config_mask |= CONFIG_MASK_BASEBAND_FOUND;
-                    break;
-                }
-                //Since ro.baseband is not a reliable source for detecting sglte
-                //the alternative is to read the SGLTE_TARGET parameter from gps.conf
-                //this parameter is read into conf_sglte_target
-                else if((strcmp("sglte", split_strings[i]) == 0 ) && conf.sglte_target) {
-                    LOC_LOGD("%s:%d]: Matched baseband SGLTE\n", __func__, __LINE__);
                     config_mask |= CONFIG_MASK_BASEBAND_FOUND;
                     break;
                 }

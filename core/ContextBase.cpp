@@ -96,7 +96,6 @@ const loc_param_s_type ContextBase::mGps_conf_table[] =
   {"A_GLONASS_POS_PROTOCOL_SELECT",  &mGps_conf.A_GLONASS_POS_PROTOCOL_SELECT,  NULL, 'n'},
   {"LPPE_CP_TECHNOLOGY",             &mGps_conf.LPPE_CP_TECHNOLOGY,             NULL, 'n'},
   {"LPPE_UP_TECHNOLOGY",             &mGps_conf.LPPE_UP_TECHNOLOGY,             NULL, 'n'},
-  {"AGPS_CERT_WRITABLE_MASK",        &mGps_conf.AGPS_CERT_WRITABLE_MASK,        NULL, 'n'},
   {"SUPL_MODE",                      &mGps_conf.SUPL_MODE,                      NULL, 'n'},
   {"SUPL_ES",                        &mGps_conf.SUPL_ES,                        NULL, 'n'},
   {"INTERMEDIATE_POS",               &mGps_conf.INTERMEDIATE_POS,               NULL, 'n'},
@@ -210,9 +209,6 @@ void ContextBase::readConfig()
         mSap_conf.ANGLE_RANDOM_WALK_SPECTRAL_DENSITY_VALID = 0;
         mSap_conf.RATE_RANDOM_WALK_SPECTRAL_DENSITY_VALID = 0;
         mSap_conf.VELOCITY_RANDOM_WALK_SPECTRAL_DENSITY_VALID = 0;
-
-        /* None of the 10 slots for agps certificates are writable by default */
-        mGps_conf.AGPS_CERT_WRITABLE_MASK = 0;
 
         /* inject supl config to modem with config values from config.xml or gps.conf, default 1 */
         mGps_conf.AGPS_CONFIG_INJECT = 1;
