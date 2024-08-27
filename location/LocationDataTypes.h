@@ -269,6 +269,8 @@ typedef uint64_t GnssLocationInfoFlagMask;
 #define LDT_GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT (1ULL<<35) // Cross-track protection level
 #define LDT_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT (1ULL<<36) // vertical protection level
 #define LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT (1ULL<<37) // dgnss station id
+#define LDT_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT  (1ULL<<38) // base station & receiver distance
+#define LDT_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT (1ULL<<39) // Age of Corrections
 #define LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT (1ULL<<40) // Leap Second Uncertainity
 
 enum GeofenceBreachType {
@@ -512,8 +514,9 @@ enum {
     GNSS_CONFIG_GPS_LOCK_NFW_R3             = 0x00000200,
     GNSS_CONFIG_GPS_LOCK_NFW_SUPL           = 0x00000400,
     GNSS_CONFIG_GPS_LOCK_NFW_CP             = 0X00000800,
+    GNSS_CONFIG_GPS_LOCK_NFW_NTN            = 0x00001000,
     GNSS_CONFIG_GPS_LOCK_NFW_ALL            =
-            (((GNSS_CONFIG_GPS_LOCK_NFW_CP << 1) - 1) & ~GNSS_CONFIG_GPS_LOCK_MO),
+            (((GNSS_CONFIG_GPS_LOCK_NFW_NTN << 1) - 1) & ~GNSS_CONFIG_GPS_LOCK_MO),
     GNSS_CONFIG_GPS_LOCK_MO_AND_NI          =
             (GNSS_CONFIG_GPS_LOCK_MO | GNSS_CONFIG_GPS_LOCK_NFW_ALL),
 };
@@ -1252,15 +1255,13 @@ struct TrackingOptions : LocationOptions {
         return minInterval == other.minInterval && powerMode == other.powerMode &&
                qualityLevelAccepted == other.qualityLevelAccepted;
     }
-    inline bool multiplexWithForTimeBasedRequest(
-            const TrackingOptions& other, uint32_t bgTrackingIntervalMs = 0xFFFFFFFF) {
+    inline bool multiplexWithForTimeBasedRequest(const TrackingOptions& other) {
         bool updated = false;
         if (other.minInterval < minInterval) {
             updated = true;
             minInterval = other.minInterval;
         }
-        if (other.powerMode < powerMode &&
-                other.minInterval < bgTrackingIntervalMs) {
+        if (other.powerMode < powerMode) {
             updated = true;
             powerMode = other.powerMode;
         }
@@ -1627,6 +1628,16 @@ struct GnssLocationInfoNotification {
     //   - Monitoring station -- 1000-2023 (Station ID biased by 1000).
     //   - Other values reserved.
     uint16_t dgnssStationId[DGNSS_STATION_ID_MAX];
+
+    // Distance between the base station and the receiver
+    // Unit - meters
+    double baseLineLength;
+
+    // Difference in time between the fix timestamp using the
+    // correction and the time of the correction
+    // Unit - milli-seconds
+    uint64_t ageMsecOfCorrections;
+
     /** Uncertainty for the GNSS leap second.
      *  Units -- Seconds */
     uint8_t leapSecondsUnc;
