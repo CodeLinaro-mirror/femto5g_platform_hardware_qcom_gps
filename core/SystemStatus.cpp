@@ -90,7 +90,7 @@ class SystemStatusNmeaBase
 protected:
     std::vector<std::string> mField;
 
-    SystemStatusNmeaBase(const char *str_in, uint32_t len_in)
+    SystemStatusNmeaBase(const char *str_in, uint32_t len_in) : mField()
     {
         // check size and talker
         if (!loc_nmea_is_debug(str_in, len_in)) {

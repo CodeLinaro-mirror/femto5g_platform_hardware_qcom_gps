@@ -371,6 +371,7 @@ void AgpsStateMachine::notifyAllSubscribers(
             if (deleteSubscriberPostNotify) {
                 it = mSubscriberList.erase(it);
                 delete subscriber;
+                subscriber = nullptr;
             } else {
                 it++;
             }
@@ -461,6 +462,7 @@ void AgpsStateMachine::deleteSubscriber(AgpsSubscriber* subscriberToDelete){
 
             it = mSubscriberList.erase(it);
             delete subscriber;
+            subscriber = nullptr;
         } else {
             it++;
         }
@@ -540,6 +542,7 @@ void AgpsStateMachine::dropAllSubscribers(){
         AgpsSubscriber* subscriber = *it;
         it = mSubscriberList.erase(it);
         delete subscriber;
+        subscriber = nullptr;
     }
 }
 
