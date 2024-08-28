@@ -90,6 +90,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define DELETE_AIDING_DATA_EXPECTED_TIME_MS 5000
 #define ONE_SECOND_IN_MS  1000
 #define IS_SS5_HW_ENABLED (1)
+#define IS_FIDL_ENABLED   (4)
+#define PVT_JITTER_IN_NSEC (20000000) /* 20 mSec */
 
 class GnssAdapter;
 
@@ -371,7 +373,8 @@ class GnssAdapter : public LocAdapterBase {
     { mAddressRequestCb = addressRequestCb;}
     inline void injectLocationAndAddr(const Location& location, const GnssCivicAddress& addr)
     { mLocApi->injectPositionAndCivicAddress(location, addr);}
-    void fillElapsedRealTime(const GpsLocationExtended& locationExtended,
+    void fillElapsedRealTime(const UlpLocation& ulpLocation,
+                             const GpsLocationExtended& locationExtended,
                              Location& out);
     void combineBlacklistSvs(const GnssSvIdConfig& blacklistSvs,
             const GnssSvTypeConfig& constellationConfig,
@@ -385,6 +388,10 @@ class GnssAdapter : public LocAdapterBase {
     void stopDgnssNtrip();
     uint64_t   mDgnssLastNmeaBootTimeMilli;
     bool mQppeResp;
+    /*==== PVT Jitter Estimation ==========================================================*/
+    /* Increment counter if Jitter is more than 20 miliseconds. */
+    uint64_t mPvtJitterCounter;
+    void updateJitterCounter(const UlpLocation& ulpLocation);
 
 protected:
 

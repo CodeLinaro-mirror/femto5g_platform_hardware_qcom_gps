@@ -325,8 +325,12 @@ LocAdapterBase::getCapabilities()
         if (ContextBase::isMessageSupported(LOC_API_ADAPTER_MESSAGE_OUTDOOR_TRIP_BATCHING)) {
             mask |= LOCATION_CAPABILITIES_OUTDOOR_TRIP_BATCHING_BIT;
         }
-        // geofence always supported
-        mask |= LOCATION_CAPABILITIES_GEOFENCE_BIT;
+
+        // geofence is supported based GNSS Deployment
+        if (0 == ContextBase::mGps_conf.GNSS_DEPLOYMENT) {
+            mask |= LOCATION_CAPABILITIES_GEOFENCE_BIT;
+        }
+
         if (ContextBase::gnssConstellationConfig()) {
             mask |= LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT;
         }

@@ -183,6 +183,8 @@ typedef struct {
     uint16_t        position_source;
     LocPosTechMask  tech_mask;
     bool            unpropagatedPosition;
+    bool            isTimeAtPVTRxFromHWVaild;
+    uint64_t        timeAtPVTRxFromHW;
 } UlpLocation;
 
 typedef struct {

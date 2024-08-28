@@ -207,7 +207,8 @@ GnssAdapter::GnssAdapter() :
     mPowerElapsedRealTimeCal(30000000),
     mPositionElapsedRealTimeCal(30000000),
     mAddressRequestCb(nullptr),
-    mHmacConfig(HMAC_CONFIG_UNKNOWN)
+    mHmacConfig(HMAC_CONFIG_UNKNOWN),
+    mPvtJitterCounter(0)
 {
     LOC_LOGD("%s]: Constructor %p", __func__, this);
     mLocPositionMode.mode = LOC_POSITION_MODE_INVALID;
@@ -466,12 +467,19 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
     }
 }
 
-void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtended,
+void GnssAdapter::fillElapsedRealTime(const UlpLocation& ulpLocation,
+                                      const GpsLocationExtended& locationExtended,
                                       Location& out) {
     if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GPS_TIME) {
         int64_t elapsedTimeNs = 0;
         float elapsedTimeUncMsec = 0.0;
-        if (mPositionElapsedRealTimeCal.getElapsedRealtimeForGpsTime(
+        if(IS_FIDL_ENABLED == ContextBase::mGps_conf.GNSS_DEPLOYMENT) {
+            out.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
+            out.elapsedRealTime = ulpLocation.gpsLocation.elapsedRealTime;
+            out.elapsedRealTimeUnc =
+                (int64_t)(ulpLocation.gpsLocation.elapsedRealTimeUnc * 1000000);
+
+        } else if (mPositionElapsedRealTimeCal.getElapsedRealtimeForGpsTime(
                 locationExtended, elapsedTimeNs, elapsedTimeUncMsec)) {
             out.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
             out.elapsedRealTime = elapsedTimeNs;
@@ -3382,6 +3390,8 @@ uint32_t
 GnssAdapter::startTrackingCommand(LocationAPI* client, TrackingOptions& options)
 {
     uint32_t sessionId = generateSessionId();
+    mPvtJitterCounter = 0;
+
     LOC_LOGD("%s]: client %p id %u minInterval %u minDistance %u mode %u powermode %u tbm %u",
              __func__, client, sessionId, options.minInterval, options.minDistance, options.mode,
              options.powerMode, options.tbm);
@@ -3789,6 +3799,7 @@ void
 GnssAdapter::stopTrackingCommand(LocationAPI* client, uint32_t id)
 {
     LOC_LOGD("%s]: client %p id %u", __func__, client, id);
+    mPvtJitterCounter = 0;
 
     struct MsgStopTracking : public LocMsg {
         GnssAdapter& mAdapter;
@@ -4501,8 +4512,9 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
         list<trackingCallback> cbRunnables;
         convertLocationInfo(locationInfo, locationExtended, status);
         convertLocation(locationInfo.location, ulpLocation, locationExtended);
-        fillElapsedRealTime(locationExtended, locationInfo.location);
+        fillElapsedRealTime(ulpLocation, locationExtended, locationInfo.location);
         logLatencyInfo();
+        updateJitterCounter(ulpLocation);
 
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
             if (reportToAllClients || needReportForClient(it->first, status)) {
@@ -4684,7 +4696,7 @@ GnssAdapter::reportEnginePositions(unsigned int count,
                 convertLocation(locationInfo[i].location,
                                 engLocation->location,
                                 engLocation->locationExtended);
-                fillElapsedRealTime(engLocation->locationExtended,
+                fillElapsedRealTime(engLocation->location, engLocation->locationExtended,
                                     locationInfo[i].location);
             }
         }
@@ -8303,4 +8315,30 @@ bool GnssAdapter::reportZppBestAvailableFix(LocGpsLocation &zppLoc,
                     zppLoc, location_extended, LOC_SESS_INTERMEDIATE, tech_mask));
     }
     return true;
+}
+
+void GnssAdapter::updateJitterCounter(const UlpLocation& ulpLocation) {
+
+    if (true == ulpLocation.isTimeAtPVTRxFromHWVaild) {
+        int64_t timeDiff = 0;
+        int64_t getSysTimeInNs = 0;
+        bool gPTPStatus = false;
+        struct timespec currentTime={};
+
+        gPTPStatus = mPositionElapsedRealTimeCal.getCurrentTime(currentTime, getSysTimeInNs);
+        if (true == gPTPStatus) {
+            timeDiff = getSysTimeInNs - ulpLocation.timeAtPVTRxFromHW;
+            timeDiff = llabs(timeDiff);
+            if (timeDiff > PVT_JITTER_IN_NSEC) {
+                mPvtJitterCounter += 1;
+                LOC_LOGd("Current System Time %" PRIu64 " and PVT HW Time %" PRIu64 " "
+                     "HLOS Stack Delay : %" PRId64 " nSec ",
+                     getSysTimeInNs, ulpLocation.timeAtPVTRxFromHW, timeDiff);
+            }
+        }
+
+        if ((0 != mPvtJitterCounter) && (0 == mPvtJitterCounter % 20)) {
+            LOC_LOGd("PVT internel Delay Count %" PRIu64 " ", mPvtJitterCounter);
+        }
+    }
 }
