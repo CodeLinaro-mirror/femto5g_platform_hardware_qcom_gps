@@ -563,16 +563,6 @@ void LocApiBase::reportGnssSvIdConfig(const GnssSvIdConfig& config)
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportGnssSvIdConfigEvent(config));
 }
 
-void LocApiBase::reportGnssSvTypeConfig(const GnssSvTypeConfig& config)
-{
-    // Print the config
-    LOC_LOGv("blacklistedMask: %" PRIu64 ", enabledMask: %" PRIu64,
-             config.blacklistedSvTypesMask, config.enabledSvTypesMask);
-
-    // Loop through adapters, and deliver to all adapters.
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportGnssSvTypeConfigEvent(config));
-}
-
 void LocApiBase::geofenceBreach(size_t count, uint32_t* hwIds, Location& location,
                                 GeofenceBreachType breachType, uint64_t timestamp)
 {
@@ -787,9 +777,6 @@ DEFAULT_IMPL()
 
 void LocApiBase::setConstellationControl(const GnssSvTypeConfig& /*config*/,
                                          LocApiResponse* /*adapterResponse*/)
-DEFAULT_IMPL()
-
-void LocApiBase::getConstellationControl()
 DEFAULT_IMPL()
 
 void LocApiBase::resetConstellationControl(LocApiResponse* /*adapterResponse*/)

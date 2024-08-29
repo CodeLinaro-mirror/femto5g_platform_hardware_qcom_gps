@@ -232,7 +232,6 @@ public:
     void reportZppBestAvailableFix(LocGpsLocation &zppLoc, GpsLocationExtended &location_extended,
             LocPosTechMask tech_mask);
     void reportGnssSvIdConfig(const GnssSvIdConfig& config);
-    void reportGnssSvTypeConfig(const GnssSvTypeConfig& config);
     void requestOdcpi(OdcpiRequestInfo& request);
     void reportGnssEngEnergyConsumedEvent(uint64_t energyConsumedSinceFirstBoot);
     void reportDeleteAidingDataEvent(GnssAidingData& aidingData);
@@ -319,7 +318,6 @@ public:
     virtual void getBlacklistSv();
     virtual void setConstellationControl(const GnssSvTypeConfig& config,
                                          LocApiResponse *adapterResponse=nullptr);
-    virtual void getConstellationControl();
     virtual void resetConstellationControl(LocApiResponse *adapterResponse=nullptr);
 
     virtual void setConstrainedTuncMode(bool enabled,

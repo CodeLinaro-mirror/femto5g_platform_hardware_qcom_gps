@@ -287,7 +287,6 @@ class GnssAdapter : public LocAdapterBase {
     uint64_t mPrevNmeaRptTimeNsec;
     GnssSvIdConfig mGnssSvIdConfig;
     GnssSvTypeConfig mGnssSeconaryBandConfig;
-    GnssSvTypeConfigCallback mGnssSvTypeConfigCb;
     // Holds the original input of constellation enablement/disablement
     // from XTRA, SV config via Location SDK has been deprecated
     GnssConstellationConfig mGnssSvTypeConfigs[SV_TYPE_CONFIG_MAX_SOURCE];
@@ -568,18 +567,12 @@ public:
     /* ==== These commands are received directly from client bypassing Location API ======== */
     void gnssUpdateSvTypeConfigCommand(const GnssSvTypeConfig& config,
             GnssSvTypeConfigSource source);
-    void gnssGetSvTypeConfigCommand(GnssSvTypeConfigCallback callback);
-    void gnssResetSvTypeConfigCommand();
 
     /* ==== UTILITIES ====================================================================== */
     LocationError gnssSvIdConfigUpdateSync(const std::vector<GnssSvIdSource>& blacklistedSvIds);
     LocationError gnssSvConfigUpdate();
     bool gnssSetSvTypeConfig(const GnssSvTypeConfig& config, GnssSvTypeConfigSource source);
     GnssSvTypeConfig gnssCombineSvTypeConfigs();
-    inline void gnssSetSvTypeConfigCallback(GnssSvTypeConfigCallback callback)
-    { mGnssSvTypeConfigCb = callback; }
-    inline GnssSvTypeConfigCallback gnssGetSvTypeConfigCallback()
-    { return mGnssSvTypeConfigCb; }
     void setConfig();
     void gnssSecondaryBandConfigUpdate(LocApiResponse* locApiResponse= nullptr);
     uint32_t getNfwControlBits(const std::vector<std::string>& enabledNfws);
@@ -703,7 +696,6 @@ public:
     virtual void reportSvPolynomialEvent(GnssSvPolynomial &svPolynomial);
     virtual void reportSvEphemerisEvent(GnssSvEphemerisReport & svEphemeris);
     virtual void reportGnssSvIdConfigEvent(const GnssSvIdConfig& config);
-    virtual void reportGnssSvTypeConfigEvent(const GnssSvTypeConfig& config);
     virtual void reportGnssConfigEvent(uint32_t sessionId, const GnssConfig& gnssConfig);
     virtual bool reportGnssEngEnergyConsumedEvent(uint64_t energyConsumedSinceFirstBoot);
     virtual void reportLocationSystemInfoEvent(const LocationSystemInfo& locationSystemInfo);
@@ -770,7 +762,6 @@ public:
                          const bool bInformNiAccept);
     void reportGnssMeasurementData(const GnssMeasurementsNotification& measurements);
     void reportGnssSvIdConfig(const GnssSvIdConfig& config);
-    void reportGnssSvTypeConfig(const GnssSvTypeConfig& config);
     void reportGnssConfig(uint32_t sessionId, const GnssConfig& gnssConfig);
     void requestOdcpi(const OdcpiRequestInfo& request);
     void invokeGnssEnergyConsumedCallback(uint64_t energyConsumedSinceFirstBoot);
