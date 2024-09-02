@@ -1271,6 +1271,7 @@ GnssAdapter::setConfig()
     // inject the configurations into modem
     loc_gps_cfg_s gpsConf = ContextBase::mGps_conf;
     loc_sap_cfg_s_type sapConf = ContextBase::mSap_conf;
+    loc_izat_cfg_s_type izatConf = ContextBase::mIzat_conf;
 
     //cache the injected configuration with GnssConfigRequested struct
     GnssConfig gnssConfigRequested = {};
@@ -1315,7 +1316,7 @@ GnssAdapter::setConfig()
     gnssConfigRequested.blacklistedSvIds.assign(mBlacklistedSvIds.begin(),
                                                 mBlacklistedSvIds.end());
     mLocApi->sendMsg(new LocApiMsg(
-            [this, gpsConf, sapConf, oldMoServerUrl, moServerUrl,
+            [this, gpsConf, sapConf, izatConf, oldMoServerUrl, moServerUrl,
             serverUrl, gnssConfigRequested] () mutable {
         gnssUpdateConfig(oldMoServerUrl, moServerUrl, serverUrl,
                 gnssConfigRequested, gnssConfigRequested);
@@ -1325,11 +1326,11 @@ GnssAdapter::setConfig()
         if (mLocConfigInfo.tuncConfigInfo.isValid == false) {
             mLocConfigInfo.tuncConfigInfo.isValid = true;
             mLocConfigInfo.tuncConfigInfo.enable =
-                    (gpsConf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED == 1);
+                    (izatConf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED == 1);
             mLocConfigInfo.tuncConfigInfo.tuncThresholdMs =
-                   (float)gpsConf.CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD;
+                   (float)izatConf.CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD;
             mLocConfigInfo.tuncConfigInfo.energyBudget =
-                   gpsConf.CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET;
+                   izatConf.CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET;
         }
 
         mLocApi->setConstrainedTuncMode(
@@ -1342,7 +1343,7 @@ GnssAdapter::setConfig()
         if (mLocConfigInfo.paceConfigInfo.isValid == false) {
             mLocConfigInfo.paceConfigInfo.isValid = true;
             mLocConfigInfo.paceConfigInfo.enable =
-                    (gpsConf.POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED==1);
+                    (izatConf.POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED==1);
         }
         mLocApi->setPositionAssistedClockEstimatorMode(
                 mLocConfigInfo.paceConfigInfo.enable);
@@ -4743,7 +4744,7 @@ void GnssAdapter::reportPositionNmea(const UlpLocation& ulpLocation,
                           (0 == ulpLocation.gpsLocation.longitude) &&
                           (LOC_RELIABILITY_NOT_SET == locationExtended.horizontal_reliability));
         uint8_t generate_nmea = (reportToAllClients && LOC_SESS_SUCCESS == status && !blank_fix);
-        bool custom_nmea_gga = (1 == ContextBase::mGps_conf.CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED);
+        bool custom_nmea_gga = (1 == ContextBase::mIzat_conf.CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED);
         bool isTagBlockGroupingEnabled =
                 (1 == ContextBase::mGps_conf.NMEA_TAG_BLOCK_GROUPING_ENABLED);
         std::vector<std::string> nmeaArraystr;
