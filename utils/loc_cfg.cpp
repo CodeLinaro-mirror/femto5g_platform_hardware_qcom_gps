@@ -643,6 +643,10 @@ int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_p
     // Get the soc-id for this device.
     loc_get_device_soc_id(socid_value, sizeof(socid_value));
 
+    strlcpy(conf.feature_wifi_supplicant_info, "BASIC",
+          sizeof(conf.feature_wifi_supplicant_info));
+    strlcpy(conf.feature_free_wifi_scan_inject, "BASIC",
+          sizeof(conf.feature_free_wifi_scan_inject));
     UTIL_READ_CONF(conf_file_name, loc_feature_conf_table);
 
     //Set service mask for GTP_MODE
@@ -698,13 +702,8 @@ int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_p
         LOC_LOGD("%s:%d]: Setting FREE_WIFI_SCAN_INJECT to mode: BASIC", __func__, __LINE__);
         loc_service_mask |= LOC_FEATURE_MASK_FREE_WIFI_SCAN_INJECT;
     }
-    else if (strcmp(conf.feature_free_wifi_scan_inject, "DISABLED") == 0) {
+    else {
         LOC_LOGD("%s:%d]: Setting FREE_WIFI_SCAN_INJECT to mode: DISABLED", __func__, __LINE__);
-    }
-    else if (strcmp(conf.feature_free_wifi_scan_inject, "PREMIUM") == 0) {
-        LOC_LOGD("%s:%d]: Unrecognized value for FREE_WIFI_SCAN_INJECT mode."\
-            "Setting FREE_WIFI_SCAN_INJECT to default mode: BASIC", __func__, __LINE__);
-        loc_service_mask |= LOC_FEATURE_MASK_FREE_WIFI_SCAN_INJECT;
     }
 
     // Set service mask for SUPL_WIFI
@@ -726,13 +725,9 @@ int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_p
         LOC_LOGD("%s:%d]: Setting WIFI_SUPPLICANT_INFO to mode: BASIC", __func__, __LINE__);
         loc_service_mask |= LOC_FEATURE_MASK_WIFI_SUPPLICANT_INFO;
     }
-    else if (strcmp(conf.feature_wifi_supplicant_info, "DISABLED") == 0) {
-        LOC_LOGD("%s:%d]: Setting WIFI_SUPPLICANT_INFO to mode: DISABLED", __func__, __LINE__);
-    }
-    else if (strcmp(conf.feature_wifi_supplicant_info, "PREMIUM") == 0) {
-        LOC_LOGD("%s:%d]: Unrecognized value for WIFI_SUPPLICANT_INFO mode."\
-            "Setting LOC_FEATURE_MASK_WIFI_SUPPLICANT_INFO to default mode: BASIC", __func__, __LINE__);
-        loc_service_mask |= LOC_FEATURE_MASK_WIFI_SUPPLICANT_INFO;
+    else {
+        LOC_LOGD("%s:%d]: Setting WIFI_SUPPLICANT_INFO to mode: DISABLED",
+                __func__, __LINE__);
     }
 
     LOC_LOGD("%s:%d]: loc_service_mask: %x\n", __func__, __LINE__, loc_service_mask);
