@@ -479,12 +479,6 @@ void LocApiBase::reportSvEphemeris(GnssSvEphemerisReport & svEphemeris)
     );
 }
 
-void LocApiBase::reportStatus(LocGpsStatusValue status)
-{
-    // loop through adapters, and deliver to all adapters.
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportStatus(status));
-}
-
 void LocApiBase::reportData(GnssDataNotification& dataNotify)
 {
     // loop through adapters, and deliver to all adapters.
@@ -555,12 +549,6 @@ void LocApiBase::requestTime()
 {
     // loop through adapters, and deliver to the first handling adapter.
     TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->requestTime());
-}
-
-void LocApiBase::requestLocation()
-{
-    // loop through adapters, and deliver to the first handling adapter.
-    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->requestLocation());
 }
 
 void LocApiBase::requestATL(int connHandle, LocAGpsType agps_type,

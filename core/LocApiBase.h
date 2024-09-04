@@ -217,7 +217,6 @@ public:
     void reportSv(GnssSvNotification& svNotify);
     void reportSvPolynomial(GnssSvPolynomial &svPolynomial);
     void reportSvEphemeris(GnssSvEphemerisReport &svEphemeris);
-    void reportStatus(LocGpsStatusValue status);
     void reportNmea(const char* nmea, int length);
     void reportData(GnssDataNotification& dataNotify);
     void reportXtraServer(const char* url1, const char* url2,
@@ -227,7 +226,6 @@ public:
     void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
     void requestXtraData();
     void requestTime();
-    void requestLocation();
     void requestATL(int connHandle, LocAGpsType agps_type,
                     LocApnTypeMask apn_type_mask, SubId sub_id=DEFAULT_SUB);
     void releaseATL(int connHandle);

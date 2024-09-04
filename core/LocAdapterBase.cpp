@@ -149,12 +149,6 @@ void LocAdapterBase::
     reportSvEphemerisEvent(GnssSvEphemerisReport &/*svEphemeris*/)
 DEFAULT_IMPL()
 
-
-void LocAdapterBase::
-    reportStatus(LocGpsStatusValue /*status*/)
-DEFAULT_IMPL()
-
-
 void LocAdapterBase::
     reportNmeaEvent(const char* /*nmea*/, size_t /*length*/)
 DEFAULT_IMPL()
@@ -182,10 +176,6 @@ DEFAULT_IMPL(false)
 
 bool LocAdapterBase::
     requestTime()
-DEFAULT_IMPL(false)
-
-bool LocAdapterBase::
-    requestLocation()
 DEFAULT_IMPL(false)
 
 bool LocAdapterBase::
