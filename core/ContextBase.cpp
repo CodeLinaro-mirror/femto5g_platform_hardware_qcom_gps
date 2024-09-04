@@ -80,6 +80,7 @@ namespace loc_core {
 
 loc_gps_cfg_s_type ContextBase::mGps_conf {};
 loc_sap_cfg_s_type ContextBase::mSap_conf {};
+loc_izat_cfg_s_type ContextBase::mIzat_conf {};
 bool ContextBase::sIsEngineCapabilitiesKnown = false;
 uint64_t ContextBase::sSupportedMsgMask = 0;
 bool ContextBase::sGnssMeasurementSupported = false;
@@ -87,6 +88,21 @@ uint8_t ContextBase::sFeaturesSupported[MAX_FEATURE_LENGTH];
 GnssNMEARptRate ContextBase::sNmeaReportRate = GNSS_NMEA_REPORT_RATE_NHZ;
 LocationCapabilitiesMask ContextBase::sQwesFeatureMask = 0;
 LocationCapabilitiesMask ContextBase::sHwCapabilitiesMask = 0;
+
+const loc_param_s_type ContextBase::mIzat_conf_table[] =
+{
+  {"CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED",
+           &mIzat_conf.CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED, NULL, 'n'},
+  {"MODEM_TYPE",                     &mIzat_conf.MODEM_TYPE,                     NULL, 'n' },
+  {"CONSTRAINED_TIME_UNCERTAINTY_ENABLED",
+           &mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED,      NULL, 'n'},
+  {"CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD",
+           &mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD,    NULL, 'f'},
+  {"CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET",
+           &mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET, NULL, 'n'},
+  {"POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED",
+           &mIzat_conf.POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED, NULL, 'n'},
+};
 
 const loc_param_s_type ContextBase::mGps_conf_table[] =
 {
@@ -111,21 +127,10 @@ const loc_param_s_type ContextBase::mGps_conf_table[] =
   {"EXTERNAL_DR_ENABLED",            &mGps_conf.EXTERNAL_DR_ENABLED,                  NULL, 'n'},
   {"SUPL_HOST",                      &mGps_conf.SUPL_HOST,                      NULL, 's'},
   {"SUPL_PORT",                      &mGps_conf.SUPL_PORT,                      NULL, 'n'},
-  {"MODEM_TYPE",                     &mGps_conf.MODEM_TYPE,                     NULL, 'n' },
   {"MO_SUPL_HOST",                   &mGps_conf.MO_SUPL_HOST,                   NULL, 's' },
   {"MO_SUPL_PORT",                   &mGps_conf.MO_SUPL_PORT,                   NULL, 'n' },
-  {"CONSTRAINED_TIME_UNCERTAINTY_ENABLED",
-           &mGps_conf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED,      NULL, 'n'},
-  {"CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD",
-           &mGps_conf.CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD,    NULL, 'f'},
-  {"CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET",
-           &mGps_conf.CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET, NULL, 'n'},
-  {"POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED",
-           &mGps_conf.POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED, NULL, 'n'},
   {"CP_MTLR_ES",                     &mGps_conf.CP_MTLR_ES,                     NULL, 'n' },
   {"GNSS_DEPLOYMENT",  &mGps_conf.GNSS_DEPLOYMENT, NULL, 'n'},
-  {"CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED",
-           &mGps_conf.CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED, NULL, 'n'},
   {"NMEA_TAG_BLOCK_GROUPING_ENABLED", &mGps_conf.NMEA_TAG_BLOCK_GROUPING_ENABLED, NULL, 'n'},
   {"NI_SUPL_DENY_ON_NFW_LOCKED",  &mGps_conf.NI_SUPL_DENY_ON_NFW_LOCKED, NULL, 'n'},
   {"ENABLE_NMEA_PRINT",  &mGps_conf.ENABLE_NMEA_PRINT, NULL, 'n'},
@@ -158,7 +163,6 @@ void ContextBase::readConfig()
     if (!confReadDone) {
         confReadDone = true;
         /*Defaults for gps.conf*/
-        mGps_conf.INTERMEDIATE_POS = 0;
         mGps_conf.ACCURACY_THRES = 0;
 #ifdef FEATURE_AUTOMOTIVE
         mGps_conf.GPS_LOCK = GNSS_CONFIG_GPS_LOCK_MO_AND_NI & (~GNSS_CONFIG_GPS_LOCK_NFW_V2X);
@@ -182,8 +186,6 @@ void ContextBase::readConfig()
         mGps_conf.LPPE_CP_TECHNOLOGY = 0;
         /* By default no LPPe UP technology is enabled*/
         mGps_conf.LPPE_UP_TECHNOLOGY = 0;
-        /* By default we use unknown modem type*/
-        mGps_conf.MODEM_TYPE = 2;
 
         /*Defaults for sap.conf*/
         mSap_conf.GYRO_BIAS_RANDOM_WALK = 0;
@@ -216,18 +218,22 @@ void ContextBase::readConfig()
            feature disabled, time uncertainty threshold defined by modem,
            and unlimited power budget */
 #ifdef FEATURE_AUTOMOTIVE
-        mGps_conf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED = 1;
+        mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED = 1;
 #else
-        mGps_conf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED = 0;
+        mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED = 0;
 #endif
-        mGps_conf.CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD = 0.0;
-        mGps_conf.CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET = 0;
+        mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD = 0.0;
+        mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET = 0;
 
         /* default configuration value of position assisted clock estimator mode */
-        mGps_conf.POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED = 0;
+        mIzat_conf.POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED = 0;
+
+        mIzat_conf.CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED = 0;
+        /* By default we use unknown modem type*/
+        mIzat_conf.MODEM_TYPE = 1;
+
         /* default configuration QTI GNSS H/W */
         mGps_conf.GNSS_DEPLOYMENT = 0;
-        mGps_conf.CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED = 0;
         /* default NMEA Tag Block Grouping is disabled */
         mGps_conf.NMEA_TAG_BLOCK_GROUPING_ENABLED = 0;
         /* default configuration for NI_SUPL_DENY_ON_NFW_LOCKED */
@@ -237,6 +243,7 @@ void ContextBase::readConfig()
 
         UTIL_READ_CONF(LOC_PATH_GPS_CONF, mGps_conf_table);
         UTIL_READ_CONF(LOC_PATH_SAP_CONF, mSap_conf_table);
+        UTIL_READ_CONF(LOC_PATH_IZAT_CONF, mIzat_conf_table);
 
         loc_param_s_type ant_info_vector_table[] =
         {

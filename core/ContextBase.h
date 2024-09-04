@@ -100,16 +100,10 @@ typedef struct loc_gps_cfg_s
     uint32_t       EXTERNAL_DR_ENABLED;
     char           SUPL_HOST[LOC_MAX_PARAM_STRING];
     uint32_t       SUPL_PORT;
-    uint32_t       MODEM_TYPE;
     char           MO_SUPL_HOST[LOC_MAX_PARAM_STRING];
     uint32_t       MO_SUPL_PORT;
-    uint32_t       CONSTRAINED_TIME_UNCERTAINTY_ENABLED;
-    double         CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD;
-    uint32_t       CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET;
-    uint32_t       POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED;
     uint32_t       CP_MTLR_ES;
     uint32_t       GNSS_DEPLOYMENT;
-    uint32_t       CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED;
     uint32_t       NI_SUPL_DENY_ON_NFW_LOCKED;
     uint32_t       ENABLE_NMEA_PRINT;
     uint32_t       NMEA_TAG_BLOCK_GROUPING_ENABLED;
@@ -146,6 +140,20 @@ typedef struct
     double         VELOCITY_RANDOM_WALK_SPECTRAL_DENSITY;
 } loc_sap_cfg_s_type;
 
+/* izat.conf support */
+/* NOTE: the implementaiton of the parser casts number
+   fields to 32 bit. To ensure all 'n' fields working,
+   they must all be 32 bit fields. */
+typedef struct
+{
+    uint32_t       CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED;
+    uint32_t       MODEM_TYPE;
+    uint32_t       CONSTRAINED_TIME_UNCERTAINTY_ENABLED;
+    double         CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD;
+    uint32_t       CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET;
+    uint32_t       POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED;
+} loc_izat_cfg_s_type;
+
 using namespace loc_util;
 
 namespace loc_core {
@@ -157,6 +165,7 @@ class ContextBase {
     LocApiBase* createLocApi(LOC_API_ADAPTER_EVENT_MASK_T excludedMask);
     static const loc_param_s_type mGps_conf_table[];
     static const loc_param_s_type mSap_conf_table[];
+    static const loc_param_s_type mIzat_conf_table[];
     static uint32_t mAntennaInfoVectorSize;
 protected:
     const LBSProxyBase* mLBSProxy;
@@ -196,6 +205,7 @@ public:
     }
     static loc_gps_cfg_s_type mGps_conf;
     static loc_sap_cfg_s_type mSap_conf;
+    static loc_izat_cfg_s_type mIzat_conf;
     static bool sIsEngineCapabilitiesKnown;
     static uint64_t sSupportedMsgMask;
     static uint8_t sFeaturesSupported[MAX_FEATURE_LENGTH];
