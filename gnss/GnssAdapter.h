@@ -735,8 +735,6 @@ public:
     void reportNtnConfigUpdateEvent(const GnssSignalTypeMask& gpsSignalTypeConfigMask);
 
     /* ======== UTILITIES ================================================================= */
-    bool needReportForAllClients(const UlpLocation& ulpLocation,
-            enum loc_sess_status status, LocPosTechMask techMask);
     bool needReportForClient(LocationAPI* client, enum loc_sess_status status);
     inline bool needReportForAnyClient(enum loc_sess_status status) {
         return needReportForClient(nullptr, status);
