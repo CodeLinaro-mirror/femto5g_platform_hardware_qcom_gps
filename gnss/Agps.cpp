@@ -572,9 +572,11 @@ void AgpsManager::createAgpsStateMachines(const AgpsCbInfo& cbInfo) {
             LOC_LOGd("AGNSS NIF: %p", mAgnssNif);
         }
         LOC_LOGd("cbInfo.cbPriority=%d mCbPriority=%d", cbInfo.cbPriority, mCbPriority);
-        if (cbInfo.cbPriority > mCbPriority) {
+        if (( nullptr != mAgnssNif) && (cbInfo.cbPriority > mCbPriority)) {
             mCbPriority = cbInfo.cbPriority;
             mAgnssNif->registerFrameworkStatusCallback((agnssStatusIpV4Callback)cbInfo.statusV4Cb);
+        } else {
+               LOC_LOGe("failed to allocate memory");
         }
     }
 }

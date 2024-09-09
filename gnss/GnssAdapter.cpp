@@ -3477,7 +3477,8 @@ GnssAdapter::startTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t sessi
         reportToClientWithNoWait = false;
     } else {
         // find the smallest interval and powerMode
-        TrackingOptions multiplexedOptions = {}; // size is 0 until set for the first time
+        TrackingOptions multiplexedOptions; // size is 0 until set for the first time
+        memset(((void*)(&multiplexedOptions)), 0, sizeof(multiplexedOptions));
         GnssPowerMode multiplexedPowerMode = GNSS_POWER_MODE_INVALID;
         for (auto it = mTimeBasedTrackingSessions.begin(); it != mTimeBasedTrackingSessions.end(); ++it) {
             // if not set or there is a new smallest interval, then set the new interval
@@ -7885,7 +7886,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
     UTIL_READ_CONF(LOC_PATH_ANT_CORR, ant_info_vector_table);
 
     for (uint32_t i = 0; i < antennaInfoVectorSize; i++) {
-        double carrierFrequencyMHz;
+        double carrierFrequencyMHz = 0.0;
         char pcOffsetStr[LOC_MAX_PARAM_STRING];
         uint32_t numberOfRows = 0;
         uint32_t numberOfColumns = 0;
