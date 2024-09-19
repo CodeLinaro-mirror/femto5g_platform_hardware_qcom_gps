@@ -201,7 +201,6 @@ GnssAdapter::GnssAdapter() :
     mAfwControlId(0),
     mGnssSvIdConfig(),
     mGnssSeconaryBandConfig(),
-    mGnssSvTypeConfigCb(nullptr),
     mLocConfigInfo{},
     mNiData(),
     mAgpsManager(),
@@ -2523,104 +2522,6 @@ GnssAdapter::gnssCombineSvTypeConfigs() {
              svTypeConfig.blacklistedSvTypesMask);
 
     return svTypeConfig;
-}
-
-void
-GnssAdapter::gnssGetSvTypeConfigCommand(GnssSvTypeConfigCallback callback)
-{
-    struct MsgGnssGetSvTypeConfig : public LocMsg {
-        GnssAdapter* mAdapter;
-        LocApiBase* mApi;
-        GnssSvTypeConfigCallback mCallback;
-        inline MsgGnssGetSvTypeConfig(
-                GnssAdapter* adapter,
-                LocApiBase* api,
-                GnssSvTypeConfigCallback callback) :
-            LocMsg(),
-            mAdapter(adapter),
-            mApi(api),
-            mCallback(callback) {}
-        inline virtual void proc() const {
-            if (!mAdapter->isEngineCapabilitiesKnown()) {
-                mAdapter->mPendingMsgs.push_back(new MsgGnssGetSvTypeConfig(*this));
-                return;
-            }
-            if (!ContextBase::isFeatureSupported(
-                    LOC_SUPPORTED_FEATURE_CONSTELLATION_ENABLEMENT_V02)) {
-                LOC_LOGE("MsgGnssGetSvTypeConfig, CONSTELLATION_ENABLEMENT not supported.");
-            } else {
-                // Save the callback
-                mAdapter->gnssSetSvTypeConfigCallback(mCallback);
-                // Send GET request to modem
-                mApi->getConstellationControl();
-            }
-        }
-    };
-
-    sendMsg(new MsgGnssGetSvTypeConfig(this, mLocApi, callback));
-}
-
-void
-GnssAdapter::gnssResetSvTypeConfigCommand()
-{
-    struct MsgGnssResetSvTypeConfig : public LocMsg {
-        GnssAdapter* mAdapter;
-        LocApiBase* mApi;
-        inline MsgGnssResetSvTypeConfig(
-                GnssAdapter* adapter,
-                LocApiBase* api) :
-            LocMsg(),
-            mAdapter(adapter),
-            mApi(api) {}
-        inline virtual void proc() const {
-            if (!mAdapter->isEngineCapabilitiesKnown()) {
-                mAdapter->mPendingMsgs.push_back(new MsgGnssResetSvTypeConfig(*this));
-                return;
-            }
-            if (!ContextBase::isFeatureSupported(
-                    LOC_SUPPORTED_FEATURE_CONSTELLATION_ENABLEMENT_V02)) {
-                LOC_LOGE("MsgGnssResetSvTypeConfig, CONSTELLATION_ENABLEMENT not supported.");
-            } else {
-                // only being called by LocSDK, the default main client
-                if (mAdapter->gnssSetSvTypeConfig({0, 0, 0}, SV_TYPE_CONFIG_FROM_API)) {
-                    mAdapter->gnssSvConfigUpdate();
-                }
-            }
-        }
-    };
-
-    sendMsg(new MsgGnssResetSvTypeConfig(this, mLocApi));
-}
-
-void GnssAdapter::reportGnssSvTypeConfigEvent(const GnssSvTypeConfig& config)
-{
-    struct MsgReportGnssSvTypeConfig : public LocMsg {
-        GnssAdapter& mAdapter;
-        const GnssSvTypeConfig mConfig;
-        inline MsgReportGnssSvTypeConfig(GnssAdapter& adapter,
-                                 const GnssSvTypeConfig& config) :
-            LocMsg(),
-            mAdapter(adapter),
-            mConfig(config) {}
-        inline virtual void proc() const {
-            mAdapter.reportGnssSvTypeConfig(mConfig);
-        }
-    };
-
-    sendMsg(new MsgReportGnssSvTypeConfig(*this, config));
-}
-
-void GnssAdapter::reportGnssSvTypeConfig(const GnssSvTypeConfig& config)
-{
-    // Invoke Get SV Type Callback
-    if (NULL != mGnssSvTypeConfigCb &&
-            config.size == sizeof(GnssSvTypeConfig)) {
-        LOC_LOGd("constellations blacklisted 0x%" PRIx64 ", enabled 0x%" PRIx64,
-                 config.blacklistedSvTypesMask, config.enabledSvTypesMask);
-        mGnssSvTypeConfigCb(config);
-    } else {
-        LOC_LOGe("Failed to report, size %d", (uint32_t)config.size);
-    }
 }
 
 void GnssAdapter::deleteAidingData(const GnssAidingData &data, uint32_t sessionId) {

@@ -250,7 +250,6 @@ public:
     virtual bool reportZppBestAvailableFix(LocGpsLocation &zppLoc,
             GpsLocationExtended &location_extended, LocPosTechMask tech_mask);
     virtual void reportGnssSvIdConfigEvent(const GnssSvIdConfig& config);
-    virtual void reportGnssSvTypeConfigEvent(const GnssSvTypeConfig& config);
     virtual void reportGnssConfigEvent(uint32_t sessionId, const GnssConfig& gnssConfig);
     virtual bool requestOdcpiEvent(OdcpiRequestInfo& request);
     virtual bool reportGnssEngEnergyConsumedEvent(uint64_t energyConsumedSinceFirstBoot);

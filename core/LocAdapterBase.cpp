@@ -209,9 +209,6 @@ DEFAULT_IMPL(false)
 void LocAdapterBase::reportGnssSvIdConfigEvent(const GnssSvIdConfig& /*config*/)
 DEFAULT_IMPL()
 
-void LocAdapterBase::reportGnssSvTypeConfigEvent(const GnssSvTypeConfig& /*config*/)
-DEFAULT_IMPL()
-
 void LocAdapterBase::reportGnssConfigEvent(uint32_t,  /* session id*/
             const GnssConfig& /*gnssConfig*/)
 DEFAULT_IMPL()

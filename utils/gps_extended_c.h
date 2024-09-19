@@ -1711,13 +1711,6 @@ typedef struct {
     int8_t leapSec;
 } GnssAdditionalSystemInfo;
 
-/* Provides the current GNSS SV Type configuration to the client.
- * This is fetched via direct call to GNSS Adapter bypassing
- * Location API */
-typedef std::function<void(
-    const GnssSvTypeConfig& config
-)> GnssSvTypeConfigCallback;
-
 /* Represents GNSS NMEA Report Rate Configuration */
 typedef enum {
     GNSS_NMEA_REPORT_RATE_UNKNOWN  = 0,
