@@ -231,11 +231,8 @@ public:
     virtual void reportNmeaEvent(const char* nmea, size_t length);
     virtual void reportSvPolynomialEvent(GnssSvPolynomial &svPolynomial);
     virtual void reportSvEphemerisEvent(GnssSvEphemerisReport &svEphemeris);
-    virtual bool reportXtraServer(const char* url1, const char* url2,
-                                  const char* url3, const int maxlength);
     virtual void reportLocationSystemInfoEvent(const LocationSystemInfo& locationSystemInfo);
     virtual void reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask);
-    virtual bool requestXtraData();
     virtual bool requestTime();
     virtual bool requestATL(int connHandle, LocAGpsType agps_type,
                             LocApnTypeMask apn_type_mask,

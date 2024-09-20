@@ -157,11 +157,6 @@ void LocAdapterBase::
     reportDataEvent(const GnssDataNotification& /*dataNotify*/)
 DEFAULT_IMPL()
 
-bool LocAdapterBase::
-    reportXtraServer(const char* /*url1*/, const char* /*url2*/,
-                     const char* /*url3*/, const int /*maxlength*/)
-DEFAULT_IMPL(false)
-
 void LocAdapterBase::
     reportLocationSystemInfoEvent(const LocationSystemInfo& /*locationSystemInfo*/)
 DEFAULT_IMPL()
@@ -169,10 +164,6 @@ DEFAULT_IMPL()
 void LocAdapterBase::
     reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& /*mask*/)
 DEFAULT_IMPL()
-
-bool LocAdapterBase::
-    requestXtraData()
-DEFAULT_IMPL(false)
 
 bool LocAdapterBase::
     requestTime()

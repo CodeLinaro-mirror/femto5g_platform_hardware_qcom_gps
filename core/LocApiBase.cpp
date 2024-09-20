@@ -454,14 +454,6 @@ void LocApiBase::reportNmea(const char* nmea, int length)
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportNmeaEvent(nmea, length));
 }
 
-void LocApiBase::reportXtraServer(const char* url1, const char* url2,
-                                  const char* url3, const int maxlength)
-{
-    // loop through adapters, and deliver to the first handling adapter.
-    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->reportXtraServer(url1, url2, url3, maxlength));
-
-}
-
 void LocApiBase::reportLocationSystemInfo(const LocationSystemInfo& locationSystemInfo)
 {
     // loop through adapters, and deliver to all adapters.
@@ -502,14 +494,8 @@ void LocApiBase::reportQwesCapabilities
     // loop through adapters, and deliver to all adapters.
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportQwesCapabilities(featureMap));
 }
-void LocApiBase::requestXtraData()
-{
-    // loop through adapters, and deliver to the first handling adapter.
-    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->requestXtraData());
-}
 
-void LocApiBase::requestTime()
-{
+void LocApiBase::requestTime() {
     // loop through adapters, and deliver to the first handling adapter.
     TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->requestTime());
 }
@@ -760,10 +746,6 @@ DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
 void LocApiBase::
     requestForAidingData(GnssAidingDataSvMask /*svDataMask*/)
 DEFAULT_IMPL()
-
-LocationError LocApiBase::
-    setXtraVersionCheckSync(uint32_t /*check*/)
-DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
 
 LocationError LocApiBase::setBlacklistSvSync(const GnssSvIdConfig& /*config*/)
 DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
