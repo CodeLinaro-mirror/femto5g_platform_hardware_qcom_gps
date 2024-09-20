@@ -3018,7 +3018,6 @@ GnssAdapter::updateClientsEventMask()
             }
         }
         if (it->second.svEphemerisCb != nullptr) {
-            LOC_LOGd("GNSS EPH supported");
             mask |= LOC_API_ADAPTER_BIT_GNSS_SV_EPHEMERIS_REPORT;
         }
     }
@@ -5578,10 +5577,20 @@ void GnssAdapter::convertGpsEphemeris(const GpsEphemerisResponse& ephRpt,
             continue;
         }
         halEph.gpsEphemerisData[numEph] = ephRpt.gpsEphemerisData[idx];
+        if (ephRpt.validExtendedEphData) {
+            halEph.gpsExtEphemerisData[numEph] = ephRpt.gpsExtEphemerisData[idx];
+        }
         numEph++;
     }
 
     halEph.numOfEphemeris = numEph;
+
+    if (ephRpt.validExtendedEphData && ephRpt.numOfExtendedEphemeris) {
+        halEph.numOfExtendedEphemeris = numEph;
+        halEph.validDataSourceSignal = ephRpt.validDataSourceSignal;
+        halEph.dataSourceSignal = ephRpt.dataSourceSignal;
+        halEph.validExtendedEphData = ephRpt.validExtendedEphData;
+    }
 }
 
 void GnssAdapter::convertGalEphemeris(const GalileoEphemerisResponse& ephRpt,
@@ -5639,10 +5648,20 @@ void GnssAdapter::convertBdsEphemeris(const BdsEphemerisResponse& ephRpt,
             continue;
         }
         halEph.bdsEphemerisData[numEph] = ephRpt.bdsEphemerisData[idx];
+        if (ephRpt.validExtendedEphData) {
+            halEph.bdsExtEphemerisData[numEph] = ephRpt.bdsExtEphemerisData[idx];
+        }
         numEph++;
     }
 
     halEph.numOfEphemeris = numEph;
+
+    if (ephRpt.validExtendedEphData && ephRpt.numOfExtendedEphemeris) {
+        halEph.numOfExtendedEphemeris = numEph;
+        halEph.validDataSourceSignal = ephRpt.validDataSourceSignal;
+        halEph.dataSourceSignal = ephRpt.dataSourceSignal;
+        halEph.validExtendedEphData = ephRpt.validExtendedEphData;
+    }
 }
 
 void GnssAdapter::convertQzssEphemeris(const QzssEphemerisResponse& ephRpt,
@@ -5659,10 +5678,20 @@ void GnssAdapter::convertQzssEphemeris(const QzssEphemerisResponse& ephRpt,
         }
 
         halEph.qzssEphemerisData[numEph] = ephRpt.qzssEphemerisData[idx];
+        if (ephRpt.validExtendedEphData) {
+            halEph.qzssExtEphemerisData[numEph] = ephRpt.qzssExtEphemerisData[idx];
+        }
         numEph++;
     }
 
     halEph.numOfEphemeris = numEph;
+
+    if (ephRpt.validExtendedEphData && ephRpt.numOfExtendedEphemeris) {
+        halEph.numOfExtendedEphemeris = numEph;
+        halEph.validDataSourceSignal = ephRpt.validDataSourceSignal;
+        halEph.dataSourceSignal = ephRpt.dataSourceSignal;
+        halEph.validExtendedEphData = ephRpt.validExtendedEphData;
+    }
 }
 void GnssAdapter::convertNavicEphemeris(const NavicEphemerisResponse& ephRpt,
             NavicEphemerisResponse& halEph) {
