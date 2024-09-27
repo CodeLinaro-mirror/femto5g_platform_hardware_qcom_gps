@@ -170,7 +170,7 @@ inline void logDlError(const char* failedCall) {
 void* dlGetSymFromLib(void*& libHandle, const char* libName, const char* symName)
 {
     void* sym = nullptr;
-    if ((nullptr != libHandle || nullptr != libName) && nullptr != symName) {
+    if ((nullptr != libName) && (nullptr != symName)) {
         if (nullptr == libHandle) {
             libHandle = dlopen(libName, RTLD_NOW);
             if (nullptr == libHandle) {
