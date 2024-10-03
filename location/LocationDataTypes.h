@@ -2144,6 +2144,8 @@ struct XtraStatus {
     uint32_t xtraValidForHours;
     std::string lastDownloadReasonCode;
 
+    bool userConsentStatus;
+
     inline bool equals (const XtraStatus& inXtraStatus) const {
         if (inXtraStatus.featureEnabled != featureEnabled) {
             return false;
