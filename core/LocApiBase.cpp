@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1119,11 +1119,13 @@ int64_t ElapsedRealtimeEstimator::getElapsedRealtimeQtimer(int64_t qtimerTicksAt
 }
 
 void ElapsedRealtimeEstimator::saveGpsTimeAndQtimerPairInPvtReport(
-        const GpsLocationExtended& locationExtended) {
+        const GpsLocationExtended& locationExtended,
+        enum loc_sess_status status) {
 
-    // Use GPS timestamp and qtimer tick for 1Hz PVT report for association
+    // Use GPS timestamp and qtimer tick for 1Hz PVT report or Final fixes for association
     if (locationExtended.isReportTimeAccurate() &&
-            (locationExtended.gnssSystemTime.u.gpsSystemTime.systemMsec % 1000 == 0)) {
+            ((locationExtended.gnssSystemTime.u.gpsSystemTime.systemMsec % 1000 == 0) ||
+             (LOC_SESS_SUCCESS == status))) {
         LOC_LOGv("save time association from PVT report with gps time %u %u, "
                  "qtimer %" PRIi64 " %f ",
                  locationExtended.gnssSystemTime.u.gpsSystemTime.systemWeek,

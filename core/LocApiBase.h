@@ -30,7 +30,7 @@
  /*
  Changes from Qualcomm Innovation Center are provided under the following license:
 
- Copyright (c) 2022, 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted (subject to the limitations in the
@@ -441,7 +441,8 @@ public:
     static int64_t getElapsedRealtimeQtimer(int64_t qtimerTicksAtOrigin);
     bool getElapsedRealtimeForGpsTime(const GpsLocationExtended& locationExtended,
                                       int64_t &elapsedTime, float & elpasedTimeUnc);
-    void saveGpsTimeAndQtimerPairInPvtReport(const GpsLocationExtended& locationExtended);
+    void saveGpsTimeAndQtimerPairInPvtReport(const GpsLocationExtended& locationExtended,
+            enum loc_sess_status status);
     void saveGpsTimeAndQtimerPairInMeasReport(const GnssSvMeasurementSet& svMeasurementSet);
     static bool getCurrentTime(struct timespec& currentTime, int64_t& sinceBootTimeNanos);
 };
