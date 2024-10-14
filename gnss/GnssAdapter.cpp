@@ -504,6 +504,8 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
                 locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask;
         out.svUsedInPosition.qzssSvUsedIdsMask =
                 locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask;
+        out.svUsedInPosition.navicSvUsedIdsMask =
+                locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask;
 
         out.flags |= GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT;
         out.numSvUsedInPosition = getNumSvUsed(out.svUsedInPosition.gpsSvUsedIdsMask,
@@ -516,6 +518,8 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
                                                 BDS_SV_PRN_MAX - BDS_SV_PRN_MIN + 1);
         out.numSvUsedInPosition += getNumSvUsed(out.svUsedInPosition.galSvUsedIdsMask,
                                                 GAL_SV_PRN_MAX - GAL_SV_PRN_MIN + 1);
+        out.numSvUsedInPosition += getNumSvUsed(out.svUsedInPosition.navicSvUsedIdsMask,
+                                                NAVIC_SV_PRN_MAX - NAVIC_SV_PRN_MIN + 1);
 
         out.numOfMeasReceived = locationExtended.numOfMeasReceived;
         for (int idx =0; idx < locationExtended.numOfMeasReceived; idx++) {
