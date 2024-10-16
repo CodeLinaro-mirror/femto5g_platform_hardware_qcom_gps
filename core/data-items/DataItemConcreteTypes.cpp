@@ -264,7 +264,7 @@ void BatteryLevelDataItem::stringify(string& valueStr) {
         valueStr += BATTERYLEVEL_FIELD_BATTERY_PCT;
         valueStr += ": ";
         char state [12];
-        snprintf (state, 12, "%d", d->mBatteryPct);
+        snprintf (state, 11, "%d", d->mBatteryPct);
         valueStr += string (state);
     } while (0);
     EXIT_LOG_WITH_ERROR("%d", result);
@@ -279,7 +279,7 @@ void TimeZoneChangeDataItem::stringify(string& valueStr) {
         valueStr = TIMEZONECHANGE_FIELD_ENABLED;
         valueStr += ": ";
         char time [30];
-        snprintf (time, 30, "%" PRIi64, d->mCurrTimeMillis);
+        snprintf (time, 29, "%" PRIi64, d->mCurrTimeMillis);
         valueStr += string (time);
     } while (0);
     EXIT_LOG_WITH_ERROR("%d", result);
@@ -293,7 +293,7 @@ void TimeChangeDataItem::stringify(string& valueStr) {
         valueStr = TIMECHANGE_FIELD_ENABLED;
         valueStr += ": ";
         char time [30];
-        snprintf (time, 30, "%" PRIi64, d->mCurrTimeMillis);
+        snprintf (time, 29, "%" PRIi64, d->mCurrTimeMillis);
         valueStr += string (time);
     } while (0);
     EXIT_LOG_WITH_ERROR("%d", result);
@@ -333,7 +333,7 @@ void NetworkInfoDataItem::stringify(string& valueStr) {
         valueStr += NETWORKINFO_FIELD_TYPE;
         valueStr += "s_MASK: ";
         char type [12];
-        snprintf (type, 12, "%" PRIu64, mAllTypes);
+        snprintf (type, 11, "%" PRIu64, mAllTypes);
         valueStr += string (type);
         valueStr += ", ";
         valueStr += NETWORKINFO_FIELD_TYPENAME;
@@ -411,7 +411,7 @@ void ServiceStatusDataItem::stringify(string& valueStr) {
         valueStr += SERVICESTATUS_FIELD_STATE;
         valueStr += ": ";
         char state [12];
-        snprintf (state, 12, "%d", d->mServiceState);
+        snprintf (state, 11, "%d", d->mServiceState);
         valueStr += string (state);
     } while (0);
     EXIT_LOG_WITH_ERROR("%d", result);
@@ -449,7 +449,7 @@ void WifiSupplicantStatusDataItem::stringify(string& valueStr) {
         valueStr += "Attach state: ";
         char t[50];
         memset (t, '\0', 50);
-        snprintf (t, 50, "%d", d->mState);
+        snprintf (t, 49, "%d", d->mState);
         valueStr += t;
 
         valueStr += ", Mac address valid: ";
@@ -457,7 +457,7 @@ void WifiSupplicantStatusDataItem::stringify(string& valueStr) {
 
         valueStr += ", AP MAC address: ";
         memset (t, '\0', 50);
-        snprintf(t, 50, "[%02x:%02x:%02x:%02x:%02x:%02x]", d->mApMacAddress[0], d->mApMacAddress[1],
+        snprintf(t, 49, "[%02x:%02x:%02x:%02x:%02x:%02x]", d->mApMacAddress[0], d->mApMacAddress[1],
             d->mApMacAddress[2], d->mApMacAddress[3], d->mApMacAddress[4], d->mApMacAddress[5]);
         valueStr += t;
 
