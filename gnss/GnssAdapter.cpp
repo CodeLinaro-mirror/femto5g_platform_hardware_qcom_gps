@@ -8254,6 +8254,40 @@ void GnssAdapter::setNtnConfigSignalMaskCommand(GnssSignalTypeMask gpsSignalType
     sendMsg(new MsgSetNtnConfig(*this, *mLocApi, sessionId, gpsSignalTypeConfigMask));
 }
 
+void GnssAdapter::injectSuplCertCommand(int32_t suplCertId,
+        const std::vector<uint8_t>& suplCertData) {
+    // generated session id will be none-zero
+    uint32_t sessionId = generateSessionId();
+    LOC_LOGd("session id %u, suplCert id %u, suplCert length %zu",
+            sessionId, suplCertId, suplCertData.size());
+    struct MsgInjectSuplCert : public LocMsg {
+        GnssAdapter&        mAdapter;
+        LocApiBase&         mApi;
+        uint32_t            mSessionId;
+        uint32_t            mSuplCertId;
+        const std::vector<uint8_t> mSuplCertData;
+
+        inline MsgInjectSuplCert(GnssAdapter& adapter, LocApiBase& api,
+                uint32_t sessionId, uint32_t suplCertId, const std::vector<uint8_t>& suplCertData):
+                LocMsg(), mAdapter(adapter), mApi(api), mSessionId(sessionId),
+                mSuplCertId(suplCertId), mSuplCertData(std::move(suplCertData)) {}
+        inline ~MsgInjectSuplCert() {}
+        inline virtual void proc() const {
+            LocApiResponse* locApiResponse = new LocApiResponse(*mAdapter.getContext(),
+                    [&mAdapter = mAdapter, mSessionId = mSessionId] (LocationError err) mutable {
+                mAdapter.reportResponse(err, mSessionId);
+            });
+            if (!locApiResponse) {
+                LOC_LOGe("memory alloc failed");
+                mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
+            } else {
+                mApi.injectSuplCert(mSuplCertId, mSuplCertData, locApiResponse);
+            }
+        }
+    };
+    sendMsg(new MsgInjectSuplCert(*this, *mLocApi, sessionId, suplCertId, suplCertData));
+}
+
 void GnssAdapter::reportGnssConfigEvent(uint32_t sessionId, const GnssConfig& gnssConfig)
 {
     struct MsgReportGnssConfig : public LocMsg {

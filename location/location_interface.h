@@ -164,6 +164,7 @@ struct GnssInterface {
     void (*set3rdPartyNtnCapability)(bool isCapable);
     void (*getNtnConfigSignalMask)();
     void (*setNtnConfigSignalMask)(GnssSignalTypeMask gpsSignalTypeConfigMask);
+    void (*injectSuplCert)(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
 };
 
 struct BatchingInterface {

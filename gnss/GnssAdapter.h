@@ -628,6 +628,7 @@ public:
     void set3rdPartyNtnCapabilityCommand(bool isCapable);
     void getNtnConfigSignalMaskCommand();
     void setNtnConfigSignalMaskCommand(GnssSignalTypeMask gpsSignalTypeConfigMask);
+    void injectSuplCertCommand(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */

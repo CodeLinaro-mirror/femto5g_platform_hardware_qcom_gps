@@ -158,6 +158,7 @@ static uint32_t gnssInjectMmfData(const GnssMapMatchedData& data);
 static void set3rdPartyNtnCapability(bool isCapable);
 static void getNtnConfigSignalMask();
 static void setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask);
+static void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
 
 static const GnssInterface gGnssInterface = {
     sizeof(GnssInterface),
@@ -232,6 +233,7 @@ static const GnssInterface gGnssInterface = {
     set3rdPartyNtnCapability,
     getNtnConfigSignalMask,
     setNtnConfigSignalMask,
+    injectSuplCert,
 };
 
 #ifndef DEBUG_X86
@@ -798,5 +800,11 @@ static void getNtnConfigSignalMask() {
 static void setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->setNtnConfigSignalMaskCommand(gpsSignalTypeConfigMask);
+    }
+}
+
+static void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData) {
+    if (NULL != gGnssAdapter) {
+        gGnssAdapter->injectSuplCertCommand(suplCertId, suplCertData);
     }
 }
