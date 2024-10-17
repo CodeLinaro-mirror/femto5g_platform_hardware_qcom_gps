@@ -215,12 +215,9 @@ public:
     void reportSvEphemeris(GnssSvEphemerisReport &svEphemeris);
     void reportNmea(const char* nmea, int length);
     void reportData(GnssDataNotification& dataNotify);
-    void reportXtraServer(const char* url1, const char* url2,
-                          const char* url3, const int maxlength);
     void reportLocationSystemInfo(const LocationSystemInfo& locationSystemInfo);
     void reportDcMessage(const GnssDcReportInfo& dcReport);
     void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
-    void requestXtraData();
     void requestTime();
     void requestATL(int connHandle, LocAGpsType agps_type,
                     LocApnTypeMask apn_type_mask, SubId sub_id=DEFAULT_SUB);
@@ -310,7 +307,6 @@ public:
             LocPosTechMask &tech_mask);
     virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);
     virtual void requestForAidingData(GnssAidingDataSvMask svDataMask);
-    virtual LocationError setXtraVersionCheckSync(uint32_t check);
     /* Requests for SV/Constellation Control */
     virtual LocationError setBlacklistSvSync(const GnssSvIdConfig& config);
     virtual void setBlacklistSv(const GnssSvIdConfig& config,
