@@ -573,10 +573,6 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
         out.techMask |= LOCATION_TECHNOLOGY_PROPAGATED_BIT;
     }
 
-    if (LOC_GPS_LOCATION_HAS_SPOOF_MASK & ulpLocation.gpsLocation.flags) {
-        out.flags |= LOCATION_HAS_SPOOF_MASK_BIT;
-        out.spoofMask = ulpLocation.gpsLocation.spoof_mask;
-    }
     out.qualityType = LOCATION_STANDALONE_QUALITY_TYPE;
     if (GPS_LOCATION_EXTENDED_HAS_NAV_SOLUTION_MASK & locationExtended.flags) {
         out.flags |= LOCATION_HAS_QUALITY_TYPE_BIT;

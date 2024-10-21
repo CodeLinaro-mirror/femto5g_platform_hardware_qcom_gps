@@ -124,7 +124,6 @@ enum LocationFlagsBits {
     LOCATION_HAS_VERTICAL_ACCURACY_BIT = (1<<5), // location has valid vertical accuracy
     LOCATION_HAS_SPEED_ACCURACY_BIT    = (1<<6), // location has valid speed accuracy
     LOCATION_HAS_BEARING_ACCURACY_BIT  = (1<<7), // location has valid bearing accuracy
-    LOCATION_HAS_SPOOF_MASK_BIT        = (1<<8), // location has valid spoof mask
     LOCATION_HAS_ELAPSED_REAL_TIME_BIT = (1<<9), // location has valid elapsed real time
     LOCATION_HAS_CONFORMITY_INDEX_BIT  = (1<<10), // location has valid conformity index
     LOCATION_HAS_QUALITY_TYPE_BIT      = (1<<11), // location has valid quality type
@@ -154,13 +153,6 @@ enum LocationTechnologyBits{
     LOCATION_TECHNOLOGY_HYBRID_ALE_BIT               = (1<<12), // HYBRID using ALE POS
     LOCATION_TECHNOLOGY_PDR_BIT                      = (1<<13), // PED mode
     LOCATION_TECHNOLOGY_PROPAGATED_BIT               = (1<<14), //using cached measures
-};
-
-typedef uint32_t LocationSpoofMask;
-enum LocationSpoofBits {
-    LOCATION_POSTION_SPOOFED             = (1<<0), // location position spoofed
-    LOCATION_TIME_SPOOFED                = (1<<1), // location time spoofed
-    LOCATION_NAVIGATION_DATA_SPOOFED     = (1<<2), // location navigation data spoofed
 };
 
 enum LocationReliability {
@@ -1180,7 +1172,6 @@ struct Location {
                              // confidence level is at 68%
     float conformityIndex;   // in range [0, 1]
     LocationTechnologyMask techMask;
-    LocationSpoofMask spoofMask;
     uint64_t elapsedRealTime;    // in ns
     uint64_t elapsedRealTimeUnc; // in ns
     LocationQualityType qualityType; // position quality
