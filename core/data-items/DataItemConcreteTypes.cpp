@@ -146,16 +146,14 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define QESDK_WWAN_FEATURE_STATUS_FIELD_QESDK_FEATURE_ID "WWAN_FEATURE_ID"
 #define QESDK_WWAN_FEATURE_STATUS_FIELD_APPHASH "WWAN_FEATURE_APP_HASH"
 
-#define QESDK_WWAN_CS_CONSENT_SRC_CARD "QESDK_WWAN_CS_CONSENT_SRC_CARD"
-#define QESDK_WWAN_CS_CONSENT_SRC_FIELD_QESDK_FEATURE_ID "QESDK_FEATURE_ID"
-#define QESDK_WWAN_CS_CONSENT_SRC_FIELD_PID "PID"
-#define QESDK_WWAN_CS_CONSENT_SRC_FIELD_UID "UID"
-#define QESDK_WWAN_CS_CONSENT_SRC_FIELD_APPHASFINEPERMISSION "APPHASFINEPERMISSION"
-#define QESDK_WWAN_CS_CONSENT_SRC_FIELD_APPHASBACKGROUNDPERMISSION "APPHASBACKGROUNDPERMISSION"
-#define QESDK_WWAN_CS_CONSENT_SRC_FIELD_APPHASH "APPHASH"
-#define QESDK_WWAN_CS_CONSENT_SRC_FIELD_APPPACKAGENAME "APPPACKAGENAME"
-#define QESDK_WWAN_CS_CONSENT_SRC_FIELD_APPCOOKIE "APPCOOKIE"
-#define QESDK_WWAN_CS_CONSENT_SRC_FIELD_APPQWESLICENSEID "APPQWESLICENSEID"
+#define WWAN_APP_INFO_CARD "WWAN_APP_INFO_CARD"
+#define WWAN_APP_INFO_FIELD_PID "PID"
+#define WWAN_APP_INFO_FIELD_UID "UID"
+#define WWAN_APP_INFO_FIELD_APPHASFINEPERMISSION "APPHASFINEPERMISSION"
+#define WWAN_APP_INFO_FIELD_APPHASBACKGROUNDPERMISSION "APPHASBACKGROUNDPERMISSION"
+#define WWAN_APP_INFO_FIELD_APPHASH "APPHASH"
+#define WWAN_APP_INFO_FIELD_APPPACKAGENAME "APPPACKAGENAME"
+#define WWAN_APP_INFO_FIELD_APPCOOKIE "APPCOOKIE"
 
 namespace loc_core
 {
@@ -864,79 +862,67 @@ int32_t QesdkWwanFeatureStatusDataItem::copyFrom(IDataItemCore* src) {
     return result;
 }
 
-void QesdkWwanCsConsentSrcDataItem::stringify(string& valueStr) {
+void WwanAppInfoDataItem::stringify(string& valueStr) {
     int32_t result = 0;
     ENTRY_LOG();
     do {
         STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(
-            QesdkWwanCsConsentSrcDataItem, QESDK_WWAN_CS_CONSENT_SRC_DATA_ITEM_ID);
+            WwanAppInfoDataItem, WWAN_APP_INFO_DATA_ITEM_ID);
 
         valueStr.clear ();
 
-        valueStr = QESDK_WWAN_CS_CONSENT_SRC_CARD;
+        valueStr = WWAN_APP_INFO_CARD;
         valueStr += "::";
 
-        valueStr += QESDK_WWAN_CS_CONSENT_SRC_FIELD_QESDK_FEATURE_ID;
-        valueStr += ": ";
-        char fid[12];
-        snprintf(fid, 12, "%d", d->mQesdkFeatureId);
-        valueStr += string(fid);
-        valueStr += ", ";
-
-        valueStr += QESDK_WWAN_CS_CONSENT_SRC_FIELD_PID;
+        valueStr += WWAN_APP_INFO_FIELD_PID;
         valueStr += ": ";
         char pid[12];
         snprintf(pid, 12, "%d", d->mPid);
         valueStr += string(pid);
         valueStr += ", ";
 
-        valueStr += QESDK_WWAN_CS_CONSENT_SRC_FIELD_UID;
+        valueStr += WWAN_APP_INFO_FIELD_UID;
         valueStr += ": ";
         char uid[12];
         snprintf(uid, 12, "%d", d->mUid);
         valueStr += string(uid);
         valueStr += ", ";
 
-        valueStr += QESDK_WWAN_CS_CONSENT_SRC_FIELD_APPHASFINEPERMISSION;
+        valueStr += WWAN_APP_INFO_FIELD_APPHASFINEPERMISSION;
         valueStr += ": ";
         valueStr += (d->mAppHasFinePermission) ? ("true") : ("false");
         valueStr += ", ";
 
-        valueStr += QESDK_WWAN_CS_CONSENT_SRC_FIELD_APPHASBACKGROUNDPERMISSION;
+        valueStr += WWAN_APP_INFO_FIELD_APPHASBACKGROUNDPERMISSION;
         valueStr += ": ";
         valueStr += (d->mAppHasBackgroundPermission) ? ("true") : ("false");
         valueStr += ", ";
 
-        valueStr += QESDK_WWAN_CS_CONSENT_SRC_FIELD_APPHASH;
+        valueStr += WWAN_APP_INFO_FIELD_APPHASH;
         valueStr += ": ";
         valueStr += d->mAppHash;
         valueStr += ", ";
 
-        valueStr += QESDK_WWAN_CS_CONSENT_SRC_FIELD_APPPACKAGENAME;
+        valueStr += WWAN_APP_INFO_FIELD_APPPACKAGENAME;
         valueStr += ": ";
         valueStr += d->mAppPackageName;
         valueStr += ", ";
 
-        valueStr += QESDK_WWAN_CS_CONSENT_SRC_FIELD_APPCOOKIE;
+        valueStr += WWAN_APP_INFO_FIELD_APPCOOKIE;
         valueStr += ": ";
         valueStr += d->mAppCookie;
         valueStr += ", ";
-
-        valueStr += QESDK_WWAN_CS_CONSENT_SRC_FIELD_APPQWESLICENSEID;
-        valueStr += ": ";
-        valueStr += d->mAppQwesLicenseId;
 
     } while (0);
     EXIT_LOG_WITH_ERROR("%d", result);
 }
 
-int32_t QesdkWwanCsConsentSrcDataItem::copyFrom(IDataItemCore* src) {
+int32_t WwanAppInfoDataItem::copyFrom(IDataItemCore* src) {
     int32_t result = -1;
     ENTRY_LOG();
     do {
         COPIER_ERROR_CHECK_AND_DOWN_CAST(
-                QesdkWwanCsConsentSrcDataItem, QESDK_WWAN_CS_CONSENT_SRC_DATA_ITEM_ID);
-        s->mQesdkFeatureId = d->mQesdkFeatureId;
+                WwanAppInfoDataItem, WWAN_APP_INFO_DATA_ITEM_ID);
         s->mPid = d->mPid;
         s->mUid = d->mUid;
         s->mAppHasFinePermission = d->mAppHasFinePermission;
@@ -944,7 +930,6 @@ int32_t QesdkWwanCsConsentSrcDataItem::copyFrom(IDataItemCore* src) {
         s->mAppHash = d->mAppHash;
         s->mAppPackageName = d->mAppPackageName;
         s->mAppCookie = d->mAppCookie;
-        s->mAppQwesLicenseId = d->mAppQwesLicenseId;
         result = 0;
     } while (0);
     EXIT_LOG("%d", result);
