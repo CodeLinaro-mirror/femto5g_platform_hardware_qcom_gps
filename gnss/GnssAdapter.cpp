@@ -3507,6 +3507,11 @@ GnssAdapter::startTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t sessi
             updateOptions = true;
         }
 
+        if (options.tbm < multiplexedOptions.tbm) {
+            multiplexedOptions.tbm = options.tbm;
+            updateOptions = true;
+        }
+
         // if session we are starting has smaller powerMode then next smallest
         if (options.powerMode < multiplexedPowerMode) {
             multiplexedOptions.powerMode = options.powerMode;
