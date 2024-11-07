@@ -366,6 +366,20 @@ public:
                        sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
                    }
                break;
+               case LOCATION_QWES_FEATURE_TYPE_WOCS:
+                   if (itr->second) {
+                       sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_WOCS;
+                   } else {
+                       sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_WOCS;
+                   }
+               break;
+               case LOCATION_QWES_FEATURE_TYPE_SBAS:
+                   if (itr->second) {
+                       sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_SBAS;
+                   } else {
+                       sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_SBAS;
+                   }
+               break;
            }
        }
 

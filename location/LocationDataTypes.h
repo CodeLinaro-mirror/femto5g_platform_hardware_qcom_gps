@@ -111,6 +111,8 @@ enum LocationError {
     LOCATION_ERROR_SYSTEM_NOT_READY,
     LOCATION_ERROR_EXCLUSIVE_SESSION_IN_PROGRESS,
     LOCATION_ERROR_TZ_LOCKED,
+    LOCATION_ERROR_NO_VALID_LICENSE,
+    LOCATION_ERROR_NO_CORRECTION,
 };
 
 // Flags to indicate which values are valid in a Location
@@ -153,6 +155,7 @@ enum LocationTechnologyBits{
     LOCATION_TECHNOLOGY_HYBRID_ALE_BIT               = (1<<12), // HYBRID using ALE POS
     LOCATION_TECHNOLOGY_PDR_BIT                      = (1<<13), // PED mode
     LOCATION_TECHNOLOGY_PROPAGATED_BIT               = (1<<14), //using cached measures
+    LOCATION_TECHNOLOGY_SBAS_BIT                     = (1<<15), //using SBAS
 };
 
 enum LocationReliability {
@@ -402,6 +405,10 @@ typedef uint64_t LocationCapabilitiesMask;
 // This mask indicates wwan premium positioning is
 // enabled by QWES license.
 #define   LOCATION_CAPABILITIES_QWES_WWAN_PREMIUM_POSITIONING         (1ULL<<39)
+// This mask indicates mlp without correction service is supported.
+#define   LOCATION_CAPABILITIES_QWES_WOCS                             (1ULL<<40)
+// This mask indicates SBAS is supported.
+#define   LOCATION_CAPABILITIES_QWES_SBAS                             (1ULL<<41)
 
 typedef uint8_t LocationQwesFeatureType;
 enum LocationQwesFeatureTypes {
@@ -467,8 +474,14 @@ enum LocationQwesFeatureTypes {
     // This indicates wwan premium positioning is
     // enabled by QWES license.
     LOCATION_QWES_FEATURE_TYPE_WWAN_PREMIUM_POSITIONING      = 22,
+    // This indicates mlp without correction service is
+    // enabled by QWES license.
+    LOCATION_QWES_FEATURE_TYPE_WOCS                          = 23,
+    // This indicates SBAS is
+    // enabled by QWES license.
+    LOCATION_QWES_FEATURE_TYPE_SBAS                          = 24,
     // Max value
-    LOCATION_QWES_FEATURE_TYPE_MAX                           = 23
+    LOCATION_QWES_FEATURE_TYPE_MAX                           = 25
 };
 
 typedef uint64_t LocationHwCapabilitiesMask;
@@ -1238,22 +1251,38 @@ enum SpecialReqType {
     SPECIAL_REQ_SHORT_CODE,   /* Short code */
 };
 
+enum PreciseType {
+    PRECISE_TYPE_UNKNOWN = 0,
+    PRECISE_TYPE_EDGNSS = 1,
+    PRECISE_TYPE_RTK = 2,
+    PRECISE_TYPE_WOCS = 3
+};
+
+enum CorrectionType {
+    CORRECTION_TYPE_DEFAULT = 1,
+    CORRECTION_TYPE_RTCM = 2,
+    CORRECTION_TYPE_3GPP = 3
+};
+
 struct TrackingOptions : LocationOptions {
     GnssPowerMode powerMode; /* Power Mode to be used for time based tracking
                                 sessions */
     uint32_t tbm;  /* Time interval between measurements specified in millis.
                       Applicable to background power modes */
     SpecialReqType specialReq; /* Special Request type */
+    CorrectionType correctionType; /* Correction type */
+    PreciseType  preciseType; /* Precise type */
 
     inline TrackingOptions() :
             LocationOptions(), powerMode(GNSS_POWER_MODE_DEFAULT), tbm(0),
-            specialReq(SPECIAL_REQ_INVALID){}
+            specialReq(SPECIAL_REQ_INVALID), correctionType(CORRECTION_TYPE_DEFAULT){}
     inline TrackingOptions(const LocationOptions& options) :
             LocationOptions(options), powerMode(GNSS_POWER_MODE_DEFAULT), tbm(0),
-            specialReq(SPECIAL_REQ_INVALID){}
+            specialReq(SPECIAL_REQ_INVALID), correctionType(CORRECTION_TYPE_DEFAULT){}
     inline bool equalsInTimeBasedRequest(const TrackingOptions& other) const {
         return minInterval == other.minInterval && powerMode == other.powerMode &&
-               qualityLevelAccepted == other.qualityLevelAccepted;
+               qualityLevelAccepted == other.qualityLevelAccepted &&
+               preciseType == other.preciseType;
     }
     inline bool multiplexWithForTimeBasedRequest(const TrackingOptions& other) {
         bool updated = false;

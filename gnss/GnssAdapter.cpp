@@ -3152,6 +3152,7 @@ GnssAdapter::handleEngineUpEvent()
             // must be called only after capabilities are known
             mAdapter.setConfig();
             mAdapter.setTribandState();
+            mAdapter.setPreciseSessionConfig();
             mAdapter.gnssSvConfigUpdate();
             mAdapter.updateSystemPowerState(mAdapter.getSystemPowerState());
             if (mAdapter.mPowerConnectState != POWER_CONNECT_UNKNOWN) {
@@ -3532,6 +3533,7 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                             mAdapter.startTimeBasedTrackingMultiplex(mClient, mSessionId, mOptions);
                     mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
                     mAdapter.setTribandState();
+                    mAdapter.setPreciseSessionConfig();
 
                     if (reportToClientWithNoWait) {
                         mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
@@ -3615,16 +3617,20 @@ GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId,
         return;
     }
 
-    LOC_LOGd("minInterval %u minDistance %u mode %u powermode %u tbm %u",
+    LOC_LOGd("minInterval %u minDistance %u mode %u powermode %u tbm %u "
+             "preciseType %u corrtionType %u",
             trackingOptions.minInterval, trackingOptions.minDistance,
-            trackingOptions.mode, trackingOptions.powerMode, trackingOptions.tbm);
+            trackingOptions.mode, trackingOptions.powerMode, trackingOptions.tbm,
+            trackingOptions.preciseType, trackingOptions.correctionType);
     LocPosMode locPosMode = {};
     convertOptions(locPosMode, trackingOptions);
     // save position mode parameters
     setLocPositionMode(locPosMode);
+    mPreciseType = trackingOptions.preciseType;
+    mCorrectionType = trackingOptions.correctionType;
     // inform engine hub that GNSS session is about to start
     mEngHubProxy->gnssSetFixMode(mLocPositionMode);
-    mEngHubProxy->gnssStartFix();
+    mEngHubProxy->gnssStartFix(trackingOptions.preciseType);
     // inform CDFW that GNSS session is about to start
     if (mCdfwInterface) {
         mCdfwInterface->updateTrackingStatus(true);
@@ -3670,7 +3676,7 @@ GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
 
     // inform engine hub that GNSS session is about to start
     mEngHubProxy->gnssSetFixMode(mLocPositionMode);
-    mEngHubProxy->gnssStartFix();
+    mEngHubProxy->gnssStartFix(updatedOptions.preciseType);
     // inform CDFW that GNSS session is about to start
     if (mCdfwInterface) {
         mCdfwInterface->updateTrackingStatus(true);
@@ -3919,6 +3925,7 @@ GnssAdapter::stopTrackingCommand(LocationAPI* client, uint32_t id)
                         mAdapter.stopTimeBasedTrackingMultiplex(mClient, mSessionId);
                     mAdapter.eraseTrackingSession(mClient, mSessionId);
                     mAdapter.setTribandState();
+                    mAdapter.setPreciseSessionConfig();
 
                     if (reportToClientWithNoWait) {
                         mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
@@ -4818,7 +4825,7 @@ bool
 GnssAdapter::reportSpeAsEnginePosition(const UlpLocation& ulpLocation,
                                    const GpsLocationExtended& locationExtended,
                                    enum loc_sess_status status) {
-    bool enginePositionReported = isPreciseEnabled();
+    bool enginePositionReported = isEngineServiceEnable();
     if (enginePositionReported) {
         EngineLocationInfo engLocationInfo = {};
         engLocationInfo.location = ulpLocation;
@@ -5974,6 +5981,7 @@ void GnssAdapter::handleQesdkQwesStatusFromEHub(
             auto dlpQesdkInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_DLP_QESDK);
             auto qfeInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_QDR3);
             auto cdParserInFeatureMap = mFeatureMap.find(LOCATION_FEATURE_TYPE_CORR_DATA_PARSER);
+            auto wocsInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_WOCS);
 
             //QESDK feature status call back handling logic:
             //1, If LOCATION_QWES_FEATURE_TYPE_PPE is presented in feature map,
@@ -6007,7 +6015,14 @@ void GnssAdapter::handleQesdkQwesStatusFromEHub(
                     mAdapter.notifyPreciseLocation();
                 }
                 mAdapter.mQppeResp = true;
-            } else if (dlpQesdkInFeatureMap != mFeatureMap.end()) {
+            } else if (wocsInFeatureMap != mFeatureMap.end()) {
+                if (wocsInFeatureMap->second) {
+                    mAdapter.mPpFeatureStatusMask |= WOCS_FEATURE_ENABLED_BY_DEFAULT;
+                } else {
+                    mAdapter.mPpFeatureStatusMask &= (~WOCS_FEATURE_ENABLED_BY_DEFAULT);
+                }
+                mAdapter.notifyPreciseLocation();
+            }else if (dlpQesdkInFeatureMap != mFeatureMap.end()) {
                 if (dlpQesdkInFeatureMap->second) {
                     mAdapter.mPpFeatureStatusMask |= DLP_FEATURE_ENABLED_BY_QESDK;
                     //Send enable precise location data item to loclauncher to inform
@@ -8077,6 +8092,33 @@ void GnssAdapter::configPrecisePositioningCommand(
     sendMsg(new MsgConfigPrecisePositioning(*this, enable, appHash, featureId));
 }
 
+void GnssAdapter::setPreciseSessionConfig() {
+
+    struct MsgConfigPrecisePositioning : public LocMsg {
+        GnssAdapter& mAdapter;
+        bool mEnable;
+        PreciseType mPreciseType;
+
+        inline MsgConfigPrecisePositioning(GnssAdapter& adapter,
+                                           bool enable,
+                                           PreciseType preciseType) :
+            LocMsg(),
+            mAdapter(adapter),
+            mEnable(enable),
+            mPreciseType(preciseType) {}
+        inline virtual void proc() const {
+            LOC_LOGd("ConfigPrecisePositioning: enable: %d, preciseType: %d", mEnable,
+                    mPreciseType);
+            if (PRECISE_TYPE_UNKNOWN != mPreciseType) {
+                mAdapter.mLocApi->configPrecisePositioning(mPreciseType, mEnable);
+            }
+        }
+    };
+    LOC_LOGd("isInSession()=%d", isInSession());
+    sendMsg(new MsgConfigPrecisePositioning(*this, isInSession(), mPreciseType));
+}
+
+
 uint32_t GnssAdapter::configMerkleTreeCommand(const char * merkleTreeConfigBuffer, int bufLen) {
     // generated session id will be none-zero
     uint32_t sessionId = generateSessionId();
@@ -8727,10 +8769,9 @@ bool GnssAdapter::isStandAloneCDParserPELib() {
     // QDGNSS_3GPP_SOURCE_AVAIL = modem side can supply 3GPP correction data
     // QDGNSS_3GPP_EP_PARSER_AVAIL = QPPE lib can parse 3GPP SSR messages
     if (m3GppSourceMask & (QDGNSS_3GPP_SOURCE_AVAIL | QDGNSS_3GPP_EP_PARSER_AVAIL) &&
-            isMlpEnabled() && !isQppeEnabled()) {
+            isMlpEnabled()) {
         standAloneCDParserPELib = true;
     }
-
     if (standAloneCDParserPELib) {
         LOC_LOGd("m3GppSourceMask 0x%x, mPpFeatureStatusMask 0x%x, standAloneCDParserPELib %d",
                 m3GppSourceMask, mPpFeatureStatusMask, standAloneCDParserPELib);
@@ -8743,10 +8784,12 @@ bool GnssAdapter::isStandAloneCDParserPELib() {
 }
 
 bool GnssAdapter::isEngineServiceEnable() {
-    if (isPreciseEnabled()) {
-        return true;
-    } else {
+    if (PRECISE_TYPE_EDGNSS == mPreciseType) {
         return isStandAloneCDParserPELib();
+    } else if (PRECISE_TYPE_RTK == mPreciseType || PRECISE_TYPE_WOCS == mPreciseType) {
+        return isPreciseEnabled();
+    } else {
+        return false;
     }
 }
 
@@ -8926,14 +8969,16 @@ void GnssAdapter::handleDisablePPENtrip() {
 }
 
 void GnssAdapter::checkUpdateDgnssNtrip(bool isLocationValid) {
-    LOC_LOGd("isInSession %d mDgnssState 0x%x isLocationValid %d "
-             "isMlpEnabled %d mSystemPowerState %d",
-            isInSession(), mDgnssState, isLocationValid, isMlpEnabled(), mSystemPowerState);
+    LOC_LOGd("isInSession %d mDgnssState 0x%x isLocationValid %d isMlpEnabled %d "
+             "mSystemPowerState %d, isNtripSourceNeeded %d, mPreciseType %d, mCorrectionType %d",
+            isInSession(), mDgnssState, isLocationValid, isMlpEnabled(), mSystemPowerState,
+            isNtripSourceNeeded(), mPreciseType, mCorrectionType);
     //1. Enable edgnss-daemon when isInSession and isMlpEnabled.
     // isMlpEnabled is true when RTK or edgnss feature is enabled.
     //2. Modem sometimes send PVT very closely right after power is suspended
     // so need to check power is not in suspend or shutdown state
-    if (isInSession() && isMlpEnabled() &&
+    //3. Ntrip source is needed
+    if (isInSession() && isMlpEnabled() && isNtripSourceNeeded() &&
             (POWER_STATE_SUSPEND != mSystemPowerState) &&
             (POWER_STATE_DEEP_SLEEP_ENTRY != mSystemPowerState) &&
             (POWER_STATE_SHUTDOWN != mSystemPowerState)) {

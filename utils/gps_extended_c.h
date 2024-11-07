@@ -1048,6 +1048,7 @@ enum ulp_gnss_sv_measurement_valid_flags{
 #define ULP_GNSS_SV_POLY_BIT_NAVIC_TGD_L1           (0x80000000000)
 #define ULP_GNSS_SV_POLY_BIT_NAVIC_ISC_L1D          (0x100000000000)
 #define ULP_GNSS_SV_POLY_BIT_NAVIC_ISC_L1P          (0x200000000000)
+#define ULP_GNSS_SV_POLY_BIT_SBAS_CORRUNC           (0x400000000000)
 
 typedef enum
 {
@@ -1590,6 +1591,7 @@ typedef struct {
     float       ionoDot;      /* Iono delay rate [m/s].  */
     float       sbasIonoDelay;/* SBAS Ionospheric delay at d_T0 [m]. */
     float       sbasIonoDot;  /* SBAS Iono delay rate [m/s].  */
+    float       sbasCorrUnc;  /* SBAS correction uncertainity [m].  */
     float       tropoDelay;   /* Tropospheric delay [m]. */
     float       elevation;    /* Elevation [rad] at d_T0 */
     float       elevationDot;      /* Elevation rate [rad/s] */

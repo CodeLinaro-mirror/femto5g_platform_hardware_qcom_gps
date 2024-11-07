@@ -926,6 +926,11 @@ void LocApiBase::
             LocApiResponse* /*adpterResponse*/)
 DEFAULT_IMPL()
 
+void LocApiBase::
+    configPrecisePositioning(PreciseType preciseType, bool enable,
+            LocApiResponse* /*adpterResponse*/)
+DEFAULT_IMPL()
+
 void LocApiBase::configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* /*merkleTree*/,
             LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
