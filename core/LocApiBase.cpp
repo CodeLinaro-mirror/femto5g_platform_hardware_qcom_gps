@@ -267,10 +267,7 @@ bool LocApiBase::needReport(const UlpLocation& ulpLocation,
             // this is a final fix with satellite and/or sensor contribution
             LocPosTechMask mask =
                 LOC_POS_TECH_MASK_SATELLITE | LOC_POS_TECH_MASK_SENSORS;
-#ifndef __ANDROID__
-            // Include propagated GPS fix if not on Android target
             mask |=  LOC_POS_TECH_MASK_PROPAGATED;
-#endif
             reported = (mask & techMask);
         }
     }
