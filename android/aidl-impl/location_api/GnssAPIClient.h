@@ -89,7 +89,6 @@ public:
 
     // for GpsInterface
     void gnssUpdateCallbacks(const shared_ptr<IGnssCallback>& gpsCb);
-    void gnssUpdateFlpCallbacks();
     bool gnssStart();
     bool gnssStop();
     void configSvStatus(bool enable);
@@ -122,12 +121,18 @@ public:
     void onStartTrackingCb(LocationError error) final;
     void onStopTrackingCb(LocationError error) final;
 
+    // sNlpRequestCb and gnssStatusCb will be NULL in case of Android OS
+    static std::function<void(bool)> sNlpRequestCb;
+    static std::function<void(bool)> sGnssStatusCb;
+    static bool sFlpRequestAllowed;
+
 private:
     void setCallbacks();
     void setFlpCallbacks();
     void initLocationOptions();
     void updateCapabilities(LocationCapabilitiesMask capabilitiesMask,
                             bool forceSendCapabilities);
+    void updateCallbacksByAccuracy(uint32_t preferredAccuracyMeters);
 
     std::mutex mMutex;
     bool mTracking;
@@ -137,6 +142,7 @@ private:
     bool mLocationCapabilitiesCached;
     bool mSvStatusEnabled;
     bool mNmeaEnabled;
+    bool mIsNlpActive;
     const shared_ptr<IGnssCallback>& mGnssCbIface;
 };
 
