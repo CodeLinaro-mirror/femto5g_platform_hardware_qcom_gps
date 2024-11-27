@@ -800,6 +800,8 @@ static void loc_nmea_generate_GSV(const GnssSvNotification &svNotify,
         for (int i=0; (svNumber <= svNotify.count) && (i < 4);  svNumber++)
         {
             GnssSignalTypeMask signalType = svNotify.gnssSvs[svNumber-1].gnssSignalTypeMask;
+            GnssSvType svType = svNotify.gnssSvs[svNumber - 1].type;
+            uint16_t svId   = svNotify.gnssSvs[svNumber - 1].svId;
             if (0 == signalType) {
                 // If no signal type in report, it means default L1,G1,E1,B1I
                 switch (svNotify.gnssSvs[svNumber - 1].type)
@@ -832,7 +834,7 @@ static void loc_nmea_generate_GSV(const GnssSvNotification &svNotify,
                 }
             }
 
-            if ((sv_meta_p->svTypeMask & (1 << svNotify.gnssSvs[svNumber - 1].type)) &&
+            if ((sv_meta_p->svTypeMask & (1 << svType)) &&
                     sv_meta_p->signalId == convert_signalType_to_signalId(signalType))
             {
                 svIdOffset = sv_meta_p->svIdOffset;
