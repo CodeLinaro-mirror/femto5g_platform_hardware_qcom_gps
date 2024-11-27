@@ -333,9 +333,9 @@ LocAdapterBase::getCapabilities()
         if (ContextBase::isMessageSupported(LOC_API_ADAPTER_MESSAGE_OUTDOOR_TRIP_BATCHING)) {
             mask |= LOCATION_CAPABILITIES_OUTDOOR_TRIP_BATCHING_BIT;
         }
-        // geofence supported for integrated solution.
         if (0 == ContextBase::mGps_conf.GNSS_DEPLOYMENT) {
-            mask |= LOCATION_CAPABILITIES_GEOFENCE_BIT;
+            /* Geofence capability is out of scope for automotive deployments. */
+            LOC_LOGv("Capabilities: LOCATION_CAPABILITIES_GEOFENCE_BIT is not supported");
         }
         if (ContextBase::gnssConstellationConfig()) {
             mask |= LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT;
@@ -352,10 +352,12 @@ LocAdapterBase::getCapabilities()
             mask |= LOCATION_CAPABILITIES_DEBUG_DATA_BIT;
         }
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_CONSTELLATION_ENABLEMENT_V02)) {
-            mask |= LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT;
+            /* Constellation enablement capability is out of scope for automotive deployments. */
+            LOC_LOGv("Capabilities: LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT not supported");
         }
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_AGPM_V02)) {
-            mask |= LOCATION_CAPABILITIES_AGPM_BIT;
+            /* AGPM capability is out of scope for automotive deployments. */
+            LOC_LOGv("Capabilities: LOCATION_CAPABILITIES_AGPM_BIT is not supported");
         }
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_LOCATION_PRIVACY)) {
             mask |= LOCATION_CAPABILITIES_PRIVACY_BIT;
