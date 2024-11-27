@@ -159,6 +159,7 @@ static uint32_t getXtraStatus();
 static uint32_t registerXtraStatusUpdate(bool registerUpdate);
 static void configPrecisePositioning(uint32_t featureId, bool enable, std::string appHash);
 static uint32_t gnssInjectMmfData(const GnssMapMatchedData& data);
+static uint32_t configureUserConsentForXtra(const bool xtraUserConsent);
 
 static const GnssInterface gGnssInterface = {
     sizeof(GnssInterface),
@@ -233,6 +234,7 @@ static const GnssInterface gGnssInterface = {
     configMerkleTree,
     configOsnmaEnablement,
     gnssInjectMmfData,
+    configureUserConsentForXtra,
 };
 
 #ifndef DEBUG_X86
@@ -808,6 +810,14 @@ static uint32_t gnssInjectMmfData(const GnssMapMatchedData& data)
 {
     if (NULL != gGnssAdapter) {
         return gGnssAdapter->gnssInjectMmfDataCommand(data);
+    } else {
+        return 0;
+    }
+}
+
+static uint32_t configureUserConsentForXtra(const bool xtraUserConsent) {
+    if (NULL != gGnssAdapter) {
+        return gGnssAdapter->gnssInjectXtraUserConsentCommand(xtraUserConsent);
     } else {
         return 0;
     }
