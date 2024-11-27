@@ -149,12 +149,6 @@ void LocAdapterBase::
     reportSvEphemerisEvent(GnssSvEphemerisReport &/*svEphemeris*/)
 DEFAULT_IMPL()
 
-
-void LocAdapterBase::
-    reportStatus(LocGpsStatusValue /*status*/)
-DEFAULT_IMPL()
-
-
 void LocAdapterBase::
     reportNmeaEvent(const char* /*nmea*/, size_t /*length*/)
 DEFAULT_IMPL()
@@ -162,11 +156,6 @@ DEFAULT_IMPL()
 void LocAdapterBase::
     reportDataEvent(const GnssDataNotification& /*dataNotify*/)
 DEFAULT_IMPL()
-
-bool LocAdapterBase::
-    reportXtraServer(const char* /*url1*/, const char* /*url2*/,
-                     const char* /*url3*/, const int /*maxlength*/)
-DEFAULT_IMPL(false)
 
 void LocAdapterBase::
     reportLocationSystemInfoEvent(const LocationSystemInfo& /*locationSystemInfo*/)
@@ -177,15 +166,7 @@ void LocAdapterBase::
 DEFAULT_IMPL()
 
 bool LocAdapterBase::
-    requestXtraData()
-DEFAULT_IMPL(false)
-
-bool LocAdapterBase::
     requestTime()
-DEFAULT_IMPL(false)
-
-bool LocAdapterBase::
-    requestLocation()
 DEFAULT_IMPL(false)
 
 bool LocAdapterBase::
@@ -217,9 +198,6 @@ bool LocAdapterBase::
 DEFAULT_IMPL(false)
 
 void LocAdapterBase::reportGnssSvIdConfigEvent(const GnssSvIdConfig& /*config*/)
-DEFAULT_IMPL()
-
-void LocAdapterBase::reportGnssSvTypeConfigEvent(const GnssSvTypeConfig& /*config*/)
 DEFAULT_IMPL()
 
 void LocAdapterBase::reportGnssConfigEvent(uint32_t,  /* session id*/

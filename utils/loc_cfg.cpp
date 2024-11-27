@@ -531,7 +531,6 @@ typedef struct {
     char baseband[LOC_MAX_PARAM_STRING];
     char low_ram_targets[LOC_MAX_PARAM_STRING];
     char soc_id_list[LOC_MAX_PARAM_STRING];
-    unsigned int sglte_target;
     char feature_gtp_mode[LOC_MAX_PARAM_STRING];
     char feature_gtp_waa[LOC_MAX_PARAM_STRING];
     char feature_odcpi[LOC_MAX_PARAM_STRING];
@@ -545,11 +544,6 @@ typedef struct {
 
 /* process configuration parameters */
 static loc_launcher_conf conf;
-
-/* gps.conf Parameter spec table */
-static const loc_param_s_type gps_conf_parameter_table[] = {
-    {"SGLTE_TARGET",        &conf.sglte_target,           NULL, 'n'},
-};
 
 /* location feature conf, e.g.: izat.conf feature mode table*/
 static const loc_param_s_type loc_feature_conf_table[] = {
@@ -631,9 +625,6 @@ int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_p
         return -1;
     }
 
-    //Read gps.conf and fill parameter table
-    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_parameter_table);
-
     //Form argument strings
     strlcat(arg_gtp_waa, LOC_FEATURE_GTP_WAA, LOC_PROCESS_MAX_ARG_STR_LENGTH-3);
     strlcat(arg_gtp_modem_cell, LOC_FEATURE_GTP_MODEM_CELL, LOC_PROCESS_MAX_ARG_STR_LENGTH-3);
@@ -652,6 +643,10 @@ int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_p
     // Get the soc-id for this device.
     loc_get_device_soc_id(socid_value, sizeof(socid_value));
 
+    strlcpy(conf.feature_wifi_supplicant_info, "BASIC",
+          sizeof(conf.feature_wifi_supplicant_info));
+    strlcpy(conf.feature_free_wifi_scan_inject, "BASIC",
+          sizeof(conf.feature_free_wifi_scan_inject));
     UTIL_READ_CONF(conf_file_name, loc_feature_conf_table);
 
     //Set service mask for GTP_MODE
@@ -707,13 +702,8 @@ int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_p
         LOC_LOGD("%s:%d]: Setting FREE_WIFI_SCAN_INJECT to mode: BASIC", __func__, __LINE__);
         loc_service_mask |= LOC_FEATURE_MASK_FREE_WIFI_SCAN_INJECT;
     }
-    else if (strcmp(conf.feature_free_wifi_scan_inject, "DISABLED") == 0) {
+    else {
         LOC_LOGD("%s:%d]: Setting FREE_WIFI_SCAN_INJECT to mode: DISABLED", __func__, __LINE__);
-    }
-    else if (strcmp(conf.feature_free_wifi_scan_inject, "PREMIUM") == 0) {
-        LOC_LOGD("%s:%d]: Unrecognized value for FREE_WIFI_SCAN_INJECT mode."\
-            "Setting FREE_WIFI_SCAN_INJECT to default mode: BASIC", __func__, __LINE__);
-        loc_service_mask |= LOC_FEATURE_MASK_FREE_WIFI_SCAN_INJECT;
     }
 
     // Set service mask for SUPL_WIFI
@@ -735,13 +725,9 @@ int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_p
         LOC_LOGD("%s:%d]: Setting WIFI_SUPPLICANT_INFO to mode: BASIC", __func__, __LINE__);
         loc_service_mask |= LOC_FEATURE_MASK_WIFI_SUPPLICANT_INFO;
     }
-    else if (strcmp(conf.feature_wifi_supplicant_info, "DISABLED") == 0) {
-        LOC_LOGD("%s:%d]: Setting WIFI_SUPPLICANT_INFO to mode: DISABLED", __func__, __LINE__);
-    }
-    else if (strcmp(conf.feature_wifi_supplicant_info, "PREMIUM") == 0) {
-        LOC_LOGD("%s:%d]: Unrecognized value for WIFI_SUPPLICANT_INFO mode."\
-            "Setting LOC_FEATURE_MASK_WIFI_SUPPLICANT_INFO to default mode: BASIC", __func__, __LINE__);
-        loc_service_mask |= LOC_FEATURE_MASK_WIFI_SUPPLICANT_INFO;
+    else {
+        LOC_LOGD("%s:%d]: Setting WIFI_SUPPLICANT_INFO to mode: DISABLED",
+                __func__, __LINE__);
     }
 
     LOC_LOGD("%s:%d]: loc_service_mask: %x\n", __func__, __LINE__, loc_service_mask);
@@ -929,14 +915,6 @@ int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_p
                 if (strcmp(baseband_name, split_strings[i]) == 0) {
                     LOC_LOGD("%s:%d]: Matched baseband: %s\n",
                              __func__, __LINE__, split_strings[i]);
-                    config_mask |= CONFIG_MASK_BASEBAND_FOUND;
-                    break;
-                }
-                //Since ro.baseband is not a reliable source for detecting sglte
-                //the alternative is to read the SGLTE_TARGET parameter from gps.conf
-                //this parameter is read into conf_sglte_target
-                else if((strcmp("sglte", split_strings[i]) == 0 ) && conf.sglte_target) {
-                    LOC_LOGD("%s:%d]: Matched baseband SGLTE\n", __func__, __LINE__);
                     config_mask |= CONFIG_MASK_BASEBAND_FOUND;
                     break;
                 }

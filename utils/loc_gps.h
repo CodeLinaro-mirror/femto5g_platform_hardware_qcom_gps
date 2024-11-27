@@ -19,7 +19,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -143,17 +143,8 @@ typedef uint16_t LocGpsLocationFlags;
 #define LOC_GPS_LOCATION_HAS_SPEED_ACCURACY   0x0040
 /** LocGpsLocation has valid bearing accuracy */
 #define LOC_GPS_LOCATION_HAS_BEARING_ACCURACY 0x0080
-/** LocGpsLocation has valid spoof mask */
-#define LOC_GPS_LOCATION_HAS_SPOOF_MASK   0x0100
 /** Location has valid source information. */
 #define LOC_GPS_LOCATION_HAS_SOURCE_INFO   0x0200
-
-/** Spoof mask in LocGpsLocation */
-typedef uint32_t LocGpsSpoofMask;
-#define LOC_GPS_LOCATION_NONE_SPOOFED            0x0000
-#define LOC_GPS_LOCATION_POSITION_SPOOFED        0x0001
-#define LOC_GPS_LOCATION_TIME_SPOOFED            0x0002
-#define LOC_GPS_LOCATION_NAVIGATION_DATA_SPOOFED 0x0004
 
 /** Flags for the loc_gps_set_capabilities callback. */
 
@@ -598,8 +589,6 @@ typedef struct {
     uint32_t        size;
     /** Contains LocGpsLocationFlags bits. */
     uint16_t        flags;
-    /** The spoof mask */
-    LocGpsSpoofMask spoof_mask;
     /** Represents latitude in degrees. */
     double          latitude;
     /** Represents longitude in degrees. */

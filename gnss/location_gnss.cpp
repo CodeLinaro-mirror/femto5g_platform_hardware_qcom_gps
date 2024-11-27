@@ -91,10 +91,6 @@ static void disable(uint32_t id);
 static uint32_t* gnssUpdateConfig(const GnssConfig& config);
 static uint32_t* gnssGetConfig(GnssConfigFlagsMask mask);
 
-static void gnssUpdateSvTypeConfig(const GnssSvTypeConfig& config);
-static void gnssGetSvTypeConfig(GnssSvTypeConfigCallback& callback);
-static void gnssResetSvTypeConfig();
-
 static void injectLocation(double latitude, double longitude, float accuracy);
 static void injectLocationExt(const GnssLocationInfoNotification &locationInfo);
 static void injectTime(int64_t time, int64_t timeReference, int32_t uncertainty);
@@ -179,9 +175,6 @@ static const GnssInterface gGnssInterface = {
     disable,
     gnssUpdateConfig,
     gnssGetConfig,
-    gnssUpdateSvTypeConfig,
-    gnssGetSvTypeConfig,
-    gnssResetSvTypeConfig,
     gnssDeleteAidingData,
     gnssUpdateXtraThrottle,
     injectLocation,
@@ -370,27 +363,6 @@ static uint32_t* gnssGetConfig(GnssConfigFlagsMask mask)
         return gGnssAdapter->gnssGetConfigCommand(mask);
     } else {
         return NULL;
-    }
-}
-
-static void gnssUpdateSvTypeConfig(const GnssSvTypeConfig& config)
-{
-    if (NULL != gGnssAdapter) {
-        gGnssAdapter->gnssUpdateSvTypeConfigCommand(config, SV_TYPE_CONFIG_FROM_API);
-    }
-}
-
-static void gnssGetSvTypeConfig(GnssSvTypeConfigCallback& callback)
-{
-    if (NULL != gGnssAdapter) {
-        gGnssAdapter->gnssGetSvTypeConfigCommand(callback);
-    }
-}
-
-static void gnssResetSvTypeConfig()
-{
-    if (NULL != gGnssAdapter) {
-        gGnssAdapter->gnssResetSvTypeConfigCommand();
     }
 }
 

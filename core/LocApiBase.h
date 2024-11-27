@@ -198,10 +198,6 @@ public:
         sendMsg(new LocKillMsg(this));
     }
 
-    static bool needReport(const UlpLocation& ulpLocation,
-                           enum loc_sess_status status,
-                           LocPosTechMask techMask);
-
     void addAdapter(LocAdapterBase* adapter);
     void removeAdapter(LocAdapterBase* adapter);
 
@@ -217,17 +213,12 @@ public:
     void reportSv(GnssSvNotification& svNotify);
     void reportSvPolynomial(GnssSvPolynomial &svPolynomial);
     void reportSvEphemeris(GnssSvEphemerisReport &svEphemeris);
-    void reportStatus(LocGpsStatusValue status);
     void reportNmea(const char* nmea, int length);
     void reportData(GnssDataNotification& dataNotify);
-    void reportXtraServer(const char* url1, const char* url2,
-                          const char* url3, const int maxlength);
     void reportLocationSystemInfo(const LocationSystemInfo& locationSystemInfo);
     void reportDcMessage(const GnssDcReportInfo& dcReport);
     void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
-    void requestXtraData();
     void requestTime();
-    void requestLocation();
     void requestATL(int connHandle, LocAGpsType agps_type,
                     LocApnTypeMask apn_type_mask, SubId sub_id=DEFAULT_SUB);
     void releaseATL(int connHandle);
@@ -238,7 +229,6 @@ public:
     void reportZppBestAvailableFix(LocGpsLocation &zppLoc, GpsLocationExtended &location_extended,
             LocPosTechMask tech_mask);
     void reportGnssSvIdConfig(const GnssSvIdConfig& config);
-    void reportGnssSvTypeConfig(const GnssSvTypeConfig& config);
     void requestOdcpi(OdcpiRequestInfo& request);
     void reportGnssEngEnergyConsumedEvent(uint64_t energyConsumedSinceFirstBoot);
     void reportDeleteAidingDataEvent(GnssAidingData& aidingData);
@@ -317,7 +307,6 @@ public:
             LocPosTechMask &tech_mask);
     virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);
     virtual void requestForAidingData(GnssAidingDataSvMask svDataMask);
-    virtual LocationError setXtraVersionCheckSync(uint32_t check);
     /* Requests for SV/Constellation Control */
     virtual LocationError setBlacklistSvSync(const GnssSvIdConfig& config);
     virtual void setBlacklistSv(const GnssSvIdConfig& config,
@@ -325,7 +314,6 @@ public:
     virtual void getBlacklistSv();
     virtual void setConstellationControl(const GnssSvTypeConfig& config,
                                          LocApiResponse *adapterResponse=nullptr);
-    virtual void getConstellationControl();
     virtual void resetConstellationControl(LocApiResponse *adapterResponse=nullptr);
 
     virtual void setConstrainedTuncMode(bool enabled,

@@ -90,6 +90,13 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**  Maximum number of satellites in an ephemeris report.  */
 #define GNSS_EPHEMERIS_LIST_MAX_SIZE_V02 32
 
+/** GNSS engine rate if requested rate and current running
+ *  rate are not mulitples of each other */
+#define MIN_GNSS_TRACKING_INTERVAL (100)
+
+/** OEM DRE Data Blob size */
+#define LDT_LOC_OEM_DRE_DATA_BLOB_SIZE 4096
+
 enum LocationError {
     LOCATION_ERROR_SUCCESS = 0,
     LOCATION_ERROR_GENERAL_FAILURE,
@@ -117,7 +124,6 @@ enum LocationFlagsBits {
     LOCATION_HAS_VERTICAL_ACCURACY_BIT = (1<<5), // location has valid vertical accuracy
     LOCATION_HAS_SPEED_ACCURACY_BIT    = (1<<6), // location has valid speed accuracy
     LOCATION_HAS_BEARING_ACCURACY_BIT  = (1<<7), // location has valid bearing accuracy
-    LOCATION_HAS_SPOOF_MASK_BIT        = (1<<8), // location has valid spoof mask
     LOCATION_HAS_ELAPSED_REAL_TIME_BIT = (1<<9), // location has valid elapsed real time
     LOCATION_HAS_CONFORMITY_INDEX_BIT  = (1<<10), // location has valid conformity index
     LOCATION_HAS_QUALITY_TYPE_BIT      = (1<<11), // location has valid quality type
@@ -147,13 +153,6 @@ enum LocationTechnologyBits{
     LOCATION_TECHNOLOGY_HYBRID_ALE_BIT               = (1<<12), // HYBRID using ALE POS
     LOCATION_TECHNOLOGY_PDR_BIT                      = (1<<13), // PED mode
     LOCATION_TECHNOLOGY_PROPAGATED_BIT               = (1<<14), //using cached measures
-};
-
-typedef uint32_t LocationSpoofMask;
-enum LocationSpoofBits {
-    LOCATION_POSTION_SPOOFED             = (1<<0), // location position spoofed
-    LOCATION_TIME_SPOOFED                = (1<<1), // location time spoofed
-    LOCATION_NAVIGATION_DATA_SPOOFED     = (1<<2), // location navigation data spoofed
 };
 
 enum LocationReliability {
@@ -269,7 +268,11 @@ typedef uint64_t GnssLocationInfoFlagMask;
 #define LDT_GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT (1ULL<<35) // Cross-track protection level
 #define LDT_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT (1ULL<<36) // vertical protection level
 #define LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT (1ULL<<37) // dgnss station id
+#define LDT_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT  (1ULL<<38) // base station & receiver distance
+#define LDT_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT (1ULL<<39) // Age of Corrections
 #define LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT (1ULL<<40) // Leap Second Uncertainity
+#define LDT_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT  (1ULL<<41) // Valid reporting interval
+#define LDT_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT    (1ULL<<42) // Gnss Extended Data
 
 enum GeofenceBreachType {
     GEOFENCE_BREACH_ENTER = 0,
@@ -512,8 +515,9 @@ enum {
     GNSS_CONFIG_GPS_LOCK_NFW_R3             = 0x00000200,
     GNSS_CONFIG_GPS_LOCK_NFW_SUPL           = 0x00000400,
     GNSS_CONFIG_GPS_LOCK_NFW_CP             = 0X00000800,
+    GNSS_CONFIG_GPS_LOCK_NFW_NTN            = 0x00001000,
     GNSS_CONFIG_GPS_LOCK_NFW_ALL            =
-            (((GNSS_CONFIG_GPS_LOCK_NFW_CP << 1) - 1) & ~GNSS_CONFIG_GPS_LOCK_MO),
+            (((GNSS_CONFIG_GPS_LOCK_NFW_NTN << 1) - 1) & ~GNSS_CONFIG_GPS_LOCK_MO),
     GNSS_CONFIG_GPS_LOCK_MO_AND_NI          =
             (GNSS_CONFIG_GPS_LOCK_MO | GNSS_CONFIG_GPS_LOCK_NFW_ALL),
 };
@@ -1168,7 +1172,6 @@ struct Location {
                              // confidence level is at 68%
     float conformityIndex;   // in range [0, 1]
     LocationTechnologyMask techMask;
-    LocationSpoofMask spoofMask;
     uint64_t elapsedRealTime;    // in ns
     uint64_t elapsedRealTimeUnc; // in ns
     LocationQualityType qualityType; // position quality
@@ -1252,15 +1255,23 @@ struct TrackingOptions : LocationOptions {
         return minInterval == other.minInterval && powerMode == other.powerMode &&
                qualityLevelAccepted == other.qualityLevelAccepted;
     }
-    inline bool multiplexWithForTimeBasedRequest(
-            const TrackingOptions& other, uint32_t bgTrackingIntervalMs = 0xFFFFFFFF) {
+    inline bool multiplexWithForTimeBasedRequest(const TrackingOptions& other) {
         bool updated = false;
         if (other.minInterval < minInterval) {
             updated = true;
-            minInterval = other.minInterval;
+            if (minInterval % other.minInterval != 0) {
+                minInterval = MIN_GNSS_TRACKING_INTERVAL;
+            } else {
+                minInterval = other.minInterval;
+            }
+        } else if (other.minInterval > minInterval) {
+            // Will update option to true only if tbf's are not multiple of each other
+            if (other.minInterval % minInterval != 0) {
+                updated = true;
+                minInterval = MIN_GNSS_TRACKING_INTERVAL;
+            }
         }
-        if (other.powerMode < powerMode &&
-                other.minInterval < bgTrackingIntervalMs) {
+        if (other.powerMode < powerMode) {
             updated = true;
             powerMode = other.powerMode;
         }
@@ -1627,9 +1638,25 @@ struct GnssLocationInfoNotification {
     //   - Monitoring station -- 1000-2023 (Station ID biased by 1000).
     //   - Other values reserved.
     uint16_t dgnssStationId[DGNSS_STATION_ID_MAX];
+    // Distance between the base station and the receiver
+    // Unit - meters
+    double baseLineLength;
+    // Difference in time between the fix timestamp using the
+    // correction and the time of the correction
+    // Unit - milli-seconds
+    uint64_t ageMsecOfCorrections;
     /** Uncertainty for the GNSS leap second.
      *  Units -- Seconds */
     uint8_t leapSecondsUnc;
+    /** Current reporting interval. Intervals at which GNSS engine is
+     *  delivering position reports. It is minimum of all clients
+     *  requesting position reports.
+     *  Unit - milli-seconds*/
+    uint32_t posReportingInterval;
+    /** Must be set to # of elements in extendedData */
+    uint32_t extendedDataLen;
+    /**   Data blob payload  */
+    uint8_t extendedData[LDT_LOC_OEM_DRE_DATA_BLOB_SIZE];
 };
 
 // Indicate the API that is called to generate the location report
@@ -2287,6 +2314,10 @@ struct GnssDcReportInfo {
     uint32_t             numValidBits;
     // dc report data, packed into uint8_t
     std::vector<uint8_t> dcReportData;
+    /** SV's Pseudo-Random Number validity */
+    bool prnValid;
+    /** SV's Pseudo-Random Number. */
+    uint8_t prn;
 };
 
 // Specify the set of terrestrial technologies

@@ -241,43 +241,6 @@ bool LocApiBase::isInSession()
     return inSession;
 }
 
-bool LocApiBase::needReport(const UlpLocation& ulpLocation,
-                            enum loc_sess_status status,
-                            LocPosTechMask techMask)
-{
-    bool reported = false;
-
-    if (LOC_SESS_INTERMEDIATE == ContextBase::mGps_conf.INTERMEDIATE_POS) {
-        // if intermediate fix is allowed, we will report out intermediate or final fixes
-        // when one of below two conditions are met:
-        // 1: if accuracy level is do not care, report out all intermediate or final fixes
-        // 2: otherwise, the accuracy level will need to be valid and less than threshold
-        if (LOC_SESS_FAILURE != status) {
-            if ((ContextBase::mGps_conf.ACCURACY_THRES != 0) &&
-                    (((ulpLocation.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ACCURACY) == 0) ||
-                     (ulpLocation.gpsLocation.accuracy >= ContextBase::mGps_conf.ACCURACY_THRES))) {
-                reported = false;
-            } else {
-                reported = true;
-            }
-        }
-    } else {
-        // intermediate fix is not allowed, only can report out final fixes
-        if (LOC_SESS_SUCCESS == status) {
-            // this is a final fix with satellite and/or sensor contribution
-            LocPosTechMask mask =
-                LOC_POS_TECH_MASK_SATELLITE | LOC_POS_TECH_MASK_SENSORS;
-#ifndef __ANDROID__
-            // Include propagated GPS fix if not on Android target
-            mask |=  LOC_POS_TECH_MASK_PROPAGATED;
-#endif
-            reported = (mask & techMask);
-        }
-    }
-
-    return reported;
-}
-
 void LocApiBase::addAdapter(LocAdapterBase* adapter)
 {
     for (int i = 0; i < MAX_ADAPTERS && mLocAdapters[i] != adapter; i++) {
@@ -387,7 +350,7 @@ void LocApiBase::reportZppBestAvailableFix(LocGpsLocation &zppLoc,
         GpsLocationExtended &location_extended, LocPosTechMask tech_mask)
 {
     // loop through adapters, and deliver to the first handling adapter.
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportZppBestAvailableFix(zppLoc,
+    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->reportZppBestAvailableFix(zppLoc,
             location_extended, tech_mask));
 }
 
@@ -479,12 +442,6 @@ void LocApiBase::reportSvEphemeris(GnssSvEphemerisReport & svEphemeris)
     );
 }
 
-void LocApiBase::reportStatus(LocGpsStatusValue status)
-{
-    // loop through adapters, and deliver to all adapters.
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportStatus(status));
-}
-
 void LocApiBase::reportData(GnssDataNotification& dataNotify)
 {
     // loop through adapters, and deliver to all adapters.
@@ -495,14 +452,6 @@ void LocApiBase::reportNmea(const char* nmea, int length)
 {
     // loop through adapters, and deliver to all adapters.
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportNmeaEvent(nmea, length));
-}
-
-void LocApiBase::reportXtraServer(const char* url1, const char* url2,
-                                  const char* url3, const int maxlength)
-{
-    // loop through adapters, and deliver to the first handling adapter.
-    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->reportXtraServer(url1, url2, url3, maxlength));
-
 }
 
 void LocApiBase::reportLocationSystemInfo(const LocationSystemInfo& locationSystemInfo)
@@ -545,22 +494,10 @@ void LocApiBase::reportQwesCapabilities
     // loop through adapters, and deliver to all adapters.
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportQwesCapabilities(featureMap));
 }
-void LocApiBase::requestXtraData()
-{
-    // loop through adapters, and deliver to the first handling adapter.
-    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->requestXtraData());
-}
 
-void LocApiBase::requestTime()
-{
+void LocApiBase::requestTime() {
     // loop through adapters, and deliver to the first handling adapter.
     TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->requestTime());
-}
-
-void LocApiBase::requestLocation()
-{
-    // loop through adapters, and deliver to the first handling adapter.
-    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->requestLocation());
 }
 
 void LocApiBase::requestATL(int connHandle, LocAGpsType agps_type,
@@ -610,16 +547,6 @@ void LocApiBase::reportGnssSvIdConfig(const GnssSvIdConfig& config)
 
     // Loop through adapters, and deliver to all adapters.
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportGnssSvIdConfigEvent(config));
-}
-
-void LocApiBase::reportGnssSvTypeConfig(const GnssSvTypeConfig& config)
-{
-    // Print the config
-    LOC_LOGv("blacklistedMask: %" PRIu64 ", enabledMask: %" PRIu64,
-             config.blacklistedSvTypesMask, config.enabledSvTypesMask);
-
-    // Loop through adapters, and deliver to all adapters.
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportGnssSvTypeConfigEvent(config));
 }
 
 void LocApiBase::geofenceBreach(size_t count, uint32_t* hwIds, Location& location,
@@ -820,10 +747,6 @@ void LocApiBase::
     requestForAidingData(GnssAidingDataSvMask /*svDataMask*/)
 DEFAULT_IMPL()
 
-LocationError LocApiBase::
-    setXtraVersionCheckSync(uint32_t /*check*/)
-DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
-
 LocationError LocApiBase::setBlacklistSvSync(const GnssSvIdConfig& /*config*/)
 DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
 
@@ -836,9 +759,6 @@ DEFAULT_IMPL()
 
 void LocApiBase::setConstellationControl(const GnssSvTypeConfig& /*config*/,
                                          LocApiResponse* /*adapterResponse*/)
-DEFAULT_IMPL()
-
-void LocApiBase::getConstellationControl()
 DEFAULT_IMPL()
 
 void LocApiBase::resetConstellationControl(LocApiResponse* /*adapterResponse*/)

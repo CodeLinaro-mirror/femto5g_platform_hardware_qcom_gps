@@ -100,9 +100,6 @@ struct GnssInterface {
     void (*disable)(uint32_t id);
     uint32_t* (*gnssUpdateConfig)(const GnssConfig& config);
     uint32_t* (*gnssGetConfig)(GnssConfigFlagsMask config);
-    void (*gnssUpdateSvTypeConfig)(const GnssSvTypeConfig& config);
-    void (*gnssGetSvTypeConfig)(GnssSvTypeConfigCallback& callback);
-    void (*gnssResetSvTypeConfig)();
     uint32_t (*gnssDeleteAidingData)(const GnssAidingData& data);
     void (*gnssUpdateXtraThrottle)(const bool enabled);
     void (*injectLocation)(double latitude, double longitude, float accuracy);

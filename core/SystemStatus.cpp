@@ -842,10 +842,10 @@ bool SystemStatus::eventDataItemNotify(IDataItemCore* dataitem)
                     SystemStatusQesdkWwanFeatureStatus(
                         *(static_cast<QesdkWwanFeatureStatusDataItem*>(dataitem))));
             break;
-        case QESDK_WWAN_CS_CONSENT_SRC_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mQesdkWwanCsConsentSrc,
-                    SystemStatusQesdkWwanCsConsentSrc(
-                        *(static_cast<QesdkWwanCsConsentSrcDataItem*>(dataitem))));
+        case WWAN_APP_INFO_DATA_ITEM_ID:
+            ret = setIteminReport(mCache.mWwanAppInfo,
+                    SystemStatusWwanAppInfo(
+                        *(static_cast<WwanAppInfoDataItem*>(dataitem))));
             break;
         default:
             break;
@@ -1132,6 +1132,28 @@ bool SystemStatus::eventNlpSessionStatus(bool nlpStarted) {
 
 bool SystemStatus::eventGpsEnabled(bool gpsEnabled) {
     SystemStatusGpsState  s(gpsEnabled);
+    mSysStatusObsvr.notify({&s.mDataItem});
+    return true;
+}
+
+/******************************************************************************
+@brief      API to update gps enable state
+
+@param[In]  enable state
+
+@return     true when successfully done
+******************************************************************************/
+
+bool SystemStatus::eventWwanAppInfo(int32_t pid,
+            int32_t uid,
+            bool appHasFinePermission,
+            bool appHasBackgroundPermission,
+            string appHash,
+            string appPackageName,
+            string appCookie,
+            string appQwesLicenseId) {
+    SystemStatusWwanAppInfo s(pid, uid, appHasFinePermission,
+            appHasBackgroundPermission, appHash, appPackageName, appCookie, appQwesLicenseId);
     mSysStatusObsvr.notify({&s.mDataItem});
     return true;
 }

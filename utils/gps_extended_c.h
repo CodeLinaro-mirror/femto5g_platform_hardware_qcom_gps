@@ -496,8 +496,20 @@ typedef uint64_t GpsLocationExtendedFlags;
 /** GpsLocationExtended has valid numOfdgnssStationId and
  *  dgnssStationId. */
 #define GPS_LOCATION_EXTENDED_HAS_DGNSS_STATION_ID               0x80000000000000
+/*  GpsLocationExtended has valid engine Calculated BaseLineLength */
+#define GPS_LOCATION_EXTENDED_HAS_CALCULATED_BASE_LINE_LENGTH    0x100000000000000
+/*  GpsLocationExtended has valid engine Calculated Age */
+#define GPS_LOCATION_EXTENDED_HAS_CALCULATED_CORR_AGE            0x200000000000000
+/*  GpsLocationExtended has valid raw base station ECEF's */
+#define GPS_LOCATION_EXTENDED_HAS_RAW_RTK_BASE_STATION_ECEF      0x400000000000000
+/*  GpsLocationExtended has valid raw Correction Data Age Timestamp */
+#define GPS_LOCATION_EXTENDED_HAS_RAW_RTK_CORR_AGE_TIMESTAMP     0x800000000000000
 /** GpsLocationExtended has valid leapSecondsUnc */
 #define GPS_LOCATION_EXTENDED_HAS_LEAP_SECONDS_UNC               0x1000000000000000
+/** GpsLocationExtended has valid current reporting interval */
+#define GPS_LOCATION_EXTENDED_HAS_REPORT_INTERVAL                0x2000000000000000
+/** GpsLocationExtended has extendedData payload. */
+#define GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA                  0x4000000000000000
 
 typedef uint32_t LocNavSolutionMask;
 /* Bitmask to specify whether SBAS ionospheric correction is used  */
@@ -866,9 +878,7 @@ enum loc_api_adapter_event_index {
     LOC_API_ADAPTER_GNSS_MEASUREMENT,                  // GNSS Measurement report
     LOC_API_ADAPTER_REQUEST_TIMEZONE,                  // Timezone injection request
     LOC_API_ADAPTER_REPORT_GENFENCE_DWELL_REPORT,      // Geofence dwell report
-    LOC_API_ADAPTER_REQUEST_POSITION_INJECTION,        // Position injection request
     LOC_API_ADAPTER_BATCH_STATUS,                      // batch status
-    LOC_API_ADAPTER_FDCL_SERVICE_REQ,                  // FDCL service request
     LOC_API_ADAPTER_REPORT_UNPROPAGATED_POSITION,      // Unpropagated Position report
     LOC_API_ADAPTER_BS_OBS_DATA_SERVICE_REQ,           // BS observation data request
     LOC_API_ADAPTER_GNSS_SV_EPHEMERIS_REPORT,          // GNSS SV Ephemeris Report
@@ -915,9 +925,7 @@ enum loc_api_adapter_event_index {
 #define LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT                 (1ULL<<LOC_API_ADAPTER_GNSS_MEASUREMENT)
 #define LOC_API_ADAPTER_BIT_REQUEST_TIMEZONE                 (1ULL<<LOC_API_ADAPTER_REQUEST_TIMEZONE)
 #define LOC_API_ADAPTER_BIT_REPORT_GENFENCE_DWELL            (1ULL<<LOC_API_ADAPTER_REPORT_GENFENCE_DWELL_REPORT)
-#define LOC_API_ADAPTER_BIT_POSITION_INJECTION_REQUEST       (1ULL<<LOC_API_ADAPTER_REQUEST_POSITION_INJECTION)
 #define LOC_API_ADAPTER_BIT_BATCH_STATUS                     (1ULL<<LOC_API_ADAPTER_BATCH_STATUS)
-#define LOC_API_ADAPTER_BIT_FDCL_SERVICE_REQ                 (1ULL<<LOC_API_ADAPTER_FDCL_SERVICE_REQ)
 #define LOC_API_ADAPTER_BIT_PARSED_UNPROPAGATED_POSITION_REPORT (1ULL<<LOC_API_ADAPTER_REPORT_UNPROPAGATED_POSITION)
 #define LOC_API_ADAPTER_BIT_BS_OBS_DATA_SERVICE_REQ          (1ULL<<LOC_API_ADAPTER_BS_OBS_DATA_SERVICE_REQ)
 #define LOC_API_ADAPTER_BIT_GNSS_SV_EPHEMERIS_REPORT         (1ULL<<LOC_API_ADAPTER_GNSS_SV_EPHEMERIS_REPORT)
@@ -1428,6 +1436,8 @@ typedef uint64_t GpsSvMeasHeaderFlags;
 #define GNSS_SV_MEAS_HEADER_HAS_GALE1E5B_TIME_BIAS            0x800000000
 #define GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS_UNC           0x1000000000
 #define GNSS_SV_MEAS_HEADER_HAS_BDSB1IB2BI_TIME_BIAS          0x2000000000
+#define GNSS_SV_MEAS_HEADER_HAS_DWELL_ALIGN_TIME_MSEC         0x4000000000
+
 
 typedef struct
 {
@@ -1495,6 +1505,10 @@ typedef struct
     /** DGNSS Ref station ID: 32bit number identifying the DGNSS
      *  ref station ID, if DGNSS was used for these measurements. */
     uint16_t                                    dgnssRefStationId;
+
+    /* Dwell Time Alignment
+     * Unit- Milli-seconds */
+    uint32_t dwellAlignTimeMsec;
 } GnssSvMeasurementHeader;
 
 typedef struct {
@@ -1706,13 +1720,6 @@ typedef struct {
     double tauC;
     int8_t leapSec;
 } GnssAdditionalSystemInfo;
-
-/* Provides the current GNSS SV Type configuration to the client.
- * This is fetched via direct call to GNSS Adapter bypassing
- * Location API */
-typedef std::function<void(
-    const GnssSvTypeConfig& config
-)> GnssSvTypeConfigCallback;
 
 /* Represents GNSS NMEA Report Rate Configuration */
 typedef enum {
