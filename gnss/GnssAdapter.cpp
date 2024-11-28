@@ -322,6 +322,15 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
             out.elapsedRealTimeUnc = (int64_t) (elapsedTimeUncMsec * 1000000);
         }
     }
+#ifndef FEATURE_AUTOMOTIVE
+    if (!(out.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT)) {
+        struct timespec curTs = {};
+        clock_gettime(CLOCK_BOOTTIME, &curTs);
+        out.elapsedRealTime = curTs.tv_sec * 1000000000 + curTs.tv_nsec;
+        out.elapsedRealTimeUnc = mElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+        out.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
+    }
+#endif //FEATURE_AUTOMOTIVE
 }
 
 /* This is utility routine that computes number of SV used
