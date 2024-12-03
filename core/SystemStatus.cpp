@@ -167,7 +167,11 @@ public:
     SystemStatusPQWM1() = default;
 };
 
-SystemStatusPQWM1::SystemStatusPQWM1(const GnssEngineDebugDataInfo& info) {
+SystemStatusPQWM1::SystemStatusPQWM1(const GnssEngineDebugDataInfo& info):
+    mJammerGps(0),
+    mJammerGlo(0),
+    mJammerBds(0),
+    mJammerGal(0) {
     mGpsWeek = info.gpsWeek;
     mGpsTowMs = info.gpsTowMs;
     mTimeValid = info.timeValid;
