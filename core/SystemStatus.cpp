@@ -993,6 +993,13 @@ bool SystemStatus::setDefaultGnssEngineStates(void)
     return true;
 }
 
+bool SystemStatus::updateMccMnc(string& mccMncCountry) {
+    SystemStatusMccMnc s(mccMncCountry);
+    mSysStatusObsvr.notify({&s.mDataItem});
+
+    return true;
+}
+
 /******************************************************************************
 @brief      API to handle connection status update event from GnssRil
 
