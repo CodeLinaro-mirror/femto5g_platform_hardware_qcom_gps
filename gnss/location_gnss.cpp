@@ -63,6 +63,11 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #include "GnssAdapter.h"
 #include "location_interface.h"
@@ -161,6 +166,7 @@ static uint32_t registerXtraStatusUpdate(bool registerUpdate);
 static void configPrecisePositioning(uint32_t featureId, bool enable, std::string appHash);
 static uint32_t gnssInjectMmfData(const GnssMapMatchedData& data);
 static uint32_t configureUserConsentForXtra(const bool xtraUserConsent);
+static void updateMccMnc(std::string& mccmncCountry);
 
 static const GnssInterface gGnssInterface = {
     sizeof(GnssInterface),
@@ -236,6 +242,7 @@ static const GnssInterface gGnssInterface = {
     configOsnmaEnablement,
     gnssInjectMmfData,
     configureUserConsentForXtra,
+    updateMccMnc,
 };
 
 #ifndef DEBUG_X86
@@ -823,5 +830,11 @@ static uint32_t configureUserConsentForXtra(const bool xtraUserConsent) {
         return gGnssAdapter->gnssInjectXtraUserConsentCommand(xtraUserConsent);
     } else {
         return 0;
+    }
+}
+
+static void updateMccMnc(std::string& mccmncCountry) {
+    if (NULL != gGnssAdapter) {
+        gGnssAdapter->getSystemStatus()->updateMccMnc(mccmncCountry);
     }
 }
