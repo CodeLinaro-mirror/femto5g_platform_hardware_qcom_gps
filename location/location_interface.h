@@ -163,6 +163,7 @@ struct GnssInterface {
     void (*configPrecisePositioning)(uint32_t featureId, bool enable, std::string appHash);
     uint32_t (*configMerkleTree) (const char * merkleTreeConfigBuffer, int bufferLength);
     uint32_t (*configOsnmaEnablement) (bool enable);
+    void (*updateMccMnc)(std::string& mccmncCountry);
 };
 
 struct BatchingInterface {

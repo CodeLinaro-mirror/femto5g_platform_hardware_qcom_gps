@@ -158,6 +158,7 @@ static uint32_t configOsnmaEnablement(bool enable);
 static uint32_t getXtraStatus();
 static uint32_t registerXtraStatusUpdate(bool registerUpdate);
 static void configPrecisePositioning(uint32_t featureId, bool enable, std::string appHash);
+static void updateMccMnc(std::string& mccmncCountry);
 
 static const GnssInterface gGnssInterface = {
     sizeof(GnssInterface),
@@ -231,6 +232,7 @@ static const GnssInterface gGnssInterface = {
     configPrecisePositioning,
     configMerkleTree,
     configOsnmaEnablement,
+    updateMccMnc,
 };
 
 #ifndef DEBUG_X86
@@ -799,5 +801,11 @@ static uint32_t configOsnmaEnablement(bool enable) {
 #endif
     } else {
         return 0;
+    }
+}
+
+static void updateMccMnc(std::string& mccmncCountry) {
+    if (NULL != gGnssAdapter) {
+        gGnssAdapter->getSystemStatus()->updateMccMnc(mccmncCountry);
     }
 }

@@ -3096,4 +3096,33 @@ enum {
 
 typedef uint16_t OdcpiCallbackTypeMask;
 
+enum NetworkConnectionStatus {
+    NET_CONNECTION_UNKNOWN = 0,
+    NET_CONNECTED,
+    NET_DISCONNECTED,
+};
+
+enum NetworkTypeInfo {
+    TYPE_UNKNOWN_NETWORK = 0,
+    TYPE_WWAN,
+    TYPE_WLAN,
+};
+
+/** @brief
+    Always set a 2-byte country string, such as "cn","us","in"<br>
+
+    When networkType is TYPE_WWAN,
+    set Mobile Country Code and the Mobile Network Code to the networkInfo,
+    The MCC is a three-digit code representing the country,
+    while the MNC is a two or three-digit code representing
+    the specific mobile network within that country.
+    For example "405|854", for Indian mobile operator Andhra Pradesh <br/>
+*/
+struct NetworkInfo {
+    NetworkConnectionStatus connection;
+    NetworkTypeInfo networkType;
+    std::string country;
+    std::string mccmnc;
+};
+
 #endif /* LOCATIONDATATYPES_H */

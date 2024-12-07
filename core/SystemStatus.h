@@ -967,6 +967,7 @@ public:
     bool getReport(SystemStatusReports& reports, bool isLatestonly = false,
             bool inSessionOnly = true) const;
     bool setDefaultGnssEngineStates(void);
+    bool updateMccMnc(string& mccmncCountry);
     bool eventConnectionStatus(bool connected, int8_t type,
                                bool roaming, NetworkHandle networkHandle, string& apn);
     bool updatePowerConnectState(bool charging);
