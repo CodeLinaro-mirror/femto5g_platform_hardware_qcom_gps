@@ -801,6 +801,5 @@ bool SystemStatus::setDefaultGnssEngineStates(void)
     pthread_mutex_unlock(&mMutexSystemStatus);
     return true;
 }
-
 } // namespace loc_core
 
