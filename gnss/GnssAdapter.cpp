@@ -636,8 +636,6 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
                 if (gptpTimeValid) {
                     out.location.flags |= LOCATION_HAS_GPTP_TIME_BIT;
                     out.location.elapsedgPTPTime = elapsedgPTPTimeNsec;
-                    out.location.flags |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
-                    out.location.elapsedgPTPTimeUnc = 0;
                 }
             }
         }
