@@ -93,13 +93,17 @@ int decodeAddress(char *addr_string, int string_size,
 #define MAX_ADAPTERS          10
 #define MAX_FEATURE_LENGTH    100
 
-#define TO_ALL_ADAPTERS(adapters, call)                                \
-    for (int i = 0; i < MAX_ADAPTERS && NULL != (adapters)[i]; i++) {  \
-        call;                                                          \
+#define TO_ALL_ADAPTERS(adapters, call)                              \
+    if (NULL != adapters)  {                                         \
+        for (int i = 0; i < MAX_ADAPTERS && NULL != (adapters)[i]; i++) {  \
+            call;                                                          \
+        }                                                                  \
     }
 
 #define TO_1ST_HANDLING_ADAPTER(adapters, call)                              \
-    for (int i = 0; i <MAX_ADAPTERS && NULL != (adapters)[i] && !(call); i++);
+    if (NULL != adapters)  {                                         \
+        for (int i = 0; i <MAX_ADAPTERS && NULL != (adapters)[i] && !(call); i++); \
+    }
 
 class LocAdapterBase;
 struct LocSsrMsg;
