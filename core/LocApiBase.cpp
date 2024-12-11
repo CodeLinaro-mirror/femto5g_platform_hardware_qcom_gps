@@ -940,6 +940,10 @@ void LocApiBase::setNtnConfigSignalMask(GnssSignalTypeMask /*gpsSignalTypeConfig
             LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
+void LocApiBase::injectSuplCert(int32_t /*suplCertId*/,
+        const std::vector<uint8_t>& /*suplCertData*/, LocApiResponse* /*adapterResponse*/)
+DEFAULT_IMPL()
+
 int64_t RealtimeEstimator::getElapsedRealtimeEstimateNanos(int64_t curDataTimeNanos,
             bool isCurDataTimeTrustable, int64_t tbfNanos) {
     //The algorithm works follow below steps:
