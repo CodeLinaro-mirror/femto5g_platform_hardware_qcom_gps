@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -246,9 +246,8 @@ public:
     virtual bool requestTime();
     virtual bool requestLocation();
     virtual bool requestATL(int connHandle, LocAGpsType agps_type,
-                            LocApnTypeMask apn_type_mask,
-                            SubId sub_id=DEFAULT_SUB);
-    virtual bool releaseATL(int connHandle);
+                            LocApnTypeMask apn_type_mask, SubId sub_id, uint32_t timeout);
+    virtual bool releaseATL(int connHandle, uint32_t timeout);
     virtual bool requestNiNotifyEvent(const GnssNiNotification &notify, const void* data,
                                       const LocInEmergency emergencyState);
     inline virtual bool isInSession() { return false; }
