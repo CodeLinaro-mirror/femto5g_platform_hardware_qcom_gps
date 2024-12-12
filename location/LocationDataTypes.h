@@ -480,8 +480,11 @@ enum LocationQwesFeatureTypes {
     // This indicates SBAS is
     // enabled by QWES license.
     LOCATION_QWES_FEATURE_TYPE_SBAS                          = 24,
+    // This indicates Robust Location is
+    // enabled by QWES license.
+    LOCATION_QWES_FEATURE_TYPE_ROBUST_LOCATION               = 25,
     // Max value
-    LOCATION_QWES_FEATURE_TYPE_MAX                           = 25
+    LOCATION_QWES_FEATURE_TYPE_MAX                           = 26
 };
 
 typedef uint64_t LocationHwCapabilitiesMask;

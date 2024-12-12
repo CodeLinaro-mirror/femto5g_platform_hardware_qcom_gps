@@ -249,6 +249,7 @@ GnssAdapter::GnssAdapter() :
 #else
     mNmeaReqEngTypeMask(LOC_REQ_ENGINE_FUSED_BIT),
 #endif
+    mRlFeatureQwesEnabled(false),
     mResponseTimer(this, (LocationError)0, (uint32_t)0),
     mIsNtnStatusValid(false),
     mNtnSignalTypeConfigMask(GNSS_SIGNAL_GPS_L1CA|GNSS_SIGNAL_GPS_L5),
@@ -1367,23 +1368,6 @@ GnssAdapter::setConfig()
         }
         mLocApi->setPositionAssistedClockEstimatorMode(
                 mLocConfigInfo.paceConfigInfo.enable);
-
-        if (mLocConfigInfo.robustLocationConfigInfo.isValid == false) {
-            mLocConfigInfo.robustLocationConfigInfo.isValid = true;
-            // robust location to be enabled on bootup for auto targets
-#ifdef FEATURE_AUTOMOTIVE
-            mLocConfigInfo.robustLocationConfigInfo.enable = true;
-            mLocConfigInfo.robustLocationConfigInfo.enableFor911 = true;
-#else
-            // robust location to be disabled on bootup for non-auto targets
-            mLocConfigInfo.robustLocationConfigInfo.enable = false;
-            mLocConfigInfo.robustLocationConfigInfo.enableFor911 = false;
-#endif
-        }
-        mLocApi->configRobustLocation(
-                mLocConfigInfo.robustLocationConfigInfo.enable,
-                mLocConfigInfo.robustLocationConfigInfo.enableFor911,
-                nullptr, true);
 
         if (sapConf.GYRO_BIAS_RANDOM_WALK_VALID ||
             sapConf.ACCEL_RANDOM_WALK_SPECTRAL_DENSITY_VALID ||
@@ -3354,6 +3338,9 @@ GnssAdapter::saveTrackingSession(LocationAPI* client, uint32_t sessionId,
             mDistanceBasedTrackingSessions[key] = options;
         } else {
             mTimeBasedTrackingSessions[key] = options;
+            if (getFgTrackingSessionCount() > 0) {
+                configRobustLocation();
+            }
         }
         reportPowerStateIfChanged();
         // notify SystemStatus the engine tracking status
@@ -3369,6 +3356,9 @@ GnssAdapter::eraseTrackingSession(LocationAPI* client, uint32_t sessionId)
         auto it = mTimeBasedTrackingSessions.find(key);
         if (it != mTimeBasedTrackingSessions.end()) {
             mTimeBasedTrackingSessions.erase(it);
+            if (getFgTrackingSessionCount() == 0) {
+                configRobustLocation();
+            }
         } else {
             auto itr = mDistanceBasedTrackingSessions.find(key);
             if (itr != mDistanceBasedTrackingSessions.end()) {
@@ -3378,6 +3368,19 @@ GnssAdapter::eraseTrackingSession(LocationAPI* client, uint32_t sessionId)
         reportPowerStateIfChanged();
         getSystemStatus()->eventSetTracking(isInSession(), true);
     }
+}
+
+uint32_t GnssAdapter::getFgTrackingSessionCount() {
+
+    uint32_t fgSessionCount = 0;
+    if (!mTimeBasedTrackingSessions.empty()) {
+        for (auto it : mTimeBasedTrackingSessions) {
+            if (it.second.powerMode != GNSS_POWER_MODE_M5) {
+                fgSessionCount++;
+            }
+        }
+    }
+    return fgSessionCount;
 }
 
 void GnssAdapter::testLaunchQppeBringUp() {
@@ -6081,9 +6084,19 @@ bool GnssAdapter::reportQwesCapabilities(
             if (iter != mFeatureMap.end() && iter->second) {
                 mAdapter.mPpFeatureStatusMask |= MLP_FEATURE_ENABLED_BY_DEFAULT;
             }
+            // Set RL feature bit
+            auto qwesIter = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_ROBUST_LOCATION);
+            if (qwesIter != mFeatureMap.end()) {
+                mAdapter.mRlFeatureQwesEnabled = qwesIter->second;
+            }
+
             LOC_LOGI("ReportQwesFeatureStatus after caps %" PRIx64 " ",
                      mAdapter.getCapabilities());
             mAdapter.broadcastCapabilities(mAdapter.getCapabilities());
+
+            // Configure robust location now, as it depends on the RL QWES status
+            mAdapter.initRobustLocationConfig();
+            mAdapter.configRobustLocation();
         }
     };
 
@@ -7579,25 +7592,57 @@ uint32_t GnssAdapter::getAntennaeInfoCommand(AntennaInfoCallback* antennaInfoCal
     return LOCATION_ERROR_SUCCESS;
 }
 
-void
-GnssAdapter::configRobustLocation(uint32_t sessionId,
-                                  bool enable, bool enableForE911) {
+void GnssAdapter::initRobustLocationConfig() {
+
+    if (!mLocConfigInfo.robustLocationConfigInfo.isValid) {
+
+        bool enable = false;
+        bool enableFor911 = false;
+
+#ifdef FEATURE_AUTOMOTIVE
+        // robust location to be enabled on bootup for auto targets
+        enable = true;
+        enableFor911 = true;
+#else
+        // robust location to be disabled on bootup for non-auto targets
+        enable = false;
+        enableFor911 = false;
+#endif
+
+        mLocConfigInfo.robustLocationConfigInfo.isValid = true;
+        mLocConfigInfo.robustLocationConfigInfo.enable = enable;
+        mLocConfigInfo.robustLocationConfigInfo.enableFor911 = enableFor911;
+    }
+}
+
+void GnssAdapter::configRobustLocation(bool enable, bool enableFor911) {
 
     mLocConfigInfo.robustLocationConfigInfo.isValid = true;
     mLocConfigInfo.robustLocationConfigInfo.enable = enable;
-    mLocConfigInfo.robustLocationConfigInfo.enableFor911 = enableForE911;
+    mLocConfigInfo.robustLocationConfigInfo.enableFor911 = enableFor911;
 
-    LocApiResponse* locApiResponse = nullptr;
-    if (sessionId != 0) {
-        locApiResponse =
-                new LocApiResponse(*getContext(),
-                                   [this, sessionId] (LocationError err) {
-                                   reportResponse(err, sessionId);});
-        if (!locApiResponse) {
-            LOC_LOGe("memory alloc failed");
+    configRobustLocation();
+}
+
+void GnssAdapter::configRobustLocation() {
+
+    bool enable = false;
+    bool enableFor911 = false;
+
+    if (mRlFeatureQwesEnabled) {
+        if (!mTimeBasedTrackingSessions.empty()) {
+            enable = mLocConfigInfo.robustLocationConfigInfo.enable;
+            enableFor911 = mLocConfigInfo.robustLocationConfigInfo.enableFor911;
+        } else {
+            enable = false;
+            enableFor911 = mLocConfigInfo.robustLocationConfigInfo.enableFor911;
         }
+    } else {
+        enable = false;
+        enableFor911 = false;
     }
-    mLocApi->configRobustLocation(enable, enableForE911, locApiResponse, true);
+
+    mLocApi->configRobustLocation(enable, enableFor911, nullptr, true);
 }
 
 uint32_t GnssAdapter::configRobustLocationCommand(
@@ -7623,7 +7668,8 @@ uint32_t GnssAdapter::configRobustLocationCommand(
             mEnable(enable),
             mEnableForE911(enableForE911) {}
         inline virtual void proc() const {
-            mAdapter.configRobustLocation(mSessionId, mEnable, mEnableForE911);
+            mAdapter.configRobustLocation(mEnable, mEnableForE911);
+            mAdapter.reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
         }
     };
 
@@ -8090,9 +8136,6 @@ void GnssAdapter::configPrecisePositioningCommand(
                 mAdapter.mLocApi->configPrecisePositioning(mFeatureId, mEnable, mAppHash);
                 // cache the Qesdk Feature Status
                 mAdapter.mAppHash = mAppHash;
-            } else if (QESDK_FEATURE_ID_RL == mFeatureId) {
-                mAdapter.mLocApi->configPrecisePositioning(mFeatureId, mEnable, mAppHash);
-                mAdapter.mLocApi->configRobustLocation(mEnable, false);
             }
         }
     };

@@ -328,6 +328,9 @@ class GnssAdapter : public LocAdapterBase {
     void reportDGnssDataUsable(const GnssSvMeasurementSet &svMeasurementSet);
     void updateModme3GppSourceStatus(QDgnss3GppSourceBitMask modem3GppSourceMask);
 
+    /* ==== QWES Feature Status ============================================================ */
+    bool mRlFeatureQwesEnabled;
+
     /* ==== ODCPI ========================================================================== */
     typedef uint8_t OdcpiStateMask;
     OdcpiStateMask mOdcpiStateMask;
@@ -532,7 +535,9 @@ public:
     void gnssGetSecondaryBandConfig(uint32_t sessionId);
     void resetSvConfig(uint32_t sessionId);
     void configLeverArm(uint32_t sessionId, const LeverArmConfigInfo& configInfo);
-    void configRobustLocation(uint32_t sessionId, bool enable, bool enableForE911);
+    void initRobustLocationConfig(); // Initial RL Config
+    void configRobustLocation(bool enable, bool enableForE911); // Command based config
+    void configRobustLocation(); // Session based config
     void configMinGpsWeek(uint32_t sessionId, uint16_t minGpsWeek);
     void injectMmfData(uint32_t sessionId, const GnssMapMatchedData& mapData);
     /* ==== NI ============================================================================= */
@@ -652,6 +657,7 @@ public:
     void setAfwControlId(uint32_t id) { mAfwControlId = id; }
     uint32_t getAfwControlId() { return mAfwControlId; }
     virtual bool isInSession() { return !mTimeBasedTrackingSessions.empty(); }
+    uint32_t getFgTrackingSessionCount();
     void initDefaultAgps();
     bool initEngHubProxy();
     inline bool isPreciseEnabled(PpFeatureStatusMask bits = DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
