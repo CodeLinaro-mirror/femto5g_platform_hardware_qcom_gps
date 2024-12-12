@@ -31,6 +31,7 @@
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
+
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_GnssAdapter"
 
@@ -148,7 +149,7 @@ GnssAdapter::GnssAdapter() :
     mGnssSvTypeConfigCb(nullptr),
     mLocConfigInfo{},
     mNiData(),
-    mAgpsManager(),
+    mAgpsManager(mMsgTask),
     mQDgnssListenerHDL(nullptr),
     mCdfwInterface(nullptr),
     mDGnssNeedReport(false),
@@ -3144,7 +3145,6 @@ GnssAdapter::handleEngineUpEvent()
             mAdapter.gnssSecondaryBandConfigUpdate();
             //Reset data connection when modem SSR
             mAdapter.mAgpsManager.handleModemSSR();
-
             // restart sessions only when Lock state is enabled and in power state resume
             mAdapter.initGnssPowerStatistics();
             if (ENGINE_LOCK_STATE_DISABLED != mApi.getEngineLockState()) {
@@ -6494,13 +6494,41 @@ void GnssAdapter::reportNfwNotificationEvent(GnssNfwNotification& notification) 
  * eQMI_LOC_WWAN_TYPE_AGNSS_V02
  * eQMI_LOC_WWAN_TYPE_AGNSS_EMERGENCY_V02 */
 bool GnssAdapter::requestATL(int connHandle, LocAGpsType agpsType,
-                             LocApnTypeMask apnTypeMask, SubId subId){
+                             LocApnTypeMask apnTypeMask, SubId subId,
+                             uint32_t timeout){
 
-    LOC_LOGi("GnssAdapter::requestATL handle=%d agpsType=0x%X apnTypeMask=0x%X subId=%d",
+    LOC_LOGi("GnssAdapter::requestATL handle=%d agpsType=0x%X "
+             "apnTypeMask=0x%X subId=%d ",
              connHandle, agpsType, apnTypeMask, subId);
+    /* Request SUPL/INTERNET/SUPL_ES ATL */
+    struct AgpsMsgRequestATL: public LocMsg {
+
+        AgpsManager* mAgpsManager;
+        int mConnHandle;
+        AGpsExtType mAgpsType;
+        LocApnTypeMask mApnTypeMask;
+        SubId mSubId;
+        uint32_t mTimeout;
+
+        inline AgpsMsgRequestATL(AgpsManager* agpsManager, int connHandle,
+                AGpsExtType agpsType, LocApnTypeMask apnTypeMask,
+                SubId subId, uint32_t timeout) :
+                LocMsg(), mAgpsManager(agpsManager), mConnHandle(connHandle),
+                mAgpsType(agpsType), mApnTypeMask(apnTypeMask), mSubId(subId),
+                mTimeout(timeout){
+
+            LOC_LOGV("AgpsMsgRequestATL");
+        }
+
+        inline virtual void proc() const {
+
+            LOC_LOGV("AgpsMsgRequestATL::proc()");
+            mAgpsManager->requestATL(mConnHandle, mAgpsType, mApnTypeMask, mSubId, mTimeout);
+        }
+    };
 
     sendMsg( new AgpsMsgRequestATL( &mAgpsManager, connHandle, (AGpsExtType)agpsType,
-                                    apnTypeMask, subId));
+                                    apnTypeMask, subId, timeout));
 
     return true;
 }
@@ -6509,27 +6537,30 @@ bool GnssAdapter::requestATL(int connHandle, LocAGpsType agpsType,
  * Method triggered in QMI thread as part of handling below message:
  * eQMI_LOC_SERVER_REQUEST_CLOSE_V02
  * Triggers teardown of an existing AGPS call */
-bool GnssAdapter::releaseATL(int connHandle){
+bool GnssAdapter::releaseATL(int connHandle, uint32_t timeout){
 
-    LOC_LOGI("GnssAdapter::releaseATL");
+    LOC_LOGi("GnssAdapter::releaseATL ");
 
     /* Release SUPL/INTERNET/SUPL_ES ATL */
     struct AgpsMsgReleaseATL: public LocMsg {
 
         AgpsManager* mAgpsManager;
         int mConnHandle;
+        uint32_t mTimeout;
 
-        inline AgpsMsgReleaseATL(AgpsManager* agpsManager, int connHandle) :
-                LocMsg(), mAgpsManager(agpsManager), mConnHandle(connHandle) {
+        inline AgpsMsgReleaseATL(AgpsManager* agpsManager,
+            int connHandle, uint32_t timeout) :
+                LocMsg(), mAgpsManager(agpsManager),
+                mConnHandle(connHandle), mTimeout(timeout) {
         }
 
         inline virtual void proc() const {
             LOC_LOGV("AgpsMsgReleaseATL::proc()");
-            mAgpsManager->releaseATL(mConnHandle);
+            mAgpsManager->releaseATL(mConnHandle, mTimeout);
         }
     };
 
-    sendMsg( new AgpsMsgReleaseATL(&mAgpsManager, connHandle));
+    sendMsg( new AgpsMsgReleaseATL(&mAgpsManager, connHandle, timeout));
 
     return true;
 }
