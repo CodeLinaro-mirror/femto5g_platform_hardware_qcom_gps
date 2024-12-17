@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -88,6 +88,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <gps_extended_c.h>
 #include <sys/stat.h>
 #include <thread>
+#include <cutils/properties.h>
 #include "XmlFileParser.h"
 
 #define RAD2DEG    (180.0 / M_PI)
@@ -300,7 +301,7 @@ GnssAdapter::GnssAdapter() :
     readConfigCommand();
     initDefaultAgpsCommand();
     initCDFWServiceCommand();
-    initEngHubProxyCommand();
+    initValueAddedProcessCommand();
     initLocGlinkCommand();
     testLaunchQppeBringUp();
     mXtraObserver.init();
@@ -8571,38 +8572,34 @@ uint32_t GnssAdapter::gnssInjectXtraUserConsentCommand(const bool xtraUserConsen
     return sessionId;
 }
 
-/* ==== Eng Hub Proxy ================================================================= */
-/* ======== UTILITIES ================================================================= */
 void
-GnssAdapter::initEngHubProxyCommand() {
+GnssAdapter::initValueAddedProcessCommand() {
     LOC_LOGd();
 
-    struct MsgInitEngHubProxy : public LocMsg {
+    struct MsgInitValueAddedProcess : public LocMsg {
         GnssAdapter* mAdapter;
-        inline MsgInitEngHubProxy(GnssAdapter* adapter) :
+        inline MsgInitValueAddedProcess(GnssAdapter* adapter) :
             LocMsg(),
             mAdapter(adapter) {}
         inline virtual void proc() const {
-            mAdapter->initEngHubProxy();
+            mAdapter->initValueAddedProcess();
         }
     };
 
-    sendMsg(new MsgInitEngHubProxy(this));
+    sendMsg(new MsgInitValueAddedProcess(this));
 }
 
-bool
-GnssAdapter::initEngHubProxy() {
-    static bool firstTime = true;
 
+bool
+GnssAdapter::initValueAddedProcess() {
+    bool retVal = true;
     const char *error = nullptr;
     unsigned int processListLength = 0;
     loc_process_info_s_type* processInfoList = nullptr;
-    do {
-        // load eng hub only once
-        if (firstTime == false) {
-            break;
-        }
+    bool valueAddedProcessEnabled = false;
+    bool engineServiceEnabled = false;
 
+    do {
         int rc = loc_read_process_conf(LOC_PATH_IZAT_CONF, &processListLength,
                                        &processInfoList);
         if (rc != 0) {
@@ -8610,32 +8607,53 @@ GnssAdapter::initEngHubProxy() {
             break;
         }
 
-        bool pluginDaemonEnabled = false;
         // go over the conf table to see whether any plugin daemon is enabled
         for (unsigned int i = 0; i < processListLength; i++) {
-            if ((strncmp(processInfoList[i].name[0], PROCESS_NAME_ENGINE_SERVICE,
-                         strlen(PROCESS_NAME_ENGINE_SERVICE)) == 0) &&
-                (processInfoList[i].proc_status == ENABLED)) {
-                pluginDaemonEnabled = true;
-                if (processInfoList[i].args[1]!= nullptr) {
-                    // check if this is DRE-INT engine
-                    if (strncmp(processInfoList[i].args[1], "DRE-INT", sizeof("DRE-INT")) == 0) {
-                        mEngServiceInfo.dreIntEnabled = true;
-                    } else if (strncmp(processInfoList[i].args[1], "PPE", sizeof("PPE")) == 0) {
-                        mEngServiceInfo.ppeEnabled = true;
-                    } else if (strncmp(processInfoList[i].args[1], "PPE-INT", sizeof("PPE-INT"))
-                               == 0) {
-                        mEngServiceInfo.ppeIntEnabled = true;
-                        mEngServiceInfo.ppeEnabled = true;
+            LOC_LOGe("process %s, enabled %d",
+                     processInfoList[i].name[0], processInfoList[i].proc_status);
+            if (processInfoList[i].proc_status == ENABLED) {
+                valueAddedProcessEnabled = true;
+
+                if (strncmp(processInfoList[i].name[0], PROCESS_NAME_ENGINE_SERVICE,
+                            strlen(PROCESS_NAME_ENGINE_SERVICE)) == 0) {
+                    engineServiceEnabled = true;
+
+                    if (processInfoList[i].args[1]!= nullptr) {
+                        // check if this is DRE-INT engine
+                        if (strncmp(processInfoList[i].args[1], "DRE-INT",
+                                    sizeof("DRE-INT")) == 0) {
+                             mEngServiceInfo.dreIntEnabled = true;
+                        } else if (strncmp(processInfoList[i].args[1], "PPE",
+                                           sizeof("PPE")) == 0) {
+                            mEngServiceInfo.ppeEnabled = true;
+                        } else if (strncmp(processInfoList[i].args[1], "PPE-INT",
+                                           sizeof("PPE-INT")) == 0) {
+                            mEngServiceInfo.ppeIntEnabled = true;
+                            mEngServiceInfo.ppeEnabled = true;
+                        }
                     }
                 }
             }
         }
 
-        // no plugin daemon is enabled for this platform,
+#ifdef _ANDROID_
+        // set the property to launch loc_launcher
+        // loc_launcher rc file will only launch loc_launcher if
+        // property "vendor.qti.izat.value_added_process" is set to "enabled".
+        char* value = "disabled";
+        if (valueAddedProcessEnabled == true) {
+           value = "enabled";
+        }
+
+        if (0 != property_set("vendor.qti.izat.value_added_process", value)) {
+           LOC_LOGe ("failed to set property vendor.qti.izat.value_added_process");
+        }
+#endif
+
+        // no engine service is enabled for this platform,
         // check if external engine is present for which we need
         // libloc_eng_hub.so to be loaded
-        if (pluginDaemonEnabled == false) {
+        if (engineServiceEnabled == false) {
             UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izatConfParamTable);
             if (!loadEngHubForExternalEngine) {
                 break;
@@ -8648,6 +8666,7 @@ GnssAdapter::initEngHubProxy() {
         if ((handle = dlopen("libloc_eng_hub.so", RTLD_NOW)) == nullptr) {
             if ((error = dlerror()) != nullptr) {
                 LOC_LOGe("libloc_eng_hub.so not found %s !", error);
+                retVal = false;
             }
             break;
         }
@@ -8712,18 +8731,19 @@ GnssAdapter::initEngHubProxy() {
             LOC_LOGd("entered, did not find function of getEngHubProxy");
         }
 
-        LOC_LOGd("first time initialization %d, returned %d",
-                 firstTime, mEngHubLoadSuccessful);
-
     } while (0);
+
+    LOC_LOGd("value added daemon enabled %d, engine service enabled %d,"
+             "engien hub load successful %d ",
+             valueAddedProcessEnabled, engineServiceEnabled,
+             mEngHubLoadSuccessful);
 
     if (processInfoList != nullptr) {
         free (processInfoList);
         processInfoList = nullptr;
     }
 
-    firstTime = false;
-    return mEngHubLoadSuccessful;
+    return retVal;
 }
 
 std::vector<double>

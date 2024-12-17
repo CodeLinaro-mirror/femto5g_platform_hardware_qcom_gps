@@ -26,6 +26,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/*
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+Copyright (c) 2022, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef LOC_TARGET_H
 #define LOC_TARGET_H
 #define TARGET_SET(gnss,ssc) ( (gnss<<1)|ssc )
@@ -50,11 +56,7 @@ unsigned int loc_get_target(void);
 void loc_get_target_baseband(char *baseband, int array_length);
 /*The character array passed to this function should have length
   of atleast PROPERTY_VALUE_MAX*/
-void loc_get_platform_name(char *platform_name, int array_length);
-/*The character array passed to this function should have length
-  of atleast PROPERTY_VALUE_MAX*/
 void loc_get_auto_platform_name(char *platform_name, int array_length);
-int loc_identify_low_ram_target();
 /*The character array passed to this function should have length
   of atleast PROPERTY_VALUE_MAX*/
 void loc_get_device_soc_id(char *soc_id_value, int array_length);

@@ -550,7 +550,7 @@ public:
     void setControlCallbacksCommand(LocationControlCallbacks& controlCallbacks);
     void readConfigCommand();
     void requestUlpCommand();
-    void initEngHubProxyCommand();
+    void initValueAddedProcessCommand();
     void initLocGlinkCommand();
     uint32_t* gnssUpdateConfigCommand(const GnssConfig& config);
     uint32_t* gnssGetConfigCommand(GnssConfigFlagsMask mask);
@@ -654,7 +654,7 @@ public:
     virtual bool isInSession() { return !mTimeBasedTrackingSessions.empty(); }
     uint32_t getFgTrackingSessionCount();
     void initDefaultAgps();
-    bool initEngHubProxy();
+    bool initValueAddedProcess();
     inline bool isPreciseEnabled(PpFeatureStatusMask bits = DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
         return (mPpFeatureStatusMask & bits) &&
                 (mPpFeatureStatusMask &

@@ -20,7 +20,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2023-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -158,13 +158,8 @@ int main() {
     }
 
     int vendorInfo = getVendorEnhancedInfo();
-    // The magic number 2 points to
-    // #define VND_ENHANCED_SYS_STATUS_BIT 0x02 in vndfwk-detect.c
-    bool vendorEnhanced = ( vendorInfo & 2 );
-    setVendorEnhanced(vendorEnhanced);
 
-
-        // Loc AIDL service
+    // Loc AIDL service
 #define VENDOR_AIDL_LIB "vendor.qti.gnss-service.so"
 #define QESDK_SERVICE_LIB "liblocation_qesdk.so"
     void* libQesdkHandle = NULL;
