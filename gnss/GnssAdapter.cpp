@@ -1009,9 +1009,20 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
         out.flags |= LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
         out.leapSecondsUnc = locationExtended.leapSecondsUnc;
     }
+
     if (GPS_LOCATION_EXTENDED_HAS_REPORT_INTERVAL & locationExtended.flags) {
         out.flags |= LDT_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT;
         out.posReportingInterval = locationExtended.posReportingInterval;
+    }
+
+    if (GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA & locationExtended.flags) {
+        out.flags |= LDT_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT;
+        out.extendedDataLen = locationExtended.extendedDataLen;
+        if (locationExtended.extendedDataLen <= sizeof(out.extendedData)) {
+            memscpy(out.extendedData, locationExtended.extendedDataLen,
+                    locationExtended.extendedData,
+                    locationExtended.extendedDataLen);
+        }
     }
 }
 
@@ -1928,18 +1939,37 @@ GnssAdapter::gnssSvIdConfigUpdateSync(const std::vector<GnssSvIdSource>& blackli
 LocationError
 GnssAdapter::gnssSvConfigUpdate()
 {
-    GnssSvIdConfig blacklistConfig = {};
-    // combine sv constellation enablement/disablement from all sources (SDK and XTRA
-    GnssSvTypeConfig currentSvTypeConfig = gnssCombineSvTypeConfigs();
-    // combine sv constellation enablement/disablement with blacklist info
-    combineBlacklistSvs(mGnssSvIdConfig, currentSvTypeConfig, blacklistConfig);
-    mLocApi->setBlacklistSv(blacklistConfig);
+    static GnssSvTypesMask currentSvTypeEnabled = 0;
 
-    if (currentSvTypeConfig.size == 0) {
-         mLocApi->resetConstellationControl();
+    GnssSvIdConfig newBlacklistConfig = {};
+    // combine sv constellation enablement/disablement from all sources (SDK and XTRA
+    GnssSvTypeConfig newSvTypeConfig = gnssCombineSvTypeConfigs();
+    // combine sv constellation enablement/disablement (newSvTypeConfig)
+    // with blacklist info (mGnssSvIdConfig) into newBlacklistConfig
+    combineBlacklistSvs(mGnssSvIdConfig, newSvTypeConfig, newBlacklistConfig);
+    mLocApi->setBlacklistSv(newBlacklistConfig);
+
+    if (newSvTypeConfig.size == 0) {
+        mLocApi->resetConstellationControl();
     } else {
-        mLocApi->setConstellationControl(currentSvTypeConfig);
+       // if constellation disablement is not supported, and if constellation need to
+       // disabled, we will need to do reset, so that constellation can be disabled,
+       // otherwise, that constellation may only get blacklisted
+       bool disableSupported = ContextBase::isFeatureSupported(
+               LOC_SUPPORTED_FEATURE_CONSTELLATION_DISABLEMENT);
+       LOC_LOGd("disablement cap %d, current enabled constellation 0x%" PRIx64 ","
+                "new enabled constellation 0x%" PRIx64 "",
+                disableSupported, currentSvTypeEnabled, newSvTypeConfig.enabledSvTypesMask);
+        if (false == disableSupported) {
+            GnssSvTypesMask newSvTypeEnabled = newSvTypeConfig.enabledSvTypesMask;
+            if (currentSvTypeEnabled & (currentSvTypeEnabled ^ newSvTypeEnabled)) {
+                mLocApi->resetConstellationControl();
+            }
+        }
+        mLocApi->setConstellationControl(newSvTypeConfig);
     }
+
+    currentSvTypeEnabled = newSvTypeConfig.enabledSvTypesMask;
 
     return LOCATION_ERROR_SUCCESS;
 }
@@ -3112,7 +3142,6 @@ GnssAdapter::updateClientsEventMask()
             mask |= LOC_API_ADAPTER_BIT_GNSS_BANDS_SUPPORTED;
         }
         if (it->second.svEphemerisCb != nullptr) {
-            LOC_LOGd("GNSS EPH supported");
             mask |= LOC_API_ADAPTER_BIT_GNSS_SV_EPHEMERIS_REPORT;
         }
     }
@@ -4406,7 +4435,7 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
 
             // save the association of GPS timestamp and qtimer tick cnt in PVT report
             mAdapter.mPositionElapsedRealTimeCal
-                    .saveGpsTimeAndQtimerPairInPvtReport(mLocationExtended);
+                    .saveGpsTimeAndQtimerPairInPvtReport(mLocationExtended, mStatus);
 
             // save sv used in fix and mb sv used in fix info from propagated report
             mAdapter.mGnssSvIdUsedInPosAvail = false;
@@ -5696,10 +5725,20 @@ void GnssAdapter::convertGpsEphemeris(const GpsEphemerisResponse& ephRpt,
             continue;
         }
         halEph.gpsEphemerisData[numEph] = ephRpt.gpsEphemerisData[idx];
+        if (ephRpt.validExtendedEphData) {
+            halEph.gpsExtEphemerisData[numEph] = ephRpt.gpsExtEphemerisData[idx];
+        }
         numEph++;
     }
 
     halEph.numOfEphemeris = numEph;
+
+    if (ephRpt.validExtendedEphData && ephRpt.numOfExtendedEphemeris) {
+        halEph.numOfExtendedEphemeris = numEph;
+        halEph.validDataSourceSignal = ephRpt.validDataSourceSignal;
+        halEph.dataSourceSignal = ephRpt.dataSourceSignal;
+        halEph.validExtendedEphData = ephRpt.validExtendedEphData;
+    }
 }
 
 void GnssAdapter::convertGalEphemeris(const GalileoEphemerisResponse& ephRpt,
@@ -5757,10 +5796,20 @@ void GnssAdapter::convertBdsEphemeris(const BdsEphemerisResponse& ephRpt,
             continue;
         }
         halEph.bdsEphemerisData[numEph] = ephRpt.bdsEphemerisData[idx];
+        if (ephRpt.validExtendedEphData) {
+            halEph.bdsExtEphemerisData[numEph] = ephRpt.bdsExtEphemerisData[idx];
+        }
         numEph++;
     }
 
     halEph.numOfEphemeris = numEph;
+
+    if (ephRpt.validExtendedEphData && ephRpt.numOfExtendedEphemeris) {
+        halEph.numOfExtendedEphemeris = numEph;
+        halEph.validDataSourceSignal = ephRpt.validDataSourceSignal;
+        halEph.dataSourceSignal = ephRpt.dataSourceSignal;
+        halEph.validExtendedEphData = ephRpt.validExtendedEphData;
+    }
 }
 
 void GnssAdapter::convertQzssEphemeris(const QzssEphemerisResponse& ephRpt,
@@ -5777,10 +5826,20 @@ void GnssAdapter::convertQzssEphemeris(const QzssEphemerisResponse& ephRpt,
         }
 
         halEph.qzssEphemerisData[numEph] = ephRpt.qzssEphemerisData[idx];
+        if (ephRpt.validExtendedEphData) {
+            halEph.qzssExtEphemerisData[numEph] = ephRpt.qzssExtEphemerisData[idx];
+        }
         numEph++;
     }
 
     halEph.numOfEphemeris = numEph;
+
+    if (ephRpt.validExtendedEphData && ephRpt.numOfExtendedEphemeris) {
+        halEph.numOfExtendedEphemeris = numEph;
+        halEph.validDataSourceSignal = ephRpt.validDataSourceSignal;
+        halEph.dataSourceSignal = ephRpt.dataSourceSignal;
+        halEph.validExtendedEphData = ephRpt.validExtendedEphData;
+    }
 }
 void GnssAdapter::convertNavicEphemeris(const NavicEphemerisResponse& ephRpt,
             NavicEphemerisResponse& halEph) {
@@ -8394,6 +8453,42 @@ void GnssAdapter::reportGnssConfigEvent(uint32_t sessionId, const GnssConfig& gn
     };
 
     sendMsg(new MsgReportGnssConfig(*this, sessionId, gnssConfig));
+}
+
+uint32_t GnssAdapter::gnssInjectXtraUserConsentCommand(const bool xtraUserConsent) {
+    // generated session id will be none-zero
+    uint32_t sessionId = generateSessionId();
+    LOC_LOGd("session id %u", sessionId);
+
+    struct MsgInjectXtraUserConsent : public LocMsg {
+        GnssAdapter&       mAdapter;
+        uint32_t           mSessionId;
+        const bool& mXtraUserConsent;
+
+        inline MsgInjectXtraUserConsent(GnssAdapter& adapter,
+                                 uint32_t sessionId,
+                                 const bool& userConsent) :
+            LocMsg(),
+            mAdapter(adapter),
+            mSessionId(sessionId),
+            mXtraUserConsent(userConsent) {}
+        inline virtual void proc() const {
+            LocationError err = LOCATION_ERROR_NOT_SUPPORTED;
+            if (mAdapter.mMpXtraEnabled == false) {
+                 mAdapter.reportResponse(LOCATION_ERROR_NOT_SUPPORTED, mSessionId);
+            } else {
+                if (true == mAdapter.mXtraObserver.updateXtraUserConsent(mXtraUserConsent)) {
+                    mAdapter.reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
+                } else {
+                    mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
+                }
+            }
+            mAdapter.reportResponse(err, mSessionId);
+        }
+    };
+
+    sendMsg(new MsgInjectXtraUserConsent(*this, sessionId, xtraUserConsent));
+    return sessionId;
 }
 
 /* ==== Eng Hub Proxy ================================================================= */
