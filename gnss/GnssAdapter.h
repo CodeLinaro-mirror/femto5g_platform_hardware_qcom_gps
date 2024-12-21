@@ -370,13 +370,6 @@ class GnssAdapter : public LocAdapterBase {
     bool mEngHubLoadSuccessful;
     EngineServiceInfo mEngServiceInfo;
     RealtimeEstimator mPositionElapsedRealTimeCal;
-    typedef enum {
-        HMAC_CONFIG_UNKNOWN = 0,
-        HMAC_CONFIG_DISABLED,
-        HMAC_CONFIG_ENABLED,
-        HMAC_CONFIG_TEST_MODE,
-    } HmacConfigType;
-    HmacConfigType mHmacConfig;
     NvParamMgr*   mNvParamMgr;
 
     /* === NativeAgpsHandler ======================================================== */
