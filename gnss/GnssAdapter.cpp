@@ -4718,8 +4718,8 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
 {
     bool reportToAnyClient = needReportForAnyClient(status);
 
-    LOC_LOGd("reportToAnyClient %d, status %d, eng type %d, precise location enabled %d",
-             reportToAnyClient, status, locationExtended.locOutputEngType, isPreciseEnabled());
+    LOC_LOGd("reportToAnyClient %d, status %d, eng type %d, engine service enabled %d",
+             reportToAnyClient, status, locationExtended.locOutputEngType, isEngineServiceEnable());
 
     if (reportToAnyClient) {
         GnssLocationInfoNotification locationInfo = {};
@@ -4734,8 +4734,8 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                 if (nullptr != it->second.gnssLocationInfoCb) {
                     it->second.gnssLocationInfoCb(locationInfo);
                 } else if ((nullptr != it->second.engineLocationsInfoCb) &&
-                        (false == isPreciseEnabled())) {
-                    // if engine hub is disabled, this is SPE fix from modem
+                        (false == isEngineServiceEnable())) {
+                    // if engine service is disabled, this is SPE fix from modem
                     // we need to have one copy marked as fused and leave the other copy
                     // unmodified (which is marked as SPE fix in LocAPIV02.cpp) and
                     // dispatch both copies to the engineLocationsInfoCb
