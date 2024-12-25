@@ -235,8 +235,7 @@ GnssAdapter::GnssAdapter() :
     mPowerIndicationCb(nullptr),
     mGnssPowerStatisticsInit(false),
     mBootReferenceEnergy(0),
-    mPowerElapsedRealTimeCal(30000000),
-    mPositionElapsedRealTimeCal(30000000),
+    mPositionElapsedRealTimeCal(),
     mAddressRequestCb(nullptr),
     mGnssCapabNotification{},
     mNvParamMgr(NvParamMgr::getInstance()),
@@ -603,6 +602,48 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
     }
 }
 
+void GnssAdapter::fillElapsedRealTimeForMeas(GnssMeasurements& measurementSet) {
+    int64_t elapsedTimeNs = -1;
+    GnssMeasurementsNotification& gnssMeasNotification = measurementSet.gnssMeasNotification;
+    GnssSvMeasurementHeader& svMeasSetHeader = measurementSet.gnssSvMeasurementSet.svMeasSetHeader;
+    if ((svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_GPS_SYSTEM_TIME) &&
+        (svMeasSetHeader.gpsSystemTime.hasAccurateTime() == true)) {
+        float elapsedTimeUncMsec = 0.0;
+        uint64_t elapsedgPTPTimeNsec = 0;
+        bool gptpTimeValid = false;
+        GPSTimeStruct gpsTime;
+        gpsTime.gpsWeek = svMeasSetHeader.gpsSystemTime.systemWeek;
+        gpsTime.gpsTimeOfWeekMs = svMeasSetHeader.gpsSystemTime.systemMsec;
+        if (mPositionElapsedRealTimeCal.fillAdditionalTimestamps(
+                gpsTime, elapsedTimeNs, elapsedTimeUncMsec,
+                elapsedgPTPTimeNsec, gptpTimeValid)) {
+
+            gnssMeasNotification.clock.flags |=
+                GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
+            gnssMeasNotification.clock.elapsedRealTime = elapsedTimeNs;
+            gnssMeasNotification.clock.flags |=
+                GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
+            gnssMeasNotification.clock.elapsedRealTimeUnc =
+                (int64_t) (elapsedTimeUncMsec * 1000000);
+            if (gptpTimeValid) {
+                gnssMeasNotification.clock.flags |=
+                    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT;
+                gnssMeasNotification.clock.elapsedgPTPTime = elapsedgPTPTimeNsec;
+                gnssMeasNotification.clock.elapsedgPTPTimeUnc = 0;
+                gnssMeasNotification.clock.flags |=
+                    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT;
+            }
+        }
+    }
+    if (-1 == elapsedTimeNs) {
+        gnssMeasNotification.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
+        gnssMeasNotification.clock.elapsedRealTime = getBootTimeMilliSec() * 1000000;
+        gnssMeasNotification.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
+        gnssMeasNotification.clock.elapsedRealTimeUnc =
+            RealtimeEstimator::getElapsedRealtimeUncNanos();
+    }
+}
+
 void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtended,
                                       GnssLocationInfoNotification& out) {
     if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GPS_TIME) {
@@ -610,36 +651,31 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
         float elapsedTimeUncMsec = 0.0;
         uint64_t elapsedgPTPTimeNsec = 0;
         bool gptpTimeValid = false;
-        if (mPositionElapsedRealTimeCal.fillAdditionalTimestamps(
-                locationExtended, elapsedTimeNs, elapsedTimeUncMsec,
-                elapsedgPTPTimeNsec, gptpTimeValid)) {
-            out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
-            out.location.elapsedRealTime = elapsedTimeNs;
-            out.location.elapsedRealTimeUnc = (int64_t) (elapsedTimeUncMsec * 1000000);
+        if (!(locationExtended.gnssSystemTime.hasAccurateGpsTime() == false ||
+                 (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GPS_TIME) == 0 ||
+                 // 65535 GPS week from modem means unknown
+                 locationExtended.gpsTime.gpsWeek == UNKNOWN_GPS_WEEK_NUM)) {
+            if (mPositionElapsedRealTimeCal.fillAdditionalTimestamps(
+                    locationExtended.gpsTime, elapsedTimeNs, elapsedTimeUncMsec,
+                    elapsedgPTPTimeNsec, gptpTimeValid)) {
+                out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
+                out.location.elapsedRealTime = elapsedTimeNs;
+                out.location.elapsedRealTimeUnc = (int64_t) (elapsedTimeUncMsec * 1000000);
 
-            if (gptpTimeValid) {
-                out.location.flags |= LOCATION_HAS_GPTP_TIME_BIT;
-                out.location.elapsedgPTPTime = elapsedgPTPTimeNsec;
-                out.location.flags |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
-                out.location.elapsedgPTPTimeUnc = 0;
+                if (gptpTimeValid) {
+                    out.location.flags |= LOCATION_HAS_GPTP_TIME_BIT;
+                    out.location.elapsedgPTPTime = elapsedgPTPTimeNsec;
+                    out.location.flags |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
+                    out.location.elapsedgPTPTimeUnc = 0;
+                }
             }
         }
 #ifndef FEATURE_AUTOMOTIVE
-        else if ((out.location.timestamp > 0) &&
-                 (locationExtended.gpsTime.gpsWeek != UNKNOWN_GPS_WEEK_NUM)) {
-            int64_t locationTimeNanos = (int64_t)out.location.timestamp * 1000000;
-            bool isCurDataTimeTrustable =
-                    (out.location.timestamp % mLocPositionMode.min_interval == 0);
-            int64_t elapsedRealTime = mPositionElapsedRealTimeCal.getElapsedRealtimeEstimateNanos(
-                    locationTimeNanos, isCurDataTimeTrustable,
-                    (int64_t)mLocPositionMode.min_interval * 1000000);
-
-            if (elapsedRealTime != -1) {
-                out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
-                out.location.elapsedRealTime = elapsedRealTime;
-                out.location.elapsedRealTimeUnc =
-                        mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
-            }
+        if (!(out.location.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT)) {
+            out.location.elapsedRealTime = getBootTimeMilliSec() * 1000000;
+            out.location.elapsedRealTimeUnc =
+                mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+            out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
         }
 #endif //FEATURE_AUTOMOTIVE
     }
@@ -5505,7 +5541,7 @@ GnssAdapter::reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurement
 
     struct MsgReportGnssMeasurementData : public LocMsg {
         GnssAdapter& mAdapter;
-        GnssMeasurements mGnssMeasurements;
+        mutable GnssMeasurements mGnssMeasurements;
         inline MsgReportGnssMeasurementData(GnssAdapter& adapter,
                                             const GnssMeasurements& gnssMeasurements) :
                 LocMsg(),
@@ -5516,6 +5552,7 @@ GnssAdapter::reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurement
         inline virtual void proc() const {
             mAdapter.mPositionElapsedRealTimeCal.saveGpsTimeAndQtimerPairInMeasReport(
                     mGnssMeasurements.gnssSvMeasurementSet);
+            mAdapter.fillElapsedRealTimeForMeas(mGnssMeasurements);
             mAdapter.reportGnssMeasurementData(mGnssMeasurements.gnssMeasNotification);
             if ((false == mGnssMeasurements.gnssSvMeasurementSet.isNhz) &&
                     mAdapter.mDGnssNeedReport) {
@@ -6330,26 +6367,20 @@ GnssAdapter::invokeGnssEnergyConsumedCallback(uint64_t energyConsumedSinceFirstB
            else
                 use the value we get here from the modem for mBootReferenceEnergy */
 
-        struct timespec currentTime = {};
-        int64_t sinceBootTimeNanos = 0;
+        uint64_t sinceBootTimeMs = getBootTimeMilliSec();
         FILE *fp = NULL;
 
         mBootReferenceEnergy = energyConsumedSinceFirstBoot;
         if (NULL != (fp = fopen("/data/vendor/location/energy.conf", "a+b"))) {
             rewind(fp);
-            if (RealtimeEstimator::getCurrentTime(currentTime, sinceBootTimeNanos)) {
-                LOC_LOGv("sinceBootTimeNanos: %" PRIu64 " ", sinceBootTimeNanos);
-                if ((uint32_t)(sinceBootTimeNanos / 1000000000) > 30) {
-                    int fr = fread(&mBootReferenceEnergy, sizeof(mBootReferenceEnergy), 1, fp);
-                    if (1 != fr) {
-                        mBootReferenceEnergy = energyConsumedSinceFirstBoot;
-                        LOC_LOGw("fread failed ferror(fp)=%d fr=%d", ferror(fp), fr);
-                    }
-                } else {
-                    fwrite(&mBootReferenceEnergy, sizeof(mBootReferenceEnergy), 1, fp);
+            LOC_LOGv("sinceBootTimeMs: %" PRIu64 " ", sinceBootTimeMs);
+            if ((uint32_t)(sinceBootTimeMs / 1000) > 30) {
+                int fr = fread(&mBootReferenceEnergy, sizeof(mBootReferenceEnergy), 1, fp);
+                if (1 != fr) {
+                    mBootReferenceEnergy = energyConsumedSinceFirstBoot;
+                    LOC_LOGw("fread failed ferror(fp)=%d fr=%d", ferror(fp), fr);
                 }
             } else {
-                LOC_LOGw("getCurrentTime failed");
                 fwrite(&mBootReferenceEnergy, sizeof(mBootReferenceEnergy), 1, fp);
             }
             fclose(fp);
@@ -6360,7 +6391,6 @@ GnssAdapter::invokeGnssEnergyConsumedCallback(uint64_t energyConsumedSinceFirstB
                  mBootReferenceEnergy, energyConsumedSinceFirstBoot);
 
         mGnssPowerStatisticsInit = true;
-        mPowerElapsedRealTimeCal.reset();
     } else if (nullptr != mPowerIndicationCb) {
         GnssPowerStatistics gnssPowerStatistics = {};
         gnssPowerStatistics.size = sizeof(GnssPowerStatistics);
@@ -6385,7 +6415,7 @@ GnssAdapter::invokeGnssEnergyConsumedCallback(uint64_t energyConsumedSinceFirstB
 
         gnssPowerStatistics.elapsedRealTime = elapsedRealtime() * 1000000LL;
         gnssPowerStatistics.elapsedRealTimeUnc =
-                mPowerElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+                RealtimeEstimator::getElapsedRealtimeUncNanos();
         mPowerIndicationCb(gnssPowerStatistics);
     }
 }
