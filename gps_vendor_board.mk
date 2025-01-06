@@ -3,6 +3,7 @@
 # added to this exclude list to prevent building
 LOC_BOARD_PLATFORM_EXCLUDE_LIST := anorak
 LOC_BOARD_PLATFORM_EXCLUDE_LIST += niobe
+LOC_BOARD_PLATFORM_EXCLUDE_LIST += vienna
 
 #lowi only exception list
 LOC_BOARD_PLATFORM_LOWI_ONLY_LIST := niobe
