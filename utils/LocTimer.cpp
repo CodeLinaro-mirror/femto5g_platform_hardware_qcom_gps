@@ -26,6 +26,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/*
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #include <unistd.h>
 #include <stdio.h>
@@ -35,7 +40,6 @@
 #include <sys/timerfd.h>
 #include <sys/epoll.h>
 #include <log_util.h>
-#include <loc_timer.h>
 #include <LocTimer.h>
 #include <LocHeap.h>
 #include <LocThread.h>
@@ -78,8 +82,6 @@ LocTimerPollTask - is a class that wraps timerfd and epoll POXIS APIs. It also
                    both implements LocRunnalbe with epoll_wait() in the run()
                    method. It is also a LocThread client, so as to loop the run
                    method.
-LocTimerWrapper - a LocTimer client itself, to implement the existing C API with
-                  APIs, loc_timer_start() and loc_timer_stop().
 
 */
 
@@ -579,69 +581,4 @@ bool LocTimer::stop() {
     mLock->unlock();
     return success;
 }
-
-/***************************LocTimerWrapper methods***************************/
-//////////////////////////////////////////////////////////////////////////
-// This section below wraps for the C style APIs
-//////////////////////////////////////////////////////////////////////////
-class LocTimerWrapper : public LocTimer {
-    loc_timer_callback mCb;
-    void* mCallerData;
-    LocTimerWrapper* mMe;
-    static pthread_mutex_t mMutex;
-    inline ~LocTimerWrapper() { mCb = NULL; mMe = NULL; }
-public:
-    inline LocTimerWrapper(loc_timer_callback cb, void* callerData) :
-        mCb(cb), mCallerData(callerData), mMe(this) {
-    }
-    void destroy() {
-        pthread_mutex_lock(&mMutex);
-        if (NULL != mCb && this == mMe) {
-            delete this;
-        }
-        pthread_mutex_unlock(&mMutex);
-    }
-    virtual void timeOutCallback() {
-        loc_timer_callback cb = mCb;
-        void* callerData = mCallerData;
-        if (cb) {
-            cb(callerData, 0);
-        }
-        destroy();
-    }
-};
-
 } // namespace loc_util
-
-//////////////////////////////////////////////////////////////////////////
-// This section below wraps for the C style APIs
-//////////////////////////////////////////////////////////////////////////
-
-using loc_util::LocTimerWrapper;
-
-pthread_mutex_t LocTimerWrapper::mMutex = PTHREAD_MUTEX_INITIALIZER;
-
-void* loc_timer_start(uint64_t msec, loc_timer_callback cb_func,
-                      void *caller_data, bool wake_on_expire)
-{
-    LocTimerWrapper* locTimerWrapper = NULL;
-
-    if (cb_func) {
-        locTimerWrapper = new LocTimerWrapper(cb_func, caller_data);
-
-        if (locTimerWrapper) {
-            locTimerWrapper->start(msec, wake_on_expire);
-        }
-    }
-
-    return locTimerWrapper;
-}
-
-void loc_timer_stop(void*&  handle)
-{
-    if (handle) {
-        LocTimerWrapper* locTimerWrapper = (LocTimerWrapper*)(handle);
-        locTimerWrapper->destroy();
-        handle = NULL;
-    }
-}

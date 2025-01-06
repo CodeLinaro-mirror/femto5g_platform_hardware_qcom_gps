@@ -69,7 +69,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Agps.h>
 #include <loc_pla.h>
 #include <ContextBase.h>
-#include <loc_timer.h>
 #include <inttypes.h>
 
 /* --------------------------------------------------------------------
