@@ -164,6 +164,7 @@ struct GnssInterface {
     uint32_t (*configMerkleTree) (const char * merkleTreeConfigBuffer, int bufferLength);
     uint32_t (*configOsnmaEnablement) (bool enable);
     uint32_t (*gnssInjectMmfData) (const GnssMapMatchedData& data);
+    uint32_t (*configureUserConsentForXtra) (const bool xtraUserConsent);
 };
 
 struct BatchingInterface {
