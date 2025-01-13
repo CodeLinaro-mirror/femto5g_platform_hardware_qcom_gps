@@ -623,6 +623,8 @@ public:
     uint32_t configOsnmaEnablementCommand(bool enable);
 #endif
     uint32_t gnssInjectMmfDataCommand(const GnssMapMatchedData& data);
+    uint32_t gnssInjectXtraUserConsentCommand(const bool xtraUserConsent);
+
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
     void initOdcpiCommand(const odcpiRequestCallback& callback,
