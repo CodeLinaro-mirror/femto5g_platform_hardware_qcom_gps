@@ -398,12 +398,16 @@ public:
 
     virtual void configPrecisePositioning(uint32_t featureId, bool enable,
             const std::string& appHash, LocApiResponse* adapterResponse=nullptr);
+    virtual void configPrecisePositioning(PreciseType preciseType, bool enable,
+            LocApiResponse* adapterResponse=nullptr);
     virtual void configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* merkleTree,
             LocApiResponse* adapterResponse=nullptr);
     virtual void configOsnmaEnablement(bool enable, LocApiResponse* adapterResponse=nullptr);
     virtual void getNtnConfigSignalMask(LocApiResponse* adapterResponse = nullptr);
     virtual void setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask,
             LocApiResponse* adapterResponse = nullptr);
+    virtual void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData,
+            LocApiResponse* adapterResponse=nullptr);
 };
 
 class RealtimeEstimator {

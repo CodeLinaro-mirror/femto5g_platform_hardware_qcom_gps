@@ -274,6 +274,8 @@ class GnssAdapter : public LocAdapterBase {
     TrackingOptionsMap mTimeBasedTrackingSessions;
     LocationSessionMap mDistanceBasedTrackingSessions;
     LocPosMode mLocPositionMode;
+    PreciseType mPreciseType;
+    CorrectionType mCorrectionType;
     GnssSvUsedInPosition mGnssSvIdUsedInPosition;
     bool mGnssSvIdUsedInPosAvail;
     GnssSvMbUsedInPosition mGnssMbSvIdUsedInPosition;
@@ -622,12 +624,14 @@ public:
     uint32_t registerXtraStatusUpdateCommand(bool registerUpdate);
     void configPrecisePositioningCommand(uint32_t featureId, bool enable,
             const std::string& appHash);
+    void setPreciseSessionConfig();
     uint32_t configMerkleTreeCommand(const char * merkleTreeConfigBuffer, int bufferLength);
     uint32_t configOsnmaEnablementCommand(bool enable);
     uint32_t gnssInjectMmfDataCommand(const GnssMapMatchedData& data);
     void set3rdPartyNtnCapabilityCommand(bool isCapable);
     void getNtnConfigSignalMaskCommand();
     void setNtnConfigSignalMaskCommand(GnssSignalTypeMask gpsSignalTypeConfigMask);
+    void injectSuplCertCommand(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
@@ -653,7 +657,8 @@ public:
     inline bool isPreciseEnabled(PpFeatureStatusMask bits = DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
         return (mPpFeatureStatusMask & bits) &&
                 (mPpFeatureStatusMask &
-                (DLP_FEATURE_ENABLED_BY_DEFAULT | DLP_FEATURE_ENABLED_BY_QESDK));
+                (DLP_FEATURE_ENABLED_BY_DEFAULT | DLP_FEATURE_ENABLED_BY_QESDK |
+                 WOCS_FEATURE_ENABLED_BY_DEFAULT));
     }
     inline bool isQppeEnabled() {
         return isPreciseEnabled(DLP_FEATURE_STATUS_QPPE_LIBRARY_PRESENT);
@@ -664,6 +669,10 @@ public:
     inline bool isMlpEnabled() {
         return mPpFeatureStatusMask &
             (MLP_FEATURE_ENABLED_BY_DEFAULT | MLP_FEATURE_ENABLED_BY_QESDK);
+    }
+    inline bool isNtripSourceNeeded () {
+        return (mPreciseType == PRECISE_TYPE_EDGNSS || mPreciseType == PRECISE_TYPE_RTK) &&
+                (mCorrectionType != CORRECTION_TYPE_3GPP);
     }
     bool isStandAloneCDParserPELib();
     bool isEngineServiceEnable();

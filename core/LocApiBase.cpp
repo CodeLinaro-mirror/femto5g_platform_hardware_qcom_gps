@@ -926,6 +926,11 @@ void LocApiBase::
             LocApiResponse* /*adpterResponse*/)
 DEFAULT_IMPL()
 
+void LocApiBase::
+    configPrecisePositioning(PreciseType preciseType, bool enable,
+            LocApiResponse* /*adpterResponse*/)
+DEFAULT_IMPL()
+
 void LocApiBase::configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* /*merkleTree*/,
             LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
@@ -938,6 +943,10 @@ DEFAULT_IMPL()
 
 void LocApiBase::setNtnConfigSignalMask(GnssSignalTypeMask /*gpsSignalTypeConfigMask*/,
             LocApiResponse* /*adapterResponse*/)
+DEFAULT_IMPL()
+
+void LocApiBase::injectSuplCert(int32_t /*suplCertId*/,
+        const std::vector<uint8_t>& /*suplCertData*/, LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
 int64_t RealtimeEstimator::getElapsedRealtimeEstimateNanos(int64_t curDataTimeNanos,

@@ -244,7 +244,11 @@ GnssAdapter::GnssAdapter() :
     mNvParamMgr(NvParamMgr::getInstance()),
     mAppHash(""),
     m3GppSourceMask(QDGNSS_3GPP_SOURCE_UNKNOWN),
+#ifdef _ANDROID_
+    mNmeaReqEngTypeMask(LOC_REQ_ENGINE_SPE_BIT),
+#else
     mNmeaReqEngTypeMask(LOC_REQ_ENGINE_FUSED_BIT),
+#endif
     mResponseTimer(this, (LocationError)0, (uint32_t)0),
     mIsNtnStatusValid(false),
     mNtnSignalTypeConfigMask(GNSS_SIGNAL_GPS_L1CA|GNSS_SIGNAL_GPS_L5),
@@ -3018,7 +3022,6 @@ GnssAdapter::updateClientsEventMask()
             }
         }
         if (it->second.svEphemerisCb != nullptr) {
-            LOC_LOGd("GNSS EPH supported");
             mask |= LOC_API_ADAPTER_BIT_GNSS_SV_EPHEMERIS_REPORT;
         }
     }
@@ -3153,6 +3156,7 @@ GnssAdapter::handleEngineUpEvent()
             // must be called only after capabilities are known
             mAdapter.setConfig();
             mAdapter.setTribandState();
+            mAdapter.setPreciseSessionConfig();
             mAdapter.gnssSvConfigUpdate();
             mAdapter.updateSystemPowerState(mAdapter.getSystemPowerState());
             if (mAdapter.mPowerConnectState != POWER_CONNECT_UNKNOWN) {
@@ -3177,6 +3181,9 @@ GnssAdapter::handleEngineUpEvent()
             }
 
             mAdapter.gnssSecondaryBandConfigUpdate();
+            //Reset data connection when modem SSR
+            mAdapter.mAgpsManager.handleModemSSR();
+
             // restart sessions only when Lock state is enabled and in power state resume
             mAdapter.initGnssPowerStatistics();
             if (ENGINE_LOCK_STATE_DISABLED != mApi.getEngineLockState()) {
@@ -3530,6 +3537,7 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                             mAdapter.startTimeBasedTrackingMultiplex(mClient, mSessionId, mOptions);
                     mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
                     mAdapter.setTribandState();
+                    mAdapter.setPreciseSessionConfig();
 
                     if (reportToClientWithNoWait) {
                         mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
@@ -3613,16 +3621,20 @@ GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId,
         return;
     }
 
-    LOC_LOGd("minInterval %u minDistance %u mode %u powermode %u tbm %u",
+    LOC_LOGd("minInterval %u minDistance %u mode %u powermode %u tbm %u "
+             "preciseType %u corrtionType %u",
             trackingOptions.minInterval, trackingOptions.minDistance,
-            trackingOptions.mode, trackingOptions.powerMode, trackingOptions.tbm);
+            trackingOptions.mode, trackingOptions.powerMode, trackingOptions.tbm,
+            trackingOptions.preciseType, trackingOptions.correctionType);
     LocPosMode locPosMode = {};
     convertOptions(locPosMode, trackingOptions);
     // save position mode parameters
     setLocPositionMode(locPosMode);
+    mPreciseType = trackingOptions.preciseType;
+    mCorrectionType = trackingOptions.correctionType;
     // inform engine hub that GNSS session is about to start
     mEngHubProxy->gnssSetFixMode(mLocPositionMode);
-    mEngHubProxy->gnssStartFix();
+    mEngHubProxy->gnssStartFix(trackingOptions.preciseType);
     // inform CDFW that GNSS session is about to start
     if (mCdfwInterface) {
         mCdfwInterface->updateTrackingStatus(true);
@@ -3668,7 +3680,7 @@ GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
 
     // inform engine hub that GNSS session is about to start
     mEngHubProxy->gnssSetFixMode(mLocPositionMode);
-    mEngHubProxy->gnssStartFix();
+    mEngHubProxy->gnssStartFix(updatedOptions.preciseType);
     // inform CDFW that GNSS session is about to start
     if (mCdfwInterface) {
         mCdfwInterface->updateTrackingStatus(true);
@@ -3917,6 +3929,7 @@ GnssAdapter::stopTrackingCommand(LocationAPI* client, uint32_t id)
                         mAdapter.stopTimeBasedTrackingMultiplex(mClient, mSessionId);
                     mAdapter.eraseTrackingSession(mClient, mSessionId);
                     mAdapter.setTribandState();
+                    mAdapter.setPreciseSessionConfig();
 
                     if (reportToClientWithNoWait) {
                         mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
@@ -4709,8 +4722,8 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
 {
     bool reportToAnyClient = needReportForAnyClient(status);
 
-    LOC_LOGd("reportToAnyClient %d, status %d, eng type %d, precise location enabled %d",
-             reportToAnyClient, status, locationExtended.locOutputEngType, isPreciseEnabled());
+    LOC_LOGd("reportToAnyClient %d, status %d, eng type %d, engine service enabled %d",
+             reportToAnyClient, status, locationExtended.locOutputEngType, isEngineServiceEnable());
 
     if (reportToAnyClient) {
         GnssLocationInfoNotification locationInfo = {};
@@ -4725,8 +4738,8 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                 if (nullptr != it->second.gnssLocationInfoCb) {
                     it->second.gnssLocationInfoCb(locationInfo);
                 } else if ((nullptr != it->second.engineLocationsInfoCb) &&
-                        (false == isPreciseEnabled())) {
-                    // if engine hub is disabled, this is SPE fix from modem
+                        (false == isEngineServiceEnable())) {
+                    // if engine service is disabled, this is SPE fix from modem
                     // we need to have one copy marked as fused and leave the other copy
                     // unmodified (which is marked as SPE fix in LocAPIV02.cpp) and
                     // dispatch both copies to the engineLocationsInfoCb
@@ -4816,7 +4829,7 @@ bool
 GnssAdapter::reportSpeAsEnginePosition(const UlpLocation& ulpLocation,
                                    const GpsLocationExtended& locationExtended,
                                    enum loc_sess_status status) {
-    bool enginePositionReported = isPreciseEnabled();
+    bool enginePositionReported = isEngineServiceEnable();
     if (enginePositionReported) {
         EngineLocationInfo engLocationInfo = {};
         engLocationInfo.location = ulpLocation;
@@ -4858,10 +4871,13 @@ GnssAdapter::reportEnginePositions(unsigned int count,
                                     locationInfo[i]);
             }
 
+#ifndef _ANDROID_
+            //Only generate and report NMEA with engine position on Auto platforms
             reportPositionNmea(engLocation->location,
                            engLocation->locationExtended,
                            engLocation->sessionStatus,
                            engLocation->location.tech_mask);
+#endif
 
        }
 
@@ -5575,10 +5591,20 @@ void GnssAdapter::convertGpsEphemeris(const GpsEphemerisResponse& ephRpt,
             continue;
         }
         halEph.gpsEphemerisData[numEph] = ephRpt.gpsEphemerisData[idx];
+        if (ephRpt.validExtendedEphData) {
+            halEph.gpsExtEphemerisData[numEph] = ephRpt.gpsExtEphemerisData[idx];
+        }
         numEph++;
     }
 
     halEph.numOfEphemeris = numEph;
+
+    if (ephRpt.validExtendedEphData && ephRpt.numOfExtendedEphemeris) {
+        halEph.numOfExtendedEphemeris = numEph;
+        halEph.validDataSourceSignal = ephRpt.validDataSourceSignal;
+        halEph.dataSourceSignal = ephRpt.dataSourceSignal;
+        halEph.validExtendedEphData = ephRpt.validExtendedEphData;
+    }
 }
 
 void GnssAdapter::convertGalEphemeris(const GalileoEphemerisResponse& ephRpt,
@@ -5636,10 +5662,20 @@ void GnssAdapter::convertBdsEphemeris(const BdsEphemerisResponse& ephRpt,
             continue;
         }
         halEph.bdsEphemerisData[numEph] = ephRpt.bdsEphemerisData[idx];
+        if (ephRpt.validExtendedEphData) {
+            halEph.bdsExtEphemerisData[numEph] = ephRpt.bdsExtEphemerisData[idx];
+        }
         numEph++;
     }
 
     halEph.numOfEphemeris = numEph;
+
+    if (ephRpt.validExtendedEphData && ephRpt.numOfExtendedEphemeris) {
+        halEph.numOfExtendedEphemeris = numEph;
+        halEph.validDataSourceSignal = ephRpt.validDataSourceSignal;
+        halEph.dataSourceSignal = ephRpt.dataSourceSignal;
+        halEph.validExtendedEphData = ephRpt.validExtendedEphData;
+    }
 }
 
 void GnssAdapter::convertQzssEphemeris(const QzssEphemerisResponse& ephRpt,
@@ -5656,10 +5692,20 @@ void GnssAdapter::convertQzssEphemeris(const QzssEphemerisResponse& ephRpt,
         }
 
         halEph.qzssEphemerisData[numEph] = ephRpt.qzssEphemerisData[idx];
+        if (ephRpt.validExtendedEphData) {
+            halEph.qzssExtEphemerisData[numEph] = ephRpt.qzssExtEphemerisData[idx];
+        }
         numEph++;
     }
 
     halEph.numOfEphemeris = numEph;
+
+    if (ephRpt.validExtendedEphData && ephRpt.numOfExtendedEphemeris) {
+        halEph.numOfExtendedEphemeris = numEph;
+        halEph.validDataSourceSignal = ephRpt.validDataSourceSignal;
+        halEph.dataSourceSignal = ephRpt.dataSourceSignal;
+        halEph.validExtendedEphData = ephRpt.validExtendedEphData;
+    }
 }
 void GnssAdapter::convertNavicEphemeris(const NavicEphemerisResponse& ephRpt,
             NavicEphemerisResponse& halEph) {
@@ -5942,6 +5988,7 @@ void GnssAdapter::handleQesdkQwesStatusFromEHub(
             auto dlpQesdkInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_DLP_QESDK);
             auto qfeInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_QDR3);
             auto cdParserInFeatureMap = mFeatureMap.find(LOCATION_FEATURE_TYPE_CORR_DATA_PARSER);
+            auto wocsInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_WOCS);
 
             //QESDK feature status call back handling logic:
             //1, If LOCATION_QWES_FEATURE_TYPE_PPE is presented in feature map,
@@ -5975,7 +6022,14 @@ void GnssAdapter::handleQesdkQwesStatusFromEHub(
                     mAdapter.notifyPreciseLocation();
                 }
                 mAdapter.mQppeResp = true;
-            } else if (dlpQesdkInFeatureMap != mFeatureMap.end()) {
+            } else if (wocsInFeatureMap != mFeatureMap.end()) {
+                if (wocsInFeatureMap->second) {
+                    mAdapter.mPpFeatureStatusMask |= WOCS_FEATURE_ENABLED_BY_DEFAULT;
+                } else {
+                    mAdapter.mPpFeatureStatusMask &= (~WOCS_FEATURE_ENABLED_BY_DEFAULT);
+                }
+                mAdapter.notifyPreciseLocation();
+            }else if (dlpQesdkInFeatureMap != mFeatureMap.end()) {
                 if (dlpQesdkInFeatureMap->second) {
                     mAdapter.mPpFeatureStatusMask |= DLP_FEATURE_ENABLED_BY_QESDK;
                     //Send enable precise location data item to loclauncher to inform
@@ -8045,6 +8099,33 @@ void GnssAdapter::configPrecisePositioningCommand(
     sendMsg(new MsgConfigPrecisePositioning(*this, enable, appHash, featureId));
 }
 
+void GnssAdapter::setPreciseSessionConfig() {
+
+    struct MsgConfigPrecisePositioning : public LocMsg {
+        GnssAdapter& mAdapter;
+        bool mEnable;
+        PreciseType mPreciseType;
+
+        inline MsgConfigPrecisePositioning(GnssAdapter& adapter,
+                                           bool enable,
+                                           PreciseType preciseType) :
+            LocMsg(),
+            mAdapter(adapter),
+            mEnable(enable),
+            mPreciseType(preciseType) {}
+        inline virtual void proc() const {
+            LOC_LOGd("ConfigPrecisePositioning: enable: %d, preciseType: %d", mEnable,
+                    mPreciseType);
+            if (PRECISE_TYPE_UNKNOWN != mPreciseType) {
+                mAdapter.mLocApi->configPrecisePositioning(mPreciseType, mEnable);
+            }
+        }
+    };
+    LOC_LOGd("isInSession()=%d", isInSession());
+    sendMsg(new MsgConfigPrecisePositioning(*this, isInSession(), mPreciseType));
+}
+
+
 uint32_t GnssAdapter::configMerkleTreeCommand(const char * merkleTreeConfigBuffer, int bufLen) {
     // generated session id will be none-zero
     uint32_t sessionId = generateSessionId();
@@ -8249,6 +8330,40 @@ void GnssAdapter::setNtnConfigSignalMaskCommand(GnssSignalTypeMask gpsSignalType
     };
 
     sendMsg(new MsgSetNtnConfig(*this, *mLocApi, sessionId, gpsSignalTypeConfigMask));
+}
+
+void GnssAdapter::injectSuplCertCommand(int32_t suplCertId,
+        const std::vector<uint8_t>& suplCertData) {
+    // generated session id will be none-zero
+    uint32_t sessionId = generateSessionId();
+    LOC_LOGd("session id %u, suplCert id %u, suplCert length %zu",
+            sessionId, suplCertId, suplCertData.size());
+    struct MsgInjectSuplCert : public LocMsg {
+        GnssAdapter&        mAdapter;
+        LocApiBase&         mApi;
+        uint32_t            mSessionId;
+        uint32_t            mSuplCertId;
+        const std::vector<uint8_t> mSuplCertData;
+
+        inline MsgInjectSuplCert(GnssAdapter& adapter, LocApiBase& api,
+                uint32_t sessionId, uint32_t suplCertId, const std::vector<uint8_t>& suplCertData):
+                LocMsg(), mAdapter(adapter), mApi(api), mSessionId(sessionId),
+                mSuplCertId(suplCertId), mSuplCertData(std::move(suplCertData)) {}
+        inline ~MsgInjectSuplCert() {}
+        inline virtual void proc() const {
+            LocApiResponse* locApiResponse = new LocApiResponse(*mAdapter.getContext(),
+                    [&mAdapter = mAdapter, mSessionId = mSessionId] (LocationError err) mutable {
+                mAdapter.reportResponse(err, mSessionId);
+            });
+            if (!locApiResponse) {
+                LOC_LOGe("memory alloc failed");
+                mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
+            } else {
+                mApi.injectSuplCert(mSuplCertId, mSuplCertData, locApiResponse);
+            }
+        }
+    };
+    sendMsg(new MsgInjectSuplCert(*this, *mLocApi, sessionId, suplCertId, suplCertData));
 }
 
 void GnssAdapter::reportGnssConfigEvent(uint32_t sessionId, const GnssConfig& gnssConfig)
@@ -8661,10 +8776,9 @@ bool GnssAdapter::isStandAloneCDParserPELib() {
     // QDGNSS_3GPP_SOURCE_AVAIL = modem side can supply 3GPP correction data
     // QDGNSS_3GPP_EP_PARSER_AVAIL = QPPE lib can parse 3GPP SSR messages
     if (m3GppSourceMask & (QDGNSS_3GPP_SOURCE_AVAIL | QDGNSS_3GPP_EP_PARSER_AVAIL) &&
-            isMlpEnabled() && !isQppeEnabled()) {
+            isMlpEnabled()) {
         standAloneCDParserPELib = true;
     }
-
     if (standAloneCDParserPELib) {
         LOC_LOGd("m3GppSourceMask 0x%x, mPpFeatureStatusMask 0x%x, standAloneCDParserPELib %d",
                 m3GppSourceMask, mPpFeatureStatusMask, standAloneCDParserPELib);
@@ -8677,10 +8791,12 @@ bool GnssAdapter::isStandAloneCDParserPELib() {
 }
 
 bool GnssAdapter::isEngineServiceEnable() {
-    if (isPreciseEnabled()) {
-        return true;
-    } else {
+    if (PRECISE_TYPE_EDGNSS == mPreciseType) {
         return isStandAloneCDParserPELib();
+    } else if (PRECISE_TYPE_RTK == mPreciseType || PRECISE_TYPE_WOCS == mPreciseType) {
+        return isPreciseEnabled();
+    } else {
+        return false;
     }
 }
 
@@ -8860,14 +8976,16 @@ void GnssAdapter::handleDisablePPENtrip() {
 }
 
 void GnssAdapter::checkUpdateDgnssNtrip(bool isLocationValid) {
-    LOC_LOGd("isInSession %d mDgnssState 0x%x isLocationValid %d "
-             "isMlpEnabled %d mSystemPowerState %d",
-            isInSession(), mDgnssState, isLocationValid, isMlpEnabled(), mSystemPowerState);
+    LOC_LOGd("isInSession %d mDgnssState 0x%x isLocationValid %d isMlpEnabled %d "
+             "mSystemPowerState %d, isNtripSourceNeeded %d, mPreciseType %d, mCorrectionType %d",
+            isInSession(), mDgnssState, isLocationValid, isMlpEnabled(), mSystemPowerState,
+            isNtripSourceNeeded(), mPreciseType, mCorrectionType);
     //1. Enable edgnss-daemon when isInSession and isMlpEnabled.
     // isMlpEnabled is true when RTK or edgnss feature is enabled.
     //2. Modem sometimes send PVT very closely right after power is suspended
     // so need to check power is not in suspend or shutdown state
-    if (isInSession() && isMlpEnabled() &&
+    //3. Ntrip source is needed
+    if (isInSession() && isMlpEnabled() && isNtripSourceNeeded() &&
             (POWER_STATE_SUSPEND != mSystemPowerState) &&
             (POWER_STATE_DEEP_SLEEP_ENTRY != mSystemPowerState) &&
             (POWER_STATE_SHUTDOWN != mSystemPowerState)) {

@@ -81,7 +81,7 @@ public:
     inline virtual ~EngineHubProxyBase() {}
 
     // gnss session related functions
-    inline virtual bool gnssStartFix() {
+    inline virtual bool gnssStartFix(PreciseType preciseType) {
         return false;
     }
 
