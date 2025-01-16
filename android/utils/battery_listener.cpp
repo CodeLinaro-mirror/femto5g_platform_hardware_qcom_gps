@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -73,20 +73,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <android/binder_manager.h>
 #include <aidl/android/hardware/health/IHealth.h>
 #include <aidl/android/hardware/health/BnHealthInfoCallback.h>
-#include <android/hardware/health/2.1/IHealth.h>
-#include <android/hardware/health/2.1/IHealthInfoCallback.h>
-#include <hidl/HidlTransportSupport.h>
 #include <thread>
 #include <log_util.h>
 
-using android::hardware::interfacesEqual;
-using android::hardware::Return;
-using android::hardware::Void;
-using HidlBatteryStatus = android::hardware::health::V1_0::BatteryStatus;
-using HidlBatteryInfo = android::hardware::health::V2_1::HealthInfo;
-using HidlHealthInfoCallback = android::hardware::health::V2_1::IHealthInfoCallback;
-using HidlHealth = android::hardware::health::V2_1::IHealth;
-using android::hardware::health::V2_0::Result;
 
 using aidl::android::hardware::health::BatteryStatus;
 using aidl::android::hardware::health::HealthInfo;
@@ -104,8 +93,6 @@ typedef std::function<void(bool)> cb_fn_t;
 
 struct AidlBatteryListenerImpl;
 static std::shared_ptr<AidlBatteryListenerImpl> batteryListenerAidl;
-struct HidlBatteryListenerImpl;
-static sp<HidlBatteryListenerImpl> batteryListenerHidl;
 
 struct AidlBatteryListenerImpl : public aidl::android::hardware::health::BnHealthInfoCallback {
     AidlBatteryListenerImpl(cb_fn_t cb);
@@ -273,222 +260,23 @@ ndk::ScopedAStatus AidlBatteryListenerImpl::healthInfoChanged(const HealthInfo& 
     return ndk::ScopedAStatus::ok();
 }
 
-
-struct HidlBatteryListenerImpl : public hardware::health::V2_1::IHealthInfoCallback,
-                             public hardware::hidl_death_recipient {
-    HidlBatteryListenerImpl(cb_fn_t cb);
-    virtual ~HidlBatteryListenerImpl ();
-    virtual hardware::Return<void> healthInfoChanged(
-            const hardware::health::V2_0::HealthInfo& info);
-    virtual hardware::Return<void> healthInfoChanged_2_1(
-            const hardware::health::V2_1::HealthInfo& info);
-    virtual void serviceDied(uint64_t cookie,
-                             const wp<hidl::base::V1_0::IBase>& who);
-    bool isCharging() {
-        std::lock_guard<std::mutex> _l(mLock);
-        return statusToBool(mStatus);
-    }
-  private:
-    sp<hardware::health::V2_1::IHealth> mHealth;
-    status_t init();
-    HidlBatteryStatus mStatus;
-    cb_fn_t mCb;
-    std::mutex mLock;
-    std::condition_variable mCond;
-    std::unique_ptr<std::thread> mThread;
-    bool mDone;
-    bool statusToBool(const HidlBatteryStatus &s) const {
-        return (s == HidlBatteryStatus::CHARGING) ||
-               (s ==  HidlBatteryStatus::FULL);
-    }
-};
-
-status_t HidlBatteryListenerImpl::init()
-{
-    int tries = 0;
-
-    if (mHealth != NULL)
-        return INVALID_OPERATION;
-
-    do {
-        mHealth = HidlHealth::getService();
-        if (mHealth != NULL)
-            break;
-        usleep(GET_HEALTH_SVC_WAIT_TIME_MS * 1000);
-        tries++;
-    } while (tries < GET_HEALTH_SVC_RETRY_CNT);
-
-    if (mHealth == NULL) {
-        LOC_LOGe("no health service found, retries %d", tries);
-        return NO_INIT;
-    } else {
-        LOC_LOGi("Get health service in %d tries", tries);
-    }
-    mStatus = HidlBatteryStatus::UNKNOWN;
-    auto ret = mHealth->getChargeStatus([&](Result r, HidlBatteryStatus status) {
-        if (r != Result::SUCCESS) {
-            LOC_LOGe("batterylistener: cannot get battery status");
-            return;
-        }
-        mStatus = status;
-    });
-    if (!ret.isOk()) {
-        LOC_LOGe("batterylistener: get charge status transaction error");
-    }
-    if (mStatus == HidlBatteryStatus::UNKNOWN) {
-        LOC_LOGw("batterylistener: init: invalid battery status");
-    }
-    mDone = false;
-    mThread = std::make_unique<std::thread>([this]() {
-            std::unique_lock<std::mutex> lock(mLock);
-            HidlBatteryStatus local_status = mStatus;
-            while (!mDone) {
-                if (local_status == mStatus) {
-                    mCond.wait(lock);
-                    continue;
-                }
-                local_status = mStatus;
-                switch (local_status) {
-                    // NOT_CHARGING is a special event that indicates, a battery is connected,
-                    // but not charging. This is seen for approx a second
-                    // after charger is plugged in. A charging event is eventually received.
-                    // We must try to avoid an unnecessary cb to HAL
-                    // only to call it again shortly.
-                    // An option to deal with this transient event would be to ignore this.
-                    // Or process this event with a slight delay (i.e cancel this event
-                    // if a different event comes in within a timeout
-                    case HidlBatteryStatus::NOT_CHARGING : {
-                        auto mStatusnot_ncharging =
-                                [this, local_status]() { return mStatus != local_status; };
-                        if (mCond.wait_for(lock, 3s, mStatusnot_ncharging)) // i.e event changed
-                            break;
-                        [[clang::fallthrough]]; //explicit fall-through between switch labels
-                    }
-                    default:
-                        bool c = statusToBool(local_status);
-                        LOC_LOGi("healthInfo cb thread: cb %s", c ? "CHARGING" : "NOT CHARGING");
-                        lock.unlock();
-                        mCb(c);
-                        lock.lock();
-                        break;
-                }
-            }
-    });
-    auto reg = mHealth->registerCallback(this);
-    if (!reg.isOk()) {
-        LOC_LOGe("Transaction error in registeringCb to HealthHAL death: %s",
-                reg.description().c_str());
-    }
-
-    auto linked = mHealth->linkToDeath(this, 0 /* cookie */);
-    if (!linked.isOk() || linked == false) {
-        LOC_LOGe("Transaction error in linking to HealthHAL death: %s",
-                linked.description().c_str());
-    }
-    return NO_ERROR;
-}
-
-HidlBatteryListenerImpl::HidlBatteryListenerImpl(cb_fn_t cb) :
-        mCb(cb)
-{
-    init();
-}
-
-
-HidlBatteryListenerImpl::~HidlBatteryListenerImpl()
-{
-    {
-        std::lock_guard<std::mutex> _l(mLock);
-        if (mHealth != NULL) {
-            mHealth->unregisterCallback(this);
-            auto r = mHealth->unlinkToDeath(this);
-            if (!r.isOk() || r == false) {
-                LOC_LOGe("Transaction error in unregister to HealthHAL death: %s",
-                        r.description().c_str());
-            }
-        }
-    }
-    mDone = true;
-    if (NULL !=  mThread) {
-        mThread->join();
-    }
-}
-
-void HidlBatteryListenerImpl::serviceDied(uint64_t cookie __unused,
-                                     const wp<hidl::base::V1_0::IBase>& who)
-{
-    {
-        std::lock_guard<std::mutex> _l(mLock);
-        if (mHealth == NULL || !interfacesEqual(mHealth, who.promote())) {
-            LOC_LOGe("health not initialized or unknown interface died");
-            return;
-        }
-        LOC_LOGi("health service died, reinit");
-        mDone = true;
-    }
-    mHealth = NULL;
-    mCond.notify_one();
-    if (NULL !=  mThread) {
-        mThread->join();
-    }
-    std::lock_guard<std::mutex> _l(mLock);
-    init();
-}
-
-// this callback seems to be a SYNC callback and so
-// waits for return before next event is issued.
-// therefore we need not have a queue to process
-// NOT_CHARGING and CHARGING concurrencies.
-// Replace single var by a list if this assumption is broken
-Return<void> HidlBatteryListenerImpl::healthInfoChanged(
-        const hardware::health::V2_0::HealthInfo& info) {
-    std::unique_lock<std::mutex> lock(mLock);
-    if (info.legacy.batteryStatus != mStatus) {
-        LOC_LOGd("batteryStatus changed from %d to %d", (int)mStatus,
-                (int)info.legacy.batteryStatus);
-        mStatus = info.legacy.batteryStatus;
-        mCond.notify_one();
-    }
-    return Void();
-}
-
-Return<void> HidlBatteryListenerImpl::healthInfoChanged_2_1(
-        const hardware::health::V2_1::HealthInfo& info) {
-    healthInfoChanged(info.legacy);
-    return Void();
-}
-
 bool batteryPropertiesListenerIsCharging() {
-    if (batteryListenerAidl != nullptr) {
-        return batteryListenerAidl->isCharging();
-    } else {
-        return batteryListenerHidl->isCharging();
-    }
+    return batteryListenerAidl->isCharging();
 }
 
 status_t batteryPropertiesListenerInit(cb_fn_t cb) {
     LOC_LOGd("batteryPropertiesListenerInit entry");
     auto service_name = std::string() + IHealth::descriptor + "/default";
-    if (AServiceManager_isDeclared(service_name.c_str())) {
-        batteryListenerAidl = ndk::SharedRefBase::make<AidlBatteryListenerImpl>(cb);
-        status_t ret = batteryListenerAidl->init();
-        if (NO_ERROR == ret) {
-            bool isCharging = batteryPropertiesListenerIsCharging();
-            LOC_LOGd("charging status: %s charging", isCharging ? "" : "not");
-            if (isCharging) {
-                cb(isCharging);
-            }
-        }
-        return ret;
-    } else {
-        batteryListenerHidl = new HidlBatteryListenerImpl(cb);
+    batteryListenerAidl = ndk::SharedRefBase::make<AidlBatteryListenerImpl>(cb);
+    status_t ret = batteryListenerAidl->init();
+    if (NO_ERROR == ret) {
         bool isCharging = batteryPropertiesListenerIsCharging();
         LOC_LOGd("charging status: %s charging", isCharging ? "" : "not");
         if (isCharging) {
             cb(isCharging);
         }
-        return NO_ERROR;
     }
+    return ret;
 }
 } // namespace android
 

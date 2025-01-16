@@ -55,7 +55,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <unistd.h>
 #include <aidl/android/hardware/gnss/IGnss.h>
-#include <hidl/LegacySupport.h>
 #include "loc_cfg.h"
 #include "loc_misc_utils.h"
 #include <android/binder_manager.h>
@@ -64,9 +63,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <pthread.h>
 #include <log_util.h>
 
-extern "C" {
-#include "vndfwk-detect.h"
-}
 #ifdef LOG_TAG
 #undef LOG_TAG
 #endif
@@ -76,9 +72,6 @@ extern "C" {
 #define DEFAULT_HW_BINDER_MEM_SIZE 65536
 #endif
 
-using android::hardware::configureRpcThreadpool;
-using android::hardware::registerPassthroughServiceImplementation;
-using android::hardware::joinRpcThreadpool;
 using ::android::sp;
 
 typedef int vendorEnhancedServiceMain(int /* argc */, char* /* argv */ []);
@@ -156,8 +149,6 @@ int main() {
             ALOGE("Error while register IGnss AIDL service, status: %d", status);
         }
     }
-
-    int vendorInfo = getVendorEnhancedInfo();
 
     // Loc AIDL service
 #define VENDOR_AIDL_LIB "vendor.qti.gnss-service.so"
