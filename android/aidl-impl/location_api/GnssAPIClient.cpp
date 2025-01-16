@@ -168,11 +168,7 @@ GnssAPIClient::GnssAPIClient(const shared_ptr<IGnssCallback>& gpsCb) :
     mLocationCapabilitiesCached(false),
     mSvStatusEnabled(false),
     mNmeaEnabled(false),
-<<<<<<< HEAD   (cd47e5 Merge "gps: disable GPS functionality for Aspen")
-=======
-    mSignalTypeCbExpected(false),
     mIsNlpActive(false),
->>>>>>> CHANGE (4ef27a KaiOS Location AIDL API implementation)
     mGnssCbIface(gpsCb) {
     LOC_LOGd("]: (%p)", &gpsCb);
     initLocationOptions();

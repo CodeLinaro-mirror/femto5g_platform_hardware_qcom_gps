@@ -142,11 +142,7 @@ private:
     bool mLocationCapabilitiesCached;
     bool mSvStatusEnabled;
     bool mNmeaEnabled;
-<<<<<<< HEAD   (cd47e5 Merge "gps: disable GPS functionality for Aspen")
-=======
-    bool mSignalTypeCbExpected;
     bool mIsNlpActive;
->>>>>>> CHANGE (4ef27a KaiOS Location AIDL API implementation)
     const shared_ptr<IGnssCallback>& mGnssCbIface;
 };
 
