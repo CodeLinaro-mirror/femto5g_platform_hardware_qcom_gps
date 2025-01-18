@@ -26,8 +26,6 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-<<<<<<< HEAD   (264042 Remove race condition while mSupportNfwControl read)
-=======
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
@@ -35,7 +33,6 @@ Copyright (c) 2022, 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
->>>>>>> CHANGE (f20d3f Avoid access of deprecated LocUnorderedSetMap entry)
 #ifndef __LOC_UNORDERDED_SETMAP_H__
 #define __LOC_UNORDERDED_SETMAP_H__
 
