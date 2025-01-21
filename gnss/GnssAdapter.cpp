@@ -601,8 +601,6 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
             if (gptpTimeValid) {
                 out.location.flags |= LOCATION_HAS_GPTP_TIME_BIT;
                 out.location.elapsedgPTPTime = elapsedgPTPTimeNsec;
-                out.location.flags |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
-                out.location.elapsedgPTPTimeUnc = 0;
             }
         }
 #ifndef FEATURE_AUTOMOTIVE
@@ -3294,6 +3292,9 @@ GnssAdapter::handleEngineUpEvent()
             }
 
             mAdapter.gnssSecondaryBandConfigUpdate();
+            //Reset data connection when modem SSR
+            mAdapter.mAgpsManager.handleModemSSR();
+
             // restart sessions only when Lock state is enabled and in power state resume
             mAdapter.initGnssPowerStatistics();
             if (ENGINE_LOCK_STATE_DISABLED != mApi.getEngineLockState()) {
