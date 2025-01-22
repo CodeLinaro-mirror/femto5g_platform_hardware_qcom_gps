@@ -590,12 +590,6 @@ void LocApiBase::reportGnssConfig(uint32_t sessionId, const GnssConfig& gnssConf
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportGnssConfigEvent(sessionId, gnssConfig));
 }
 
-void LocApiBase::reportLatencyInfo(GnssLatencyInfo& gnssLatencyInfo)
-{
-    // loop through adapters, and deliver to the first handling adapter.
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportLatencyInfoEvent(gnssLatencyInfo));
-}
-
 void LocApiBase::reportEngineLockStatus(EngineLockState engineLockState) {
     // loop through adapters, and deliver to the All handling adapter.
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->handleEngineLockStatusEvent(engineLockState));
