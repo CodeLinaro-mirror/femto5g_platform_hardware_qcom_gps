@@ -193,6 +193,13 @@ void BatchingAPIClient::onBatchingCb(size_t count, Location* location,
             for (size_t i = 0; i < count; i++) {
                 mBatchedLocationInCache.push_back(location[i]);
             }
+            /* When Flush command is received after stop request as
+             * back-to-back with count zero. Then treat that request
+             * as Dummy and allow the trigger the report.
+             */
+            if(0 == count) {
+               processReport = true;
+            }
             break;
         case STARTED:
         case STOPPED: // flush() always trigger report, even on a stopped session
