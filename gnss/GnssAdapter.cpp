@@ -128,26 +128,6 @@ typedef const CdfwInterface* (*getCdfwInterface)();
 
 typedef void getPdnTypeFromWds(const std::string& apnName, std::function<void(int)> pdnCb);
 
-GnssReportLoggerUtil::GnssReportLoggerUtil() : mLogLatency(nullptr) {
-    LOC_LOGi("Loc_DiagIface_enabled");
-    const char* libname = "liblocdiagiface.so";
-    void* libHandle = nullptr;
-    mLogLatency = (LogGnssLatency)dlGetSymFromLib(libHandle, libname, "LogGnssLatency");
-    if (nullptr == mLogLatency) {
-        LOC_LOGw("DiagIface mLogLatency is null");
-    }
-}
-
-inline bool GnssReportLoggerUtil::isLogEnabled() {
-    return (mLogLatency != nullptr);
-}
-
-inline void GnssReportLoggerUtil::log(const GnssLatencyInfo& gnssLatencyMeasInfo) {
-    if (mLogLatency != nullptr) {
-        mLogLatency(gnssLatencyMeasInfo);
-    }
-}
-
 class LocNvParams
 {
 public:
@@ -3089,22 +3069,10 @@ GnssAdapter::updateClientsEventMask()
         mask |= LOC_API_ADAPTER_BIT_REQUEST_WIFI;
     }
 
-    // need to register for leap second info
-    // for proper nmea generation
-    mask |= LOC_API_ADAPTER_BIT_LOC_SYSTEM_INFO;
-
     // always register for NI NOTIFY VERIFY to handle internally in HAL
     mask |= LOC_API_ADAPTER_BIT_NI_NOTIFY_VERIFY_REQUEST;
-
     // register for engine lock state
     mask |= LOC_API_ADAPTER_BIT_ENGINE_LOCK_STATE_DATA_REPORT;
-
-    // Enable the latency report
-    if (mask & LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT) {
-        if (mLogger.isLogEnabled()) {
-            mask |= LOC_API_ADAPTER_BIT_LATENCY_INFORMATION;
-        }
-    }
 
     updateEvtMask(mask, LOC_REGISTRATION_MASK_SET);
 }
@@ -4602,57 +4570,6 @@ void GnssAdapter::notifyPreciseLocation() {
     setTribandState();
 }
 
-void
-GnssAdapter::logLatencyInfo()
-{
-    if (0 == mGnssLatencyInfoQueue.size()) {
-        return;
-    }
-    mGnssLatencyInfoQueue.front().hlosQtimer5 = getQTimerTickCount();
-    if (0 == mGnssLatencyInfoQueue.front().hlosQtimer3) {
-        /* if SPE from engine hub is not reported then hlosQtimer3 = 0, set it
-        equal to hlosQtimer2 to make sense */
-        mGnssLatencyInfoQueue.front().hlosQtimer3 = mGnssLatencyInfoQueue.front().hlosQtimer2;
-    }
-    if (0 == mGnssLatencyInfoQueue.front().hlosQtimer4) {
-        /* if PPE from engine hub is not reported then hlosQtimer4 = 0, set it
-        equal to hlosQtimer3 to make sense */
-        mGnssLatencyInfoQueue.front().hlosQtimer4 = mGnssLatencyInfoQueue.front().hlosQtimer3;
-    }
-    if (mGnssLatencyInfoQueue.front().hlosQtimer4 < mGnssLatencyInfoQueue.front().hlosQtimer3) {
-        /* hlosQtimer3 is timestamped when SPE from engine hub is reported,
-        and hlosQtimer4 is timestamped when PPE from engine hub is reported.
-        The order is random though, hence making sure the timestamps are sorted */
-        std::swap(mGnssLatencyInfoQueue.front().hlosQtimer3,
-                  mGnssLatencyInfoQueue.front().hlosQtimer4);
-    }
-    LOC_LOGa("meQtimer1=%" PRIi64 " "
-             "meQtimer2=%" PRIi64 " "
-             "meQtimer3=%" PRIi64 " "
-             "peQtimer1=%" PRIi64 " "
-             "peQtimer2=%" PRIi64 " "
-             "peQtimer3=%" PRIi64 " "
-             "smQtimer1=%" PRIi64 " "
-             "smQtimer2=%" PRIi64 " "
-             "smQtimer3=%" PRIi64 " "
-             "locMwQtimer=%" PRIi64 " "
-             "hlosQtimer1=%" PRIi64 " "
-             "hlosQtimer2=%" PRIi64 " "
-             "hlosQtimer3=%" PRIi64 " "
-             "hlosQtimer4=%" PRIi64 " "
-             "hlosQtimer5=%" PRIi64 " ",
-             mGnssLatencyInfoQueue.front().meQtimer1, mGnssLatencyInfoQueue.front().meQtimer2,
-             mGnssLatencyInfoQueue.front().meQtimer3, mGnssLatencyInfoQueue.front().peQtimer1,
-             mGnssLatencyInfoQueue.front().peQtimer2, mGnssLatencyInfoQueue.front().peQtimer3,
-             mGnssLatencyInfoQueue.front().smQtimer1, mGnssLatencyInfoQueue.front().smQtimer2,
-             mGnssLatencyInfoQueue.front().smQtimer3, mGnssLatencyInfoQueue.front().locMwQtimer,
-             mGnssLatencyInfoQueue.front().hlosQtimer1, mGnssLatencyInfoQueue.front().hlosQtimer2,
-             mGnssLatencyInfoQueue.front().hlosQtimer3, mGnssLatencyInfoQueue.front().hlosQtimer4,
-             mGnssLatencyInfoQueue.front().hlosQtimer5);
-    mLogger.log(mGnssLatencyInfoQueue.front());
-    mGnssLatencyInfoQueue.pop();
-}
-
 LocReqEngineTypeMask convertEngTypeToEngMask(const LocOutputEngineType &engType) {
     LocReqEngineTypeMask engMask = LOC_REQ_ENGINE_FUSED_BIT;
     switch (engType) {
@@ -4773,7 +4690,6 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
         convertLocationInfo(locationInfo, locationExtended, status);
         convertLocation(locationInfo.location, ulpLocation, locationExtended, status);
         fillElapsedRealTime(locationExtended, locationInfo);
-        logLatencyInfo();
 
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
             if (needReportForClient(it->first, status)) {
@@ -4849,22 +4765,6 @@ void GnssAdapter::reportEngDebugDataInfoEvent(GnssEngineDebugDataInfo& gnssEngin
     sendMsg(new MsgReportEngDebugDataInfo(*this, gnssEngineDebugDataInfo));
 }
 
-void
-GnssAdapter::reportLatencyInfoEvent(const GnssLatencyInfo& gnssLatencyInfo) {
-    struct MsgReportLatencyInfo : public LocMsg {
-        GnssAdapter& mAdapter;
-        GnssLatencyInfo mGnssLatencyInfo;
-        inline MsgReportLatencyInfo(GnssAdapter& adapter,
-            const GnssLatencyInfo& gnssLatencyInfo) :
-            mGnssLatencyInfo(gnssLatencyInfo),
-            mAdapter(adapter) {}
-        inline virtual void proc() const {
-            mAdapter.mGnssLatencyInfoQueue.push(mGnssLatencyInfo);
-        }
-    };
-    sendMsg(new MsgReportLatencyInfo(*this, gnssLatencyInfo));
-}
-
 bool
 GnssAdapter::reportSpeAsEnginePosition(const UlpLocation& ulpLocation,
                                    const GpsLocationExtended& locationExtended,
@@ -4920,27 +4820,15 @@ GnssAdapter::reportEnginePositions(unsigned int count,
 #endif
 
        }
-
-        const EngineLocationInfo* engLocation = locationArr;
-
-        if (0 != mGnssLatencyInfoQueue.size()) {
-            if ((GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE & engLocation->locationExtended.flags) &&
-                (LOC_OUTPUT_ENGINE_SPE == engLocation->locationExtended.locOutputEngType)) {
-                mGnssLatencyInfoQueue.front().hlosQtimer3 = getQTimerTickCount();
-            }
-            if ((GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE & engLocation->locationExtended.flags) &&
-                (LOC_OUTPUT_ENGINE_PPE == engLocation->locationExtended.locOutputEngType)) {
-                mGnssLatencyInfoQueue.front().hlosQtimer4 = getQTimerTickCount();
-            }
-        }
-        if (needReportEnginePositions) {
-            for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
-                if ((nullptr != it->second.engineLocationsInfoCb) &&
-                    (needReportForClient(it->first, engLocation->sessionStatus))) {
-                    it->second.engineLocationsInfoCb(count, locationInfo);
-                }
-            }
-        }
+       const EngineLocationInfo* engLocation = locationArr;
+       if (needReportEnginePositions) {
+           for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
+               if ((nullptr != it->second.engineLocationsInfoCb) &&
+                       (needReportForClient(it->first, engLocation->sessionStatus))) {
+                   it->second.engineLocationsInfoCb(count, locationInfo);
+               }
+           }
+       }
     }
     return isPrecisePositioningEnabled;
 }

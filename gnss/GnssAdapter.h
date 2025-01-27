@@ -78,7 +78,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 #include <functional>
 #include <loc_misc_utils.h>
-#include <queue>
 #include <NativeAgpsHandler.h>
 #include <unordered_map>
 #include <base_util/nvparam_mgr.h>
@@ -250,18 +249,6 @@ typedef uint16_t  DGnssStateBitMask;
 #define DGNSS_STATE_NO_NMEA_PENDING           0X02
 #define DGNSS_STATE_NTRIP_SESSION_STARTED     0X04
 
-class GnssReportLoggerUtil {
-public:
-    typedef void (*LogGnssLatency)(const GnssLatencyInfo& gnssLatencyMeasInfo);
-
-    GnssReportLoggerUtil();
-    bool isLogEnabled();
-    void log(const GnssLatencyInfo& gnssLatencyMeasInfo);
-
-private:
-    LogGnssLatency mLogLatency;
-};
-
 class GnssAdapter : public LocAdapterBase {
 
     LocGlinkBase* mLocGlinkProxy;
@@ -367,8 +354,6 @@ class GnssAdapter : public LocAdapterBase {
     /* === Misc ===================================================================== */
     BlockCPIInfo mBlockCPIInfo;
     bool mPowerOn;
-    std::queue<GnssLatencyInfo> mGnssLatencyInfoQueue;
-    GnssReportLoggerUtil mLogger;
     bool mEngHubLoadSuccessful;
     EngineServiceInfo mEngServiceInfo;
     RealtimeEstimator mPositionElapsedRealTimeCal;
@@ -460,7 +445,6 @@ protected:
     virtual void updateClientsEventMask();
     virtual void stopClientSessions(LocationAPI* client, bool eraseSession = true);
     inline void setNmeaReportRateConfig();
-    void logLatencyInfo();
     halResponseTimer mResponseTimer;
 
 public:
@@ -721,7 +705,6 @@ public:
     virtual bool reportGnssAdditionalSystemInfoEvent(
             GnssAdditionalSystemInfo& additionalSystemInfo);
     virtual void reportNfwNotificationEvent(GnssNfwNotification& notification);
-    virtual void reportLatencyInfoEvent(const GnssLatencyInfo& gnssLatencyInfo);
     virtual void reportEngDebugDataInfoEvent(GnssEngineDebugDataInfo&
             gnssEngineDebugDataInfo) override;
     virtual bool reportQwesCapabilities

@@ -240,7 +240,6 @@ public:
     void reportGnssAdditionalSystemInfo(GnssAdditionalSystemInfo& additionalSystemInfo);
     void sendNfwNotification(GnssNfwNotification& notification);
     void reportGnssConfig(uint32_t sessionId, const GnssConfig& gnssConfig);
-    void reportLatencyInfo(GnssLatencyInfo& gnssLatencyInfo);
     void reportEngineLockStatus(EngineLockState engineLockState);
     void reportEngDebugDataInfo(GnssEngineDebugDataInfo& gnssEngineDebugDataInfo);
     void reportQwesCapabilities
