@@ -30,7 +30,7 @@
  /*
  Changes from Qualcomm Innovation Center are provided under the following license:
 
- Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) 2022-2024, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted (subject to the limitations in the
@@ -82,6 +82,9 @@ using std::string;
 using namespace loc_util;
 
 namespace loc_core {
+
+#define ATL_OPEN_DEFAULT_TIMEOUT_MSEC   15000
+#define ATL_CLOSE_DEFAULT_TIMEOUT_MSEC   5000
 
 class ContextBase;
 struct LocApiResponse;
@@ -220,8 +223,9 @@ public:
     void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
     void requestTime();
     void requestATL(int connHandle, LocAGpsType agps_type,
-                    LocApnTypeMask apn_type_mask, SubId sub_id=DEFAULT_SUB);
-    void releaseATL(int connHandle);
+                    LocApnTypeMask apn_type_mask, SubId sub_id=DEFAULT_SUB,
+                    uint32_t timeout=ATL_OPEN_DEFAULT_TIMEOUT_MSEC);
+    void releaseATL(int connHandle, uint32_t timeout=ATL_CLOSE_DEFAULT_TIMEOUT_MSEC);
     void requestNiNotify(GnssNiNotification &notify, const void* data,
                          const LocInEmergency emergencyState);
     void reportGnssMeasurements(GnssMeasurements& gnssMeasurements);
@@ -443,7 +447,8 @@ public:
     bool fillAdditionalTimestamps(const GpsLocationExtended& locationExtended,
                                       int64_t &elapsedTime, float & elpasedTimeUnc,
                                       uint64_t &gptpTime, bool &gPTPValidity);
-    void saveGpsTimeAndQtimerPairInPvtReport(const GpsLocationExtended& locationExtended);
+    void saveGpsTimeAndQtimerPairInPvtReport(const GpsLocationExtended& locationExtended,
+            enum loc_sess_status status);
     void saveGpsTimeAndQtimerPairInMeasReport(const GnssSvMeasurementSet& svMeasurementSet);
     static bool getCurrentTime(struct timespec& currentTime, int64_t& sinceBootTimeNanos);
 };

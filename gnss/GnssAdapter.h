@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -328,6 +328,9 @@ class GnssAdapter : public LocAdapterBase {
     void reportDGnssDataUsable(const GnssSvMeasurementSet &svMeasurementSet);
     void updateModme3GppSourceStatus(QDgnss3GppSourceBitMask modem3GppSourceMask);
 
+    /* ==== QWES Feature Status ============================================================ */
+    bool mRlFeatureQwesEnabled;
+
     /* ==== ODCPI ========================================================================== */
     typedef uint8_t OdcpiStateMask;
     OdcpiStateMask mOdcpiStateMask;
@@ -370,13 +373,6 @@ class GnssAdapter : public LocAdapterBase {
     bool mEngHubLoadSuccessful;
     EngineServiceInfo mEngServiceInfo;
     RealtimeEstimator mPositionElapsedRealTimeCal;
-    typedef enum {
-        HMAC_CONFIG_UNKNOWN = 0,
-        HMAC_CONFIG_DISABLED,
-        HMAC_CONFIG_ENABLED,
-        HMAC_CONFIG_TEST_MODE,
-    } HmacConfigType;
-    HmacConfigType mHmacConfig;
     NvParamMgr*   mNvParamMgr;
 
     /* === NativeAgpsHandler ======================================================== */
@@ -456,6 +452,7 @@ class GnssAdapter : public LocAdapterBase {
     /*==== WakeLock acquire/release based on TBF ==================================*/
     bool mIsWakeLockActive;
     uint32_t mWakeLockEnableTbfThreshold;
+    void acquireWakeLockBasedOnTBF(uint32_t tbfInMs);
 
 protected:
 
@@ -532,7 +529,9 @@ public:
     void gnssGetSecondaryBandConfig(uint32_t sessionId);
     void resetSvConfig(uint32_t sessionId);
     void configLeverArm(uint32_t sessionId, const LeverArmConfigInfo& configInfo);
-    void configRobustLocation(uint32_t sessionId, bool enable, bool enableForE911);
+    void initRobustLocationConfig(); // Initial RL Config
+    void configRobustLocation(bool enable, bool enableForE911); // Command based config
+    void configRobustLocation(); // Session based config
     void configMinGpsWeek(uint32_t sessionId, uint16_t minGpsWeek);
     void injectMmfData(uint32_t sessionId, const GnssMapMatchedData& mapData);
     /* ==== NI ============================================================================= */
@@ -652,6 +651,7 @@ public:
     void setAfwControlId(uint32_t id) { mAfwControlId = id; }
     uint32_t getAfwControlId() { return mAfwControlId; }
     virtual bool isInSession() { return !mTimeBasedTrackingSessions.empty(); }
+    uint32_t getFgTrackingSessionCount();
     void initDefaultAgps();
     bool initEngHubProxy();
     inline bool isPreciseEnabled(PpFeatureStatusMask bits = DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
@@ -712,9 +712,8 @@ public:
     virtual void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
     virtual void reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask);
     virtual bool requestATL(int connHandle, LocAGpsType agps_type,
-                            LocApnTypeMask apn_type_mask,
-                            SubId sub_id=DEFAULT_SUB);
-    virtual bool releaseATL(int connHandle);
+                            LocApnTypeMask apn_type_mask, SubId sub_id, uint32_t timeout);
+    virtual bool releaseATL(int connHandle, uint32_t timeout);
     virtual bool requestOdcpiEvent(OdcpiRequestInfo& request);
     virtual bool reportDeleteAidingDataEvent(GnssAidingData& aidingData);
     virtual bool reportKlobucharIonoModelEvent(GnssKlobucharIonoModel& ionoModel);

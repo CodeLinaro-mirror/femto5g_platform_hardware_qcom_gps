@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -501,17 +501,18 @@ void LocApiBase::requestTime() {
 }
 
 void LocApiBase::requestATL(int connHandle, LocAGpsType agps_type,
-                            LocApnTypeMask apn_type_mask, SubId sub_id)
+                            LocApnTypeMask apn_type_mask, SubId sub_id,
+                            uint32_t timeout)
 {
     // loop through adapters, and deliver to the first handling adapter.
     TO_1ST_HANDLING_LOCADAPTERS(
-            mLocAdapters[i]->requestATL(connHandle, agps_type, apn_type_mask, sub_id));
+            mLocAdapters[i]->requestATL(connHandle, agps_type, apn_type_mask, sub_id, timeout));
 }
 
-void LocApiBase::releaseATL(int connHandle)
+void LocApiBase::releaseATL(int connHandle, uint32_t timeout)
 {
     // loop through adapters, and deliver to the first handling adapter.
-    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->releaseATL(connHandle));
+    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->releaseATL(connHandle, timeout));
 }
 
 void LocApiBase::requestNiNotify(GnssNiNotification &notify, const void* data,
@@ -1051,11 +1052,13 @@ int64_t RealtimeEstimator::getElapsedRealtimeQtimer(int64_t qtimerTicksAtOrigin)
 }
 
 void RealtimeEstimator::saveGpsTimeAndQtimerPairInPvtReport(
-        const GpsLocationExtended& locationExtended) {
+        const GpsLocationExtended& locationExtended,
+        enum loc_sess_status status) {
 
-    // Use GPS timestamp and qtimer tick for 1Hz PVT report for association
+    // Use GPS timestamp and qtimer tick for 1Hz PVT report or Final fixes for association
     if (locationExtended.isReportTimeAccurate() &&
-            (locationExtended.gnssSystemTime.u.gpsSystemTime.systemMsec % 1000 == 0)) {
+            ((locationExtended.gnssSystemTime.u.gpsSystemTime.systemMsec % 1000 == 0) ||
+             (LOC_SESS_SUCCESS == status))) {
         LOC_LOGv("save time association from PVT report with gps time %u %u, "
                  "qtimer %" PRIi64 " %f ",
                  locationExtended.gnssSystemTime.u.gpsSystemTime.systemWeek,

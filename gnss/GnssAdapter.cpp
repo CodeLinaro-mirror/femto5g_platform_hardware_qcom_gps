@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -93,7 +93,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define RAD2DEG    (180.0 / M_PI)
 #define DEG2RAD    (M_PI / 180.0)
 #define PROCESS_NAME_ENGINE_SERVICE "engine-service"
-#define PROCESS_NAME_SAP_MAP        "hmacdaemon"
 #define MIN_TRACKING_INTERVAL (MIN_GNSS_TRACKING_INTERVAL) // 100 msec
 #define NHZ_ENABLED_MIN_TRACKING_INTERVAL (100) // 100 msec
 #define NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL (1000) // 1 sec
@@ -203,7 +202,7 @@ GnssAdapter::GnssAdapter() :
     mGnssSeconaryBandConfig(),
     mLocConfigInfo{},
     mNiData(),
-    mAgpsManager(),
+    mAgpsManager(mMsgTask),
     mQDgnssListenerHDL(nullptr),
     mCdfwInterface(nullptr),
     mDGnssNeedReport(false),
@@ -239,7 +238,6 @@ GnssAdapter::GnssAdapter() :
     mPowerElapsedRealTimeCal(30000000),
     mPositionElapsedRealTimeCal(30000000),
     mAddressRequestCb(nullptr),
-    mHmacConfig(HMAC_CONFIG_UNKNOWN),
     mGnssCapabNotification{},
     mNvParamMgr(NvParamMgr::getInstance()),
     mAppHash(""),
@@ -249,6 +247,7 @@ GnssAdapter::GnssAdapter() :
 #else
     mNmeaReqEngTypeMask(LOC_REQ_ENGINE_FUSED_BIT),
 #endif
+    mRlFeatureQwesEnabled(false),
     mResponseTimer(this, (LocationError)0, (uint32_t)0),
     mIsNtnStatusValid(false),
     mNtnSignalTypeConfigMask(GNSS_SIGNAL_GPS_L1CA|GNSS_SIGNAL_GPS_L5),
@@ -1367,23 +1366,6 @@ GnssAdapter::setConfig()
         }
         mLocApi->setPositionAssistedClockEstimatorMode(
                 mLocConfigInfo.paceConfigInfo.enable);
-
-        if (mLocConfigInfo.robustLocationConfigInfo.isValid == false) {
-            mLocConfigInfo.robustLocationConfigInfo.isValid = true;
-            // robust location to be enabled on bootup for auto targets
-#ifdef FEATURE_AUTOMOTIVE
-            mLocConfigInfo.robustLocationConfigInfo.enable = true;
-            mLocConfigInfo.robustLocationConfigInfo.enableFor911 = true;
-#else
-            // robust location to be disabled on bootup for non-auto targets
-            mLocConfigInfo.robustLocationConfigInfo.enable = false;
-            mLocConfigInfo.robustLocationConfigInfo.enableFor911 = false;
-#endif
-        }
-        mLocApi->configRobustLocation(
-                mLocConfigInfo.robustLocationConfigInfo.enable,
-                mLocConfigInfo.robustLocationConfigInfo.enableFor911,
-                nullptr, true);
 
         if (sapConf.GYRO_BIAS_RANDOM_WALK_VALID ||
             sapConf.ACCEL_RANDOM_WALK_SPECTRAL_DENSITY_VALID ||
@@ -3174,16 +3156,13 @@ GnssAdapter::handleEngineUpEvent()
                 }
             }
 
-            //Release wake lock when modem SSR
-            if (mAdapter.mIsWakeLockActive) {
-                locReleaseWakeLock();
-                mAdapter.mIsWakeLockActive = false;
-            }
+            //Release wake lock when modem SSR or GNSS HAL process SSR
+            locReleaseWakeLock();
+            mAdapter.mIsWakeLockActive = false;
 
             mAdapter.gnssSecondaryBandConfigUpdate();
             //Reset data connection when modem SSR
             mAdapter.mAgpsManager.handleModemSSR();
-
             // restart sessions only when Lock state is enabled and in power state resume
             mAdapter.initGnssPowerStatistics();
             if (ENGINE_LOCK_STATE_DISABLED != mApi.getEngineLockState()) {
@@ -3354,6 +3333,9 @@ GnssAdapter::saveTrackingSession(LocationAPI* client, uint32_t sessionId,
             mDistanceBasedTrackingSessions[key] = options;
         } else {
             mTimeBasedTrackingSessions[key] = options;
+            if (getFgTrackingSessionCount() > 0) {
+                configRobustLocation();
+            }
         }
         reportPowerStateIfChanged();
         // notify SystemStatus the engine tracking status
@@ -3369,6 +3351,9 @@ GnssAdapter::eraseTrackingSession(LocationAPI* client, uint32_t sessionId)
         auto it = mTimeBasedTrackingSessions.find(key);
         if (it != mTimeBasedTrackingSessions.end()) {
             mTimeBasedTrackingSessions.erase(it);
+            if (getFgTrackingSessionCount() == 0) {
+                configRobustLocation();
+            }
         } else {
             auto itr = mDistanceBasedTrackingSessions.find(key);
             if (itr != mDistanceBasedTrackingSessions.end()) {
@@ -3378,6 +3363,19 @@ GnssAdapter::eraseTrackingSession(LocationAPI* client, uint32_t sessionId)
         reportPowerStateIfChanged();
         getSystemStatus()->eventSetTracking(isInSession(), true);
     }
+}
+
+uint32_t GnssAdapter::getFgTrackingSessionCount() {
+
+    uint32_t fgSessionCount = 0;
+    if (!mTimeBasedTrackingSessions.empty()) {
+        for (auto it : mTimeBasedTrackingSessions) {
+            if (it.second.powerMode != GNSS_POWER_MODE_M5) {
+                fgSessionCount++;
+            }
+        }
+    }
+    return fgSessionCount;
 }
 
 void GnssAdapter::testLaunchQppeBringUp() {
@@ -3607,6 +3605,24 @@ GnssAdapter::startTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t sessi
     return reportToClientWithNoWait;
 }
 
+void GnssAdapter::acquireWakeLockBasedOnTBF(uint32_t tbfInMs) {
+    LOC_LOGd("DEBUG: mIsWakeLockActive: %d, minInterval: %d, "
+            "mWakeLockEnableTbfThreshold: %d",
+            mIsWakeLockActive, tbfInMs,
+            mWakeLockEnableTbfThreshold);
+    if (mIsWakeLockActive) {
+        if (tbfInMs > mWakeLockEnableTbfThreshold) {
+            locReleaseWakeLock();
+            mIsWakeLockActive = false;
+        }
+    } else if (tbfInMs <= mWakeLockEnableTbfThreshold) {
+        int ret = locAcquireWakeLock();
+        if (ret >= 0) {
+            mIsWakeLockActive = true;
+        }
+    }
+}
+
 void
 GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId,
         const TrackingOptions& trackingOptions)
@@ -3646,23 +3662,20 @@ GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId,
     TrackingOptions tempOptions(trackingOptions);
     if (!checkAndSetSPEToRunforNHz(tempOptions)) {
         mLocApi->startTimeBasedTracking(tempOptions, new LocApiResponse(*getContext(),
-                          [this, client, sessionId] (LocationError err) {
+                          [this, client, sessionId, tempOptions] (LocationError err) {
                 if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
                     LOCATION_ERROR_SUCCESS != err) {
                     eraseTrackingSession(client, sessionId);
+                    locReleaseWakeLock();
+                    mIsWakeLockActive = false;
                 } else {
                     checkUpdateDgnssNtrip(false);
+                    acquireWakeLockBasedOnTBF(tempOptions.minInterval);
                 }
 
                 reportResponse(client, err, sessionId);
             }
         ));
-        if (tempOptions.minInterval <= mWakeLockEnableTbfThreshold) {
-            int ret = locAcquireWakeLock();
-            if (ret >= 0) {
-                mIsWakeLockActive = true;
-            }
-        }
     } else {
         reportResponse(client, LOCATION_ERROR_SUCCESS, sessionId);
     }
@@ -3692,26 +3705,20 @@ GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
     TrackingOptions tempOptions(updatedOptions);
     if (!checkAndSetSPEToRunforNHz(tempOptions)) {
         mLocApi->startTimeBasedTracking(tempOptions, new LocApiResponse(*getContext(),
-                          [this, client, sessionId, oldOptions] (LocationError err) {
+                          [this, client, sessionId, oldOptions, tempOptions] (LocationError err) {
                 if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
                     LOCATION_ERROR_SUCCESS != err) {
                     // restore the old LocationOptions
                     saveTrackingSession(client, sessionId, oldOptions);
+                    //Release wakelock
+                    locReleaseWakeLock();
+                    mIsWakeLockActive = false;
+                } else {
+                    acquireWakeLockBasedOnTBF(tempOptions.minInterval);
                 }
                 reportResponse(client, err, sessionId);
             }
         ));
-        if (mIsWakeLockActive) {
-            if (tempOptions.minInterval > mWakeLockEnableTbfThreshold) {
-                locReleaseWakeLock();
-                mIsWakeLockActive = false;
-            }
-        } else if (tempOptions.minInterval <= mWakeLockEnableTbfThreshold) {
-            int ret = locAcquireWakeLock();
-            if (ret >= 0) {
-                mIsWakeLockActive = true;
-            }
-        }
     } else {
         reportResponse(client, LOCATION_ERROR_SUCCESS, sessionId);
     }
@@ -4012,11 +4019,9 @@ GnssAdapter::stopTracking(LocationAPI* client, uint32_t id)
             new LocApiResponse(*getContext(),
                                [this, client, id] (LocationError err) {
         reportResponse(client, err, id);
-    }));
-    if (mIsWakeLockActive) {
         locReleaseWakeLock();
         mIsWakeLockActive = false;
-    }
+    }));
 
     if (isDgnssNmeaRequired()) {
         mDgnssState &= ~DGNSS_STATE_NO_NMEA_PENDING;
@@ -4345,7 +4350,7 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
 
             // save the association of GPS timestamp and qtimer tick cnt in PVT report
             mAdapter.mPositionElapsedRealTimeCal
-                    .saveGpsTimeAndQtimerPairInPvtReport(mLocationExtended);
+                    .saveGpsTimeAndQtimerPairInPvtReport(mLocationExtended, mStatus);
 
             // save sv used in fix and mb sv used in fix info from propagated report
             mAdapter.mGnssSvIdUsedInPosAvail = false;
@@ -4750,9 +4755,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                     engLocationsInfo[1] = locationInfo;
                     it->second.engineLocationsInfoCb(2, engLocationsInfo);
                 } else if (nullptr != it->second.trackingCb) {
-                    it->second.trackingCb(locationInfo.location);
-                } else if (reportToAnyClient) {
-                    if (nullptr != it->second.trackingCb) {
+                    if (reportToAnyClient) {
                         cbRunnables.emplace_back([ cb=it->second.trackingCb ] (Location location) {
                             cb(location);
                         });
@@ -6081,9 +6084,19 @@ bool GnssAdapter::reportQwesCapabilities(
             if (iter != mFeatureMap.end() && iter->second) {
                 mAdapter.mPpFeatureStatusMask |= MLP_FEATURE_ENABLED_BY_DEFAULT;
             }
+            // Set RL feature bit
+            auto qwesIter = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_ROBUST_LOCATION);
+            if (qwesIter != mFeatureMap.end()) {
+                mAdapter.mRlFeatureQwesEnabled = qwesIter->second;
+            }
+
             LOC_LOGI("ReportQwesFeatureStatus after caps %" PRIx64 " ",
                      mAdapter.getCapabilities());
             mAdapter.broadcastCapabilities(mAdapter.getCapabilities());
+
+            // Configure robust location now, as it depends on the RL QWES status
+            mAdapter.initRobustLocationConfig();
+            mAdapter.configRobustLocation();
         }
     };
 
@@ -6536,13 +6549,41 @@ void GnssAdapter::reportNfwNotificationEvent(GnssNfwNotification& notification) 
  * eQMI_LOC_WWAN_TYPE_AGNSS_V02
  * eQMI_LOC_WWAN_TYPE_AGNSS_EMERGENCY_V02 */
 bool GnssAdapter::requestATL(int connHandle, LocAGpsType agpsType,
-                             LocApnTypeMask apnTypeMask, SubId subId){
+                             LocApnTypeMask apnTypeMask, SubId subId,
+                             uint32_t timeout){
 
-    LOC_LOGi("GnssAdapter::requestATL handle=%d agpsType=0x%X apnTypeMask=0x%X subId=%d",
+    LOC_LOGi("GnssAdapter::requestATL handle=%d agpsType=0x%X "
+             "apnTypeMask=0x%X subId=%d ",
              connHandle, agpsType, apnTypeMask, subId);
+    /* Request SUPL/INTERNET/SUPL_ES ATL */
+    struct AgpsMsgRequestATL: public LocMsg {
+
+        AgpsManager* mAgpsManager;
+        int mConnHandle;
+        AGpsExtType mAgpsType;
+        LocApnTypeMask mApnTypeMask;
+        SubId mSubId;
+        uint32_t mTimeout;
+
+        inline AgpsMsgRequestATL(AgpsManager* agpsManager, int connHandle,
+                AGpsExtType agpsType, LocApnTypeMask apnTypeMask,
+                SubId subId, uint32_t timeout) :
+                LocMsg(), mAgpsManager(agpsManager), mConnHandle(connHandle),
+                mAgpsType(agpsType), mApnTypeMask(apnTypeMask), mSubId(subId),
+                mTimeout(timeout){
+
+            LOC_LOGV("AgpsMsgRequestATL");
+        }
+
+        inline virtual void proc() const {
+
+            LOC_LOGV("AgpsMsgRequestATL::proc()");
+            mAgpsManager->requestATL(mConnHandle, mAgpsType, mApnTypeMask, mSubId, mTimeout);
+        }
+    };
 
     sendMsg( new AgpsMsgRequestATL( &mAgpsManager, connHandle, (AGpsExtType)agpsType,
-                                    apnTypeMask, subId));
+                                    apnTypeMask, subId, timeout));
 
     return true;
 }
@@ -6551,27 +6592,30 @@ bool GnssAdapter::requestATL(int connHandle, LocAGpsType agpsType,
  * Method triggered in QMI thread as part of handling below message:
  * eQMI_LOC_SERVER_REQUEST_CLOSE_V02
  * Triggers teardown of an existing AGPS call */
-bool GnssAdapter::releaseATL(int connHandle){
+bool GnssAdapter::releaseATL(int connHandle, uint32_t timeout){
 
-    LOC_LOGI("GnssAdapter::releaseATL");
+    LOC_LOGi("GnssAdapter::releaseATL ");
 
     /* Release SUPL/INTERNET/SUPL_ES ATL */
     struct AgpsMsgReleaseATL: public LocMsg {
 
         AgpsManager* mAgpsManager;
         int mConnHandle;
+        uint32_t mTimeout;
 
-        inline AgpsMsgReleaseATL(AgpsManager* agpsManager, int connHandle) :
-                LocMsg(), mAgpsManager(agpsManager), mConnHandle(connHandle) {
+        inline AgpsMsgReleaseATL(AgpsManager* agpsManager,
+            int connHandle, uint32_t timeout) :
+                LocMsg(), mAgpsManager(agpsManager),
+                mConnHandle(connHandle), mTimeout(timeout) {
         }
 
         inline virtual void proc() const {
             LOC_LOGV("AgpsMsgReleaseATL::proc()");
-            mAgpsManager->releaseATL(mConnHandle);
+            mAgpsManager->releaseATL(mConnHandle, mTimeout);
         }
     };
 
-    sendMsg( new AgpsMsgReleaseATL(&mAgpsManager, connHandle));
+    sendMsg( new AgpsMsgReleaseATL(&mAgpsManager, connHandle, timeout));
 
     return true;
 }
@@ -7507,45 +7551,9 @@ bool GnssAdapter::measCorrSetCorrectionsCommand(const GnssMeasurementCorrections
 
         inline virtual void proc() const {
             LOC_LOGV("MsgSetCorrectionsMeasCorr::proc()");
-            if (HMAC_CONFIG_ENABLED != mAdapter.mHmacConfig) {
-                mApi.setMeasurementCorrections(mGnssMeasCorr);
-            } else {
-                LOC_LOGD("MsgSetCorrectionsMeasCorr: mapDataAvailable is true, "
-                         "use MapData for aiding");
-            }
+            mApi.setMeasurementCorrections(mGnssMeasCorr);
         }
     };
-
-    if (HMAC_CONFIG_UNKNOWN == mHmacConfig) {
-        unsigned int processListLength = 0;
-        loc_process_info_s_type* processInfoList = nullptr;
-        int rc = loc_read_process_conf(LOC_PATH_IZAT_CONF, &processListLength,
-                                       &processInfoList);
-        if (0 == rc) {
-            // go over the conf table to see whether any plugin daemon is enabled
-            mHmacConfig = HMAC_CONFIG_DISABLED;
-            for (unsigned int i = 0; i < processListLength; i++) {
-                if ((0 == strncmp(processInfoList[i].name[0], PROCESS_NAME_SAP_MAP,
-                            strlen (PROCESS_NAME_SAP_MAP))) &&
-                                    (ENABLED == processInfoList[i].proc_status)) {
-                    mHmacConfig = HMAC_CONFIG_ENABLED;
-                    break;
-                }
-            }
-            char mapDataTestMode[LOC_MAX_PARAM_STRING];
-            loc_param_s_type izatMapDataTable[] =
-            {
-                { "MAP_DATA_TEST_MODE", &mapDataTestMode, NULL, 's' },
-            };
-            UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izatMapDataTable);
-            if (strcmp(mapDataTestMode, "ENABLED") == 0) {
-                LOC_LOGd("MAP_DATA_TEST_MODE mode set to ENABLED");
-                mHmacConfig = HMAC_CONFIG_TEST_MODE;
-            }
-        } else {
-            LOC_LOGe("failed to parse conf file");
-        }
-    }
 
     if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_MEASUREMENTS_CORRECTION)) {
         sendMsg(new MsgSetCorrectionsMeasCorr(gnssMeasCorr, *this, *mLocApi));
@@ -7579,25 +7587,57 @@ uint32_t GnssAdapter::getAntennaeInfoCommand(AntennaInfoCallback* antennaInfoCal
     return LOCATION_ERROR_SUCCESS;
 }
 
-void
-GnssAdapter::configRobustLocation(uint32_t sessionId,
-                                  bool enable, bool enableForE911) {
+void GnssAdapter::initRobustLocationConfig() {
+
+    if (!mLocConfigInfo.robustLocationConfigInfo.isValid) {
+
+        bool enable = false;
+        bool enableFor911 = false;
+
+#ifdef FEATURE_AUTOMOTIVE
+        // robust location to be enabled on bootup for auto targets
+        enable = true;
+        enableFor911 = true;
+#else
+        // robust location to be disabled on bootup for non-auto targets
+        enable = false;
+        enableFor911 = false;
+#endif
+
+        mLocConfigInfo.robustLocationConfigInfo.isValid = true;
+        mLocConfigInfo.robustLocationConfigInfo.enable = enable;
+        mLocConfigInfo.robustLocationConfigInfo.enableFor911 = enableFor911;
+    }
+}
+
+void GnssAdapter::configRobustLocation(bool enable, bool enableFor911) {
 
     mLocConfigInfo.robustLocationConfigInfo.isValid = true;
     mLocConfigInfo.robustLocationConfigInfo.enable = enable;
-    mLocConfigInfo.robustLocationConfigInfo.enableFor911 = enableForE911;
+    mLocConfigInfo.robustLocationConfigInfo.enableFor911 = enableFor911;
 
-    LocApiResponse* locApiResponse = nullptr;
-    if (sessionId != 0) {
-        locApiResponse =
-                new LocApiResponse(*getContext(),
-                                   [this, sessionId] (LocationError err) {
-                                   reportResponse(err, sessionId);});
-        if (!locApiResponse) {
-            LOC_LOGe("memory alloc failed");
+    configRobustLocation();
+}
+
+void GnssAdapter::configRobustLocation() {
+
+    bool enable = false;
+    bool enableFor911 = false;
+
+    if (mRlFeatureQwesEnabled) {
+        if (!mTimeBasedTrackingSessions.empty()) {
+            enable = mLocConfigInfo.robustLocationConfigInfo.enable;
+            enableFor911 = mLocConfigInfo.robustLocationConfigInfo.enableFor911;
+        } else {
+            enable = false;
+            enableFor911 = mLocConfigInfo.robustLocationConfigInfo.enableFor911;
         }
+    } else {
+        enable = false;
+        enableFor911 = false;
     }
-    mLocApi->configRobustLocation(enable, enableForE911, locApiResponse, true);
+
+    mLocApi->configRobustLocation(enable, enableFor911, nullptr, true);
 }
 
 uint32_t GnssAdapter::configRobustLocationCommand(
@@ -7623,7 +7663,8 @@ uint32_t GnssAdapter::configRobustLocationCommand(
             mEnable(enable),
             mEnableForE911(enableForE911) {}
         inline virtual void proc() const {
-            mAdapter.configRobustLocation(mSessionId, mEnable, mEnableForE911);
+            mAdapter.configRobustLocation(mEnable, mEnableForE911);
+            mAdapter.reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
         }
     };
 
@@ -8090,9 +8131,6 @@ void GnssAdapter::configPrecisePositioningCommand(
                 mAdapter.mLocApi->configPrecisePositioning(mFeatureId, mEnable, mAppHash);
                 // cache the Qesdk Feature Status
                 mAdapter.mAppHash = mAppHash;
-            } else if (QESDK_FEATURE_ID_RL == mFeatureId) {
-                mAdapter.mLocApi->configPrecisePositioning(mFeatureId, mEnable, mAppHash);
-                mAdapter.mLocApi->configRobustLocation(mEnable, false);
             }
         }
     };

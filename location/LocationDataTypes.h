@@ -480,8 +480,11 @@ enum LocationQwesFeatureTypes {
     // This indicates SBAS is
     // enabled by QWES license.
     LOCATION_QWES_FEATURE_TYPE_SBAS                          = 24,
+    // This indicates Robust Location is
+    // enabled by QWES license.
+    LOCATION_QWES_FEATURE_TYPE_ROBUST_LOCATION               = 25,
     // Max value
-    LOCATION_QWES_FEATURE_TYPE_MAX                           = 25
+    LOCATION_QWES_FEATURE_TYPE_MAX                           = 26
 };
 
 typedef uint64_t LocationHwCapabilitiesMask;
@@ -782,6 +785,8 @@ enum GnssMeasurementsDataFlagsBits {
     GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT             = (1<<25),
     GNSS_MEASUREMENTS_DATA_GLO_FREQUENCY_BIT                = (1<<26),
     GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT    = (1<<27),
+    GNSS_MEASUREMENTS_DATA_MEAS_CODE_TYPE_BIT               = (1<<28),
+    GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT         = (1<<29),
 };
 
 typedef uint32_t GnssMeasurementsStateMask;
