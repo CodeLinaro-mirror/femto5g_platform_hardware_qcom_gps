@@ -190,10 +190,6 @@ reportGnssMeasurementsEvent(const GnssMeasurements& /*gnssMeasurements*/)
 DEFAULT_IMPL()
 
 bool LocAdapterBase::
-    reportWwanZppFix(LocGpsLocation &/*zppLoc*/)
-DEFAULT_IMPL(false)
-
-bool LocAdapterBase::
     reportZppBestAvailableFix(LocGpsLocation& /*zppLoc*/,
             GpsLocationExtended& /*location_extended*/, LocPosTechMask /*tech_mask*/)
 DEFAULT_IMPL(false)
