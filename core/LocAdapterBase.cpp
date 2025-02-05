@@ -189,10 +189,6 @@ void LocAdapterBase::
 reportGnssMeasurementsEvent(const GnssMeasurements& /*gnssMeasurements*/)
 DEFAULT_IMPL()
 
-bool LocAdapterBase::
-    reportZppBestAvailableFix(LocGpsLocation& /*zppLoc*/,
-            GpsLocationExtended& /*location_extended*/, LocPosTechMask /*tech_mask*/)
-DEFAULT_IMPL(false)
 
 void LocAdapterBase::reportGnssSvIdConfigEvent(const GnssSvIdConfig& /*config*/)
 DEFAULT_IMPL()

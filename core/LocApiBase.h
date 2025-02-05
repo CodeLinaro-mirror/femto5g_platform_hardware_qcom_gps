@@ -229,8 +229,6 @@ public:
     void requestNiNotify(GnssNiNotification &notify, const void* data,
                          const LocInEmergency emergencyState);
     void reportGnssMeasurements(GnssMeasurements& gnssMeasurements);
-    void reportZppBestAvailableFix(LocGpsLocation &zppLoc, GpsLocationExtended &location_extended,
-            LocPosTechMask tech_mask);
     void reportGnssSvIdConfig(const GnssSvIdConfig& config);
     void requestOdcpi(OdcpiRequestInfo& request);
     void reportGnssEngEnergyConsumedEvent(uint64_t energyConsumedSinceFirstBoot);
@@ -303,7 +301,6 @@ public:
     virtual void setMeasurementCorrections(
             const GnssMeasurementCorrections& gnssMeasurementCorrections);
 
-    virtual void getBestAvailableZppFix();
     virtual bool getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
             LocPosTechMask &tech_mask);
     virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);

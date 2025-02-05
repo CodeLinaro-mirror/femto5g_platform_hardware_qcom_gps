@@ -340,14 +340,6 @@ void LocApiBase::reportPosition(UlpLocation& location,
     );
 }
 
-void LocApiBase::reportZppBestAvailableFix(LocGpsLocation &zppLoc,
-        GpsLocationExtended &location_extended, LocPosTechMask tech_mask)
-{
-    // loop through adapters, and deliver to the first handling adapter.
-    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->reportZppBestAvailableFix(zppLoc,
-            location_extended, tech_mask));
-}
-
 void LocApiBase::requestOdcpi(OdcpiRequestInfo& request)
 {
     // loop through adapters, and deliver to the first handling adapter.
@@ -714,10 +706,6 @@ DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
 
 void LocApiBase::setMeasurementCorrections(
         const GnssMeasurementCorrections& /*gnssMeasurementCorrections*/)
-DEFAULT_IMPL()
-
-void LocApiBase::
-   getBestAvailableZppFix()
 DEFAULT_IMPL()
 
 bool LocApiBase::
