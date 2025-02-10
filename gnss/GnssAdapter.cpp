@@ -219,7 +219,6 @@ GnssAdapter::GnssAdapter() :
     mPositionElapsedRealTimeCal(),
     mAddressRequestCb(nullptr),
     mGnssCapabNotification{},
-    mNvParamMgr(NvParamMgr::getInstance()),
     mAppHash(""),
     m3GppSourceMask(QDGNSS_3GPP_SOURCE_UNKNOWN),
 #ifdef _ANDROID_
@@ -284,7 +283,10 @@ GnssAdapter::GnssAdapter() :
     initValueAddedProcessCommand();
     initLocGlinkCommand();
     mXtraObserver.init();
-    restoreConfigFromNvm();
+    //restore Configuration parameters only when engine hub is loaded
+    if (true == mEngHubLoadSuccessful) {
+        restoreConfigFromNvm();
+    }
     // at last step, let us inform adapater base that we are done
     // with initialization, e.g.: ready to process handleEngineUpEvent
     doneInit();
@@ -333,8 +335,9 @@ LeverArmConfigInfo GnssAdapter::readVrpDataFromNvm()
     unsigned int size = sizeof(LeverArmConfigInfo);
     paramName = LocNvParams::getParamName(LocNvParams::LEVER_ARM_GNSS_TO_VRP);
     unsigned char* leverArmBlob = reinterpret_cast<unsigned char*>(&configInfo);
-    if ((nullptr != leverArmBlob) && (nullptr != mNvParamMgr)) {
-        errorCode = mNvParamMgr->getBlobParam(paramName, leverArmBlob, size);
+    NvParamMgr* nvParamMgr = NvParamMgr::getInstance();
+    if ((nullptr != leverArmBlob) && (nullptr != nvParamMgr)) {
+        errorCode = nvParamMgr->getBlobParam(paramName, leverArmBlob, size);
         if (NV_PARAM_ERR_NO_ERR == errorCode) {
             LeverArmConfigInfo* leverArmConfig =
                   reinterpret_cast<LeverArmConfigInfo*>(leverArmBlob);
@@ -342,6 +345,10 @@ LeverArmConfigInfo GnssAdapter::readVrpDataFromNvm()
                 configInfo = *leverArmConfig;
             }
         }
+    }
+    if (nvParamMgr) {
+        NvParamMgr::releaseInstance();
+        nvParamMgr = nullptr;
     }
     return configInfo;
 }
@@ -358,10 +365,15 @@ bool GnssAdapter::storeVrpData2Nvm(const LeverArmConfigInfo& configInfo)
         const char* paramName = NULL;
         nv_param_err_code errorCode = NV_PARAM_ERR_NO_ERR;
         unsigned int size = sizeof(LeverArmConfigInfo);
-        if (nullptr != mNvParamMgr) {
+        NvParamMgr* nvParamMgr = NvParamMgr::getInstance();
+        if (nullptr != nvParamMgr) {
             paramName = LocNvParams::getParamName(LocNvParams::LEVER_ARM_GNSS_TO_VRP);
-            errorCode = mNvParamMgr->saveBlobParam(paramName,
+            errorCode = nvParamMgr->saveBlobParam(paramName,
                     (const unsigned char*)&configInfo, size);
+        }
+        if (nvParamMgr) {
+            NvParamMgr::releaseInstance();
+            nvParamMgr = nullptr;
         }
     }
     if (NV_PARAM_ERR_NO_ERR == errorCode) {
