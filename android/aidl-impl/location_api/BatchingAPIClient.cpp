@@ -31,6 +31,11 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/*
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_BatchingAPIClient"
@@ -237,7 +242,6 @@ static void convertBatchOption(const IGnssBatching::Options& in, LocationOptions
     memset(&out, 0, sizeof(LocationOptions));
     out.size = sizeof(LocationOptions);
     out.minInterval = (uint32_t)(in.periodNanos / 1000000L);
-    out.minDistance = 0;
     out.mode = GNSS_SUPL_MODE_STANDALONE;
     if (mask & LOCATION_CAPABILITIES_GNSS_MSA_BIT)
         out.mode = GNSS_SUPL_MODE_MSA;

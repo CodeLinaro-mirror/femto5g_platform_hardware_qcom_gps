@@ -312,8 +312,6 @@ typedef uint64_t LocationCapabilitiesMask;
 #define   LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT           (1<<1)
 // supports startTracking API with minDistance param
 #define  LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT        (1<<2)
-// supports startBatching API with minDistance param
-#define   LOCATION_CAPABILITIES_DISTANCE_BASED_BATCHING_BIT       (1<<3)
 // supports addGeofences API
 #define   LOCATION_CAPABILITIES_GEOFENCE_BIT                      (1<<4)
 // supports GnssMeasurementsCallback
@@ -324,8 +322,6 @@ typedef uint64_t LocationCapabilitiesMask;
 #define   LOCATION_CAPABILITIES_GNSS_MSA_BIT                      (1<<7)
 // supports debug nmea sentences in the debugNmeaCallback
 #define   LOCATION_CAPABILITIES_DEBUG_DATA_BIT                    (1<<8)
-// support outdoor trip batching
-#define   LOCATION_CAPABILITIES_OUTDOOR_TRIP_BATCHING_BIT         (1<<9)
 // support constellation enablement
 #define   LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT      (1<<10)
 // support agpm
@@ -716,12 +712,10 @@ enum GnssSuplMode {
 
 enum BatchingMode {
     BATCHING_MODE_ROUTINE = 0,   // positions are reported when batched positions memory is full
-    BATCHING_MODE_TRIP,          // positions are reported when a certain distance is covered
     BATCHING_MODE_NO_AUTO_REPORT // no report of positions automatically, instead queried on demand
 };
 
 enum BatchingStatus {
-    BATCHING_STATUS_TRIP_COMPLETED = 0,
     BATCHING_STATUS_POSITION_AVAILABE,
     BATCHING_STATUS_POSITION_UNAVAILABLE
 };
@@ -1349,7 +1343,6 @@ struct BatchingOptions : LocationOptions {
             LocationOptions(options), batchingMode(BATCHING_MODE_ROUTINE) {}
     inline void setLocationOptions(const LocationOptions& options) {
         minInterval = options.minInterval;
-        minDistance = options.minDistance;
         mode = options.mode;
     }
 };
@@ -1701,7 +1694,6 @@ enum LocReportTriggerType {
     LOC_REPORT_TRIGGER_ENGINE_TRACKING_SESSION   = 3,
     LOC_REPORT_TRIGGER_SINGLE_TERRESTRIAL_FIX    = 4,
     LOC_REPORT_TRIGGER_SINGLE_FIX                = 5,
-    LOC_REPORT_TRIGGER_TRIP_BATCHING_SESSION     = 6,
     LOC_REPORT_TRIGGER_ROUTINE_BATCHING_SESSION  = 7,
     LOC_REPORT_TRIGGER_GEOFENCE_SESSION          = 8,
 };

@@ -236,10 +236,6 @@ LocAdapterBase::reportLocationsEvent(const Location* /*locations*/, size_t /*cou
 DEFAULT_IMPL()
 
 void
-LocAdapterBase::reportCompletedTripsEvent(uint32_t /*accumulated_distance*/)
-DEFAULT_IMPL()
-
-void
 LocAdapterBase::reportBatchStatusChangeEvent(BatchingStatus /*batchStatus*/)
 DEFAULT_IMPL()
 
@@ -292,7 +288,6 @@ LocAdapterBase::getCapabilities()
         mask |= LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT;
         mask |= LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT;
         mask |= LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT;
-        mask |= LOCATION_CAPABILITIES_OUTDOOR_TRIP_BATCHING_BIT;
         // geofence always supported
         mask |= LOCATION_CAPABILITIES_GEOFENCE_BIT;
         if (ContextBase::gnssConstellationConfig()) {

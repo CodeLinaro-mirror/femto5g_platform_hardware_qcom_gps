@@ -553,11 +553,6 @@ void LocApiBase::reportLocations(Location* locations, size_t count, BatchingMode
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportLocationsEvent(locations, count, batchingMode));
 }
 
-void LocApiBase::reportCompletedTrips(uint32_t accumulated_distance)
-{
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportCompletedTripsEvent(accumulated_distance));
-}
-
 void LocApiBase::handleBatchStatusEvent(BatchingStatus batchStatus)
 {
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportBatchStatusChangeEvent(batchStatus));
@@ -789,52 +784,13 @@ DEFAULT_IMPL()
 void LocApiBase::stopBatching(uint32_t /*sessionId*/, LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
-LocationError LocApiBase::startOutdoorTripBatchingSync(uint32_t /*tripDistance*/,
-        uint32_t /*tripTbf*/, uint32_t /*timeout*/)
-DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
-
-void LocApiBase::startOutdoorTripBatching(uint32_t /*tripDistance*/, uint32_t /*tripTbf*/,
-        uint32_t /*timeout*/, LocApiResponse* /*adapterResponse*/)
-DEFAULT_IMPL()
-
-void LocApiBase::reStartOutdoorTripBatching(uint32_t /*ongoingTripDistance*/,
-        uint32_t /*ongoingTripInterval*/, uint32_t /*batchingTimeout,*/,
-        LocApiResponse* /*adapterResponse*/)
-DEFAULT_IMPL()
-
-LocationError LocApiBase::stopOutdoorTripBatchingSync(bool /*deallocBatchBuffer*/)
-DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
-
-void LocApiBase::stopOutdoorTripBatching(bool /*deallocBatchBuffer*/,
-        LocApiResponse* /*adapterResponse*/)
-DEFAULT_IMPL()
-
 LocationError LocApiBase::getBatchedLocationsSync(size_t /*count*/)
 DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
 
 void LocApiBase::getBatchedLocations(size_t /*count*/, LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
-LocationError LocApiBase::getBatchedTripLocationsSync(size_t /*count*/,
-        uint32_t /*accumulatedDistance*/)
-DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
-
-void LocApiBase::getBatchedTripLocations(size_t /*count*/, uint32_t /*accumulatedDistance*/,
-        LocApiResponse* /*adapterResponse*/)
-DEFAULT_IMPL()
-
-LocationError LocApiBase::queryAccumulatedTripDistanceSync(uint32_t& /*accumulated_trip_distance*/,
-        uint32_t& /*numOfBatchedPositions*/)
-DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
-
-void LocApiBase::queryAccumulatedTripDistance(
-        LocApiResponseData<LocApiBatchData>* /*adapterResponseData*/)
-DEFAULT_IMPL()
-
 void LocApiBase::setBatchSize(size_t /*size*/)
-DEFAULT_IMPL()
-
-void LocApiBase::setTripBatchSize(size_t /*size*/)
 DEFAULT_IMPL()
 
 void LocApiBase::addToCallQueue(LocApiResponse* /*adapterResponse*/)

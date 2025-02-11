@@ -260,7 +260,6 @@ public:
 
     virtual void reportLocationsEvent(const Location* locations, size_t count,
             BatchingMode batchingMode);
-    virtual void reportCompletedTripsEvent(uint32_t accumulated_distance);
     virtual void reportBatchStatusChangeEvent(BatchingStatus batchStatus);
 
     /* ==== CLIENT ========================================================================= */

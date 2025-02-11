@@ -27,7 +27,7 @@
  */
 /*
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #ifndef LOCATION_API_CLINET_BASE_H
@@ -46,8 +46,7 @@
 enum SESSION_MODE {
     SESSION_MODE_NONE = 0,
     SESSION_MODE_ON_FULL,
-    SESSION_MODE_ON_FIX,
-    SESSION_MODE_ON_TRIP_COMPLETED
+    SESSION_MODE_ON_FIX
 };
 
 enum REQUEST_TYPE {
@@ -265,8 +264,6 @@ public:
             const BatchingOptions& /*batchingOptions*/) {}
     inline virtual void onBatchingStatusCb(const BatchingStatusInfo& /*batchingStatus*/,
             std::list<uint32_t> &/*listOfCompletedTrips*/) {}
-    void beforeBatchingStatusCb(const BatchingStatusInfo& batchStatus,
-            const std::list<uint32_t> & tripCompletedList);
     inline virtual void onStartBatchingCb(LocationError /*error*/) {}
     inline virtual void onStopBatchingCb(LocationError /*error*/) {}
     inline virtual void onUpdateBatchingOptionsCb(LocationError /*error*/) {}
@@ -589,8 +586,6 @@ private:
     pthread_mutex_t mMutex;
 
     geofenceBreachCallback mGeofenceBreachCallback;
-    batchingStatusCallback mBatchingStatusCallback;
-
     ILocationAPI* mLocationAPI;
 
     RequestQueue mRequestQueues[REQUEST_MAX];
