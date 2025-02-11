@@ -243,7 +243,6 @@ public:
     inline virtual bool isInSession() { return false; }
     ContextBase* getContext() const { return mContext; }
     virtual void reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurements);
-    virtual bool reportWwanZppFix(LocGpsLocation &zppLoc);
     virtual bool reportZppBestAvailableFix(LocGpsLocation &zppLoc,
             GpsLocationExtended &location_extended, LocPosTechMask tech_mask);
     virtual void reportGnssSvIdConfigEvent(const GnssSvIdConfig& config);
