@@ -341,7 +341,7 @@ LocAdapterBase::getCapabilities()
         if (ContextBase::isAntennaInfoAvailable()) {
             mask |= LOCATION_CAPABILITIES_ANTENNA_INFO;
         }
-        if (mPpFeatureStatusMask & DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
+        if (ContextBase::mIzat_process_conf.engineServiceEnabled) {
             mask |= LOCATION_CAPABILITIES_PRECISE_LIB_PRESENT;
         }
         //Get HW feature status mask

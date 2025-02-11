@@ -533,7 +533,7 @@ public:
     void setControlCallbacksCommand(LocationControlCallbacks& controlCallbacks);
     void readConfigCommand();
     void requestUlpCommand();
-    void initValueAddedProcessCommand();
+    void initEngineHubCommand();
     void initLocGlinkCommand();
     uint32_t* gnssUpdateConfigCommand(const GnssConfig& config);
     uint32_t* gnssGetConfigCommand(GnssConfigFlagsMask mask);
@@ -637,18 +637,19 @@ public:
     virtual bool isInSession() { return !mTimeBasedTrackingSessions.empty(); }
     uint32_t getFgTrackingSessionCount();
     void initDefaultAgps();
-    bool initValueAddedProcess();
-    inline bool isPreciseEnabled(PpFeatureStatusMask bits = DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
-        return (mPpFeatureStatusMask & bits) &&
-                (mPpFeatureStatusMask &
-                (DLP_FEATURE_ENABLED_BY_DEFAULT | DLP_FEATURE_ENABLED_BY_QESDK |
-                 WOCS_FEATURE_ENABLED_BY_DEFAULT));
+    bool initEngineHub();
+    inline bool isPreciseEnabled() {
+        return (mPpFeatureStatusMask &
+                  (DLP_FEATURE_ENABLED_BY_DEFAULT | DLP_FEATURE_ENABLED_BY_QESDK |
+                   WOCS_FEATURE_ENABLED_BY_DEFAULT));
     }
     inline bool isQppeEnabled() {
-        return isPreciseEnabled(DLP_FEATURE_STATUS_QPPE_LIBRARY_PRESENT);
+        return (ContextBase::mIzat_process_conf.engineServiceInfo.ppeIntEnabled &&
+                isPreciseEnabled());
     }
     inline bool isQfeEnabled() {
-        return isPreciseEnabled(DLP_FEATURE_STATUS_QFE_LIBRARY_PRESENT);
+        return (ContextBase::mIzat_process_conf.engineServiceInfo.dreIntEnabled &&
+                isPreciseEnabled());
     }
     inline bool isMlpEnabled() {
         return mPpFeatureStatusMask &

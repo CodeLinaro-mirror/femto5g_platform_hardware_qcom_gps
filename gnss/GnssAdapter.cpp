@@ -93,7 +93,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define RAD2DEG    (180.0 / M_PI)
 #define DEG2RAD    (M_PI / 180.0)
-#define PROCESS_NAME_ENGINE_SERVICE "engine-service"
 #define MIN_TRACKING_INTERVAL (MIN_GNSS_TRACKING_INTERVAL) // 100 msec
 #define NHZ_ENABLED_MIN_TRACKING_INTERVAL (100) // 100 msec
 #define NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL (1000) // 1 sec
@@ -281,7 +280,7 @@ GnssAdapter::GnssAdapter() :
     readConfigCommand();
     initDefaultAgpsCommand();
     initCDFWServiceCommand();
-    initValueAddedProcessCommand();
+    initEngineHubCommand();
     initLocGlinkCommand();
     mXtraObserver.init();
     restoreConfigFromNvm();
@@ -1236,13 +1235,7 @@ GnssAdapter::readConfigCommand()
             mAdapter(adapter),
             mContext(context) {}
         inline virtual void proc() const {
-            static bool confReadDone = false;
-            if (!confReadDone) {
-                confReadDone = true;
-                // reads config into mContext->mGps_conf
-                mContext.readConfig();
-                mAdapter->readNfwLockConfig();
-            }
+            mAdapter->readNfwLockConfig();
         }
     };
 
@@ -3189,7 +3182,6 @@ GnssAdapter::handleEngineUpEvent()
         }
     };
 
-    readConfigCommand();
     sendMsg(new MsgHandleEngineUpEvent(*this, *mLocApi));
 }
 
@@ -5904,11 +5896,7 @@ void GnssAdapter::handleQesdkQwesStatusFromEHub(
             //QESDK feature status call back handling logic:
             //1, DLP_FEATURE_ENABLED_BY_DEFAULT bit is set in reportQwesCapabilities
             //   according to PPE and QFE feature status during GNSS HAL process
-            //   boot up;
-            //   DLP_FEATURE_STATUS_QPPE_LIBRARY_PRESENT bit is set in initEngHubProxy
-            //   when QPPE process is enabled in izat.conf.
-            //   DLP_FEATURE_STATUS_QFE_LIBRARY_PRESENT bit is set in initEngHubProxy
-            //   when QEF process is enabled in izat.conf.
+            //   boot up
             //2, If LOCATION_QWES_FEATURE_TYPE_DLP_QESDK is presented in feature map,
             //   It means Qwes status callback is triggered when Engine hub recieves
             //   configPreciseLocation command from GnssAdapter, and already checked
@@ -5919,14 +5907,14 @@ void GnssAdapter::handleQesdkQwesStatusFromEHub(
                     mAdapter.mPpFeatureStatusMask |= DLP_FEATURE_ENABLED_BY_QESDK;
                     //Send enable precise location data item to loclauncher to inform
                     //it QPPE engine-service need to launch
-                    if (mAdapter.mPpFeatureStatusMask & DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
+                    if (ContextBase::mIzat_process_conf.engineServiceEnabled) {
                         mAdapter.notifyPreciseLocation();
                     }
                 } else {
                     mAdapter.mPpFeatureStatusMask &= (~DLP_FEATURE_ENABLED_BY_QESDK);
                     //Send disable precise location data item to loclauncher to inform
                     //it QPPE engine-service need to exit
-                    if (mAdapter.mPpFeatureStatusMask & DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
+                    if (ContextBase::mIzat_process_conf.engineServiceEnabled) {
                         mAdapter.notifyPreciseLocation();
                     }
                 }
@@ -8431,90 +8419,36 @@ uint32_t GnssAdapter::gnssInjectXtraUserConsentCommand(const bool xtraUserConsen
 }
 
 void
-GnssAdapter::initValueAddedProcessCommand() {
+GnssAdapter::initEngineHubCommand() {
     LOC_LOGd();
 
-    struct MsgInitValueAddedProcess : public LocMsg {
+    struct MsginitEngineHub : public LocMsg {
         GnssAdapter* mAdapter;
-        inline MsgInitValueAddedProcess(GnssAdapter* adapter) :
+        inline MsginitEngineHub(GnssAdapter* adapter) :
             LocMsg(),
             mAdapter(adapter) {}
         inline virtual void proc() const {
-            mAdapter->initValueAddedProcess();
+            mAdapter->initEngineHub();
         }
     };
 
-    sendMsg(new MsgInitValueAddedProcess(this));
+    sendMsg(new MsginitEngineHub(this));
 }
 
 
 bool
-GnssAdapter::initValueAddedProcess() {
+GnssAdapter::initEngineHub() {
     bool retVal = true;
     const char *error = nullptr;
-    unsigned int processListLength = 0;
-    loc_process_info_s_type* processInfoList = nullptr;
-    bool valueAddedProcessEnabled = false;
-    bool engineServiceEnabled = false;
 
     do {
-        int rc = loc_read_process_conf(LOC_PATH_IZAT_CONF, &processListLength,
-                                       &processInfoList);
-        if (rc != 0) {
-            LOC_LOGe("failed to parse conf file");
-            break;
-        }
-
-        // go over the conf table to see whether any plugin daemon is enabled
-        for (unsigned int i = 0; i < processListLength; i++) {
-            LOC_LOGe("process %s, enabled %d",
-                     processInfoList[i].name[0], processInfoList[i].proc_status);
-            if (processInfoList[i].proc_status == ENABLED) {
-                valueAddedProcessEnabled = true;
-
-                if (strncmp(processInfoList[i].name[0], PROCESS_NAME_ENGINE_SERVICE,
-                            strlen(PROCESS_NAME_ENGINE_SERVICE)) == 0) {
-                    engineServiceEnabled = true;
-
-                    if (processInfoList[i].args[1]!= nullptr) {
-                        // check if this is DRE-INT engine
-                        if (strncmp(processInfoList[i].args[1], "DRE-INT",
-                                    sizeof("DRE-INT")) == 0) {
-                             mEngServiceInfo.dreIntEnabled = true;
-                        } else if (strncmp(processInfoList[i].args[1], "PPE",
-                                           sizeof("PPE")) == 0) {
-                            mEngServiceInfo.ppeEnabled = true;
-                        } else if (strncmp(processInfoList[i].args[1], "PPE-INT",
-                                           sizeof("PPE-INT")) == 0) {
-                            mEngServiceInfo.ppeIntEnabled = true;
-                            mEngServiceInfo.ppeEnabled = true;
-                        }
-                    }
-                }
-            }
-        }
-
-#ifdef _ANDROID_
-        // set the property to launch loc_launcher
-        // loc_launcher rc file will only launch loc_launcher if
-        // property "vendor.qti.izat.value_added_process" is set to "enabled".
-        char* value = "disabled";
-        if (valueAddedProcessEnabled == true) {
-           value = "enabled";
-        }
-
-        if (0 != property_set("vendor.qti.izat.value_added_process", value)) {
-           LOC_LOGe ("failed to set property vendor.qti.izat.value_added_process");
-        }
-#endif
-
         // no engine service is enabled for this platform,
         // check if external engine is present for which we need
         // libloc_eng_hub.so to be loaded
-        if (engineServiceEnabled == false) {
+        if (ContextBase::mIzat_process_conf.engineServiceEnabled == false) {
             UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izatConfParamTable);
             if (!loadEngHubForExternalEngine) {
-                break;
+               break;
             }
         }
 
@@ -8577,8 +8511,8 @@ GnssAdapter::initValueAddedProcess() {
             locUtilWaitForDir(SOCKET_DIR_EHUB);
             EngineHubProxyBase* hubProxy = (*getter) (mMsgTask, mContext,
                       mSystemStatus->getOsObserver(),
-                      mEngServiceInfo, reportPositionEventCb, reqAidingDataCb,
-                      updateNHzRequirementCb, updateQwesFeatureStatusCb,
+                      ContextBase::mIzat_process_conf.engineServiceInfo, reportPositionEventCb,
+                      reqAidingDataCb, updateNHzRequirementCb, updateQwesFeatureStatusCb,
                       [ this ] { return isEngineServiceEnable(); });
             if (hubProxy != nullptr) {
                 mEngHubProxy = hubProxy;
@@ -8591,15 +8525,10 @@ GnssAdapter::initValueAddedProcess() {
 
     } while (0);
 
-    LOC_LOGd("value added daemon enabled %d, engine service enabled %d,"
-             "engien hub load successful %d ",
-             valueAddedProcessEnabled, engineServiceEnabled,
-             mEngHubLoadSuccessful);
-
-    if (processInfoList != nullptr) {
-        free (processInfoList);
-        processInfoList = nullptr;
-    }
+    LOC_LOGd("engine service enabled %d, external engine enabled %d,"
+             "engien hub load successful %d",
+             ContextBase::mIzat_process_conf.engineServiceEnabled,
+             loadEngHubForExternalEngine, mEngHubLoadSuccessful);
 
     return retVal;
 }
