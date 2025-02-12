@@ -278,7 +278,9 @@ GnssAdapter::GnssAdapter() :
 
     readConfigCommand();
     initDefaultAgpsCommand();
-    initCDFWServiceCommand();
+    if (ContextBase::mIzat_process_conf.eDgnssDaemonEnabled) {
+        initCDFWServiceCommand();
+    }
     initEngineHubCommand();
     initLocGlinkCommand();
     mXtraObserver.init();
@@ -5965,6 +5967,7 @@ bool GnssAdapter::reportQwesCapabilities(
             auto iter = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_DGNSS);
             if (iter != mFeatureMap.end() && iter->second) {
                 mAdapter.mPpFeatureStatusMask |= MLP_FEATURE_ENABLED_BY_DEFAULT;
+                mAdapter.initCDFWService();
             }
             // Set RL feature bit
             auto qwesIter = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_ROBUST_LOCATION);
