@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -233,17 +233,6 @@ public:
     bool mEnabled;
 };
 
-class PowerConnectStateDataItem: public IDataItemCore {
-public:
-    PowerConnectStateDataItem(bool state = false) :
-        mState(state) {mId = POWER_CONNECTED_STATE_DATA_ITEM_ID;}
-    virtual ~PowerConnectStateDataItem() {}
-    virtual void stringify(string& /*valueStr*/) override;
-    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-// Data members
-    bool mState;
-};
-
 class TimeZoneChangeDataItem: public IDataItemCore {
 public:
     TimeZoneChangeDataItem(int64_t currTimeMillis = TIME_DEFAULT_CURRTIME,
@@ -406,17 +395,6 @@ private:
     }
 };
 
-class ServiceStatusDataItem: public IDataItemCore {
-public:
-    ServiceStatusDataItem(int32_t serviceState = SERVICESTATUS_DEFAULT_STATE) :
-        mServiceState (serviceState) {mId = SERVICESTATUS_DATA_ITEM_ID;}
-    virtual ~ServiceStatusDataItem() {}
-    virtual void stringify(string& /*valueStr*/) override;
-    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-// Data members
-    int32_t mServiceState;
-};
-
 class ModelDataItem: public IDataItemCore {
 public:
     ModelDataItem(const string & name = "") :
@@ -439,35 +417,6 @@ public:
     string mManufacturer;
 };
 
-class RilServiceInfoDataItem : public IDataItemCore {
-public:
-    inline RilServiceInfoDataItem() :
-            mData(nullptr) {mId = RILSERVICEINFO_DATA_ITEM_ID;}
-    inline virtual ~RilServiceInfoDataItem() { if (nullptr != mData) free(mData); }
-    virtual void stringify(string& /*valueStr*/) {}
-    virtual int32_t copyFrom(IDataItemCore* src) {
-        if (nullptr != mData && nullptr != src) {
-            memcpy(mData,  ((RilServiceInfoDataItem*)src)->mData, mLength);
-        }
-        return 0;
-    }
-    inline RilServiceInfoDataItem(const RilServiceInfoDataItem& peer) :
-            RilServiceInfoDataItem() {
-        mLength = peer.mLength;
-        mData = malloc(mLength);
-        if (nullptr != mData) {
-            memcpy(mData,  peer.mData, mLength);
-        }
-        peer.setPeerData(*this);
-    }
-    inline virtual bool operator==(const RilServiceInfoDataItem& other) const {
-        return other.mData == mData;
-    }
-    inline virtual void setPeerData(RilServiceInfoDataItem& /*peer*/) const {}
-    void* mData;
-    int mLength;
-};
-
 class RilCellInfoDataItem : public IDataItemCore {
 public:
     inline RilCellInfoDataItem() :
@@ -487,12 +436,10 @@ public:
         if (nullptr != mData) {
             memcpy(mData,  peer.mData, mLength);
         }
-        peer.setPeerData(*this);
     }
     inline virtual bool operator==(const RilCellInfoDataItem& other) const {
         return other.mData == mData;
     }
-    inline virtual void setPeerData(RilCellInfoDataItem& /*peer*/) const {}
     void* mData;
     int mLength;
 };
@@ -547,17 +494,6 @@ public:
     virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
 // Data members
     string mValue;
-};
-
-class BatteryLevelDataItem: public IDataItemCore {
-public:
-    inline BatteryLevelDataItem(uint8_t batteryPct = BATTERY_PCT_DEFAULT) :
-            mBatteryPct(batteryPct) {mId = BATTERY_LEVEL_DATA_ITEM_ID;}
-    inline ~BatteryLevelDataItem() {}
-    virtual void stringify(string& /*valueStr*/) override;
-    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-// Data members
-    uint8_t mBatteryPct;
 };
 
 class InEmergencyCallDataItem: public IDataItemCore {

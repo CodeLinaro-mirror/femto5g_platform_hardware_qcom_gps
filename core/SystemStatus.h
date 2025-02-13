@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -553,17 +553,6 @@ public:
     }
 };
 
-class SystemStatusServiceInfo : public SystemStatusItemBase {
-public:
-    RilServiceInfoDataItem mDataItem;
-    inline SystemStatusServiceInfo(): mDataItem() {}
-    inline SystemStatusServiceInfo(const RilServiceInfoDataItem& itemBase):
-            mDataItem(itemBase) {}
-    inline bool equals(const SystemStatusItemBase& peer) override {
-        return ((const SystemStatusServiceInfo&)peer).mDataItem == mDataItem;
-    }
-};
-
 class SystemStatusRilCellInfo : public SystemStatusItemBase {
 public:
     RilCellInfoDataItem mDataItem;
@@ -571,18 +560,6 @@ public:
     inline SystemStatusRilCellInfo(const RilCellInfoDataItem& itemBase): mDataItem(itemBase) {}
     inline bool equals(const SystemStatusItemBase& peer) override {
         return ((const SystemStatusRilCellInfo&)peer).mDataItem == mDataItem;
-    }
-};
-
-class SystemStatusServiceStatus : public SystemStatusItemBase {
-public:
-    ServiceStatusDataItem mDataItem;
-    inline SystemStatusServiceStatus(int32_t mServiceState=0): mDataItem(mServiceState) {}
-    inline SystemStatusServiceStatus(const ServiceStatusDataItem& itemBase):
-            mDataItem(itemBase) {}
-    inline bool equals(const SystemStatusItemBase& peer) override {
-        return mDataItem.mServiceState ==
-                ((const SystemStatusServiceStatus&)peer).mDataItem.mServiceState;
     }
 };
 
@@ -604,17 +581,6 @@ public:
     inline bool equals(const SystemStatusItemBase& peer) override {
         return mDataItem.mManufacturer ==
                 ((const SystemStatusManufacturer&)peer).mDataItem.mManufacturer;
-    }
-};
-
-class SystemStatusPowerConnectState : public SystemStatusItemBase {
-public:
-    PowerConnectStateDataItem mDataItem;
-    inline SystemStatusPowerConnectState(bool state=false): mDataItem(state) {}
-    inline SystemStatusPowerConnectState(const PowerConnectStateDataItem& itemBase):
-            mDataItem(itemBase) {}
-    inline bool equals(const SystemStatusItemBase& peer) override {
-        return mDataItem.mState == ((const SystemStatusPowerConnectState&)peer).mDataItem.mState;
     }
 };
 
@@ -863,13 +829,10 @@ public:
     std::vector<SystemStatusGpsState>         mGPSState;
     std::vector<SystemStatusWifiHardwareState> mWifiHardwareState;
     std::vector<SystemStatusNetworkInfo>      mNetworkInfo;
-    std::vector<SystemStatusServiceInfo>      mRilServiceInfo;
     std::vector<SystemStatusRilCellInfo>      mRilCellInfo;
-    std::vector<SystemStatusServiceStatus>    mServiceStatus;
     std::vector<SystemStatusModel>            mModel;
     std::vector<SystemStatusManufacturer>     mManufacturer;
     std::vector<SystemStatusInEmergencyCall>  mInEmergencyCall;
-    std::vector<SystemStatusPowerConnectState> mPowerConnectState;
     std::vector<SystemStatusTimeZoneChange>   mTimeZoneChange;
     std::vector<SystemStatusTimeChange>       mTimeChange;
     std::vector<SystemStatusWifiSupplicantStatus> mWifiSupplicantStatus;
@@ -926,7 +889,6 @@ public:
     bool setDefaultGnssEngineStates(void);
     bool eventConnectionStatus(bool connected, int8_t type,
                                bool roaming, NetworkHandle networkHandle, const string& apn);
-    bool updatePowerConnectState(bool charging);
     void resetNetworkInfo();
     bool eventOptInStatus(bool userConsent);
     bool eventRegionStatus(bool region);
