@@ -357,7 +357,6 @@ class GnssAdapter : public LocAdapterBase {
     bool mEngHubLoadSuccessful;
     EngineServiceInfo mEngServiceInfo;
     RealtimeEstimator mPositionElapsedRealTimeCal;
-    NvParamMgr*   mNvParamMgr;
 
     /* === NativeAgpsHandler ======================================================== */
     NativeAgpsHandler mNativeAgpsHandler;
@@ -449,9 +448,6 @@ protected:
 public:
     GnssAdapter();
     virtual inline ~GnssAdapter() {
-        if (nullptr != mNvParamMgr) {
-            mNvParamMgr->releaseInstance();
-        }
     }
 
     /* ==== SSR ============================================================================ */
