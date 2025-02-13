@@ -223,6 +223,7 @@ GnssAdapter::GnssAdapter() :
     mAppHash(""),
     m3GppSourceMask(QDGNSS_3GPP_SOURCE_UNKNOWN),
 #ifdef _ANDROID_
+    // android only use SPE to generate nmea
     mNmeaReqEngTypeMask(LOC_REQ_ENGINE_SPE_BIT),
 #else
     mNmeaReqEngTypeMask(LOC_REQ_ENGINE_FUSED_BIT),
@@ -4792,14 +4793,20 @@ GnssAdapter::reportEnginePositions(unsigned int count,
                 fillElapsedRealTime(engLocation->locationExtended,
                                     locationInfo[i]);
             }
-
-#ifndef _ANDROID_
-            //Only generate and report NMEA with engine position on Auto platforms
-            reportPositionNmea(engLocation->location,
-                           engLocation->locationExtended,
-                           engLocation->sessionStatus,
-                           engLocation->location.tech_mask);
+            bool generateNmea = true;
+#ifdef _ANDROID_
+            // On Android, NMEA should only come from SPE engine
+            if ((GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE & engLocation->locationExtended.flags) &&
+                (LOC_OUTPUT_ENGINE_SPE != engLocation->locationExtended.locOutputEngType)) {
+                generateNmea = false;
+            }
 #endif
+            if (generateNmea) {
+                reportPositionNmea(engLocation->location,
+                               engLocation->locationExtended,
+                               engLocation->sessionStatus,
+                               engLocation->location.tech_mask);
+            }
 
        }
        const EngineLocationInfo* engLocation = locationArr;
