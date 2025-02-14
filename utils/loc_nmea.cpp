@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -692,6 +692,10 @@ static uint32_t loc_nmea_generate_GSA(const UlpLocation &location,
     char fixType = '\0';
 
     const char* talker = sv_meta_p->talker;
+    if (!talker) {
+        LOC_LOGe("Invalid talker Information. ");
+        return 0;
+    }
     uint32_t svIdOffset = sv_meta_p->svIdOffset;
     uint64_t mask = sv_meta_p->mask;
 
@@ -832,7 +836,7 @@ static void loc_nmea_generate_GSV(const GnssSvNotification &svNotify,
                               loc_nmea_sv_meta* sv_meta_p,
                               std::vector<std::string> &nmeaArraystr)
 {
-    if (!sentence || bufSize <= 0)
+    if (!sentence || bufSize <= 0 || !sv_meta_p)
     {
         LOC_LOGE("NMEA Error invalid argument.");
         return;
@@ -846,6 +850,10 @@ static void loc_nmea_generate_GSV(const GnssSvNotification &svNotify,
     size_t svNumber = 1;
 
     const char* talker = sv_meta_p->talker;
+    if (!talker) {
+        LOC_LOGe("Invalid talker Information. ");
+        return;
+    }
     uint32_t svIdOffset = sv_meta_p->svIdOffset;
     int svCount = sv_meta_p->svCount;
     if (svCount <= 0)
