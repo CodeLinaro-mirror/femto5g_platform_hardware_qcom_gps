@@ -285,10 +285,8 @@ GnssAdapter::GnssAdapter() :
     initEngineHubCommand();
     initLocGlinkCommand();
     mXtraObserver.init();
-    //restore Configuration parameters only when engine hub is loaded
-    if (true == mEngHubLoadSuccessful) {
-        restoreConfigFromNvm();
-    }
+    restoreConfigFromNvm();
+
     // at last step, let us inform adapater base that we are done
     // with initialization, e.g.: ready to process handleEngineUpEvent
     doneInit();
@@ -306,6 +304,11 @@ void GnssAdapter::restoreConfigFromNvm()
             LocMsg(),
             mAdapter(adapter) {}
         inline virtual void proc() const {
+            //restore Configuration parameters only when engine hub is loaded
+            if (false == mAdapter.mEngHubLoadSuccessful) {
+                LOC_LOGd("EHUB not enabled, return");
+                return;
+            }
             //Read GNSS VRP data
             mAdapter.mLocConfigInfo.leverArmConfigInfo = mAdapter.readVrpDataFromNvm();
             LOC_LOGi("0x%x %f %f %f", mAdapter.mLocConfigInfo.leverArmConfigInfo.leverArmValidMask,
