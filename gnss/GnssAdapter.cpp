@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -88,6 +88,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <gps_extended_c.h>
 #include <sys/stat.h>
 #include <thread>
+#include <cutils/properties.h>
 #include "XmlFileParser.h"
 
 #define RAD2DEG    (180.0 / M_PI)
@@ -126,26 +127,6 @@ static void agpsCloseResultCb (bool isSuccess, AGpsExtType agpsType, void* userD
 typedef const CdfwInterface* (*getCdfwInterface)();
 
 typedef void getPdnTypeFromWds(const std::string& apnName, std::function<void(int)> pdnCb);
-
-GnssReportLoggerUtil::GnssReportLoggerUtil() : mLogLatency(nullptr) {
-    LOC_LOGi("Loc_DiagIface_enabled");
-    const char* libname = "liblocdiagiface.so";
-    void* libHandle = nullptr;
-    mLogLatency = (LogGnssLatency)dlGetSymFromLib(libHandle, libname, "LogGnssLatency");
-    if (nullptr == mLogLatency) {
-        LOC_LOGw("DiagIface mLogLatency is null");
-    }
-}
-
-inline bool GnssReportLoggerUtil::isLogEnabled() {
-    return (mLogLatency != nullptr);
-}
-
-inline void GnssReportLoggerUtil::log(const GnssLatencyInfo& gnssLatencyMeasInfo) {
-    if (mLogLatency != nullptr) {
-        mLogLatency(gnssLatencyMeasInfo);
-    }
-}
 
 class LocNvParams
 {
@@ -235,8 +216,7 @@ GnssAdapter::GnssAdapter() :
     mPowerIndicationCb(nullptr),
     mGnssPowerStatisticsInit(false),
     mBootReferenceEnergy(0),
-    mPowerElapsedRealTimeCal(30000000),
-    mPositionElapsedRealTimeCal(30000000),
+    mPositionElapsedRealTimeCal(),
     mAddressRequestCb(nullptr),
     mGnssCapabNotification{},
     mNvParamMgr(NvParamMgr::getInstance()),
@@ -301,9 +281,8 @@ GnssAdapter::GnssAdapter() :
     readConfigCommand();
     initDefaultAgpsCommand();
     initCDFWServiceCommand();
-    initEngHubProxyCommand();
+    initValueAddedProcessCommand();
     initLocGlinkCommand();
-    testLaunchQppeBringUp();
     mXtraObserver.init();
     restoreConfigFromNvm();
     // at last step, let us inform adapater base that we are done
@@ -603,6 +582,48 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
     }
 }
 
+void GnssAdapter::fillElapsedRealTimeForMeas(GnssMeasurements& measurementSet) {
+    int64_t elapsedTimeNs = -1;
+    GnssMeasurementsNotification& gnssMeasNotification = measurementSet.gnssMeasNotification;
+    GnssSvMeasurementHeader& svMeasSetHeader = measurementSet.gnssSvMeasurementSet.svMeasSetHeader;
+    if ((svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_GPS_SYSTEM_TIME) &&
+        (svMeasSetHeader.gpsSystemTime.hasAccurateTime() == true)) {
+        float elapsedTimeUncMsec = 0.0;
+        uint64_t elapsedgPTPTimeNsec = 0;
+        bool gptpTimeValid = false;
+        GPSTimeStruct gpsTime;
+        gpsTime.gpsWeek = svMeasSetHeader.gpsSystemTime.systemWeek;
+        gpsTime.gpsTimeOfWeekMs = svMeasSetHeader.gpsSystemTime.systemMsec;
+        if (mPositionElapsedRealTimeCal.fillAdditionalTimestamps(
+                gpsTime, elapsedTimeNs, elapsedTimeUncMsec,
+                elapsedgPTPTimeNsec, gptpTimeValid)) {
+
+            gnssMeasNotification.clock.flags |=
+                GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
+            gnssMeasNotification.clock.elapsedRealTime = elapsedTimeNs;
+            gnssMeasNotification.clock.flags |=
+                GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
+            gnssMeasNotification.clock.elapsedRealTimeUnc =
+                (int64_t) (elapsedTimeUncMsec * 1000000);
+            if (gptpTimeValid) {
+                gnssMeasNotification.clock.flags |=
+                    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT;
+                gnssMeasNotification.clock.elapsedgPTPTime = elapsedgPTPTimeNsec;
+                gnssMeasNotification.clock.elapsedgPTPTimeUnc = 0;
+                gnssMeasNotification.clock.flags |=
+                    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT;
+            }
+        }
+    }
+    if (-1 == elapsedTimeNs) {
+        gnssMeasNotification.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
+        gnssMeasNotification.clock.elapsedRealTime = getBootTimeMilliSec() * 1000000;
+        gnssMeasNotification.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
+        gnssMeasNotification.clock.elapsedRealTimeUnc =
+            RealtimeEstimator::getElapsedRealtimeUncNanos();
+    }
+}
+
 void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtended,
                                       GnssLocationInfoNotification& out) {
     if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GPS_TIME) {
@@ -610,36 +631,31 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
         float elapsedTimeUncMsec = 0.0;
         uint64_t elapsedgPTPTimeNsec = 0;
         bool gptpTimeValid = false;
-        if (mPositionElapsedRealTimeCal.fillAdditionalTimestamps(
-                locationExtended, elapsedTimeNs, elapsedTimeUncMsec,
-                elapsedgPTPTimeNsec, gptpTimeValid)) {
-            out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
-            out.location.elapsedRealTime = elapsedTimeNs;
-            out.location.elapsedRealTimeUnc = (int64_t) (elapsedTimeUncMsec * 1000000);
+        if (!(locationExtended.gnssSystemTime.hasAccurateGpsTime() == false ||
+                 (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GPS_TIME) == 0 ||
+                 // 65535 GPS week from modem means unknown
+                 locationExtended.gpsTime.gpsWeek == UNKNOWN_GPS_WEEK_NUM)) {
+            if (mPositionElapsedRealTimeCal.fillAdditionalTimestamps(
+                    locationExtended.gpsTime, elapsedTimeNs, elapsedTimeUncMsec,
+                    elapsedgPTPTimeNsec, gptpTimeValid)) {
+                out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
+                out.location.elapsedRealTime = elapsedTimeNs;
+                out.location.elapsedRealTimeUnc = (int64_t) (elapsedTimeUncMsec * 1000000);
 
-            if (gptpTimeValid) {
-                out.location.flags |= LOCATION_HAS_GPTP_TIME_BIT;
-                out.location.elapsedgPTPTime = elapsedgPTPTimeNsec;
-                out.location.flags |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
-                out.location.elapsedgPTPTimeUnc = 0;
+                if (gptpTimeValid) {
+                    out.location.flags |= LOCATION_HAS_GPTP_TIME_BIT;
+                    out.location.elapsedgPTPTime = elapsedgPTPTimeNsec;
+                    out.location.flags |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
+                    out.location.elapsedgPTPTimeUnc = 0;
+                }
             }
         }
 #ifndef FEATURE_AUTOMOTIVE
-        else if ((out.location.timestamp > 0) &&
-                 (locationExtended.gpsTime.gpsWeek != UNKNOWN_GPS_WEEK_NUM)) {
-            int64_t locationTimeNanos = (int64_t)out.location.timestamp * 1000000;
-            bool isCurDataTimeTrustable =
-                    (out.location.timestamp % mLocPositionMode.min_interval == 0);
-            int64_t elapsedRealTime = mPositionElapsedRealTimeCal.getElapsedRealtimeEstimateNanos(
-                    locationTimeNanos, isCurDataTimeTrustable,
-                    (int64_t)mLocPositionMode.min_interval * 1000000);
-
-            if (elapsedRealTime != -1) {
-                out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
-                out.location.elapsedRealTime = elapsedRealTime;
-                out.location.elapsedRealTimeUnc =
-                        mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
-            }
+        if (!(out.location.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT)) {
+            out.location.elapsedRealTime = getBootTimeMilliSec() * 1000000;
+            out.location.elapsedRealTimeUnc =
+                mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+            out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
         }
 #endif //FEATURE_AUTOMOTIVE
     }
@@ -3052,22 +3068,10 @@ GnssAdapter::updateClientsEventMask()
         mask |= LOC_API_ADAPTER_BIT_REQUEST_WIFI;
     }
 
-    // need to register for leap second info
-    // for proper nmea generation
-    mask |= LOC_API_ADAPTER_BIT_LOC_SYSTEM_INFO;
-
     // always register for NI NOTIFY VERIFY to handle internally in HAL
     mask |= LOC_API_ADAPTER_BIT_NI_NOTIFY_VERIFY_REQUEST;
-
     // register for engine lock state
     mask |= LOC_API_ADAPTER_BIT_ENGINE_LOCK_STATE_DATA_REPORT;
-
-    // Enable the latency report
-    if (mask & LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT) {
-        if (mLogger.isLogEnabled()) {
-            mask |= LOC_API_ADAPTER_BIT_LATENCY_INFORMATION;
-        }
-    }
 
     updateEvtMask(mask, LOC_REGISTRATION_MASK_SET);
 }
@@ -3139,6 +3143,7 @@ GnssAdapter::handleEngineUpEvent()
             mAdapter.setConfig();
             mAdapter.setTribandState();
             mAdapter.setPreciseSessionConfig();
+            mAdapter.notifyPreciseLocation();
             mAdapter.gnssSvConfigUpdate();
             mAdapter.updateSystemPowerState(mAdapter.getSystemPowerState());
             if (mAdapter.mPowerConnectState != POWER_CONNECT_UNKNOWN) {
@@ -3378,26 +3383,6 @@ uint32_t GnssAdapter::getFgTrackingSessionCount() {
     return fgSessionCount;
 }
 
-void GnssAdapter::testLaunchQppeBringUp() {
-    std::thread testLaunchThead([&](){
-        int retryAttempts = 60;
-        mQppeResp = false;
-        getSystemStatus()->eventPreciseLocation(true);
-        getSystemStatus()->eventSetTracking(true, true);
-        while (retryAttempts >= 0 && !mQppeResp) {
-            LOC_LOGd("testLaunchQppeBringUp, retry %d", (60 - retryAttempts));
-            sleep(1);
-            retryAttempts--;
-        }
-        if (!(mPpFeatureStatusMask & DLP_FEATURE_STATUS_LIBRARY_PRESENT)) {
-            LOC_LOGd("timeout, no response from Qppe process.");
-            getSystemStatus()->eventPreciseLocation(false);
-        }
-        getSystemStatus()->eventSetTracking(isInSession(), false);
-    });
-    testLaunchThead.detach();
-}
-
 bool GnssAdapter::setLocPositionMode(const LocPosMode& mode) {
     if (!mLocPositionMode.equals(mode)) {
         mLocPositionMode = mode;
@@ -3536,6 +3521,7 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                     mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
                     mAdapter.setTribandState();
                     mAdapter.setPreciseSessionConfig();
+                    mAdapter.notifyPreciseLocation();
 
                     if (reportToClientWithNoWait) {
                         mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
@@ -3937,6 +3923,7 @@ GnssAdapter::stopTrackingCommand(LocationAPI* client, uint32_t id)
                     mAdapter.eraseTrackingSession(mClient, mSessionId);
                     mAdapter.setTribandState();
                     mAdapter.setPreciseSessionConfig();
+                    mAdapter.notifyPreciseLocation();
 
                     if (reportToClientWithNoWait) {
                         mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
@@ -4565,57 +4552,6 @@ void GnssAdapter::notifyPreciseLocation() {
     setTribandState();
 }
 
-void
-GnssAdapter::logLatencyInfo()
-{
-    if (0 == mGnssLatencyInfoQueue.size()) {
-        return;
-    }
-    mGnssLatencyInfoQueue.front().hlosQtimer5 = getQTimerTickCount();
-    if (0 == mGnssLatencyInfoQueue.front().hlosQtimer3) {
-        /* if SPE from engine hub is not reported then hlosQtimer3 = 0, set it
-        equal to hlosQtimer2 to make sense */
-        mGnssLatencyInfoQueue.front().hlosQtimer3 = mGnssLatencyInfoQueue.front().hlosQtimer2;
-    }
-    if (0 == mGnssLatencyInfoQueue.front().hlosQtimer4) {
-        /* if PPE from engine hub is not reported then hlosQtimer4 = 0, set it
-        equal to hlosQtimer3 to make sense */
-        mGnssLatencyInfoQueue.front().hlosQtimer4 = mGnssLatencyInfoQueue.front().hlosQtimer3;
-    }
-    if (mGnssLatencyInfoQueue.front().hlosQtimer4 < mGnssLatencyInfoQueue.front().hlosQtimer3) {
-        /* hlosQtimer3 is timestamped when SPE from engine hub is reported,
-        and hlosQtimer4 is timestamped when PPE from engine hub is reported.
-        The order is random though, hence making sure the timestamps are sorted */
-        std::swap(mGnssLatencyInfoQueue.front().hlosQtimer3,
-                  mGnssLatencyInfoQueue.front().hlosQtimer4);
-    }
-    LOC_LOGa("meQtimer1=%" PRIi64 " "
-             "meQtimer2=%" PRIi64 " "
-             "meQtimer3=%" PRIi64 " "
-             "peQtimer1=%" PRIi64 " "
-             "peQtimer2=%" PRIi64 " "
-             "peQtimer3=%" PRIi64 " "
-             "smQtimer1=%" PRIi64 " "
-             "smQtimer2=%" PRIi64 " "
-             "smQtimer3=%" PRIi64 " "
-             "locMwQtimer=%" PRIi64 " "
-             "hlosQtimer1=%" PRIi64 " "
-             "hlosQtimer2=%" PRIi64 " "
-             "hlosQtimer3=%" PRIi64 " "
-             "hlosQtimer4=%" PRIi64 " "
-             "hlosQtimer5=%" PRIi64 " ",
-             mGnssLatencyInfoQueue.front().meQtimer1, mGnssLatencyInfoQueue.front().meQtimer2,
-             mGnssLatencyInfoQueue.front().meQtimer3, mGnssLatencyInfoQueue.front().peQtimer1,
-             mGnssLatencyInfoQueue.front().peQtimer2, mGnssLatencyInfoQueue.front().peQtimer3,
-             mGnssLatencyInfoQueue.front().smQtimer1, mGnssLatencyInfoQueue.front().smQtimer2,
-             mGnssLatencyInfoQueue.front().smQtimer3, mGnssLatencyInfoQueue.front().locMwQtimer,
-             mGnssLatencyInfoQueue.front().hlosQtimer1, mGnssLatencyInfoQueue.front().hlosQtimer2,
-             mGnssLatencyInfoQueue.front().hlosQtimer3, mGnssLatencyInfoQueue.front().hlosQtimer4,
-             mGnssLatencyInfoQueue.front().hlosQtimer5);
-    mLogger.log(mGnssLatencyInfoQueue.front());
-    mGnssLatencyInfoQueue.pop();
-}
-
 LocReqEngineTypeMask convertEngTypeToEngMask(const LocOutputEngineType &engType) {
     LocReqEngineTypeMask engMask = LOC_REQ_ENGINE_FUSED_BIT;
     switch (engType) {
@@ -4736,7 +4672,6 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
         convertLocationInfo(locationInfo, locationExtended, status);
         convertLocation(locationInfo.location, ulpLocation, locationExtended, status);
         fillElapsedRealTime(locationExtended, locationInfo);
-        logLatencyInfo();
 
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
             if (needReportForClient(it->first, status)) {
@@ -4812,22 +4747,6 @@ void GnssAdapter::reportEngDebugDataInfoEvent(GnssEngineDebugDataInfo& gnssEngin
     sendMsg(new MsgReportEngDebugDataInfo(*this, gnssEngineDebugDataInfo));
 }
 
-void
-GnssAdapter::reportLatencyInfoEvent(const GnssLatencyInfo& gnssLatencyInfo) {
-    struct MsgReportLatencyInfo : public LocMsg {
-        GnssAdapter& mAdapter;
-        GnssLatencyInfo mGnssLatencyInfo;
-        inline MsgReportLatencyInfo(GnssAdapter& adapter,
-            const GnssLatencyInfo& gnssLatencyInfo) :
-            mGnssLatencyInfo(gnssLatencyInfo),
-            mAdapter(adapter) {}
-        inline virtual void proc() const {
-            mAdapter.mGnssLatencyInfoQueue.push(mGnssLatencyInfo);
-        }
-    };
-    sendMsg(new MsgReportLatencyInfo(*this, gnssLatencyInfo));
-}
-
 bool
 GnssAdapter::reportSpeAsEnginePosition(const UlpLocation& ulpLocation,
                                    const GpsLocationExtended& locationExtended,
@@ -4883,27 +4802,15 @@ GnssAdapter::reportEnginePositions(unsigned int count,
 #endif
 
        }
-
-        const EngineLocationInfo* engLocation = locationArr;
-
-        if (0 != mGnssLatencyInfoQueue.size()) {
-            if ((GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE & engLocation->locationExtended.flags) &&
-                (LOC_OUTPUT_ENGINE_SPE == engLocation->locationExtended.locOutputEngType)) {
-                mGnssLatencyInfoQueue.front().hlosQtimer3 = getQTimerTickCount();
-            }
-            if ((GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE & engLocation->locationExtended.flags) &&
-                (LOC_OUTPUT_ENGINE_PPE == engLocation->locationExtended.locOutputEngType)) {
-                mGnssLatencyInfoQueue.front().hlosQtimer4 = getQTimerTickCount();
-            }
-        }
-        if (needReportEnginePositions) {
-            for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
-                if ((nullptr != it->second.engineLocationsInfoCb) &&
-                    (needReportForClient(it->first, engLocation->sessionStatus))) {
-                    it->second.engineLocationsInfoCb(count, locationInfo);
-                }
-            }
-        }
+       const EngineLocationInfo* engLocation = locationArr;
+       if (needReportEnginePositions) {
+           for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
+               if ((nullptr != it->second.engineLocationsInfoCb) &&
+                       (needReportForClient(it->first, engLocation->sessionStatus))) {
+                   it->second.engineLocationsInfoCb(count, locationInfo);
+               }
+           }
+       }
     }
     return isPrecisePositioningEnabled;
 }
@@ -5503,7 +5410,7 @@ GnssAdapter::reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurement
 
     struct MsgReportGnssMeasurementData : public LocMsg {
         GnssAdapter& mAdapter;
-        GnssMeasurements mGnssMeasurements;
+        mutable GnssMeasurements mGnssMeasurements;
         inline MsgReportGnssMeasurementData(GnssAdapter& adapter,
                                             const GnssMeasurements& gnssMeasurements) :
                 LocMsg(),
@@ -5514,6 +5421,7 @@ GnssAdapter::reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurement
         inline virtual void proc() const {
             mAdapter.mPositionElapsedRealTimeCal.saveGpsTimeAndQtimerPairInMeasReport(
                     mGnssMeasurements.gnssSvMeasurementSet);
+            mAdapter.fillElapsedRealTimeForMeas(mGnssMeasurements);
             mAdapter.reportGnssMeasurementData(mGnssMeasurements.gnssMeasNotification);
             if ((false == mGnssMeasurements.gnssSvMeasurementSet.isNhz) &&
                     mAdapter.mDGnssNeedReport) {
@@ -5994,45 +5902,19 @@ void GnssAdapter::handleQesdkQwesStatusFromEHub(
             auto wocsInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_WOCS);
 
             //QESDK feature status call back handling logic:
-            //1, If LOCATION_QWES_FEATURE_TYPE_PPE is presented in feature map,
-            //   It means Qwes status callback is triggered by Engine Servive try
-            //   to register to Engine Hub, set DLP_FEATURE_STATUS_QPPE_LIBRARY_PRESENT
-            //   bit, and set DLP_FEATURE_ENABLED_BY_DEFAULT bit according to
-            //   PPE feature status;
-            //2, If LOCATION_QWES_FEATURE_TYPE_QDR3 is presented in feature map,
-            //   It means Qwes status callback is triggered by Engine Servive try
-            //   to register to Engine Hub, set DLP_FEATURE_STATUS_QFE_LIBRARY_PRESENT
-            //   bit, and set DLP_FEATURE_ENABLED_BY_DEFAULT bit according to
-            //   PPE feature status;
-            //3, If LOCATION_QWES_FEATURE_TYPE_DLP_QESDK is presented in feature map,
+            //1, DLP_FEATURE_ENABLED_BY_DEFAULT bit is set in reportQwesCapabilities
+            //   according to PPE and QFE feature status during GNSS HAL process
+            //   boot up;
+            //   DLP_FEATURE_STATUS_QPPE_LIBRARY_PRESENT bit is set in initEngHubProxy
+            //   when QPPE process is enabled in izat.conf.
+            //   DLP_FEATURE_STATUS_QFE_LIBRARY_PRESENT bit is set in initEngHubProxy
+            //   when QEF process is enabled in izat.conf.
+            //2, If LOCATION_QWES_FEATURE_TYPE_DLP_QESDK is presented in feature map,
             //   It means Qwes status callback is triggered when Engine hub recieves
             //   configPreciseLocation command from GnssAdapter, and already checked
             //   QESDK feature status via QWES call checkInstalledLicense, set
             //   DLP_FEATURE_ENABLED_BY_QESDK bit according to QESDK feature status.
-            if (ppeInFeatureMap != mFeatureMap.end() || qfeInFeatureMap != mFeatureMap.end()) {
-                if (ppeInFeatureMap != mFeatureMap.end()) {
-                    mAdapter.mPpFeatureStatusMask |= DLP_FEATURE_STATUS_QPPE_LIBRARY_PRESENT;
-                }
-                if (qfeInFeatureMap != mFeatureMap.end()) {
-                    mAdapter.mPpFeatureStatusMask |= DLP_FEATURE_STATUS_QFE_LIBRARY_PRESENT;
-                }
-                if ((ppeInFeatureMap != mFeatureMap.end() && ppeInFeatureMap->second) ||
-                        (qfeInFeatureMap != mFeatureMap.end() && qfeInFeatureMap->second)) {
-                    mAdapter.mPpFeatureStatusMask |= DLP_FEATURE_ENABLED_BY_DEFAULT;
-                    mAdapter.notifyPreciseLocation();
-                } else {
-                    mAdapter.mPpFeatureStatusMask &= (~DLP_FEATURE_ENABLED_BY_DEFAULT);
-                    mAdapter.notifyPreciseLocation();
-                }
-                mAdapter.mQppeResp = true;
-            } else if (wocsInFeatureMap != mFeatureMap.end()) {
-                if (wocsInFeatureMap->second) {
-                    mAdapter.mPpFeatureStatusMask |= WOCS_FEATURE_ENABLED_BY_DEFAULT;
-                } else {
-                    mAdapter.mPpFeatureStatusMask &= (~WOCS_FEATURE_ENABLED_BY_DEFAULT);
-                }
-                mAdapter.notifyPreciseLocation();
-            }else if (dlpQesdkInFeatureMap != mFeatureMap.end()) {
+            if (dlpQesdkInFeatureMap != mFeatureMap.end()) {
                 if (dlpQesdkInFeatureMap->second) {
                     mAdapter.mPpFeatureStatusMask |= DLP_FEATURE_ENABLED_BY_QESDK;
                     //Send enable precise location data item to loclauncher to inform
@@ -6092,6 +5974,20 @@ bool GnssAdapter::reportQwesCapabilities(
 
             LOC_LOGI("ReportQwesFeatureStatus after caps %" PRIx64 " ",
                      mAdapter.getCapabilities());
+            //Set Dlp feature bit
+            auto ppeInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_PPE);
+            auto qfeInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_QDR3);
+            if (ppeInFeatureMap != mFeatureMap.end() || qfeInFeatureMap != mFeatureMap.end()) {
+                if ((ppeInFeatureMap != mFeatureMap.end() && ppeInFeatureMap->second) ||
+                        (qfeInFeatureMap != mFeatureMap.end() && qfeInFeatureMap->second)) {
+                    mAdapter.mPpFeatureStatusMask |= DLP_FEATURE_ENABLED_BY_DEFAULT;
+                    mAdapter.notifyPreciseLocation();
+                } else {
+                    mAdapter.mPpFeatureStatusMask &= (~DLP_FEATURE_ENABLED_BY_DEFAULT);
+                    mAdapter.notifyPreciseLocation();
+                }
+            }
+            LOC_LOGd("mPpFeatureStatusMask = 0x%x", mAdapter.mPpFeatureStatusMask);
             mAdapter.broadcastCapabilities(mAdapter.getCapabilities());
 
             // Configure robust location now, as it depends on the RL QWES status
@@ -6328,26 +6224,20 @@ GnssAdapter::invokeGnssEnergyConsumedCallback(uint64_t energyConsumedSinceFirstB
            else
                 use the value we get here from the modem for mBootReferenceEnergy */
 
-        struct timespec currentTime = {};
-        int64_t sinceBootTimeNanos = 0;
+        uint64_t sinceBootTimeMs = getBootTimeMilliSec();
         FILE *fp = NULL;
 
         mBootReferenceEnergy = energyConsumedSinceFirstBoot;
         if (NULL != (fp = fopen("/data/vendor/location/energy.conf", "a+b"))) {
             rewind(fp);
-            if (RealtimeEstimator::getCurrentTime(currentTime, sinceBootTimeNanos)) {
-                LOC_LOGv("sinceBootTimeNanos: %" PRIu64 " ", sinceBootTimeNanos);
-                if ((uint32_t)(sinceBootTimeNanos / 1000000000) > 30) {
-                    int fr = fread(&mBootReferenceEnergy, sizeof(mBootReferenceEnergy), 1, fp);
-                    if (1 != fr) {
-                        mBootReferenceEnergy = energyConsumedSinceFirstBoot;
-                        LOC_LOGw("fread failed ferror(fp)=%d fr=%d", ferror(fp), fr);
-                    }
-                } else {
-                    fwrite(&mBootReferenceEnergy, sizeof(mBootReferenceEnergy), 1, fp);
+            LOC_LOGv("sinceBootTimeMs: %" PRIu64 " ", sinceBootTimeMs);
+            if ((uint32_t)(sinceBootTimeMs / 1000) > 30) {
+                int fr = fread(&mBootReferenceEnergy, sizeof(mBootReferenceEnergy), 1, fp);
+                if (1 != fr) {
+                    mBootReferenceEnergy = energyConsumedSinceFirstBoot;
+                    LOC_LOGw("fread failed ferror(fp)=%d fr=%d", ferror(fp), fr);
                 }
             } else {
-                LOC_LOGw("getCurrentTime failed");
                 fwrite(&mBootReferenceEnergy, sizeof(mBootReferenceEnergy), 1, fp);
             }
             fclose(fp);
@@ -6358,7 +6248,6 @@ GnssAdapter::invokeGnssEnergyConsumedCallback(uint64_t energyConsumedSinceFirstB
                  mBootReferenceEnergy, energyConsumedSinceFirstBoot);
 
         mGnssPowerStatisticsInit = true;
-        mPowerElapsedRealTimeCal.reset();
     } else if (nullptr != mPowerIndicationCb) {
         GnssPowerStatistics gnssPowerStatistics = {};
         gnssPowerStatistics.size = sizeof(GnssPowerStatistics);
@@ -6383,7 +6272,7 @@ GnssAdapter::invokeGnssEnergyConsumedCallback(uint64_t energyConsumedSinceFirstB
 
         gnssPowerStatistics.elapsedRealTime = elapsedRealtime() * 1000000LL;
         gnssPowerStatistics.elapsedRealTimeUnc =
-                mPowerElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+                RealtimeEstimator::getElapsedRealtimeUncNanos();
         mPowerIndicationCb(gnssPowerStatistics);
     }
 }
@@ -8505,38 +8394,70 @@ GnssAdapter::initLocGlinkProxy() {
     return locGlinkLoadSuccessful;
 }
 
-/* ==== Eng Hub Proxy ================================================================= */
-/* ======== UTILITIES ================================================================= */
-void
-GnssAdapter::initEngHubProxyCommand() {
-    LOC_LOGd();
+uint32_t GnssAdapter::gnssInjectXtraUserConsentCommand(const bool xtraUserConsent) {
+    // generated session id will be none-zero
+    uint32_t sessionId = generateSessionId();
+    LOC_LOGd("session id %u", sessionId);
 
-    struct MsgInitEngHubProxy : public LocMsg {
-        GnssAdapter* mAdapter;
-        inline MsgInitEngHubProxy(GnssAdapter* adapter) :
+    struct MsgInjectXtraUserConsent : public LocMsg {
+        GnssAdapter&       mAdapter;
+        uint32_t           mSessionId;
+        const bool& mXtraUserConsent;
+
+        inline MsgInjectXtraUserConsent(GnssAdapter& adapter,
+                                 uint32_t sessionId,
+                                 const bool& userConsent) :
             LocMsg(),
-            mAdapter(adapter) {}
+            mAdapter(adapter),
+            mSessionId(sessionId),
+            mXtraUserConsent(userConsent) {}
         inline virtual void proc() const {
-            mAdapter->initEngHubProxy();
+            LocationError err = LOCATION_ERROR_NOT_SUPPORTED;
+            if (mAdapter.mMpXtraEnabled == false) {
+                 mAdapter.reportResponse(LOCATION_ERROR_NOT_SUPPORTED, mSessionId);
+            } else {
+                if (true == mAdapter.mXtraObserver.updateXtraUserConsent(mXtraUserConsent)) {
+                    mAdapter.reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
+                } else {
+                    mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
+                }
+            }
+            mAdapter.reportResponse(err, mSessionId);
         }
     };
 
-    sendMsg(new MsgInitEngHubProxy(this));
+    sendMsg(new MsgInjectXtraUserConsent(*this, sessionId, xtraUserConsent));
+    return sessionId;
 }
 
-bool
-GnssAdapter::initEngHubProxy() {
-    static bool firstTime = true;
+void
+GnssAdapter::initValueAddedProcessCommand() {
+    LOC_LOGd();
 
+    struct MsgInitValueAddedProcess : public LocMsg {
+        GnssAdapter* mAdapter;
+        inline MsgInitValueAddedProcess(GnssAdapter* adapter) :
+            LocMsg(),
+            mAdapter(adapter) {}
+        inline virtual void proc() const {
+            mAdapter->initValueAddedProcess();
+        }
+    };
+
+    sendMsg(new MsgInitValueAddedProcess(this));
+}
+
+
+bool
+GnssAdapter::initValueAddedProcess() {
+    bool retVal = true;
     const char *error = nullptr;
     unsigned int processListLength = 0;
     loc_process_info_s_type* processInfoList = nullptr;
-    do {
-        // load eng hub only once
-        if (firstTime == false) {
-            break;
-        }
+    bool valueAddedProcessEnabled = false;
+    bool engineServiceEnabled = false;
 
+    do {
         int rc = loc_read_process_conf(LOC_PATH_IZAT_CONF, &processListLength,
                                        &processInfoList);
         if (rc != 0) {
@@ -8544,32 +8465,53 @@ GnssAdapter::initEngHubProxy() {
             break;
         }
 
-        bool pluginDaemonEnabled = false;
         // go over the conf table to see whether any plugin daemon is enabled
         for (unsigned int i = 0; i < processListLength; i++) {
-            if ((strncmp(processInfoList[i].name[0], PROCESS_NAME_ENGINE_SERVICE,
-                         strlen(PROCESS_NAME_ENGINE_SERVICE)) == 0) &&
-                (processInfoList[i].proc_status == ENABLED)) {
-                pluginDaemonEnabled = true;
-                if (processInfoList[i].args[1]!= nullptr) {
-                    // check if this is DRE-INT engine
-                    if (strncmp(processInfoList[i].args[1], "DRE-INT", sizeof("DRE-INT")) == 0) {
-                        mEngServiceInfo.dreIntEnabled = true;
-                    } else if (strncmp(processInfoList[i].args[1], "PPE", sizeof("PPE")) == 0) {
-                        mEngServiceInfo.ppeEnabled = true;
-                    } else if (strncmp(processInfoList[i].args[1], "PPE-INT", sizeof("PPE-INT"))
-                               == 0) {
-                        mEngServiceInfo.ppeIntEnabled = true;
-                        mEngServiceInfo.ppeEnabled = true;
+            LOC_LOGe("process %s, enabled %d",
+                     processInfoList[i].name[0], processInfoList[i].proc_status);
+            if (processInfoList[i].proc_status == ENABLED) {
+                valueAddedProcessEnabled = true;
+
+                if (strncmp(processInfoList[i].name[0], PROCESS_NAME_ENGINE_SERVICE,
+                            strlen(PROCESS_NAME_ENGINE_SERVICE)) == 0) {
+                    engineServiceEnabled = true;
+
+                    if (processInfoList[i].args[1]!= nullptr) {
+                        // check if this is DRE-INT engine
+                        if (strncmp(processInfoList[i].args[1], "DRE-INT",
+                                    sizeof("DRE-INT")) == 0) {
+                             mEngServiceInfo.dreIntEnabled = true;
+                        } else if (strncmp(processInfoList[i].args[1], "PPE",
+                                           sizeof("PPE")) == 0) {
+                            mEngServiceInfo.ppeEnabled = true;
+                        } else if (strncmp(processInfoList[i].args[1], "PPE-INT",
+                                           sizeof("PPE-INT")) == 0) {
+                            mEngServiceInfo.ppeIntEnabled = true;
+                            mEngServiceInfo.ppeEnabled = true;
+                        }
                     }
                 }
             }
         }
 
-        // no plugin daemon is enabled for this platform,
+#ifdef _ANDROID_
+        // set the property to launch loc_launcher
+        // loc_launcher rc file will only launch loc_launcher if
+        // property "vendor.qti.izat.value_added_process" is set to "enabled".
+        char* value = "disabled";
+        if (valueAddedProcessEnabled == true) {
+           value = "enabled";
+        }
+
+        if (0 != property_set("vendor.qti.izat.value_added_process", value)) {
+           LOC_LOGe ("failed to set property vendor.qti.izat.value_added_process");
+        }
+#endif
+
+        // no engine service is enabled for this platform,
         // check if external engine is present for which we need
         // libloc_eng_hub.so to be loaded
-        if (pluginDaemonEnabled == false) {
+        if (engineServiceEnabled == false) {
             UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izatConfParamTable);
             if (!loadEngHubForExternalEngine) {
                 break;
@@ -8582,6 +8524,7 @@ GnssAdapter::initEngHubProxy() {
         if ((handle = dlopen("libloc_eng_hub.so", RTLD_NOW)) == nullptr) {
             if ((error = dlerror()) != nullptr) {
                 LOC_LOGe("libloc_eng_hub.so not found %s !", error);
+                retVal = false;
             }
             break;
         }
@@ -8646,18 +8589,19 @@ GnssAdapter::initEngHubProxy() {
             LOC_LOGd("entered, did not find function of getEngHubProxy");
         }
 
-        LOC_LOGd("first time initialization %d, returned %d",
-                 firstTime, mEngHubLoadSuccessful);
-
     } while (0);
+
+    LOC_LOGd("value added daemon enabled %d, engine service enabled %d,"
+             "engien hub load successful %d ",
+             valueAddedProcessEnabled, engineServiceEnabled,
+             mEngHubLoadSuccessful);
 
     if (processInfoList != nullptr) {
         free (processInfoList);
         processInfoList = nullptr;
     }
 
-    firstTime = false;
-    return mEngHubLoadSuccessful;
+    return retVal;
 }
 
 std::vector<double>

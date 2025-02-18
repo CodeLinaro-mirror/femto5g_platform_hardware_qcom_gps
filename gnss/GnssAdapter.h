@@ -78,7 +78,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 #include <functional>
 #include <loc_misc_utils.h>
-#include <queue>
 #include <NativeAgpsHandler.h>
 #include <unordered_map>
 #include <base_util/nvparam_mgr.h>
@@ -250,18 +249,6 @@ typedef uint16_t  DGnssStateBitMask;
 #define DGNSS_STATE_NO_NMEA_PENDING           0X02
 #define DGNSS_STATE_NTRIP_SESSION_STARTED     0X04
 
-class GnssReportLoggerUtil {
-public:
-    typedef void (*LogGnssLatency)(const GnssLatencyInfo& gnssLatencyMeasInfo);
-
-    GnssReportLoggerUtil();
-    bool isLogEnabled();
-    void log(const GnssLatencyInfo& gnssLatencyMeasInfo);
-
-private:
-    LogGnssLatency mLogLatency;
-};
-
 class GnssAdapter : public LocAdapterBase {
 
     LocGlinkBase* mLocGlinkProxy;
@@ -313,7 +300,6 @@ class GnssAdapter : public LocAdapterBase {
     powerIndicationCb mPowerIndicationCb;
     bool mGnssPowerStatisticsInit;
     uint64_t mBootReferenceEnergy;
-    RealtimeEstimator mPowerElapsedRealTimeCal;
 
     /* ==== Measurement Corrections========================================================= */
     bool mIsMeasCorrInterfaceOpen;
@@ -368,8 +354,6 @@ class GnssAdapter : public LocAdapterBase {
     /* === Misc ===================================================================== */
     BlockCPIInfo mBlockCPIInfo;
     bool mPowerOn;
-    std::queue<GnssLatencyInfo> mGnssLatencyInfoQueue;
-    GnssReportLoggerUtil mLogger;
     bool mEngHubLoadSuccessful;
     EngineServiceInfo mEngServiceInfo;
     RealtimeEstimator mPositionElapsedRealTimeCal;
@@ -426,6 +410,7 @@ class GnssAdapter : public LocAdapterBase {
     { mLocApi->injectPositionAndCivicAddress(location, addr);}
     void fillElapsedRealTime(const GpsLocationExtended& locationExtended,
                              GnssLocationInfoNotification& out);
+    void fillElapsedRealTimeForMeas(GnssMeasurements& svMeasurementSet);
     void combineBlacklistSvs(const GnssSvIdConfig& blacklistSvs,
             const GnssSvTypeConfig& constellationConfig,
             GnssSvIdConfig& combinedBlacklistSvs);
@@ -437,7 +422,6 @@ class GnssAdapter : public LocAdapterBase {
     void checkUpdateDgnssNtrip(bool isLocationValid);
     void stopDgnssNtrip();
     uint64_t   mDgnssLastNmeaBootTimeMilli;
-    bool mQppeResp;
 
     /*==== Signal type capabilities ====================================================*/
     GnssCapabNotification mGnssCapabNotification;
@@ -460,7 +444,6 @@ protected:
     virtual void updateClientsEventMask();
     virtual void stopClientSessions(LocationAPI* client, bool eraseSession = true);
     inline void setNmeaReportRateConfig();
-    void logLatencyInfo();
     halResponseTimer mResponseTimer;
 
 public:
@@ -550,7 +533,7 @@ public:
     void setControlCallbacksCommand(LocationControlCallbacks& controlCallbacks);
     void readConfigCommand();
     void requestUlpCommand();
-    void initEngHubProxyCommand();
+    void initValueAddedProcessCommand();
     void initLocGlinkCommand();
     uint32_t* gnssUpdateConfigCommand(const GnssConfig& config);
     uint32_t* gnssGetConfigCommand(GnssConfigFlagsMask mask);
@@ -627,6 +610,7 @@ public:
     uint32_t configMerkleTreeCommand(const char * merkleTreeConfigBuffer, int bufferLength);
     uint32_t configOsnmaEnablementCommand(bool enable);
     uint32_t gnssInjectMmfDataCommand(const GnssMapMatchedData& data);
+    uint32_t gnssInjectXtraUserConsentCommand(const bool xtraUserConsent);
     void set3rdPartyNtnCapabilityCommand(bool isCapable);
     void getNtnConfigSignalMaskCommand();
     void setNtnConfigSignalMaskCommand(GnssSignalTypeMask gpsSignalTypeConfigMask);
@@ -653,7 +637,7 @@ public:
     virtual bool isInSession() { return !mTimeBasedTrackingSessions.empty(); }
     uint32_t getFgTrackingSessionCount();
     void initDefaultAgps();
-    bool initEngHubProxy();
+    bool initValueAddedProcess();
     inline bool isPreciseEnabled(PpFeatureStatusMask bits = DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
         return (mPpFeatureStatusMask & bits) &&
                 (mPpFeatureStatusMask &
@@ -720,7 +704,6 @@ public:
     virtual bool reportGnssAdditionalSystemInfoEvent(
             GnssAdditionalSystemInfo& additionalSystemInfo);
     virtual void reportNfwNotificationEvent(GnssNfwNotification& notification);
-    virtual void reportLatencyInfoEvent(const GnssLatencyInfo& gnssLatencyInfo);
     virtual void reportEngDebugDataInfoEvent(GnssEngineDebugDataInfo&
             gnssEngineDebugDataInfo) override;
     virtual bool reportQwesCapabilities
@@ -862,7 +845,6 @@ public:
     inline void setEsStatusCallback (std::function<void(bool)> esStatusCb) {
             mEsStatusCb = esStatusCb; }
     void setTribandState();
-    void testLaunchQppeBringUp();
     /*==== DGnss Usable Report Flag ====================================================*/
     inline void setDGnssUsableFLag(bool dGnssNeedReport) { mDGnssNeedReport = dGnssNeedReport;}
     inline bool isNMEAPrintEnabled() {

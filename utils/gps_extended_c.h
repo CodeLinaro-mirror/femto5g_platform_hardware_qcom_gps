@@ -27,7 +27,7 @@
  */
 
 /*
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -885,7 +885,6 @@ enum loc_api_adapter_event_index {
     LOC_API_ADAPTER_LOC_SYSTEM_INFO,                   // Location system info event
     LOC_API_ADAPTER_GNSS_NHZ_MEASUREMENT_REPORT,       // GNSS SV nHz measurement report
     LOC_API_ADAPTER_EVENT_REPORT_INFO,                 // Event report info
-    LOC_API_ADAPTER_LATENCY_INFORMATION_REPORT,        // Latency information report
     LOC_API_ADAPTER_ENGINE_DEBUG_DATA_REPORT,          // Engine Debug data report
     LOC_API_ADAPTER_REPORT_DISASTER_CRISIS,            // Disaster crisis message report
     LOC_API_ADAPTER_ENGINE_LOCK_STATE_DATA_REPORT,     // Engine lock state data report
@@ -932,7 +931,6 @@ enum loc_api_adapter_event_index {
 #define LOC_API_ADAPTER_BIT_LOC_SYSTEM_INFO                  (1ULL<<LOC_API_ADAPTER_LOC_SYSTEM_INFO)
 #define LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT             (1ULL<<LOC_API_ADAPTER_GNSS_NHZ_MEASUREMENT_REPORT)
 #define LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO                (1ULL<<LOC_API_ADAPTER_EVENT_REPORT_INFO)
-#define LOC_API_ADAPTER_BIT_LATENCY_INFORMATION              (1ULL<<LOC_API_ADAPTER_LATENCY_INFORMATION_REPORT)
 #define LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT         (1ULL<<LOC_API_ADAPTER_ENGINE_DEBUG_DATA_REPORT)
 #define LOC_API_ADAPTER_BIT_DISASTER_CRISIS_REPORT           (1ULL<<LOC_API_ADAPTER_REPORT_DISASTER_CRISIS)
 #define LOC_API_ADAPTER_BIT_ENGINE_LOCK_STATE_DATA_REPORT    (1ULL<<LOC_API_ADAPTER_ENGINE_LOCK_STATE_DATA_REPORT)

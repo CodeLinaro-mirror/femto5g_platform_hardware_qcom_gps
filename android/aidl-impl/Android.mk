@@ -37,17 +37,12 @@ LOCAL_C_INCLUDES:= \
     $(LOCAL_PATH)/location_api
 
 LOCAL_STATIC_LIBRARIES := liblocbatterylistener
-LOCAL_STATIC_LIBRARIES += libhealthhalutils
 
 LOCAL_SHARED_LIBRARIES := \
     libbase \
     libbinder_ndk \
     android.hardware.gnss-V4-ndk \
     android.hardware.health-V1-ndk \
-    android.hardware.health@1.0 \
-    android.hardware.health@2.0 \
-    android.hardware.health@2.1 \
-    libhidlbase \
     liblog \
     libcutils \
     libutils \
@@ -55,12 +50,6 @@ LOCAL_SHARED_LIBRARIES := \
     libgps.utils \
     libdl \
     liblocation_api
-
-ifneq ($(TARGET_SUPPORTS_WEARABLES),true)
-    LOCAL_SHARED_LIBRARIES += libqti_vndfwk_detect_vendor
-else
-    LOCAL_SHARED_LIBRARIES += libqti_vndfwk_detect
-endif
 
 LOCAL_CFLAGS += $(GNSS_CFLAGS)
 
@@ -91,14 +80,7 @@ LOCAL_SHARED_LIBRARIES := \
     liblocation_api \
     libbinder_ndk
 
-ifneq ($(TARGET_SUPPORTS_WEARABLES),true)
-    LOCAL_SHARED_LIBRARIES += libqti_vndfwk_detect_vendor
-else
-    LOCAL_SHARED_LIBRARIES += libqti_vndfwk_detect
-endif
-
 LOCAL_SHARED_LIBRARIES += \
-    libhidlbase \
     android.hardware.gnss-V4-ndk \
     android.hardware.gnss-aidl-impl-qti
 

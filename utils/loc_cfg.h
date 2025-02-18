@@ -28,7 +28,7 @@
  */
 /*
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022, 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022, 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -45,16 +45,6 @@
 #define LOC_MAX_PARAM_STRING               172
 #define LOC_MAX_PARAM_LINE    (LOC_MAX_PARAM_NAME + LOC_MAX_PARAM_STRING)
 
-#define LOC_FEATURE_MODE_DISABLED "DISABLED"
-#define LOC_FEATURE_MODE_BASIC    "BASIC"
-#define LOC_FEATURE_MODE_PREMIUM  "PREMIUM"
-
-#define LOC_FEATURE_GTP_AP_CELL        "gtp-ap-cell"
-#define LOC_FEATURE_GTP_MODEM_CELL     "gtp-modem-cell"
-#define LOC_FEATURE_GTP_CELL_ENH       "gtp-cell-enh"
-#define LOC_FEATURE_GTP_WIFI           "gtp-wifi"
-#define LOC_FEATURE_GTP_WAA            "gtp-waa"
-#define LOC_FEATURE_SAP                "sap"
 #define LOC_FEATURE_LAUNCH_TRIGGER_MASK   "launch-trigger-mask"
 
 #define LOC_PROCESS_MAX_NUM_GROUPS     20
@@ -92,10 +82,8 @@ typedef struct
 
 typedef enum {
     ENABLED,
-    RUNNING,
     DISABLED,
-    DISABLED_FROM_CONF,
-    DISABLED_VIA_VENDOR_ENHANCED_CHECK
+    RUNNING
 } loc_process_e_status;
 
 typedef struct {
@@ -124,8 +112,6 @@ extern "C" {
  *                       MODULE EXPORTED FUNCTIONS
  *
  *============================================================================*/
-bool isVendorEnhanced();
-void setVendorEnhanced(bool vendorEnhanced);
 void loc_read_conf_long(const char* conf_file_name,
                         const loc_param_s_type config_table[],
                         uint32_t table_length, uint16_t string_len);

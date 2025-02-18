@@ -471,10 +471,6 @@ LocAdapterBase::requestCapabilitiesCommand(LocationAPI* client)
 }
 
 void
-LocAdapterBase::reportLatencyInfoEvent(const GnssLatencyInfo& /*gnssLatencyInfo*/)
-DEFAULT_IMPL()
-
-void
 LocAdapterBase::handleEngineLockStatusEvent(const EngineLockState engineLockState)
 DEFAULT_IMPL()
 

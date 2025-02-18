@@ -590,12 +590,6 @@ void LocApiBase::reportGnssConfig(uint32_t sessionId, const GnssConfig& gnssConf
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportGnssConfigEvent(sessionId, gnssConfig));
 }
 
-void LocApiBase::reportLatencyInfo(GnssLatencyInfo& gnssLatencyInfo)
-{
-    // loop through adapters, and deliver to the first handling adapter.
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportLatencyInfoEvent(gnssLatencyInfo));
-}
-
 void LocApiBase::reportEngineLockStatus(EngineLockState engineLockState) {
     // loop through adapters, and deliver to the All handling adapter.
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->handleEngineLockStatusEvent(engineLockState));
@@ -950,105 +944,9 @@ void LocApiBase::injectSuplCert(int32_t /*suplCertId*/,
         const std::vector<uint8_t>& /*suplCertData*/, LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
-int64_t RealtimeEstimator::getElapsedRealtimeEstimateNanos(int64_t curDataTimeNanos,
-            bool isCurDataTimeTrustable, int64_t tbfNanos) {
-    //The algorithm works follow below steps:
-    //When isCurDataTimeTrustable is meet (means Modem timestamp is already stable),
-    //1, Wait for mFixTimeStablizationThreshold fixes; While waiting for modem time
-    //   stable, we set the traveltime to a default value;
-    //2, When the mFixTimeStablizationThreshold fix comes, we think now the mode time
-    //   is already stable, calculate the initial AP-Modem clock diff(mCurrentClockDiff)
-    //   using formula:
-    //   mCurrentClockDiff = currentTimeNanos - locationTimeNanos - currentTravelTimeNanos
-    //3, since then, when the nth fix comes,
-    //   3.1 First update mCurrentClockDiff using below formula:
-    //        mCurrentClockDiff = mCurrentClockDiff + (currentTimeNanos - sinceBootTimeNanos)
-    //                - (mPrevUtcTimeNanos - mPrevBootTimeNanos)
-    //   3.2 Calculate currentTravelTimeNanos:
-    //        currentTravelTimeNanos = currentTimeNanos - locationTimeNanos - mCurrentClockDiff
-    //4, It is possible that locationTimeNanos will jump,
-    //   reset mFixTimeStablizationThreshold to default value, jump to step 2 to continue.
-
-    int64_t currentTravelTimeNanos = mInitialTravelTime;
-    struct timespec currentTime = {};
-    int64_t sinceBootTimeNanos = 0;
-    if (getCurrentTime(currentTime, sinceBootTimeNanos)) {
-        if (isCurDataTimeTrustable) {
-            if (tbfNanos > 0 && tbfNanos != curDataTimeNanos - mPrevDataTimeNanos) {
-                mFixTimeStablizationThreshold = 5;
-            }
-            int64_t currentTimeNanos = (int64_t)currentTime.tv_sec*1000000000 + currentTime.tv_nsec;
-            LOC_LOGv("sinceBootTimeNanos:%" PRIi64 " currentTimeNanos:%" PRIi64 ""
-                     " locationTimeNanos:%" PRIi64 "",
-                     sinceBootTimeNanos, currentTimeNanos, curDataTimeNanos);
-            if (mFixTimeStablizationThreshold == 0) {
-                currentTravelTimeNanos = mInitialTravelTime;
-                mCurrentClockDiff = currentTimeNanos - curDataTimeNanos - currentTravelTimeNanos;
-            } else if (mFixTimeStablizationThreshold < 0) {
-                mCurrentClockDiff = mCurrentClockDiff + (currentTimeNanos - sinceBootTimeNanos)
-                        - (mPrevUtcTimeNanos - mPrevBootTimeNanos);
-                currentTravelTimeNanos = currentTimeNanos - curDataTimeNanos - mCurrentClockDiff;
-            }
-
-            mPrevUtcTimeNanos = currentTimeNanos;
-            mPrevBootTimeNanos = sinceBootTimeNanos;
-            mPrevDataTimeNanos = curDataTimeNanos;
-            mFixTimeStablizationThreshold--;
-        }
-    } else {
-        return -1;
-    }
-    LOC_LOGv("Estimated travel time: %" PRIi64 "", currentTravelTimeNanos);
-    return (sinceBootTimeNanos - currentTravelTimeNanos);
-}
-
 void RealtimeEstimator::reset() {
-    mCurrentClockDiff = 0;
-    mPrevDataTimeNanos = 0;
-    mPrevUtcTimeNanos = 0;
-    mPrevBootTimeNanos = 0;
-    mFixTimeStablizationThreshold = 5;
     memset(&mTimePairPVTReport, 0, sizeof(mTimePairPVTReport));
     memset(&mTimePairMeasReport, 0, sizeof(mTimePairMeasReport));
-}
-
-int64_t RealtimeEstimator::getElapsedRealtimeQtimer(int64_t qtimerTicksAtOrigin) {
-    struct timespec currentTime = {};
-    int64_t sinceBootTimeNanos = 0;
-    int64_t elapsedRealTimeNanos = 0;
-
-    if (getCurrentTime(currentTime, sinceBootTimeNanos)) {
-       uint64_t qtimerDiff = 0;
-       uint64_t qTimerTickCount = getQTimerTickCount();
-       if (qTimerTickCount >= qtimerTicksAtOrigin) {
-           qtimerDiff = qTimerTickCount - qtimerTicksAtOrigin;
-       }
-       LOC_LOGd("sinceBootTimeNanos:%" PRIi64 " qtimerTicksAtOrigin=%" PRIi64 ""
-                " qTimerTickCount=%" PRIi64 " qtimerDiff=%" PRIi64 "",
-                sinceBootTimeNanos, qtimerTicksAtOrigin, qTimerTickCount, qtimerDiff);
-       uint64_t qTimerDiffNanos = qTimerTicksToNanos(double(qtimerDiff));
-
-       /* If the time difference between Qtimer on modem side and Qtimer on AP side
-          is greater than one second we assume this is a dual-SoC device such as
-          Kona and will try to get Qtimer on modem side and on AP side and
-          will adjust our difference accordingly */
-       if (qTimerDiffNanos > 1000000000) {
-           uint64_t qtimerDelta = getQTimerDeltaNanos();
-           if (qTimerDiffNanos >= qtimerDelta) {
-               qTimerDiffNanos -= qtimerDelta;
-           }
-       }
-
-       LOC_LOGd("Qtimer travel time: %" PRIi64 "", qTimerDiffNanos);
-       if (sinceBootTimeNanos >= qTimerDiffNanos) {
-           elapsedRealTimeNanos = sinceBootTimeNanos - qTimerDiffNanos;
-       } else {
-           elapsedRealTimeNanos = -1;
-       }
-    } else {
-        elapsedRealTimeNanos = -1;
-    }
-    return elapsedRealTimeNanos;
 }
 
 void RealtimeEstimator::saveGpsTimeAndQtimerPairInPvtReport(
@@ -1100,7 +998,7 @@ void RealtimeEstimator::saveGpsTimeAndQtimerPairInMeasReport(
     }
 
 bool RealtimeEstimator::fillAdditionalTimestamps(
-        const GpsLocationExtended& locationExtended,
+        const GPSTimeStruct& gpsTimeAtOrigin,
         int64_t &bootTimeNsAtOrigin, float &bootTimeUnc,
         uint64_t &gptpTime, bool &gPTPValidity) {
     struct timespec curBootTime = {};
@@ -1121,15 +1019,7 @@ bool RealtimeEstimator::fillAdditionalTimestamps(
         return false;
     }
 
-    if (locationExtended.gnssSystemTime.hasAccurateGpsTime() == false ||
-            (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_GPS_TIME) == 0 ||
-            // 65535 GPS week from modem means unknown
-            locationExtended.gpsTime.gpsWeek == UNKNOWN_GPS_WEEK_NUM) {
-          return false;
-    }
-
     int64_t timePairQtimerNsec = (timePair.qtimerTick / 192) * 10000;
-    const GPSTimeStruct& gpsTimeAtOrigin = locationExtended.gpsTime;
     int64_t originMsec = (int64_t)gpsTimeAtOrigin.gpsWeek * (int64_t)MSEC_IN_ONE_WEEK +
                          (int64_t)gpsTimeAtOrigin.gpsTimeOfWeekMs;
     int64_t timePairMsec = (int64_t)timePair.gpsTime.gpsWeek * (int64_t)MSEC_IN_ONE_WEEK +
@@ -1167,45 +1057,6 @@ bool RealtimeEstimator::fillAdditionalTimestamps(
     } else {
         return false;
     }
-}
-
-bool RealtimeEstimator::getCurrentTime(
-        struct timespec& currentTime, int64_t& sinceBootTimeNanos)
-{
-    struct timespec sinceBootTime = {};
-    struct timespec sinceBootTimeTest = {};
-    bool clockGetTimeSuccess = false;
-    const uint32_t MAX_TIME_DELTA_VALUE_NANOS = 2000000; // 2 milli-seconds
-    const uint32_t MAX_GET_TIME_COUNT = 20;
-    /* Attempt to get CLOCK_REALTIME and CLOCK_BOOTIME in succession without an interruption
-    or context switch (for up to MAX_GET_TIME_COUNT times) to avoid errors in the calculation */
-    for (uint32_t i = 0; i < MAX_GET_TIME_COUNT; i++) {
-        if (clock_gettime(CLOCK_BOOTTIME, &sinceBootTime) != 0) {
-            break;
-        };
-        if (clock_gettime(CLOCK_REALTIME, &currentTime) != 0) {
-            break;
-        }
-        if (clock_gettime(CLOCK_BOOTTIME, &sinceBootTimeTest) != 0) {
-            break;
-        };
-        sinceBootTimeNanos = (int64_t)sinceBootTime.tv_sec * 1000000000 + sinceBootTime.tv_nsec;
-        int64_t sinceBootTimeTestNanos =
-            (int64_t)sinceBootTimeTest.tv_sec * 1000000000 + sinceBootTimeTest.tv_nsec;
-        int64_t sinceBootTimeDeltaNanos = sinceBootTimeTestNanos - sinceBootTimeNanos;
-
-        /* sinceBootTime and sinceBootTimeTest should have a close value if there was no
-        interruption or context switch between clock_gettime for CLOCK_BOOTIME and
-        clock_gettime for CLOCK_REALTIME */
-        if (sinceBootTimeDeltaNanos < MAX_TIME_DELTA_VALUE_NANOS) {
-            clockGetTimeSuccess = true;
-            break;
-        } else {
-            LOC_LOGd("Delta:%" PRIi64 "ns time too large, retry number #%u...",
-                     sinceBootTimeDeltaNanos, i + 1);
-        }
-    }
-    return clockGetTimeSuccess;
 }
 
 } // namespace loc_core
