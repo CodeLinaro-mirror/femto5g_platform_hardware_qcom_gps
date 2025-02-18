@@ -476,20 +476,10 @@ void GnssAPIClient::onCapabilitiesCb(LocationCapabilitiesMask capabilitiesMask)
                 (capabilitiesMask & LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT) ||
                 (capabilitiesMask & LOCATION_CAPABILITIES_DISTANCE_BASED_BATCHING_BIT))
             data |= IGnssCallback::Capabilities::SCHEDULING;
-        if (capabilitiesMask & LOCATION_CAPABILITIES_GEOFENCE_BIT)
-            data |= V1_0::IGnssCallback::Capabilities::GEOFENCING;
         if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT)
             data |= V1_0::IGnssCallback::Capabilities::MEASUREMENTS;
-        if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_MSB_BIT)
-            data |= IGnssCallback::Capabilities::MSB;
-        if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_MSA_BIT)
-            data |= IGnssCallback::Capabilities::MSA;
-        if (capabilitiesMask & LOCATION_CAPABILITIES_AGPM_BIT)
-            data |= IGnssCallback::Capabilities::LOW_POWER_MODE;
         if (capabilitiesMask & LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT)
             data |= IGnssCallback::Capabilities::SATELLITE_BLACKLIST;
-        if (capabilitiesMask & LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT)
-            data |= V2_0::IGnssCallback::Capabilities::MEASUREMENT_CORRECTIONS;
         if (capabilitiesMask & LOCATION_CAPABILITIES_ANTENNA_INFO) {
             data |= V2_1::IGnssCallback::Capabilities::ANTENNA_INFO;
         }

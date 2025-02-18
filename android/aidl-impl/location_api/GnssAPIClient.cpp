@@ -422,33 +422,14 @@ void GnssAPIClient::updateCapabilities(LocationCapabilitiesMask capabilitiesMask
             (capabilitiesMask & LOCATION_CAPABILITIES_DISTANCE_BASED_BATCHING_BIT)) {
         data |= IGnssCallback::CAPABILITY_SCHEDULING;
     }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_GEOFENCE_BIT) {
-        data |= IGnssCallback::CAPABILITY_GEOFENCING;
-    }
     if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT) {
         data |= IGnssCallback::CAPABILITY_MEASUREMENTS;
-    }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_MSB_BIT) {
-        data |= IGnssCallback::CAPABILITY_MSB;
-    }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_MSA_BIT) {
-        data |= IGnssCallback::CAPABILITY_MSA;
-    }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_AGPM_BIT) {
-        data |= IGnssCallback::CAPABILITY_LOW_POWER_MODE;
     }
     if (capabilitiesMask & LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT) {
         data |= IGnssCallback::CAPABILITY_SATELLITE_BLOCKLIST;
     }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT) {
-        data |= IGnssCallback::CAPABILITY_MEASUREMENT_CORRECTIONS;
-        data |= IGnssCallback::CAPABILITY_MEASUREMENT_CORRECTIONS_FOR_DRIVING;
-    }
     if (capabilitiesMask & LOCATION_CAPABILITIES_ANTENNA_INFO) {
         data |= IGnssCallback::CAPABILITY_ANTENNA_INFO;
-    }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT) {
-        data |= IGnssCallback::CAPABILITY_SATELLITE_PVT;
     }
 
     IGnssCallback::GnssSystemInfo gnssInfo = { .yearOfHw = 2015, "aidl-impl" };
