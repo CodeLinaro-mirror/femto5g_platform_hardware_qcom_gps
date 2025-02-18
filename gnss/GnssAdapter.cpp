@@ -5820,6 +5820,7 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
                 if (nullptr != mEsStatusCb) {
                     mEsStatusCb(request.isEmergencyMode);
                 }
+                sendEmergencyCallStatusEvent = true;
             }
             mOdcpiRequest = request;
 
