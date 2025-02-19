@@ -245,10 +245,6 @@ public:
     void geofenceBreach(size_t count, uint32_t* hwIds, Location& location,
             GeofenceBreachType breachType, uint64_t timestamp);
     void geofenceStatus(GeofenceStatusAvailable available);
-    void reportDBTPosition(UlpLocation &location,
-                           GpsLocationExtended &locationExtended,
-                           enum loc_sess_status status,
-                           LocPosTechMask loc_technology_mask);
     void reportLocations(Location* locations, size_t count, BatchingMode batchingMode);
     void reportCompletedTrips(uint32_t accumulated_distance);
     void handleBatchStatusEvent(BatchingStatus batchStatus);

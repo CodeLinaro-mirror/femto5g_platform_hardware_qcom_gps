@@ -3343,8 +3343,7 @@ GnssAdapter::saveTrackingSession(LocationAPI* client, uint32_t sessionId,
 {
     if (nullptr != client) {
         LocationSessionKey key(client, sessionId);
-        if ((options.minDistance > 0) &&
-            ContextBase::isMessageSupported(LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_TRACKING)) {
+        if (options.minDistance > 0) {
             mDistanceBasedTrackingSessions[key] = options;
         } else {
             mTimeBasedTrackingSessions[key] = options;
@@ -3503,9 +3502,7 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                 LOC_LOGd("Updated min Interval: %d, nHzEnabled: %s",
                         mOptions.minInterval, nHzStatus ? "true" : "false");
 
-                if (mOptions.minDistance > 0 &&
-                        ContextBase::isMessageSupported(
-                        LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_TRACKING)) {
+                if (mOptions.minDistance > 0) {
                     mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
                     mApi.startDistanceBasedTracking(mSessionId, mOptions,
                             new LocApiResponse(*mAdapter.getContext(),

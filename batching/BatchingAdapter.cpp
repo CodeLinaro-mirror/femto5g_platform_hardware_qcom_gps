@@ -29,7 +29,7 @@
 
 /*
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -350,9 +350,6 @@ BatchingAdapter::startBatchingCommand(
                 err = LOCATION_ERROR_CALLBACK_MISSING;
             } else if (0 == mBatchingOptions.size) {
                 err = LOCATION_ERROR_INVALID_PARAMETER;
-            } else if (!ContextBase::isMessageSupported(
-                       LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_LOCATION_BATCHING)) {
-                err = LOCATION_ERROR_NOT_SUPPORTED;
             }
             if (LOCATION_ERROR_SUCCESS == err) {
                 if (mBatchingOptions.batchingMode == BATCHING_MODE_ROUTINE ||

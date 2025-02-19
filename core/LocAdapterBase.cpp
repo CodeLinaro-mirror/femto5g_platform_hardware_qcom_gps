@@ -290,17 +290,9 @@ LocAdapterBase::getCapabilities()
     if (isEngineCapabilitiesKnown()) {
         // time based tracking always supported
         mask |= LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT;
-        if (ContextBase::isMessageSupported(
-                LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_LOCATION_BATCHING)) {
-            mask |= LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT |
-                    LOCATION_CAPABILITIES_DISTANCE_BASED_BATCHING_BIT;
-        }
-        if (ContextBase::isMessageSupported(LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_TRACKING)) {
-            mask |= LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT;
-        }
-        if (ContextBase::isMessageSupported(LOC_API_ADAPTER_MESSAGE_OUTDOOR_TRIP_BATCHING)) {
-            mask |= LOCATION_CAPABILITIES_OUTDOOR_TRIP_BATCHING_BIT;
-        }
+        mask |= LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT;
+        mask |= LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT;
+        mask |= LOCATION_CAPABILITIES_OUTDOOR_TRIP_BATCHING_BIT;
         // geofence always supported
         mask |= LOCATION_CAPABILITIES_GEOFENCE_BIT;
         if (ContextBase::gnssConstellationConfig()) {

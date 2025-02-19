@@ -90,7 +90,6 @@ loc_izat_cfg_s_type ContextBase::mIzat_conf {};
 izat_process_info ContextBase:: mIzat_process_conf {};
 
 bool ContextBase::sIsEngineCapabilitiesKnown = false;
-uint64_t ContextBase::sSupportedMsgMask = 0;
 bool ContextBase::sGnssMeasurementSupported = false;
 uint8_t ContextBase::sFeaturesSupported[MAX_FEATURE_LENGTH];
 GnssNMEARptRate ContextBase::sNmeaReportRate = GNSS_NMEA_REPORT_RATE_NHZ;
@@ -461,11 +460,9 @@ ContextBase::ContextBase(const MsgTask* msgTask,
 {
 }
 
-void ContextBase::setEngineCapabilities(uint64_t supportedMsgMask,
-       uint8_t *featureList, bool gnssMeasurementSupported) {
+void ContextBase::setEngineCapabilities(uint8_t *featureList, bool gnssMeasurementSupported) {
 
     if (ContextBase::sIsEngineCapabilitiesKnown == false) {
-        ContextBase::sSupportedMsgMask = supportedMsgMask;
         ContextBase::sGnssMeasurementSupported = gnssMeasurementSupported;
         if (featureList != NULL) {
             memcpy((void *)ContextBase::sFeaturesSupported,

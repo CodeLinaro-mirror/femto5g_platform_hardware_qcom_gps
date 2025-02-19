@@ -219,7 +219,6 @@ public:
     static loc_izat_cfg_s_type mIzat_conf;
     static izat_process_info   mIzat_process_conf;
     static bool sIsEngineCapabilitiesKnown;
-    static uint64_t sSupportedMsgMask;
     static uint8_t sFeaturesSupported[MAX_FEATURE_LENGTH];
     static bool sGnssMeasurementSupported;
     static GnssNMEARptRate sNmeaReportRate;
@@ -229,23 +228,10 @@ public:
     static void readConfig();
     static void readIZatConfForValueAddedProcess();
     static uint32_t getCarrierCapabilities();
-    void setEngineCapabilities(uint64_t supportedMsgMask,
-            uint8_t *featureList, bool gnssMeasurementSupported);
+    void setEngineCapabilities(uint8_t *featureList, bool gnssMeasurementSupported);
 
     static inline bool isEngineCapabilitiesKnown() {
         return sIsEngineCapabilitiesKnown;
-    }
-
-    static inline bool isMessageSupported(LocCheckingMessagesID msgID) {
-
-        // confirm if msgID is not larger than the number of bits in
-        // mSupportedMsg
-        if ((uint64_t)msgID > (sizeof(sSupportedMsgMask) << 3)) {
-            return false;
-        } else {
-            uint32_t messageChecker = 1 << msgID;
-            return (messageChecker & sSupportedMsgMask) == messageChecker;
-        }
     }
 
     /*

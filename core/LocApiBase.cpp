@@ -548,13 +548,6 @@ void LocApiBase::geofenceStatus(GeofenceStatusAvailable available)
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->geofenceStatusEvent(available));
 }
 
-void LocApiBase::reportDBTPosition(UlpLocation &location, GpsLocationExtended &locationExtended,
-                                   enum loc_sess_status status, LocPosTechMask loc_technology_mask)
-{
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportPositionEvent(location, locationExtended, status,
-                                                            loc_technology_mask));
-}
-
 void LocApiBase::reportLocations(Location* locations, size_t count, BatchingMode batchingMode)
 {
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportLocationsEvent(locations, count, batchingMode));
