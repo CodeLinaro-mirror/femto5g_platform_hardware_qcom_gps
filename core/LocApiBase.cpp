@@ -769,14 +769,6 @@ DEFAULT_IMPL()
 void LocApiBase::stopTimeBasedTracking(LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
-void LocApiBase::startDistanceBasedTracking(uint32_t /*sessionId*/,
-        const LocationOptions& /*options*/, LocApiResponse* /*adapterResponse*/)
-DEFAULT_IMPL()
-
-void LocApiBase::stopDistanceBasedTracking(uint32_t /*sessionId*/,
-        LocApiResponse* /*adapterResponse*/)
-DEFAULT_IMPL()
-
 void LocApiBase::startBatching(uint32_t /*sessionId*/, const LocationOptions& /*options*/,
         uint32_t /*accuracy*/, uint32_t /*timeout*/, LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()

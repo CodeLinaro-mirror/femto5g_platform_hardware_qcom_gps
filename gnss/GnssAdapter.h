@@ -259,7 +259,6 @@ class GnssAdapter : public LocAdapterBase {
 
     /* ==== TRACKING ======================================================================= */
     TrackingOptionsMap mTimeBasedTrackingSessions;
-    LocationSessionMap mDistanceBasedTrackingSessions;
     LocPosMode mLocPositionMode;
     PreciseType mPreciseType;
     CorrectionType mCorrectionType;
@@ -471,8 +470,6 @@ public:
     /* ======== RESPONSES ================================================================== */
     void reportResponse(LocationAPI* client, LocationError err, uint32_t sessionId);
     /* ======== UTILITIES ================================================================== */
-    bool isTimeBasedTrackingSession(LocationAPI* client, uint32_t sessionId);
-    bool isDistanceBasedTrackingSession(LocationAPI* client, uint32_t sessionId);
     bool hasCallbacksToStartTracking(LocationAPI* client);
     void saveTrackingSession(LocationAPI* client, uint32_t sessionId,
                              const TrackingOptions& trackingOptions);

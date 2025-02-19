@@ -321,10 +321,6 @@ public:
     virtual void startTimeBasedTracking(const TrackingOptions& options,
              LocApiResponse* adapterResponse);
     virtual void stopTimeBasedTracking(LocApiResponse* adapterResponse);
-    virtual void startDistanceBasedTracking(uint32_t sessionId, const LocationOptions& options,
-             LocApiResponse* adapterResponse);
-    virtual void stopDistanceBasedTracking(uint32_t sessionId,
-             LocApiResponse* adapterResponse = nullptr);
     virtual void startBatching(uint32_t sessionId, const LocationOptions& options,
             uint32_t accuracy, uint32_t timeout, LocApiResponse* adapterResponse);
     virtual void stopBatching(uint32_t sessionId, LocApiResponse* adapterResponse);
