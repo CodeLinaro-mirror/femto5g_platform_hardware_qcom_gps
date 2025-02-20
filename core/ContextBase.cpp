@@ -174,7 +174,7 @@ void ContextBase::readConfig()
 #else
         mGps_conf.GPS_LOCK = GNSS_CONFIG_GPS_LOCK_MO_AND_NI;
 #endif
-        mGps_conf.SUPL_VER = 0x10000;
+        mGps_conf.SUPL_VER = 0x00020004;
         mGps_conf.SUPL_MODE = 0x1;
         mGps_conf.SUPL_ES = 0;
         mGps_conf.CP_MTLR_ES = 0;
