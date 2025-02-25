@@ -87,6 +87,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define APQ8074_ID_1 "184"
 #define SG8350P_ID_1 "682"
 #define SM8650Q_ID_1 "696"
+#define SG6175_ID_1  "700"
 
 #define LINE_LEN 100
 #define STR_LIQUID      "Liquid"
@@ -283,6 +284,9 @@ unsigned int loc_get_target(void)
         gTarget = TARGET_NO_GNSS;
     } else if (!memcmp(rd_id, SM8650Q_ID_1, LENGTH(SM8650Q_ID_1))
                 && IS_STR_END(rd_id[LENGTH(SM8650Q_ID_1)])) {
+        gTarget = TARGET_NO_GNSS;
+    } else if (!memcmp(rd_id, SG6175_ID_1, LENGTH(SG6175_ID_1))
+                && IS_STR_END(rd_id[LENGTH(SG6175_ID_1)])) {
         gTarget = TARGET_NO_GNSS;
     } else {
         gTarget = TARGET_UNKNOWN;
