@@ -29,7 +29,7 @@
 
 /*
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -46,50 +46,15 @@ using namespace loc_core;
 class BatchingAdapter : public LocAdapterBase {
 
     /* ==== BATCHING ======================================================================= */
-    typedef struct {
-        uint32_t accumulatedDistanceOngoingBatch;
-        uint32_t accumulatedDistanceThisTrip;
-        uint32_t accumulatedDistanceOnTripRestart;
-        uint32_t tripDistance;
-        uint32_t tripTBFInterval;
-    } TripSessionStatus;
-    typedef std::map<uint32_t, TripSessionStatus> TripSessionStatusMap;
     typedef std::map<LocationSessionKey, BatchingOptions> BatchingSessionMap;
 
     BatchingSessionMap mBatchingSessions;
-    TripSessionStatusMap mTripSessions;
-    uint32_t mOngoingTripDistance;
-    uint32_t mOngoingTripTBFInterval;
-    bool mTripWithOngoingTBFDropped;
-    bool mTripWithOngoingTripDistanceDropped;
     PowerStateType mSystemPowerState;
-
-    void startTripBatchingMultiplex(LocationAPI* client, uint32_t sessionId,
-                                    const BatchingOptions& batchingOptions);
-    void stopTripBatchingMultiplex(LocationAPI* client, uint32_t sessionId,
-                                   bool restartNeeded,
-                                   const BatchingOptions& batchOptions,
-                                   bool eraseSession = true);
-    inline void stopTripBatchingMultiplex(LocationAPI* client, uint32_t id,
-                                             bool eraseSession = true) {
-        BatchingOptions batchOptions;
-        stopTripBatchingMultiplex(client, id, false, batchOptions, eraseSession);
-    };
-    void stopTripBatchingMultiplexCommon(LocationError err,
-                                         LocationAPI* client,
-                                         uint32_t sessionId,
-                                         bool restartNeeded,
-                                         const BatchingOptions& batchOptions,
-                                         bool eraseSession = true);
-    void restartTripBatching(bool queryAccumulatedDistance, uint32_t accDist = 0,
-                             uint32_t numbatchedPos = 0);
-    void printTripReport();
 
     /* ==== CONFIGURATION ================================================================== */
     uint32_t mBatchingTimeout;
     uint32_t mBatchingAccuracy;
     size_t mBatchSize;
-    size_t mTripBatchSize;
 
 protected:
 
@@ -121,7 +86,6 @@ public:
     /* ======== UTILITIES ================================================================== */
     bool hasBatchingCallback(LocationAPI* client);
     bool isBatchingSession(LocationAPI* client, uint32_t sessionId);
-    bool isTripSession(uint32_t sessionId);
     void saveBatchingSession(LocationAPI* client, uint32_t sessionId,
                              const BatchingOptions& batchingOptions);
     void eraseBatchingSession(LocationAPI* client, uint32_t sessionId);
@@ -143,7 +107,6 @@ public:
     /* ======== EVENTS ====(Called from QMI Thread)========================================= */
     void reportLocationsEvent(const Location* locations, size_t count,
             BatchingMode batchingMode);
-    void reportCompletedTripsEvent(uint32_t accumulatedDistance);
     void reportBatchStatusChangeEvent(BatchingStatus batchStatus);
     /* ======== UTILITIES ================================================================== */
     void reportLocations(Location* locations, size_t count, BatchingMode batchingMode);
@@ -155,8 +118,6 @@ public:
     /* ======== UTILITIES ================================================================== */
     void setBatchSize(size_t batchSize) { mBatchSize = batchSize; }
     size_t getBatchSize() { return mBatchSize; }
-    void setTripBatchSize(size_t batchSize) { mTripBatchSize = batchSize; }
-    size_t getTripBatchSize() { return mTripBatchSize; }
     void setBatchingTimeout(uint32_t batchingTimeout) { mBatchingTimeout = batchingTimeout; }
     uint32_t getBatchingTimeout() { return mBatchingTimeout; }
     void setBatchingAccuracy(uint32_t accuracy) { mBatchingAccuracy = accuracy; }

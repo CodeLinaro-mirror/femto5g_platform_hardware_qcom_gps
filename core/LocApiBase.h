@@ -111,11 +111,6 @@ struct LocSsrMsg;
 struct LocOpenMsg;
 
 typedef struct {
-    uint32_t accumulatedDistance;
-    uint32_t numOfBatchedPositions;
-} LocApiBatchData;
-
-typedef struct {
     uint32_t hwId;
 } LocApiGeofenceData;
 
@@ -246,7 +241,6 @@ public:
             GeofenceBreachType breachType, uint64_t timestamp);
     void geofenceStatus(GeofenceStatusAvailable available);
     void reportLocations(Location* locations, size_t count, BatchingMode batchingMode);
-    void reportCompletedTrips(uint32_t accumulated_distance);
     void handleBatchStatusEvent(BatchingStatus batchStatus);
     void reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask);
     void reportNtnStatusEvent(LocationError status,
@@ -334,27 +328,9 @@ public:
     virtual void startBatching(uint32_t sessionId, const LocationOptions& options,
             uint32_t accuracy, uint32_t timeout, LocApiResponse* adapterResponse);
     virtual void stopBatching(uint32_t sessionId, LocApiResponse* adapterResponse);
-    virtual LocationError startOutdoorTripBatchingSync(uint32_t tripDistance,
-            uint32_t tripTbf, uint32_t timeout);
-    virtual void startOutdoorTripBatching(uint32_t tripDistance,
-            uint32_t tripTbf, uint32_t timeout, LocApiResponse* adapterResponse);
-    virtual void reStartOutdoorTripBatching(uint32_t ongoingTripDistance,
-            uint32_t ongoingTripInterval, uint32_t batchingTimeout,
-            LocApiResponse* adapterResponse);
-    virtual LocationError stopOutdoorTripBatchingSync(bool deallocBatchBuffer = true);
-    virtual void stopOutdoorTripBatching(bool deallocBatchBuffer = true,
-            LocApiResponse* adapterResponse = nullptr);
     virtual LocationError getBatchedLocationsSync(size_t count);
     virtual void getBatchedLocations(size_t count, LocApiResponse* adapterResponse);
-    virtual LocationError getBatchedTripLocationsSync(size_t count, uint32_t accumulatedDistance);
-    virtual void getBatchedTripLocations(size_t count, uint32_t accumulatedDistance,
-            LocApiResponse* adapterResponse);
-    virtual LocationError queryAccumulatedTripDistanceSync(uint32_t &accumulated_trip_distance,
-            uint32_t &numOfBatchedPositions);
-    virtual void queryAccumulatedTripDistance(
-            LocApiResponseData<LocApiBatchData>* adapterResponseData);
     virtual void setBatchSize(size_t size);
-    virtual void setTripBatchSize(size_t size);
     virtual void addToCallQueue(LocApiResponse* adapterResponse);
 
     void updateEvtMask();

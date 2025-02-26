@@ -28,7 +28,7 @@
 
 /*
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #define LOG_NDEBUG 0
@@ -253,7 +253,6 @@ LocationAPIControlClient::getRequestBySessionArrayPtr(
 // LocationAPIClientBase
 LocationAPIClientBase::LocationAPIClientBase() :
     mGeofenceBreachCallback(nullptr),
-    mBatchingStatusCallback(nullptr),
     mLocationAPI(nullptr),
     mTracking(false)
 {
@@ -303,15 +302,6 @@ void LocationAPIClientBase::locAPISetCallbacks(LocationCallbacks& locationCallba
         [this](size_t count, LocationError* errors, uint32_t* ids) {
             onCollectiveResponseCb(count, errors, ids);
         };
-
-    if (locationCallbacks.batchingStatusCb != nullptr) {
-        mBatchingStatusCallback = locationCallbacks.batchingStatusCb;
-        locationCallbacks.batchingStatusCb =
-                [this](const BatchingStatusInfo& batchStatus,
-                const std::list<uint32_t> & tripCompletedList) {
-            beforeBatchingStatusCb(batchStatus, tripCompletedList);
-        };
-    }
 
     if (mLocationAPI == nullptr ) {
         mLocationAPI = LocationAPI::createInstance(locationCallbacks);
@@ -470,16 +460,12 @@ uint32_t LocationAPIClientBase::locAPIStartSession(
                 case SESSION_MODE_ON_FULL:
                     batchOptions.batchingMode = BATCHING_MODE_ROUTINE;
                     break;
-                case SESSION_MODE_ON_TRIP_COMPLETED:
-                    batchOptions.batchingMode = BATCHING_MODE_TRIP;
-                    break;
                 default:
                     batchOptions.batchingMode = BATCHING_MODE_NO_AUTO_REPORT;
                     break;
                 }
 
                 // Populate location option values
-                batchOptions.minDistance = options.minDistance;
                 batchOptions.minInterval = options.minInterval;
                 batchOptions.mode = options.mode;
 
@@ -584,14 +570,11 @@ uint32_t LocationAPIClientBase::locAPIUpdateSessionOptions(
                 // we only add an UpdateBatchingOptionsRequest to mRequestQueues[REQUEST_SESSION],
                 // even if this update request will stop tracking and then start batching.
                 mRequestQueues[REQUEST_SESSION].push(new UpdateBatchingOptionsRequest(*this));
-                BatchingOptions batchOptions = {};
+                BatchingOptions batchOptions(options);
                 batchOptions.size = sizeof(BatchingOptions);
                 switch (sessionMode) {
                 case SESSION_MODE_ON_FULL:
                     batchOptions.batchingMode = BATCHING_MODE_ROUTINE;
-                    break;
-                case SESSION_MODE_ON_TRIP_COMPLETED:
-                    batchOptions.batchingMode = BATCHING_MODE_TRIP;
                     break;
                 default:
                     batchOptions.batchingMode = BATCHING_MODE_NO_AUTO_REPORT;
@@ -605,10 +588,6 @@ uint32_t LocationAPIClientBase::locAPIUpdateSessionOptions(
                     mLocationAPI->stopTracking(trackingSession);
                     trackingSession = 0;
 
-                    // Populate location option values
-                    batchOptions.minDistance = options.minDistance;
-                    batchOptions.minInterval = options.minInterval;
-                    batchOptions.mode = options.mode;
 
                     // start batching
                     batchingSession = mLocationAPI->startBatching(batchOptions);
@@ -926,29 +905,6 @@ void LocationAPIClientBase::beforeGeofenceBreachCb(
     }
 
     free(ids);
-}
-
-void LocationAPIClientBase::beforeBatchingStatusCb(const BatchingStatusInfo& batchStatus,
-        const std::list<uint32_t> & tripCompletedList) {
-
-    // map the trip ids to the client ids
-    std::list<uint32_t> tripCompletedClientIdList;
-    tripCompletedClientIdList.clear();
-
-    if (batchStatus.batchingStatus == BATCHING_STATUS_TRIP_COMPLETED) {
-        for (auto itt = tripCompletedList.begin(); itt != tripCompletedList.end(); itt++) {
-            if (mSessionBiDict.hasSession(*itt)) {
-                SessionEntity sessEntity = mSessionBiDict.getExtBySession(*itt);
-
-                if (sessEntity.sessionMode == SESSION_MODE_ON_TRIP_COMPLETED) {
-                    tripCompletedClientIdList.push_back(sessEntity.id);
-                    mSessionBiDict.rmBySession(*itt);
-                }
-            }
-        }
-    }
-
-    mBatchingStatusCallback(batchStatus, tripCompletedClientIdList);
 }
 
 void LocationAPIClientBase::onResponseCb(LocationError error, uint32_t id)
