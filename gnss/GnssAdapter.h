@@ -355,7 +355,6 @@ class GnssAdapter : public LocAdapterBase {
     BlockCPIInfo mBlockCPIInfo;
     bool mPowerOn;
     bool mEngHubLoadSuccessful;
-    EngineServiceInfo mEngServiceInfo;
     RealtimeEstimator mPositionElapsedRealTimeCal;
 
     /* === NativeAgpsHandler ======================================================== */
