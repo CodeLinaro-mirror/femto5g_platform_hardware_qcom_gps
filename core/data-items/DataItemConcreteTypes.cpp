@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -72,7 +72,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ENH_FIELD_ENABLED "IS_QUALCOMM_ENHANCED_PROVIDER_ENABLED"
 #define GPSSTATE_FIELD_ENABLED "IS_GPS_PROVIDER_ENABLED"
 #define WIFIHARDWARESTATE_FIELD_ENABLED "IS_WIFI_HARDWARE_ON"
-#define POWERCONNECTSTATE_FIELD_ENABLED "IS_POWER_CONNECTED"
 #define TIMEZONECHANGE_FIELD_ENABLED "IS_TIMEZONE_CHANGED"
 #define TIMECHANGE_FIELD_ENABLED "IS_TIME_CHANGED"
 #define TIMECHANGE_FIELD_CURRENT_TIME_MILLIS "CURR_TIME_MILLIS"
@@ -98,42 +97,14 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define NETWORKINFO_FIELD_NETWORKHANDLE_9 "NETWORK_HANDLE_9"
 #define NETWORKINFO_FIELD_APN_NAME "APN_NAME"
 
-#define SERVICESTATUS_FIELD_STATE "CELL_NETWORK_STATUS"
 #define MODEL_FIELD_NAME "MODEL"
 #define MANUFACTURER_FIELD_NAME "MANUFACTURER"
 #define OSSTATUS_CARD "ACTIVE_NETWORK_INFO"
-
-#define RILSERVICEINFO_CARD "RIL-SERVICE-INFO"
-#define RILSERVICEINFO_FIELD_ARIF_TYPE_MASK "SUPPORTED-AIRINTERFACE-TYPE-MASK"
-#define RILSERVICEINFO_FIELD_CARRIER_ARIF_TYPE "CARRIER-AIRINTERFACE-TYPE"
-#define RILSERVICEINFO_FIELD_CARRIER_MCC "MOBILE-COUNTRY-CODE"
-#define RILSERVICEINFO_FIELD_CARRIER_MNC "MOBILE-NETWORK-CODE"
-#define RILSERVICEINFO_FIELD_CARRIER_NAME "HOME-CARRIER-NAME"
-
-#define RILCELLINFO_CARD "RIL-CELL-UPDATE"
-#define RILCELLINFO_FIELD_NETWORK_STATUS "NETWORK-STATUS"
-#define RILCELLINFO_FIELD_RIL_TECH_TYPE "RIL-TECH-TYPE"
-#define RILLCELLINFO_FIELD_MCC "MOBILE-COUNTRY-CODE"
-#define RILLCELLINFO_FIELD_MNC "MOBILE-NETWORK-CODE"
-#define RILLCELLINFO_FIELD_LAC "LOCATION-AREA-CODE"
-#define RILLCELLINFO_FIELD_CID "CELL-ID"
-#define RILLCELLINFO_FIELD_SID "SYSTEM-ID"
-#define RILLCELLINFO_FIELD_NID "NETWORK-ID"
-#define RILLCELLINFO_FIELD_BSID "BASE-STATION-ID"
-#define RILLCELLINFO_FIELD_BSLAT "BASE-STATION-LATITUDE"
-#define RILLCELLINFO_FIELD_BSLON "BASE-STATION-LONGITUDE"
-#define RILLCELLINFO_FIELD_UTC_TIME_OFFSET "TIME-ZONE-OFFSET"
-#define RILLCELLINFO_FIELD_DAYLIGHT_TIMEZONE "IN-DAY-LIGHT-SAVING"
-#define RILLCELLINFO_FIELD_TAC "TRACKING-AREA-CODE"
-#define RILLCELLINFO_FIELD_PCI "PHYSICAL-CELL-ID"
-#define RILLCELLINFO_FIELD_NB_MODE "NB-MODE"
-#define RILLCELLINFO_FIELD_NB_EARFCN_OFFSET "NB-EARFCN-OFFSET"
 
 #define WIFI_SUPPLICANT_FIELD_STATE "WIFI-SUPPLICANT-STATE"
 #define MCCMNC_FIELD_NAME "MCCMNC"
 
 #define OEM_GTP_UPLAOD_TRIGGER_READY_FIELD_NAME "OEM-GTP-UPLOAD-TRIGGER-READY"
-#define BATTERYLEVEL_FIELD_BATTERY_PCT "BATTERY_PCT"
 
 #define IN_EMERGENCY_CALL_FIELD_NAME "IS_EMERGENCY"
 #define PRECISE_LOCATION_ENABLED_FIELD_NAME "PRECISE_LOCATION_ENABLED"
@@ -196,34 +167,6 @@ void WifiHardwareStateDataItem::stringify(string& valueStr) {
         valueStr = WIFIHARDWARESTATE_FIELD_ENABLED;
         valueStr += ": ";
         valueStr += (d->mEnabled) ? ("true") : ("false");
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-}
-void PowerConnectStateDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(PowerConnectStateDataItem,
-                POWER_CONNECTED_STATE_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr = POWERCONNECTSTATE_FIELD_ENABLED;
-        valueStr += ": ";
-        valueStr += (d->mState) ? ("true") : ("false");
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-}
-
-void BatteryLevelDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(BatteryLevelDataItem, BATTERY_LEVEL_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr += BATTERYLEVEL_FIELD_BATTERY_PCT;
-        valueStr += ": ";
-        char state [12];
-        snprintf (state, 12, "%d", d->mBatteryPct);
-        valueStr += string (state);
     } while (0);
     EXIT_LOG_WITH_ERROR("%d", result);
 }
@@ -333,20 +276,6 @@ void NetworkInfoDataItem::stringify(string& valueStr) {
         valueStr += NETWORKINFO_FIELD_APN_NAME;
         valueStr += ": ";
         valueStr += d->mApn;
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-}
-void ServiceStatusDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(ServiceStatusDataItem, SERVICESTATUS_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr += SERVICESTATUS_FIELD_STATE;
-        valueStr += ": ";
-        char state [12];
-        snprintf (state, 12, "%d", d->mServiceState);
-        valueStr += string (state);
     } while (0);
     EXIT_LOG_WITH_ERROR("%d", result);
 }
@@ -477,31 +406,6 @@ int32_t WifiHardwareStateDataItem::copyFrom(IDataItemCore* src) {
     EXIT_LOG_WITH_ERROR("%d", result);
     return result;
 }
-int32_t PowerConnectStateDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(PowerConnectStateDataItem,
-                POWER_CONNECTED_STATE_DATA_ITEM_ID);
-        if (s->mState == d->mState) { result = 0; break; }
-        s->mState = d->mState;
-        result = 0;
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-    return result;
-}
-int32_t BatteryLevelDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(BatteryLevelDataItem, BATTERY_LEVEL_DATA_ITEM_ID);
-        if (s->mBatteryPct == d->mBatteryPct) { result = 0; break; }
-        s->mBatteryPct = d->mBatteryPct;
-        result = 0;
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-    return result;
-}
 int32_t TimeZoneChangeDataItem::copyFrom(IDataItemCore* src) {
     int32_t result = -1;
     ENTRY_LOG();
@@ -578,18 +482,6 @@ int32_t NetworkInfoDataItem::copyFrom(IDataItemCore* src) {
         result = 0;
     } while (0);
     EXIT_LOG_WITH_ERROR("%d", result);
-    return result;
-}
-int32_t ServiceStatusDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(ServiceStatusDataItem, SERVICESTATUS_DATA_ITEM_ID);
-        if (s->mServiceState == d->mServiceState) { result = 0; break; }
-        s->mServiceState = d->mServiceState;
-        result = 0;
-    } while (0);
-    EXIT_LOG("%d", result);
     return result;
 }
 int32_t ModelDataItem::copyFrom(IDataItemCore* src) {
