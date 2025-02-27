@@ -5981,6 +5981,11 @@ bool GnssAdapter::reportQwesCapabilities(
             if (qwesIter != mFeatureMap.end()) {
                 mAdapter.mRlFeatureQwesEnabled = qwesIter->second;
             }
+            //Set WOCS feature bit
+            auto wocsIter = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_WOCS);
+            if (wocsIter != mFeatureMap.end() && wocsIter->second) {
+                mAdapter.mPpFeatureStatusMask |= WOCS_FEATURE_ENABLED_BY_DEFAULT;
+            }
 
             LOC_LOGI("ReportQwesFeatureStatus after caps %" PRIx64 " ",
                      mAdapter.getCapabilities());
