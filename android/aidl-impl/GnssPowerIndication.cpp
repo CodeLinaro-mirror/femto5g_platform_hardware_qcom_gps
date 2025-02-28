@@ -113,7 +113,7 @@ ScopedAStatus GnssPowerIndication::setCallback(
         return ScopedAStatus::fromExceptionCode(STATUS_INVALID_OPERATION);
     }
     if (callback != nullptr) {
-        callback->setCapabilitiesCb(0);
+        callback->setCapabilitiesCb(IGnssPowerIndicationCallback::CAPABILITY_TOTAL);
     }
     return ScopedAStatus::ok();
 }
