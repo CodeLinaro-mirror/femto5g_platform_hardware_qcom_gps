@@ -1274,10 +1274,12 @@ struct TrackingOptions : LocationOptions {
 
     inline TrackingOptions() :
             LocationOptions(), powerMode(GNSS_POWER_MODE_DEFAULT), tbm(0),
-            specialReq(SPECIAL_REQ_INVALID), correctionType(CORRECTION_TYPE_DEFAULT){}
+            specialReq(SPECIAL_REQ_INVALID), correctionType(CORRECTION_TYPE_DEFAULT),
+            preciseType(PRECISE_TYPE_UNKNOWN){}
     inline TrackingOptions(const LocationOptions& options) :
             LocationOptions(options), powerMode(GNSS_POWER_MODE_DEFAULT), tbm(0),
-            specialReq(SPECIAL_REQ_INVALID), correctionType(CORRECTION_TYPE_DEFAULT){}
+            specialReq(SPECIAL_REQ_INVALID), correctionType(CORRECTION_TYPE_DEFAULT),
+            preciseType(PRECISE_TYPE_UNKNOWN){}
     inline bool equalsInTimeBasedRequest(const TrackingOptions& other) const {
         return minInterval == other.minInterval && powerMode == other.powerMode &&
                qualityLevelAccepted == other.qualityLevelAccepted &&

@@ -201,7 +201,6 @@ GnssAdapter::GnssAdapter() :
     mBlockCPIInfo{},
     mEsStatusCb(nullptr),
     mEngHubLoadSuccessful(false),
-    mEngServiceInfo{},
     mPowerOn(false),
     mNativeAgpsHandler(mSystemStatus->getOsObserver(), *this),
     mGnssEnergyConsumedCb(nullptr),
@@ -2824,7 +2823,7 @@ GnssAdapter::setEsStatusCallbackCommand(std::function<void(bool)> esStatusCb)
 void
 GnssAdapter::setTribandState() {
     bool enabled = false;
-    if (isInSession() && mEngServiceInfo.ppeIntEnabled && isQppeEnabled()) {
+    if (isInSession() && (PRECISE_TYPE_RTK == mPreciseType) && isQppeEnabled()) {
         enabled = true;
     }
     LOC_LOGd("enabled:%d", enabled);
@@ -7666,7 +7665,8 @@ uint32_t GnssAdapter::configEngineRunStateCommand(
     // generated session id will be none-zero
     uint32_t sessionId = generateSessionId();
     LOC_LOGd("session id %u, eng type 0x%x, eng state %d, dre enabled %d",
-        sessionId, engType, engState, mEngServiceInfo.dreIntEnabled);
+        sessionId, engType, engState,
+        ContextBase::mIzat_process_conf.engineServiceInfo.dreIntEnabled);
 
     struct MsgConfigEngineRunState : public LocMsg {
         GnssAdapter& mAdapter;
@@ -7687,7 +7687,7 @@ uint32_t GnssAdapter::configEngineRunStateCommand(
             LocationError err = LOCATION_ERROR_NOT_SUPPORTED;
             // Currently, only DR engine supports pause/resume request
             if ((mEngType == DEAD_RECKONING_ENGINE) &&
-                (mAdapter.mEngServiceInfo.dreIntEnabled == true)) {
+                (ContextBase::mIzat_process_conf.engineServiceInfo.dreIntEnabled == true)) {
                 if (true == mAdapter.mEngHubProxy->configEngineRunState(mEngType, mEngState)) {
                     err = LOCATION_ERROR_SUCCESS;
                 }
@@ -7822,7 +7822,8 @@ uint32_t GnssAdapter::configEngineIntegrityRiskCommand(
     // generated session id will be none-zero
     uint32_t sessionId = generateSessionId();
     LOC_LOGd("session id %u, eng type 0x%x, integrity risk %u, ppe enabled %d",
-             sessionId, engType, integrityRisk, mEngServiceInfo.ppeEnabled);
+             sessionId, engType, integrityRisk,
+             ContextBase::mIzat_process_conf.engineServiceInfo.ppeEnabled);
 
     struct MsgConfigEngineIntegrityRisk : public LocMsg {
         GnssAdapter&          mAdapter;
@@ -7843,7 +7844,7 @@ uint32_t GnssAdapter::configEngineIntegrityRiskCommand(
             LocationError err = LOCATION_ERROR_NOT_SUPPORTED;
             // Currently, only PPE engine supports integrity risk config request
             if ((mEngType == PRECISE_POSITIONING_ENGINE) &&
-                    (mAdapter.mEngServiceInfo.ppeEnabled == true)) {
+                    (ContextBase::mIzat_process_conf.engineServiceInfo.ppeEnabled == true)) {
                 if (true == mAdapter.mEngHubProxy->configEngineIntegrityRisk(
                         mEngType, mIntegrityRisk)) {
                     err = LOCATION_ERROR_SUCCESS;
