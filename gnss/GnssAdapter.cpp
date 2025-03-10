@@ -3104,6 +3104,9 @@ GnssAdapter::handleEngineUpEvent()
                    mAdapter.mPowerConnectState == POWER_CONNECT_YES);
             }
             mAdapter.gnssSecondaryBandConfigUpdate();
+            //Reset data connection when modem SSR
+            mAdapter.mAgpsManager.handleModemSSR();
+
             // restart sessions only when Lock state is enabled and in power state resume
             mAdapter.initGnssPowerStatistics();
             if (ENGINE_LOCK_STATE_ENABLED == mApi.getEngineLockState()) {
