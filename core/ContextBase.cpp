@@ -334,7 +334,7 @@ void ContextBase::readIZatConfForValueAddedProcess() {
     // set the property to launch loc_launcher
     // loc_launcher rc file will only launch loc_launcher if
     // property "vendor.qti.izat.value_added_process" is set to "enabled".
-    char* value = "disabled";
+    const char* value = "disabled";
     if (mIzat_process_conf.valueAddedProcessEnabled == true) {
         value = "enabled";
     }
