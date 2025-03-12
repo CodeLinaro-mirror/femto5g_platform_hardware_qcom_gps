@@ -147,6 +147,7 @@ typedef uint32_t LocPosTechMask;
 #define LOC_POS_TECH_MASK_INS ((LocPosTechMask)0x00000800)
 #define LOC_POS_TECH_MASK_PDR ((LocPosTechMask)0x00001000)
 #define LOC_POS_TECH_MASK_PROPAGATED ((LocPosTechMask)0x00002000)
+#define LOC_POS_TECH_MASK_SBAS ((LocPosTechMask)0x00004000)
 
 #define QESDK_FEATURE_ID_EDGNSS        2641
 #define QESDK_FEATURE_ID_RTK           2642
