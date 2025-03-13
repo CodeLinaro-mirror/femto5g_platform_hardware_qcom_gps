@@ -3229,6 +3229,11 @@ GnssAdapter::suspendSessions()
     }
 }
 
+bool GnssAdapter::isValidTrackingSession(LocationAPI* client, uint32_t sessionId) {
+    LocationSessionKey key(client, sessionId);
+    return (mTimeBasedTrackingSessions.find(key) != mTimeBasedTrackingSessions.end());
+}
+
 bool
 GnssAdapter::hasCallbacksToStartTracking(LocationAPI* client)
 {
@@ -3660,6 +3665,12 @@ GnssAdapter::updateTrackingOptionsCommand(LocationAPI* client, uint32_t id,
             mOptions(options) {}
         inline virtual void proc() const {
             LocationError err = LOCATION_ERROR_SUCCESS;
+            bool isValidSession = mAdapter.isValidTrackingSession(mClient, mSessionId);
+            LOC_LOGd("isValidSession %d ",  isValidSession);
+            if (!isValidSession) {
+                mAdapter.reportResponse(mClient, LOCATION_ERROR_ID_UNKNOWN, mSessionId);
+                return;
+            }
             if (0 == mOptions.size) {
                 err = LOCATION_ERROR_INVALID_PARAMETER;
             }
@@ -3773,6 +3784,12 @@ GnssAdapter::stopTrackingCommand(LocationAPI* client, uint32_t id)
             mClient(client),
             mSessionId(sessionId) {}
         inline virtual void proc() const {
+            bool isValidSession = mAdapter.isValidTrackingSession(mClient, mSessionId);
+            LOC_LOGd("isValidSession %d ",  isValidSession);
+            if (!isValidSession) {
+                mAdapter.reportResponse(mClient, LOCATION_ERROR_ID_UNKNOWN, mSessionId);
+                return;
+            }
             // Api doesn't support multiple clients for time based tracking, so mutiplex
             bool reportToClientWithNoWait =
                     mAdapter.stopTimeBasedTrackingMultiplex(mClient, mSessionId);

@@ -470,6 +470,7 @@ public:
     /* ======== RESPONSES ================================================================== */
     void reportResponse(LocationAPI* client, LocationError err, uint32_t sessionId);
     /* ======== UTILITIES ================================================================== */
+    bool isValidTrackingSession(LocationAPI* client, uint32_t sessionId);
     bool hasCallbacksToStartTracking(LocationAPI* client);
     void saveTrackingSession(LocationAPI* client, uint32_t sessionId,
                              const TrackingOptions& trackingOptions);
