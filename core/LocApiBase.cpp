@@ -190,7 +190,7 @@ struct LocCloseMsg : public LocMsg {
     }
 };
 
-MsgTask* LocApiBase::mMsgTask;
+MsgTask* LocApiBase::mMsgTask = nullptr;
 
 LocApiBase::LocApiBase(LOC_API_ADAPTER_EVENT_MASK_T excludedMask,
                        ContextBase* context) :
