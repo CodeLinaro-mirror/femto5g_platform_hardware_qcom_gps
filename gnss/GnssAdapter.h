@@ -168,6 +168,10 @@ typedef struct {
     uint32_t reqIDCounter;
 } NiData;
 
+typedef enum {
+    NMEA_PROVIDER_AP = 0, // Application Processor Provider of NMEA
+    NMEA_PROVIDER_MP      // Modem Processor Provider of NMEA
+} NmeaProviderType;
 typedef struct {
     GnssSvType svType;
     const char* talker;
@@ -672,16 +676,19 @@ public:
                                      const GpsLocationExtended& locationExtended,
                                      enum loc_sess_status status,
                                      LocPosTechMask techMask,
-                                     GnssDataNotification* pDataNotify = nullptr);
+                                     GnssDataNotification* pDataNotify = nullptr,
+                                     int msInWeek = -1);
     void reportEnginePositionsEvent(unsigned int count,
                                     EngineLocationInfo* locationArr);
     virtual void reportPropogatedPuncEvent(LocGpsLocation gpsLocation);
 
     virtual void reportSvEvent(const GnssSvNotification& svNotify);
-    virtual void reportDataEvent(const GnssDataNotification& dataNotify);
+    virtual void reportNmeaEvent(const char* nmea, size_t length);
+    virtual void reportDataEvent(const GnssDataNotification& dataNotify, int msInWeek);
     virtual bool requestNiNotifyEvent(const GnssNiNotification& notify, const void* data,
                                       const LocInEmergency emergencyState);
-    virtual void reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurements);
+    virtual void reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurements,
+                                                int msInWeek);
     virtual void reportSvPolynomialEvent(GnssSvPolynomial &svPolynomial);
     virtual void reportSvEphemerisEvent(GnssSvEphemerisReport & svEphemeris);
     virtual void reportGnssSvIdConfigEvent(const GnssSvIdConfig& config);
@@ -848,6 +855,7 @@ public:
     void disablePPENtripStreamCommand();
     void handleEnablePPENtrip(const GnssNtripConnectionParams& params, bool enableRTKEngine);
     void handleDisablePPENtrip();
+    void reportGGAToNtrip(const char* nmea);
     inline bool isDgnssNmeaRequired() { return mSendNmeaConsent &&
             mStartDgnssNtripParams.ntripParams.requiresNmeaLocation;}
     void readPPENtripConfig();
