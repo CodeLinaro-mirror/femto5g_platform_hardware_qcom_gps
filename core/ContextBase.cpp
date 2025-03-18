@@ -368,6 +368,7 @@ void ContextBase::setEngineCapabilities(uint64_t supportedMsgMask,
             if (!isSapModeKnown) {
                 /* Check if SAP is PREMIUM_ENV_AIDING in izat.conf */
                 char conf_feature_sap[LOC_MAX_PARAM_STRING];
+                memset(conf_feature_sap, 0, (sizeof(char) * LOC_MAX_PARAM_STRING));
                 loc_param_s_type izat_conf_feature_table[] =
                 {
                     { "SAP",           &conf_feature_sap,           &isSapModeKnown, 's' }
