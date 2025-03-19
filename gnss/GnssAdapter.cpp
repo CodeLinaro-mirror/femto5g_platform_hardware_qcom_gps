@@ -204,7 +204,6 @@ GnssAdapter::GnssAdapter() :
     mPowerOn(false),
     mNativeAgpsHandler(mSystemStatus->getOsObserver(), *this),
     mGnssEnergyConsumedCb(nullptr),
-    mPowerStateCb(nullptr),
     mSupportNfwControl(true),
     mIsMeasCorrInterfaceOpen(false),
     mLastDeleteAidingDataTime(0),
@@ -3257,38 +3256,6 @@ GnssAdapter::hasCallbacksToStartTracking(LocationAPI* client)
 }
 
 void
-GnssAdapter::reportPowerStateIfChanged()
-{
-    bool newPowerOn = !mTimeBasedTrackingSessions.empty();
-    if (newPowerOn != mPowerOn) {
-        mPowerOn = newPowerOn;
-        if (mPowerStateCb != nullptr) {
-            mPowerStateCb(mPowerOn);
-        }
-    }
-}
-
-void
-GnssAdapter::getPowerStateChangesCommand(std::function<void(bool)> powerStateCb)
-{
-    struct MsgReportLocation : public LocMsg {
-        GnssAdapter& mAdapter;
-        std::function<void(bool)> mPowerStateCb;
-        inline MsgReportLocation(GnssAdapter& adapter,
-                                 std::function<void(bool)> powerStateCb) :
-            LocMsg(),
-            mAdapter(adapter),
-            mPowerStateCb(powerStateCb) {}
-        inline virtual void proc() const {
-            mAdapter.savePowerStateCallback(mPowerStateCb);
-            mPowerStateCb(mAdapter.getPowerState());
-        }
-    };
-
-    sendMsg(new MsgReportLocation(*this, powerStateCb));
-}
-
-void
 GnssAdapter::saveTrackingSession(LocationAPI* client, uint32_t sessionId,
                                 const TrackingOptions& options)
 {
@@ -3298,7 +3265,6 @@ GnssAdapter::saveTrackingSession(LocationAPI* client, uint32_t sessionId,
         if (getFgTrackingSessionCount() > 0) {
             configRobustLocation();
         }
-        reportPowerStateIfChanged();
         // notify SystemStatus the engine tracking status
         getSystemStatus()->eventSetTracking(isInSession(), true);
     }
@@ -3316,7 +3282,6 @@ GnssAdapter::eraseTrackingSession(LocationAPI* client, uint32_t sessionId)
                 configRobustLocation();
             }
         }
-        reportPowerStateIfChanged();
         getSystemStatus()->eventSetTracking(isInSession(), true);
     }
 }
