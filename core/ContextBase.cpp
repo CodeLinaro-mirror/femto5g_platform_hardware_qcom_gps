@@ -62,6 +62,12 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_CtxBase"
 
@@ -81,8 +87,9 @@ namespace loc_core {
 loc_gps_cfg_s_type ContextBase::mGps_conf {};
 loc_sap_cfg_s_type ContextBase::mSap_conf {};
 loc_izat_cfg_s_type ContextBase::mIzat_conf {};
+izat_process_info ContextBase:: mIzat_process_conf {};
+
 bool ContextBase::sIsEngineCapabilitiesKnown = false;
-uint64_t ContextBase::sSupportedMsgMask = 0;
 bool ContextBase::sGnssMeasurementSupported = false;
 uint8_t ContextBase::sFeaturesSupported[MAX_FEATURE_LENGTH];
 GnssNMEARptRate ContextBase::sNmeaReportRate = GNSS_NMEA_REPORT_RATE_NHZ;
@@ -166,7 +173,7 @@ void ContextBase::readConfig()
 #else
         mGps_conf.GPS_LOCK = GNSS_CONFIG_GPS_LOCK_MO_AND_NI;
 #endif
-        mGps_conf.SUPL_VER = 0x10000;
+        mGps_conf.SUPL_VER = 0x00020004;
         mGps_conf.SUPL_MODE = 0x1;
         mGps_conf.SUPL_ES = 0;
         mGps_conf.CP_MTLR_ES = 0;
@@ -267,7 +274,89 @@ void ContextBase::readConfig()
           default:
              break;
         }
+
+        readIZatConfForValueAddedProcess();
     }
+}
+
+void ContextBase::readIZatConfForValueAddedProcess() {
+    bool retVal = true;
+    const char *error = nullptr;
+    unsigned int processListLength = 0;
+    loc_process_info_s_type* processInfoList = nullptr;
+
+    int rc = loc_read_process_conf(LOC_PATH_IZAT_CONF, &processListLength,
+                                   &processInfoList);
+    if (rc != 0) {
+        LOC_LOGe("failed to parse conf file for value added process");
+        return;
+    }
+
+    // go over the conf table to see whether any plugin daemon is enabled
+    for (unsigned int i = 0; i < processListLength; i++) {
+        LOC_LOGi("process %s, enabled %d",
+                 processInfoList[i].name[0], processInfoList[i].proc_status);
+        if (processInfoList[i].proc_status == ENABLED) {
+            mIzat_process_conf.valueAddedProcessEnabled = true;
+
+            if (strncmp(processInfoList[i].name[0], "engine-service",
+                        strlen("engine-service")) == 0) {
+                mIzat_process_conf.engineServiceEnabled = true;
+
+                if (processInfoList[i].args[1]!= nullptr) {
+                    // check if this is DRE-INT engine
+                    if (strncmp(processInfoList[i].args[1], "DRE-INT",
+                                sizeof("DRE-INT")) == 0) {
+                        mIzat_process_conf.engineServiceInfo.dreIntEnabled = true;
+                    } else if (strncmp(processInfoList[i].args[1], "PPE",
+                                       sizeof("PPE")) == 0) {
+                        mIzat_process_conf.engineServiceInfo.ppeEnabled = true;
+                    } else if (strncmp(processInfoList[i].args[1], "PPE-INT",
+                                       sizeof("PPE-INT")) == 0) {
+                        mIzat_process_conf.engineServiceInfo.ppeIntEnabled = true;
+                        mIzat_process_conf.engineServiceInfo.ppeEnabled = true;
+                    }
+                }
+            } else if (strncmp(processInfoList[i].name[0], "xtwifi-client",
+                               strlen("xtwifi-client")) == 0) {
+                mIzat_process_conf.gtpDaemonEnabled = true;
+            } else if (strncmp(processInfoList[i].name[0], "slim_daemon",
+                               strlen("slim_daemon")) == 0) {
+                mIzat_process_conf.slimDaemonEnabled = true;
+            } else if (strncmp(processInfoList[i].name[0], "edgnss-daemon",
+                               strlen("edgnss-daemon")) == 0) {
+                mIzat_process_conf.eDgnssDaemonEnabled = true;
+            }
+        }
+    }
+
+#ifdef _ANDROID_
+    // set the property to launch loc_launcher
+    // loc_launcher rc file will only launch loc_launcher if
+    // property "vendor.qti.izat.value_added_process" is set to "enabled".
+    char* value = "disabled";
+    if (mIzat_process_conf.valueAddedProcessEnabled == true) {
+        value = "enabled";
+    }
+
+    if (0 != property_set("vendor.qti.izat.value_added_process", value)) {
+        LOC_LOGe ("failed to set property vendor.qti.izat.value_added_process");
+    }
+#endif
+
+    if (processInfoList != nullptr) {
+        free (processInfoList);
+        processInfoList = nullptr;
+    }
+
+    LOC_LOGd ("value added process enabled %d, gtp enabled %d, slim daemon enabled %d, "
+              "edgnss enabled %d, engine service enabled %d (ppe: %d, ppe-int:%d, dre: %d)",
+              mIzat_process_conf.valueAddedProcessEnabled, mIzat_process_conf.gtpDaemonEnabled,
+              mIzat_process_conf.slimDaemonEnabled, mIzat_process_conf.eDgnssDaemonEnabled,
+              mIzat_process_conf.engineServiceEnabled,
+              mIzat_process_conf.engineServiceInfo.ppeEnabled,
+              mIzat_process_conf.engineServiceInfo.ppeIntEnabled,
+              mIzat_process_conf.engineServiceInfo.dreIntEnabled);
 }
 
 uint32_t ContextBase::getCarrierCapabilities() {
@@ -371,11 +460,9 @@ ContextBase::ContextBase(const MsgTask* msgTask,
 {
 }
 
-void ContextBase::setEngineCapabilities(uint64_t supportedMsgMask,
-       uint8_t *featureList, bool gnssMeasurementSupported) {
+void ContextBase::setEngineCapabilities(uint8_t *featureList, bool gnssMeasurementSupported) {
 
     if (ContextBase::sIsEngineCapabilitiesKnown == false) {
-        ContextBase::sSupportedMsgMask = supportedMsgMask;
         ContextBase::sGnssMeasurementSupported = gnssMeasurementSupported;
         if (featureList != NULL) {
             memcpy((void *)ContextBase::sFeaturesSupported,

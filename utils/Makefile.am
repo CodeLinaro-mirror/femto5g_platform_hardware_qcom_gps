@@ -17,7 +17,6 @@ libgps_utils_la_h_sources = \
         loc_cfg.h \
         loc_log.h \
         loc_target.h \
-        loc_timer.h \
         MsgTask.h \
         LocHeap.h \
         LocThread.h \

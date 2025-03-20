@@ -310,10 +310,6 @@ typedef uint64_t LocationCapabilitiesMask;
 #define   LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT           (1<<0)
 // supports startBatching API with minInterval param
 #define   LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT           (1<<1)
-// supports startTracking API with minDistance param
-#define  LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT        (1<<2)
-// supports startBatching API with minDistance param
-#define   LOCATION_CAPABILITIES_DISTANCE_BASED_BATCHING_BIT       (1<<3)
 // supports addGeofences API
 #define   LOCATION_CAPABILITIES_GEOFENCE_BIT                      (1<<4)
 // supports GnssMeasurementsCallback
@@ -324,8 +320,6 @@ typedef uint64_t LocationCapabilitiesMask;
 #define   LOCATION_CAPABILITIES_GNSS_MSA_BIT                      (1<<7)
 // supports debug nmea sentences in the debugNmeaCallback
 #define   LOCATION_CAPABILITIES_DEBUG_DATA_BIT                    (1<<8)
-// support outdoor trip batching
-#define   LOCATION_CAPABILITIES_OUTDOOR_TRIP_BATCHING_BIT         (1<<9)
 // support constellation enablement
 #define   LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT      (1<<10)
 // support agpm
@@ -716,12 +710,10 @@ enum GnssSuplMode {
 
 enum BatchingMode {
     BATCHING_MODE_ROUTINE = 0,   // positions are reported when batched positions memory is full
-    BATCHING_MODE_TRIP,          // positions are reported when a certain distance is covered
     BATCHING_MODE_NO_AUTO_REPORT // no report of positions automatically, instead queried on demand
 };
 
 enum BatchingStatus {
-    BATCHING_STATUS_TRIP_COMPLETED = 0,
     BATCHING_STATUS_POSITION_AVAILABE,
     BATCHING_STATUS_POSITION_UNAVAILABLE
 };
@@ -1227,8 +1219,6 @@ enum FixQualityLevel {
 struct LocationOptions {
     uint32_t size;          // set to sizeof(LocationOptions)
     uint32_t minInterval; // in milliseconds
-    uint32_t minDistance; // in meters. if minDistance > 0, gnssSvCallback/gnssNmeaCallback/
-                          // gnssMeasurementsCallback may not be called
     GnssSuplMode mode;    // Standalone/MS-Based/MS-Assisted
     // behavior when this field is 0:
     //  if engine hub is running, this will be fused fix,
@@ -1237,7 +1227,7 @@ struct LocationOptions {
     FixQualityLevel qualityLevelAccepted; /* Send through position reports with which accuracy. */
 
     inline LocationOptions() :
-            size(0), minInterval(0), minDistance(0), mode(GNSS_SUPL_MODE_STANDALONE),
+            size(0), minInterval(0), mode(GNSS_SUPL_MODE_STANDALONE),
             locReqEngTypeMask((LocReqEngineTypeMask)0),
             qualityLevelAccepted(QUALITY_HIGH_ACCU_FIX_ONLY) {}
 };
@@ -1280,10 +1270,12 @@ struct TrackingOptions : LocationOptions {
 
     inline TrackingOptions() :
             LocationOptions(), powerMode(GNSS_POWER_MODE_DEFAULT), tbm(0),
-            specialReq(SPECIAL_REQ_INVALID), correctionType(CORRECTION_TYPE_DEFAULT){}
+            specialReq(SPECIAL_REQ_INVALID), correctionType(CORRECTION_TYPE_DEFAULT),
+            preciseType(PRECISE_TYPE_UNKNOWN){}
     inline TrackingOptions(const LocationOptions& options) :
             LocationOptions(options), powerMode(GNSS_POWER_MODE_DEFAULT), tbm(0),
-            specialReq(SPECIAL_REQ_INVALID), correctionType(CORRECTION_TYPE_DEFAULT){}
+            specialReq(SPECIAL_REQ_INVALID), correctionType(CORRECTION_TYPE_DEFAULT),
+            preciseType(PRECISE_TYPE_UNKNOWN){}
     inline bool equalsInTimeBasedRequest(const TrackingOptions& other) const {
         return minInterval == other.minInterval && powerMode == other.powerMode &&
                qualityLevelAccepted == other.qualityLevelAccepted &&
@@ -1321,7 +1313,6 @@ struct TrackingOptions : LocationOptions {
     inline void setLocationOptions(const LocationOptions& options) {
         size = sizeof(TrackingOptions);
         minInterval = options.minInterval;
-        minDistance = options.minDistance;
         mode = options.mode;
         locReqEngTypeMask = options.locReqEngTypeMask;
         qualityLevelAccepted = options.qualityLevelAccepted;
@@ -1329,7 +1320,6 @@ struct TrackingOptions : LocationOptions {
     inline LocationOptions getLocationOptions() {
         LocationOptions locOption;
         locOption.size = sizeof(locOption);
-        locOption.minDistance = minDistance;
         locOption.minInterval = minInterval;
         locOption.mode = mode;
         locOption.locReqEngTypeMask = locReqEngTypeMask;
@@ -1349,7 +1339,6 @@ struct BatchingOptions : LocationOptions {
             LocationOptions(options), batchingMode(BATCHING_MODE_ROUTINE) {}
     inline void setLocationOptions(const LocationOptions& options) {
         minInterval = options.minInterval;
-        minDistance = options.minDistance;
         mode = options.mode;
     }
 };
@@ -1701,7 +1690,6 @@ enum LocReportTriggerType {
     LOC_REPORT_TRIGGER_ENGINE_TRACKING_SESSION   = 3,
     LOC_REPORT_TRIGGER_SINGLE_TERRESTRIAL_FIX    = 4,
     LOC_REPORT_TRIGGER_SINGLE_FIX                = 5,
-    LOC_REPORT_TRIGGER_TRIP_BATCHING_SESSION     = 6,
     LOC_REPORT_TRIGGER_ROUTINE_BATCHING_SESSION  = 7,
     LOC_REPORT_TRIGGER_GEOFENCE_SESSION          = 8,
 };

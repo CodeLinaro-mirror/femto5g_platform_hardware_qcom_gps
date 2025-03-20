@@ -13,8 +13,11 @@ cc_library_shared {
         "liblog",
         "libloc_core",
         "libgps.utils",
-        "libxml2",
         "libloc_base_util",
+    ],
+
+    include_dirs: [
+        "external/libxml2/include",
     ],
 
     srcs: [

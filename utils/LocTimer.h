@@ -26,6 +26,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/*
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #ifndef __LOC_TIMER_CPP_H__
 #define __LOC_TIMER_CPP_H__
@@ -56,12 +61,13 @@ public:
 
     // timeOutInMs:  timeout delay in ms
     // wakeOnExpire: true if to wake up CPU (if sleeping) upon timer
-    //                        expiration and notify the client.
+    //                        expiration and notify the client. DEPRECATED!!
     //               false if to wait until next time CPU wakes up (if
     //                        sleeping) and then notify the client.
+    //               PLEASE NOTE THAT only false is supported now
     // return:       true on success;
     //               false on failure, e.g. timer is already running.
-    bool start(uint32_t timeOutInMs, bool wakeOnExpire);
+    bool start(uint32_t timeOutInMs, bool wakeOnExpire = false);
 
     // return:       true on success;
     //               false on failure, e.g. timer is not running.

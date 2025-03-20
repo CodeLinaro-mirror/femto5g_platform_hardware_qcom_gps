@@ -259,7 +259,6 @@ class GnssAdapter : public LocAdapterBase {
 
     /* ==== TRACKING ======================================================================= */
     TrackingOptionsMap mTimeBasedTrackingSessions;
-    LocationSessionMap mDistanceBasedTrackingSessions;
     LocPosMode mLocPositionMode;
     PreciseType mPreciseType;
     CorrectionType mCorrectionType;
@@ -355,9 +354,7 @@ class GnssAdapter : public LocAdapterBase {
     BlockCPIInfo mBlockCPIInfo;
     bool mPowerOn;
     bool mEngHubLoadSuccessful;
-    EngineServiceInfo mEngServiceInfo;
     RealtimeEstimator mPositionElapsedRealTimeCal;
-    NvParamMgr*   mNvParamMgr;
 
     /* === NativeAgpsHandler ======================================================== */
     NativeAgpsHandler mNativeAgpsHandler;
@@ -449,9 +446,6 @@ protected:
 public:
     GnssAdapter();
     virtual inline ~GnssAdapter() {
-        if (nullptr != mNvParamMgr) {
-            mNvParamMgr->releaseInstance();
-        }
     }
 
     /* ==== SSR ============================================================================ */
@@ -476,8 +470,6 @@ public:
     /* ======== RESPONSES ================================================================== */
     void reportResponse(LocationAPI* client, LocationError err, uint32_t sessionId);
     /* ======== UTILITIES ================================================================== */
-    bool isTimeBasedTrackingSession(LocationAPI* client, uint32_t sessionId);
-    bool isDistanceBasedTrackingSession(LocationAPI* client, uint32_t sessionId);
     bool hasCallbacksToStartTracking(LocationAPI* client);
     void saveTrackingSession(LocationAPI* client, uint32_t sessionId,
                              const TrackingOptions& trackingOptions);
@@ -533,7 +525,7 @@ public:
     void setControlCallbacksCommand(LocationControlCallbacks& controlCallbacks);
     void readConfigCommand();
     void requestUlpCommand();
-    void initValueAddedProcessCommand();
+    void initEngineHubCommand();
     void initLocGlinkCommand();
     uint32_t* gnssUpdateConfigCommand(const GnssConfig& config);
     uint32_t* gnssGetConfigCommand(GnssConfigFlagsMask mask);
@@ -637,18 +629,19 @@ public:
     virtual bool isInSession() { return !mTimeBasedTrackingSessions.empty(); }
     uint32_t getFgTrackingSessionCount();
     void initDefaultAgps();
-    bool initValueAddedProcess();
-    inline bool isPreciseEnabled(PpFeatureStatusMask bits = DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
-        return (mPpFeatureStatusMask & bits) &&
-                (mPpFeatureStatusMask &
-                (DLP_FEATURE_ENABLED_BY_DEFAULT | DLP_FEATURE_ENABLED_BY_QESDK |
-                 WOCS_FEATURE_ENABLED_BY_DEFAULT));
+    bool initEngineHub();
+    inline bool isPreciseEnabled() {
+        return (mPpFeatureStatusMask &
+                  (DLP_FEATURE_ENABLED_BY_DEFAULT | DLP_FEATURE_ENABLED_BY_QESDK |
+                   WOCS_FEATURE_ENABLED_BY_DEFAULT));
     }
     inline bool isQppeEnabled() {
-        return isPreciseEnabled(DLP_FEATURE_STATUS_QPPE_LIBRARY_PRESENT);
+        return (ContextBase::mIzat_process_conf.engineServiceInfo.ppeIntEnabled &&
+                isPreciseEnabled());
     }
     inline bool isQfeEnabled() {
-        return isPreciseEnabled(DLP_FEATURE_STATUS_QFE_LIBRARY_PRESENT);
+        return (ContextBase::mIzat_process_conf.engineServiceInfo.dreIntEnabled &&
+                isPreciseEnabled());
     }
     inline bool isMlpEnabled() {
         return mPpFeatureStatusMask &
@@ -808,6 +801,7 @@ public:
     static uint32_t convertAGloProt(const GnssConfigAGlonassPositionProtocolMask);
     static uint32_t convertSuplMode(const GnssConfigSuplModeMask suplModeMask);
     static void convertSatelliteInfo(std::vector<GnssDebugSatelliteInfo>& out,
+                                     const GnssSvType& in_constellation,
                                      const SystemStatusReports& in);
     static bool convertToGnssSvIdConfig(
             const std::vector<GnssSvIdSource>& blacklistedSvIds, GnssSvIdConfig& config);

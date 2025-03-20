@@ -189,14 +189,6 @@ void LocAdapterBase::
 reportGnssMeasurementsEvent(const GnssMeasurements& /*gnssMeasurements*/)
 DEFAULT_IMPL()
 
-bool LocAdapterBase::
-    reportWwanZppFix(LocGpsLocation &/*zppLoc*/)
-DEFAULT_IMPL(false)
-
-bool LocAdapterBase::
-    reportZppBestAvailableFix(LocGpsLocation& /*zppLoc*/,
-            GpsLocationExtended& /*location_extended*/, LocPosTechMask /*tech_mask*/)
-DEFAULT_IMPL(false)
 
 void LocAdapterBase::reportGnssSvIdConfigEvent(const GnssSvIdConfig& /*config*/)
 DEFAULT_IMPL()
@@ -241,10 +233,6 @@ DEFAULT_IMPL()
 void
 LocAdapterBase::reportLocationsEvent(const Location* /*locations*/, size_t /*count*/,
                                      BatchingMode /*batchingMode*/)
-DEFAULT_IMPL()
-
-void
-LocAdapterBase::reportCompletedTripsEvent(uint32_t /*accumulated_distance*/)
 DEFAULT_IMPL()
 
 void
@@ -298,17 +286,7 @@ LocAdapterBase::getCapabilities()
     if (isEngineCapabilitiesKnown()) {
         // time based tracking always supported
         mask |= LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT;
-        if (ContextBase::isMessageSupported(
-                LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_LOCATION_BATCHING)) {
-            mask |= LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT |
-                    LOCATION_CAPABILITIES_DISTANCE_BASED_BATCHING_BIT;
-        }
-        if (ContextBase::isMessageSupported(LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_TRACKING)) {
-            mask |= LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT;
-        }
-        if (ContextBase::isMessageSupported(LOC_API_ADAPTER_MESSAGE_OUTDOOR_TRIP_BATCHING)) {
-            mask |= LOCATION_CAPABILITIES_OUTDOOR_TRIP_BATCHING_BIT;
-        }
+        mask |= LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT;
         // geofence always supported
         mask |= LOCATION_CAPABILITIES_GEOFENCE_BIT;
         if (ContextBase::gnssConstellationConfig()) {
@@ -349,7 +327,7 @@ LocAdapterBase::getCapabilities()
         if (ContextBase::isAntennaInfoAvailable()) {
             mask |= LOCATION_CAPABILITIES_ANTENNA_INFO;
         }
-        if (mPpFeatureStatusMask & DLP_FEATURE_STATUS_LIBRARY_PRESENT) {
+        if (ContextBase::mIzat_process_conf.engineServiceEnabled) {
             mask |= LOCATION_CAPABILITIES_PRECISE_LIB_PRESENT;
         }
         //Get HW feature status mask

@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -95,6 +95,23 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define BDS_SV_ID_MAX    (263) //201-263
 #define GAL_SV_ID_MAX    (336) //301-336
 #define NAVIC_SV_ID_MAX  (420) //401-420
+
+#define GPS_SV_NUM    (GPS_SV_ID_MAX - GPS_SV_ID_MIN + 1)
+#define GLO_SV_NUM    (GLO_SV_ID_MAX - GLO_SV_ID_MIN + 1)
+#define QZSS_SV_NUM    (QZSS_SV_ID_MAX - QZSS_SV_ID_MIN + 1)
+#define BDS_SV_NUM     (BDS_SV_ID_MAX - BDS_SV_ID_MIN + 1)
+#define GAL_SV_NUM     (GAL_SV_ID_MAX - GAL_SV_ID_MIN + 1)
+#define NAVIC_SV_NUM   (NAVIC_SV_ID_MAX - NAVIC_SV_ID_MIN + 1)
+
+#define GPS_SV_INDEX_OFFSET   (0)
+#define GLO_SV_INDEX_OFFSET   (GPS_SV_INDEX_OFFSET + GPS_SV_NUM)
+#define QZSS_SV_INDEX_OFFSET  (GLO_SV_INDEX_OFFSET + GLO_SV_NUM)
+#define BDS_SV_INDEX_OFFSET   (QZSS_SV_INDEX_OFFSET + QZSS_SV_NUM)
+#define GAL_SV_INDEX_OFFSET   (BDS_SV_INDEX_OFFSET + BDS_SV_NUM)
+#define NAVIC_SV_INDEX_OFFSET (GAL_SV_INDEX_OFFSET + GAL_SV_NUM)
+
+#define SV_ALL_NUM  (GPS_SV_NUM + GLO_SV_NUM + QZSS_SV_NUM + \
+                  BDS_SV_NUM + GAL_SV_NUM + NAVIC_SV_NUM )
 
 #define GNSS_BUGREPORT_GPS_SV_ID_MIN    (1)
 #define GNSS_BUGREPORT_GLO_SV_ID_MIN    (1)
@@ -381,14 +398,20 @@ public:
 
 };
 
+struct SystemStatusNav
+{
+    GnssEphemerisType   mType;
+    GnssEphemerisSource mSource;
+    int32_t             mAgeSec;
+};
+
 class SystemStatusNavData : public SystemStatusItemBase
 {
 public:
-    uint32_t mNavLen;
-    GnssNavDataInfo mNav[GNSS_MAX_SV_INFO_LIST_SIZE];
-
+    SystemStatusNav mNav[SV_ALL_NUM];
     inline SystemStatusNavData() {
-        mNavLen = 0;
+        // GNSS_EPH_TYPE_UNKNOWN and GNSS_EPH_TYPE_UNKNOWN are 0
+        memset(mNav, 0, sizeof (mNav));
     }
 
     inline SystemStatusNavData(const GnssEngineDebugDataInfo& info);
@@ -553,17 +576,6 @@ public:
     }
 };
 
-class SystemStatusServiceInfo : public SystemStatusItemBase {
-public:
-    RilServiceInfoDataItem mDataItem;
-    inline SystemStatusServiceInfo(): mDataItem() {}
-    inline SystemStatusServiceInfo(const RilServiceInfoDataItem& itemBase):
-            mDataItem(itemBase) {}
-    inline bool equals(const SystemStatusItemBase& peer) override {
-        return ((const SystemStatusServiceInfo&)peer).mDataItem == mDataItem;
-    }
-};
-
 class SystemStatusRilCellInfo : public SystemStatusItemBase {
 public:
     RilCellInfoDataItem mDataItem;
@@ -571,18 +583,6 @@ public:
     inline SystemStatusRilCellInfo(const RilCellInfoDataItem& itemBase): mDataItem(itemBase) {}
     inline bool equals(const SystemStatusItemBase& peer) override {
         return ((const SystemStatusRilCellInfo&)peer).mDataItem == mDataItem;
-    }
-};
-
-class SystemStatusServiceStatus : public SystemStatusItemBase {
-public:
-    ServiceStatusDataItem mDataItem;
-    inline SystemStatusServiceStatus(int32_t mServiceState=0): mDataItem(mServiceState) {}
-    inline SystemStatusServiceStatus(const ServiceStatusDataItem& itemBase):
-            mDataItem(itemBase) {}
-    inline bool equals(const SystemStatusItemBase& peer) override {
-        return mDataItem.mServiceState ==
-                ((const SystemStatusServiceStatus&)peer).mDataItem.mServiceState;
     }
 };
 
@@ -604,17 +604,6 @@ public:
     inline bool equals(const SystemStatusItemBase& peer) override {
         return mDataItem.mManufacturer ==
                 ((const SystemStatusManufacturer&)peer).mDataItem.mManufacturer;
-    }
-};
-
-class SystemStatusPowerConnectState : public SystemStatusItemBase {
-public:
-    PowerConnectStateDataItem mDataItem;
-    inline SystemStatusPowerConnectState(bool state=false): mDataItem(state) {}
-    inline SystemStatusPowerConnectState(const PowerConnectStateDataItem& itemBase):
-            mDataItem(itemBase) {}
-    inline bool equals(const SystemStatusItemBase& peer) override {
-        return mDataItem.mState == ((const SystemStatusPowerConnectState&)peer).mDataItem.mState;
     }
 };
 
@@ -863,13 +852,10 @@ public:
     std::vector<SystemStatusGpsState>         mGPSState;
     std::vector<SystemStatusWifiHardwareState> mWifiHardwareState;
     std::vector<SystemStatusNetworkInfo>      mNetworkInfo;
-    std::vector<SystemStatusServiceInfo>      mRilServiceInfo;
     std::vector<SystemStatusRilCellInfo>      mRilCellInfo;
-    std::vector<SystemStatusServiceStatus>    mServiceStatus;
     std::vector<SystemStatusModel>            mModel;
     std::vector<SystemStatusManufacturer>     mManufacturer;
     std::vector<SystemStatusInEmergencyCall>  mInEmergencyCall;
-    std::vector<SystemStatusPowerConnectState> mPowerConnectState;
     std::vector<SystemStatusTimeZoneChange>   mTimeZoneChange;
     std::vector<SystemStatusTimeChange>       mTimeChange;
     std::vector<SystemStatusWifiSupplicantStatus> mWifiSupplicantStatus;
@@ -926,7 +912,6 @@ public:
     bool setDefaultGnssEngineStates(void);
     bool eventConnectionStatus(bool connected, int8_t type,
                                bool roaming, NetworkHandle networkHandle, const string& apn);
-    bool updatePowerConnectState(bool charging);
     void resetNetworkInfo();
     bool eventOptInStatus(bool userConsent);
     bool eventRegionStatus(bool region);

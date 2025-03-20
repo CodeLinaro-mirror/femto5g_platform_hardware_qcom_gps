@@ -29,7 +29,7 @@
 
 /*
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -47,28 +47,22 @@ BatchingAdapter::BatchingAdapter() :
     LocAdapterBase(0,
                    LocContext::getLocContext(LocContext::mLocationHalName),
                    false, nullptr, true),
-    mOngoingTripDistance(0),
-    mOngoingTripTBFInterval(0),
-    mTripWithOngoingTBFDropped(false),
-    mTripWithOngoingTripDistanceDropped(false),
-    mBatchingTimeout(20000),
+    mBatchingTimeout(0),
     mBatchingAccuracy(1),
     mBatchSize(20),
-    mTripBatchSize(600),
     mSystemPowerState(POWER_STATE_UNKNOWN)
 {
     LOC_LOGD("%s]: Constructor", __func__);
     const loc_param_s_type batching_conf_param_table[] =
     {
         {"BATCH_SIZE", &mBatchSize, NULL, 'n'},
-        {"OUTDOOR_TRIP_BATCH_SIZE", &mTripBatchSize, NULL, 'n'},
         {"BATCH_SESSION_TIMEOUT", &mBatchingTimeout, NULL, 'n'},
         {"ACCURACY", &mBatchingAccuracy, NULL, 'n'},
     };
     UTIL_READ_CONF(LOC_PATH_IZAT_CONF, batching_conf_param_table);
 
-    LOC_LOGd("batchSize %u tripBatchSize %u batchingAccuracy %u batchingTimeout %u ",
-            mBatchSize, mTripBatchSize, mBatchingAccuracy, mBatchingTimeout);
+    LOC_LOGd("batchSize %u batchingAccuracy %u batchingTimeout %u ",
+            mBatchSize, mBatchingAccuracy, mBatchingTimeout);
 
     // at last step, let us inform adapater base that we are done
     // with initialization, e.g.: ready to process handleEngineUpEvent
@@ -94,11 +88,7 @@ BatchingAdapter::stopClientSessions(LocationAPI* client, bool eraseSession)
         }
     }
     for (auto keyBatchingMode : vBatchingClient) {
-        if (keyBatchingMode.batchingMode != BATCHING_MODE_TRIP) {
-            stopBatching(keyBatchingMode.client, keyBatchingMode.id, eraseSession);
-        } else {
-            stopTripBatchingMultiplex(keyBatchingMode.client, keyBatchingMode.id, eraseSession);
-        }
+        stopBatching(keyBatchingMode.client, keyBatchingMode.id, eraseSession);
     }
 }
 
@@ -108,7 +98,7 @@ BatchingAdapter::updateClientsEventMask()
     LOC_API_ADAPTER_EVENT_MASK_T mask = 0;
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
         // we don't register LOC_API_ADAPTER_BIT_BATCH_FULL until we
-        // start batching with ROUTINE or TRIP option
+        // start batching with ROUTINE option
         if (it->second.batchingCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_BATCH_STATUS;
         }
@@ -173,7 +163,6 @@ BatchingAdapter::handleEngineUpEvent()
             mAdapter.setEngineCapabilitiesKnown(true);
             mAdapter.broadcastCapabilities(mAdapter.getCapabilities());
             mApi.setBatchSize(mAdapter.getBatchSize());
-            mApi.setTripBatchSize(mAdapter.getTripBatchSize());
             if (ENGINE_LOCK_STATE_DISABLED != mApi.getEngineLockState()) {
                 for (auto msg: mAdapter.mPendingMsgs) {
                     mAdapter.sendMsg(msg);
@@ -203,49 +192,10 @@ BatchingAdapter::restartSessions()
     }
     for (auto it = mBatchingSessions.begin();
               it != mBatchingSessions.end(); ++it) {
-        if (it->second.batchingMode != BATCHING_MODE_TRIP) {
-            mLocApi->startBatching(it->first.id, it->second,
-                                    getBatchingAccuracy(), getBatchingTimeout(),
-                                    new LocApiResponse(*getContext(),
-                                    [] (LocationError /*err*/) {}));
-        }
-    }
-
-    if (mTripSessions.size() > 0) {
-        // restart outdoor trip batching session if any.
-        mOngoingTripDistance = 0;
-        mOngoingTripTBFInterval = 0;
-
-        // record the min trip distance and min tbf interval of all ongoing sessions
-        for (auto tripSession : mTripSessions) {
-
-            TripSessionStatus &tripSessStatus = tripSession.second;
-
-            if ((0 == mOngoingTripDistance) ||
-                (mOngoingTripDistance >
-                 (tripSessStatus.tripDistance - tripSessStatus.accumulatedDistanceThisTrip))) {
-                mOngoingTripDistance = tripSessStatus.tripDistance -
-                    tripSessStatus.accumulatedDistanceThisTrip;
-            }
-
-            if ((0 == mOngoingTripTBFInterval) ||
-                (mOngoingTripTBFInterval > tripSessStatus.tripTBFInterval)) {
-                mOngoingTripTBFInterval = tripSessStatus.tripTBFInterval;
-            }
-
-            // reset the accumulatedDistanceOngoingBatch for each session
-            tripSessStatus.accumulatedDistanceOngoingBatch = 0;
-
-        }
-
-        mLocApi->startOutdoorTripBatching(mOngoingTripDistance, mOngoingTripTBFInterval,
-                getBatchingTimeout(), new LocApiResponse(*getContext(), [this] (LocationError err) {
-            if (LOCATION_ERROR_SUCCESS != err) {
-                mOngoingTripDistance = 0;
-                mOngoingTripTBFInterval = 0;
-            }
-            printTripReport();
-        }));
+        mLocApi->startBatching(it->first.id, it->second,
+                getBatchingAccuracy(), getBatchingTimeout(),
+                new LocApiResponse(*getContext(),
+                [] (LocationError /*err*/) {}));
     }
 }
 
@@ -261,11 +211,6 @@ BatchingAdapter::isBatchingSession(LocationAPI* client, uint32_t sessionId)
 {
     LocationSessionKey key(client, sessionId);
     return (mBatchingSessions.find(key) != mBatchingSessions.end());
-}
-
-bool
-BatchingAdapter::isTripSession(uint32_t sessionId) {
-    return (mTripSessions.find(sessionId) != mTripSessions.end());
 }
 
 void
@@ -309,7 +254,6 @@ BatchingAdapter::autoReportBatchingSessionsCount()
             count++;
         }
     }
-    count += mTripSessions.size();
     return count;
 }
 
@@ -318,8 +262,8 @@ BatchingAdapter::startBatchingCommand(
         LocationAPI* client, const BatchingOptions& batchOptions)
 {
     uint32_t sessionId = generateSessionId();
-    LOC_LOGD("%s]: client %p id %u minInterval %u minDistance %u mode %u Batching Mode %d",
-             __func__, client, sessionId, batchOptions.minInterval, batchOptions.minDistance,
+    LOC_LOGD("%s]: client %p id %u minInterval %u mode %u Batching Mode %d",
+             __func__, client, sessionId, batchOptions.minInterval,
              batchOptions.mode,batchOptions.batchingMode);
 
     struct MsgStartBatching : public LocMsg {
@@ -350,16 +294,11 @@ BatchingAdapter::startBatchingCommand(
                 err = LOCATION_ERROR_CALLBACK_MISSING;
             } else if (0 == mBatchingOptions.size) {
                 err = LOCATION_ERROR_INVALID_PARAMETER;
-            } else if (!ContextBase::isMessageSupported(
-                       LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_LOCATION_BATCHING)) {
-                err = LOCATION_ERROR_NOT_SUPPORTED;
             }
             if (LOCATION_ERROR_SUCCESS == err) {
                 if (mBatchingOptions.batchingMode == BATCHING_MODE_ROUTINE ||
                     mBatchingOptions.batchingMode == BATCHING_MODE_NO_AUTO_REPORT) {
                     mAdapter.startBatching(mClient, mSessionId, mBatchingOptions);
-                } else if (mBatchingOptions.batchingMode == BATCHING_MODE_TRIP) {
-                    mAdapter.startTripBatchingMultiplex(mClient, mSessionId, mBatchingOptions);
                 } else {
                     mAdapter.reportResponse(mClient, LOCATION_ERROR_INVALID_PARAMETER, mSessionId);
                 }
@@ -411,9 +350,9 @@ void
 BatchingAdapter::updateBatchingOptionsCommand(LocationAPI* client, uint32_t id,
         const BatchingOptions& batchOptions)
 {
-    LOC_LOGD("%s]: client %p id %u minInterval %u minDistance %u mode %u batchMode %u",
+    LOC_LOGD("%s]: client %p id %u minInterval %u mode %u batchMode %u",
              __func__, client, id, batchOptions.minInterval,
-             batchOptions.minDistance, batchOptions.mode,
+             batchOptions.mode,
              batchOptions.batchingMode);
 
     struct MsgUpdateBatching : public LocMsg {
@@ -446,12 +385,8 @@ BatchingAdapter::updateBatchingOptionsCommand(LocationAPI* client, uint32_t id,
                 err = LOCATION_ERROR_INVALID_PARAMETER;
             }
             if (LOCATION_ERROR_SUCCESS == err) {
-                if (!mAdapter.isTripSession(mSessionId)) {
-                    mAdapter.stopBatching(mClient, mSessionId, true, mBatchOptions);
-                } else {
-                    mAdapter.stopTripBatchingMultiplex(mClient, mSessionId, true, mBatchOptions);
-                }
-           }
+                mAdapter.stopBatching(mClient, mSessionId, true, mBatchOptions);
+            }
         }
     };
 
@@ -487,11 +422,7 @@ BatchingAdapter::stopBatchingCommand(LocationAPI* client, uint32_t id)
                 err = LOCATION_ERROR_ID_UNKNOWN;
             }
             if (LOCATION_ERROR_SUCCESS == err) {
-                if (mAdapter.isTripSession(mSessionId)) {
-                    mAdapter.stopTripBatchingMultiplex(mClient, mSessionId);
-                } else {
-                    mAdapter.stopBatching(mClient, mSessionId);
-                }
+                mAdapter.stopBatching(mClient, mSessionId);
             }
         }
     };
@@ -531,8 +462,6 @@ BatchingAdapter::stopBatching(LocationAPI* client, uint32_t sessionId, bool rest
                     if (batchOptions.batchingMode == BATCHING_MODE_ROUTINE ||
                             batchOptions.batchingMode == BATCHING_MODE_NO_AUTO_REPORT) {
                         startBatching(client, sessionId, batchOptions);
-                    } else if (batchOptions.batchingMode == BATCHING_MODE_TRIP) {
-                        startTripBatchingMultiplex(client, sessionId, batchOptions);
                     }
                 }
             }
@@ -575,20 +504,11 @@ BatchingAdapter::getBatchedLocationsCommand(LocationAPI* client, uint32_t id, si
                 err = LOCATION_ERROR_ID_UNKNOWN;
             }
             if (LOCATION_ERROR_SUCCESS == err) {
-                if (mAdapter.isTripSession(mSessionId)) {
-                    mApi.getBatchedTripLocations(mCount, 0,
-                            new LocApiResponse(*mAdapter.getContext(),
+                mApi.getBatchedLocations(mCount, new LocApiResponse(*mAdapter.getContext(),
                             [&mAdapter = mAdapter, mSessionId = mSessionId,
                             mClient = mClient] (LocationError err) {
-                        mAdapter.reportResponse(mClient, err, mSessionId);
-                    }));
-                } else {
-                    mApi.getBatchedLocations(mCount, new LocApiResponse(*mAdapter.getContext(),
-                            [&mAdapter = mAdapter, mSessionId = mSessionId,
-                            mClient = mClient] (LocationError err) {
-                        mAdapter.reportResponse(mClient, err, mSessionId);
-                    }));
-                }
+                            mAdapter.reportResponse(mClient, err, mSessionId);
+                            }));
             } else {
                 mAdapter.reportResponse(mClient, err, mSessionId);
             }
@@ -652,69 +572,6 @@ BatchingAdapter::reportLocations(Location* locations, size_t count, BatchingMode
 }
 
 void
-BatchingAdapter::reportCompletedTripsEvent(uint32_t accumulated_distance)
-{
-    struct MsgReportCompletedTrips : public LocMsg {
-        BatchingAdapter& mAdapter;
-        uint32_t mAccumulatedDistance;
-        inline MsgReportCompletedTrips(BatchingAdapter& adapter,
-                                  uint32_t accumulated_distance) :
-            LocMsg(),
-            mAdapter(adapter),
-            mAccumulatedDistance(accumulated_distance)
-        {
-        }
-        inline virtual ~MsgReportCompletedTrips() {
-        }
-        inline virtual void proc() const {
-
-            // Check if any trips are completed
-            std::list<uint32_t> completedTripsList;
-            completedTripsList.clear();
-
-            for(auto itt = mAdapter.mTripSessions.begin(); itt != mAdapter.mTripSessions.end();)
-            {
-                TripSessionStatus &tripSession = itt->second;
-
-                tripSession.accumulatedDistanceThisTrip =
-                        tripSession.accumulatedDistanceOnTripRestart
-                        + (mAccumulatedDistance - tripSession.accumulatedDistanceOngoingBatch);
-                if (tripSession.tripDistance <= tripSession.accumulatedDistanceThisTrip) {
-                    // trip is completed
-                    completedTripsList.push_back(itt->first);
-                    itt = mAdapter.mTripSessions.erase(itt);
-
-                    if (tripSession.tripTBFInterval == mAdapter.mOngoingTripTBFInterval) {
-                        // trip with ongoing TBF interval is completed
-                        mAdapter.mTripWithOngoingTBFDropped = true;
-                    }
-
-                    if (tripSession.tripDistance == mAdapter.mOngoingTripDistance) {
-                        // trip with ongoing trip distance is completed
-                        mAdapter.mTripWithOngoingTripDistanceDropped = true;
-                    }
-                } else {
-                    itt++;
-                }
-            }
-
-            if (completedTripsList.size() > 0) {
-                mAdapter.reportBatchStatusChange(BATCHING_STATUS_TRIP_COMPLETED,
-                        completedTripsList);
-                mAdapter.restartTripBatching(false, mAccumulatedDistance, 0);
-            } else {
-                mAdapter.printTripReport();
-            }
-        }
-    };
-
-    LOC_LOGD("%s]: Accumulated Distance so far: %u",
-               __func__,  accumulated_distance);
-
-    sendMsg(new MsgReportCompletedTrips(*this, accumulated_distance));
-}
-
-void
 BatchingAdapter::reportBatchStatusChange(BatchingStatus batchStatus,
         std::list<uint32_t> & completedTripsList)
 {
@@ -751,293 +608,6 @@ BatchingAdapter::reportBatchStatusChangeEvent(BatchingStatus batchStatus)
     };
 
     sendMsg(new MsgReportBatchStatus(*this, batchStatus));
-}
-
-void
-BatchingAdapter::startTripBatchingMultiplex(LocationAPI* client, uint32_t sessionId,
-        const BatchingOptions& batchingOptions)
-{
-    if (mTripSessions.size() == 0) {
-        // if there is currenty no batching sessions interested in batch full event, then this
-        // new session will need to register for batch full event
-        if (0 == autoReportBatchingSessionsCount()) {
-            updateEvtMask(LOC_API_ADAPTER_BIT_BATCH_FULL,
-                          LOC_REGISTRATION_MASK_ENABLED);
-        }
-
-        // Assume start will be OK, remove session if not
-        saveBatchingSession(client, sessionId, batchingOptions);
-
-        mTripSessions[sessionId] = { 0, 0, 0, batchingOptions.minDistance,
-                batchingOptions.minInterval};
-        mLocApi->startOutdoorTripBatching(batchingOptions.minDistance,
-                batchingOptions.minInterval, getBatchingTimeout(), new LocApiResponse(*getContext(),
-                [this, client, sessionId, batchingOptions] (LocationError err) {
-            if (ENGINE_LOCK_STATE_DISABLED == mLocApi->getEngineLockState() ||
-                err == LOCATION_ERROR_SUCCESS) {
-                mOngoingTripDistance = batchingOptions.minDistance;
-                mOngoingTripTBFInterval = batchingOptions.minInterval;
-                LOC_LOGD("%s] New Trip started ...", __func__);
-                printTripReport();
-            } else {
-                eraseBatchingSession(client, sessionId);
-                mTripSessions.erase(sessionId);
-                // if we fail to start batching and we have already registered batch full event
-                // we need to undo that since no sessions are now interested in batch full event
-                if (0 == autoReportBatchingSessionsCount()) {
-                    updateEvtMask(LOC_API_ADAPTER_BIT_BATCH_FULL,
-                                  LOC_REGISTRATION_MASK_DISABLED);
-                }
-            }
-            reportResponse(client, err, sessionId);
-        }));
-    } else {
-        // query accumulated distance
-        mLocApi->queryAccumulatedTripDistance(
-                new LocApiResponseData<LocApiBatchData>(*getContext(),
-                [this, batchingOptions, sessionId, client]
-                (LocationError err, LocApiBatchData data) {
-            uint32_t accumulatedDistanceOngoingBatch = 0;
-            uint32_t numOfBatchedPositions = 0;
-            uint32_t ongoingTripDistance = mOngoingTripDistance;
-            uint32_t ongoingTripInterval = mOngoingTripTBFInterval;
-            bool needsRestart = false;
-
-            // check if TBF of new session is lesser than ongoing TBF interval
-            if (ongoingTripInterval > batchingOptions.minInterval) {
-                ongoingTripInterval = batchingOptions.minInterval;
-                needsRestart = true;
-            }
-            accumulatedDistanceOngoingBatch = data.accumulatedDistance;
-            numOfBatchedPositions = data.numOfBatchedPositions;
-            TripSessionStatus newTripSession = { accumulatedDistanceOngoingBatch, 0, 0,
-                                                 batchingOptions.minDistance,
-                                                 batchingOptions.minInterval};
-            if (err != LOCATION_ERROR_SUCCESS) {
-                // unable to query accumulated distance, assume remaining distance in
-                // ongoing batch is mongoingTripDistance.
-                if (batchingOptions.minDistance < ongoingTripDistance) {
-                    ongoingTripDistance = batchingOptions.minDistance;
-                    needsRestart = true;
-                }
-            } else {
-                // compute the remaining distance
-                uint32_t ongoing_trip_remaining_distance = ongoingTripDistance -
-                        accumulatedDistanceOngoingBatch;
-
-                // check if new trip distance is lesser than the ongoing batch remaining distance
-                if (batchingOptions.minDistance < ongoing_trip_remaining_distance) {
-                    ongoingTripDistance = batchingOptions.minDistance;
-                    needsRestart = true;
-                } else if (needsRestart == true) {
-                    // needsRestart is anyways true , may be because of lesser TBF of new session.
-                    ongoingTripDistance = ongoing_trip_remaining_distance;
-                }
-                mTripSessions[sessionId] = newTripSession;
-                LOC_LOGD("%s] New Trip started ...", __func__);
-                printTripReport();
-            }
-
-            if (needsRestart) {
-                mOngoingTripDistance = ongoingTripDistance;
-                mOngoingTripTBFInterval = ongoingTripInterval;
-
-                // reset the accumulatedDistanceOngoingBatch for each session,
-                // and record the total accumulated distance so far for the session.
-                for (auto itt = mTripSessions.begin(); itt != mTripSessions.end(); itt++) {
-                    TripSessionStatus &tripSessStatus = itt->second;
-                    tripSessStatus.accumulatedDistanceOngoingBatch = 0;
-                    tripSessStatus.accumulatedDistanceOnTripRestart =
-                            tripSessStatus.accumulatedDistanceThisTrip;
-                }
-                mLocApi->reStartOutdoorTripBatching(ongoingTripDistance, ongoingTripInterval,
-                        getBatchingTimeout(), new LocApiResponse(*getContext(),
-                        [this, client, sessionId] (LocationError err) {
-                    if (err != LOCATION_ERROR_SUCCESS) {
-                        LOC_LOGE("%s] New Trip restart failed!", __func__);
-                    }
-                    reportResponse(client, err, sessionId);
-                }));
-            } else {
-                reportResponse(client, LOCATION_ERROR_SUCCESS, sessionId);
-            }
-        }));
-    }
-}
-
-void
-BatchingAdapter::stopTripBatchingMultiplex(LocationAPI* client, uint32_t sessionId,
-        bool restartNeeded, const BatchingOptions& batchOptions, bool eraseSession)
-{
-    LocationError err = LOCATION_ERROR_SUCCESS;
-
-    if (mTripSessions.size() == 1) {
-        mLocApi->stopOutdoorTripBatching(true, new LocApiResponse(*getContext(),
-                [this, restartNeeded, client, sessionId, batchOptions, eraseSession]
-                (LocationError err) {
-            if (LOCATION_ERROR_SUCCESS == err) {
-                // if stopOutdoorTripBatching is success, unregister for batch full event if this
-                // was the last batching session that is interested in batch full event
-                if (1 == autoReportBatchingSessionsCount()) {
-                    updateEvtMask(LOC_API_ADAPTER_BIT_BATCH_FULL,
-                                  LOC_REGISTRATION_MASK_DISABLED);
-                }
-            }
-            stopTripBatchingMultiplexCommon(err, client, sessionId, restartNeeded,
-                                            batchOptions, eraseSession);
-        }));
-        return;
-    }
-
-    stopTripBatchingMultiplexCommon(err, client, sessionId, restartNeeded,
-                                    batchOptions, eraseSession);
-}
-
-void
-BatchingAdapter::stopTripBatchingMultiplexCommon(LocationError err, LocationAPI* client,
-        uint32_t sessionId, bool restartNeeded, const BatchingOptions& batchOptions,
-        bool eraseSession)
-{
-    auto itt = mTripSessions.find(sessionId);
-    TripSessionStatus tripSess = itt->second;
-    if (tripSess.tripTBFInterval == mOngoingTripTBFInterval) {
-        // trip with ongoing trip interval is stopped
-        mTripWithOngoingTBFDropped = true;
-    }
-
-    if (tripSess.tripDistance == mOngoingTripDistance) {
-        // trip with ongoing trip distance is stopped
-        mTripWithOngoingTripDistanceDropped = true;
-    }
-
-    if (eraseSession)
-        mTripSessions.erase(sessionId);
-
-    if (mTripSessions.size() == 0) {
-        mOngoingTripDistance = 0;
-        mOngoingTripTBFInterval = 0;
-    } else {
-        restartTripBatching(true);
-    }
-
-    if (restartNeeded) {
-        eraseBatchingSession(client, sessionId);
-        if (batchOptions.batchingMode == BATCHING_MODE_ROUTINE ||
-                batchOptions.batchingMode == BATCHING_MODE_NO_AUTO_REPORT) {
-            startBatching(client, sessionId, batchOptions);
-        } else if (batchOptions.batchingMode == BATCHING_MODE_TRIP) {
-            startTripBatchingMultiplex(client, sessionId, batchOptions);
-        }
-    }
-    reportResponse(client, err, sessionId);
-}
-
-
-void
-BatchingAdapter::restartTripBatching(bool queryAccumulatedDistance, uint32_t accDist,
-        uint32_t numbatchedPos)
-{
-    // does batch need restart with new trip distance / TBF interval
-    uint32_t minRemainingDistance = 0;
-    uint32_t minTBFInterval = 0;
-
-    // if no more trips left, stop the ongoing trip
-    if (mTripSessions.size() == 0) {
-        mLocApi->stopOutdoorTripBatching(true, new LocApiResponse(*getContext(),
-                                               [] (LocationError /*err*/) {}));
-        mOngoingTripDistance = 0;
-        mOngoingTripTBFInterval = 0;
-        // unregister for batch full event if there are no more
-        // batching session that is interested in batch full event
-        if (0 == autoReportBatchingSessionsCount()) {
-                updateEvtMask(LOC_API_ADAPTER_BIT_BATCH_FULL,
-                              LOC_REGISTRATION_MASK_DISABLED);
-        }
-        return;
-    }
-
-    // record the min trip distance and min tbf interval of all ongoing sessions
-    for (auto itt = mTripSessions.begin(); itt != mTripSessions.end(); itt++) {
-
-        TripSessionStatus tripSessStatus = itt->second;
-
-        if ((minRemainingDistance == 0) ||
-                (minRemainingDistance > (tripSessStatus.tripDistance
-                - tripSessStatus.accumulatedDistanceThisTrip))) {
-            minRemainingDistance = tripSessStatus.tripDistance -
-                    tripSessStatus.accumulatedDistanceThisTrip;
-        }
-
-        if ((minTBFInterval == 0) ||
-            (minTBFInterval > tripSessStatus.tripTBFInterval)) {
-            minTBFInterval = tripSessStatus.tripTBFInterval;
-        }
-    }
-
-    mLocApi->queryAccumulatedTripDistance(
-            new LocApiResponseData<LocApiBatchData>(*getContext(),
-            [this, queryAccumulatedDistance, minRemainingDistance, minTBFInterval, accDist,
-            numbatchedPos] (LocationError /*err*/, LocApiBatchData data) {
-        bool needsRestart = false;
-
-        uint32_t ongoingTripDistance = mOngoingTripDistance;
-        uint32_t ongoingTripInterval = mOngoingTripTBFInterval;
-        uint32_t accumulatedDistance = accDist;
-        uint32_t numOfBatchedPositions = numbatchedPos;
-
-        if (queryAccumulatedDistance) {
-            accumulatedDistance = data.accumulatedDistance;
-            numOfBatchedPositions = data.numOfBatchedPositions;
-        }
-
-        if ((!mTripWithOngoingTripDistanceDropped) &&
-                (ongoingTripDistance - accumulatedDistance != 0)) {
-            // if ongoing trip is already not completed still,
-            // check the min distance against the remaining distance
-            if (minRemainingDistance <
-                    (ongoingTripDistance - accumulatedDistance)) {
-                ongoingTripDistance = minRemainingDistance;
-                needsRestart = true;
-            }
-        } else if (minRemainingDistance != 0) {
-            // else if ongoing trip is already completed / dropped,
-            // use the minRemainingDistance of ongoing sessions
-            ongoingTripDistance = minRemainingDistance;
-            needsRestart = true;
-        }
-
-         if ((minTBFInterval < ongoingTripInterval) ||
-                    ((minTBFInterval != ongoingTripInterval) &&
-                    (mTripWithOngoingTBFDropped))) {
-            ongoingTripInterval = minTBFInterval;
-            needsRestart = true;
-        }
-
-        if (needsRestart) {
-            mLocApi->reStartOutdoorTripBatching(ongoingTripDistance, ongoingTripInterval,
-                    getBatchingTimeout(), new LocApiResponse(*getContext(),
-                    [this, accumulatedDistance, ongoingTripDistance, ongoingTripInterval]
-                    (LocationError err) {
-
-                if (err == LOCATION_ERROR_SUCCESS) {
-                    for(auto itt = mTripSessions.begin(); itt != mTripSessions.end(); itt++) {
-                        TripSessionStatus &tripSessStatus = itt->second;
-                        tripSessStatus.accumulatedDistanceThisTrip =
-                                tripSessStatus.accumulatedDistanceOnTripRestart +
-                                (accumulatedDistance -
-                                 tripSessStatus.accumulatedDistanceOngoingBatch);
-
-                        tripSessStatus.accumulatedDistanceOngoingBatch = 0;
-                        tripSessStatus.accumulatedDistanceOnTripRestart =
-                                tripSessStatus.accumulatedDistanceThisTrip;
-                    }
-
-                    mOngoingTripDistance = ongoingTripDistance;
-                    mOngoingTripTBFInterval = ongoingTripInterval;
-                }
-            }));
-        }
-    }));
 }
 
 void
@@ -1096,24 +666,3 @@ BatchingAdapter::updateSystemPowerState(PowerStateType systemPowerState)
     }
 }
 
-void
-BatchingAdapter::printTripReport()
-{
-    IF_LOC_LOGD {
-        LOC_LOGD("Ongoing Trip Distance = %u, Ongoing Trip TBF Interval = %u",
-                mOngoingTripDistance, mOngoingTripTBFInterval);
-
-        for (auto itt = mTripSessions.begin(); itt != mTripSessions.end(); itt++) {
-            TripSessionStatus tripSessStatus = itt->second;
-
-            LOC_LOGD("tripDistance:%u tripTBFInterval:%u"
-                    " trip accumulated Distance:%u"
-                    " trip accumualted distance ongoing batch:%u"
-                    " trip accumulated distance on trip restart %u \r\n",
-                    tripSessStatus.tripDistance, tripSessStatus.tripTBFInterval,
-                    tripSessStatus.accumulatedDistanceThisTrip,
-                    tripSessStatus.accumulatedDistanceOngoingBatch,
-                    tripSessStatus.accumulatedDistanceOnTripRestart);
-        }
-    }
-}

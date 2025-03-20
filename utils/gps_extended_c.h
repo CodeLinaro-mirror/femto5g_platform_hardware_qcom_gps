@@ -944,18 +944,6 @@ enum loc_api_adapter_event_index {
 
 typedef uint64_t LOC_API_ADAPTER_EVENT_MASK_T;
 
-typedef enum loc_api_adapter_msg_to_check_supported {
-    LOC_API_ADAPTER_MESSAGE_LOCATION_BATCHING,               // Batching 1.0
-    LOC_API_ADAPTER_MESSAGE_BATCHED_GENFENCE_BREACH,         // Geofence Batched Breach
-    LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_TRACKING,          // DBT 2.0
-    LOC_API_ADAPTER_MESSAGE_ADAPTIVE_LOCATION_BATCHING,      // Batching 1.5
-    LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_LOCATION_BATCHING, // Batching 2.0
-    LOC_API_ADAPTER_MESSAGE_UPDATE_TBF_ON_THE_FLY,           // Updating Tracking TBF On The Fly
-    LOC_API_ADAPTER_MESSAGE_OUTDOOR_TRIP_BATCHING,           // Outdoor Trip Batching
-
-    LOC_API_ADAPTER_MESSAGE_MAX
-} LocCheckingMessagesID;
-
 typedef int IzatDevId_t;
 
 typedef uint32_t LOC_GPS_LOCK_MASK;
@@ -1851,13 +1839,6 @@ can runtime disable itself with this exit code*/
 #define QCSR_SS5_ENABLED                1
 #define PDS_API_ENABLED                 2
 #define QTI_MDM_GNSS_ENABLED            3
-
-typedef enum {
-    LOC_FEATURE_STATUS_UNKNOWN = 0,
-    LOC_FEATURE_STATUS_NONE = 1,
-    LOC_FEATURE_STATUS_OK = 2,
-    LOC_FEATURE_STATUS_EXPIRED = 3
-} LocFeatureStatus;
 
 #ifdef __cplusplus
 }

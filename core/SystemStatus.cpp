@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -156,7 +156,11 @@ void SystemStatusXoState::dump()
  SystemStatusRfAndParams
 ******************************************************************************/
 SystemStatusRfAndParams::SystemStatusRfAndParams(const GnssEngineDebugDataInfo& info) :
-    mJammedSignalsMask(info.jammedSignalsMask) {
+    mJammedSignalsMask(info.jammedSignalsMask),
+    mJammerGps(0),
+    mJammerGlo(0),
+    mJammerBds(0),
+    mJammerGal(0) {
 
     if (info.jammerInd.size() > 0) {
          mJammerGps = info.jammerInd[GNSS_LOC_SIGNAL_TYPE_GPS_L1CA];
@@ -479,21 +483,46 @@ void SystemStatusPdr::dump()
 ******************************************************************************/
 SystemStatusNavData::SystemStatusNavData(const GnssEngineDebugDataInfo& info)
 {
-   mNavLen = info.navDataLen;
-   for (uint32_t i=0; i<mNavLen; i++) {
-      mNav[i] = info.navData[i];
+   memset(mNav, 0, sizeof(mNav));
+   for (int i = 0; i < info.navDataLen; i++) {
+        GnssNavDataInfo navInfo  = info.navData[i];
+        int offset = 0;
+        if (0 == navInfo.gnssSvId) continue;
+        // GPS
+        if (navInfo.gnssSvId >= GPS_SV_ID_MIN && navInfo.gnssSvId <= GPS_SV_ID_MAX) {
+            offset = GPS_SV_INDEX_OFFSET + navInfo.gnssSvId - GPS_SV_ID_MIN;
+        }
+        // GLO
+        if (navInfo.gnssSvId >= GLO_SV_ID_MIN && navInfo.gnssSvId <= GLO_SV_ID_MAX) {
+            offset = GLO_SV_INDEX_OFFSET + navInfo.gnssSvId - GLO_SV_ID_MIN;
+        }
+        // BDS
+        if (navInfo.gnssSvId >= BDS_SV_ID_MIN && navInfo.gnssSvId <= BDS_SV_ID_MAX) {
+            offset = BDS_SV_INDEX_OFFSET + navInfo.gnssSvId - BDS_SV_ID_MIN;
+        }
+        // GAL
+        if (navInfo.gnssSvId >= GAL_SV_ID_MIN && navInfo.gnssSvId <= GAL_SV_ID_MAX) {
+            offset = GAL_SV_INDEX_OFFSET + navInfo.gnssSvId - GAL_SV_ID_MIN;
+        }
+        // QZSS
+        if (navInfo.gnssSvId >= QZSS_SV_ID_MIN && navInfo.gnssSvId <= QZSS_SV_ID_MAX) {
+            offset = QZSS_SV_INDEX_OFFSET + navInfo.gnssSvId - QZSS_SV_ID_MIN;
+        }
+        // Navic
+        if (navInfo.gnssSvId >= NAVIC_SV_ID_MIN && navInfo.gnssSvId <= NAVIC_SV_ID_MAX) {
+            offset = NAVIC_SV_INDEX_OFFSET + navInfo.gnssSvId - NAVIC_SV_ID_MIN;
+        }
+        mNav[offset].mType   = GnssEphemerisType(navInfo.type);
+        mNav[offset].mSource = GnssEphemerisSource(navInfo.src);
+        mNav[offset].mAgeSec = navInfo.age;
    }
 }
 
 bool SystemStatusNavData::equals(const SystemStatusItemBase& peer) {
-    if (mNavLen != ((const SystemStatusNavData&)peer).mNavLen) {
-       return false;
-    }
-    for (uint32_t i=0; i<mNavLen; i++) {
-        if ((mNav[i].gnssSvId != ((const SystemStatusNavData&)peer).mNav[i].gnssSvId) ||
-            (mNav[i].type != ((const SystemStatusNavData&)peer).mNav[i].type) ||
-            (mNav[i].src != ((const SystemStatusNavData&)peer).mNav[i].src) ||
-            (mNav[i].age != ((const SystemStatusNavData&)peer).mNav[i].age)) {
+    for (uint32_t i=0; i<SV_ALL_NUM; i++) {
+        if ((mNav[i].mType != ((const SystemStatusNavData&)peer).mNav[i].mType) ||
+            (mNav[i].mSource != ((const SystemStatusNavData&)peer).mNav[i].mSource) ||
+            (mNav[i].mAgeSec != ((const SystemStatusNavData&)peer).mNav[i].mAgeSec)) {
             return false;
         }
     }
@@ -504,9 +533,9 @@ void SystemStatusNavData::dump()
 {
     LOC_LOGV("NavData: u=%ld:%ld",
             mUtcTime.tv_sec, mUtcTime.tv_nsec);
-    for (uint32_t i=0; i<mNavLen; i++) {
-        LOC_LOGV("i=%d, svid=%d type=%d src=%d age=%d",
-            i, mNav[i].gnssSvId, mNav[i].type, mNav[i].src, mNav[i].age);
+    for (uint32_t i=0; i<SV_ALL_NUM; i++) {
+        LOC_LOGV("i=%d type=%d src=%d age=%d",
+            i, mNav[i].mType, mNav[i].mSource, mNav[i].mAgeSec);
     }
 }
 
@@ -630,12 +659,9 @@ SystemStatus::SystemStatus(const MsgTask* msgTask) :
     mCache.mGPSState.clear();
     mCache.mWifiHardwareState.clear();
     mCache.mNetworkInfo.clear();
-    mCache.mRilServiceInfo.clear();
     mCache.mRilCellInfo.clear();
-    mCache.mServiceStatus.clear();
     mCache.mModel.clear();
     mCache.mManufacturer.clear();
-    mCache.mPowerConnectState.clear();
     mCache.mTimeZoneChange.clear();
     mCache.mTimeChange.clear();
     mCache.mWifiSupplicantStatus.clear();
@@ -767,17 +793,9 @@ bool SystemStatus::eventDataItemNotify(IDataItemCore* dataitem)
                         static_cast<NetworkInfoDataItem*>(dataitem))->mAllNetworkHandles));
             }
             break;
-        case RILSERVICEINFO_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mRilServiceInfo,
-                    SystemStatusServiceInfo(*(static_cast<RilServiceInfoDataItem*>(dataitem))));
-            break;
         case RILCELLINFO_DATA_ITEM_ID:
             ret = setIteminReport(mCache.mRilCellInfo,
                     SystemStatusRilCellInfo(*(static_cast<RilCellInfoDataItem*>(dataitem))));
-            break;
-        case SERVICESTATUS_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mServiceStatus,
-                    SystemStatusServiceStatus(*(static_cast<ServiceStatusDataItem*>(dataitem))));
             break;
         case MODEL_DATA_ITEM_ID:
             ret = setIteminReport(mCache.mModel,
@@ -791,10 +809,6 @@ bool SystemStatus::eventDataItemNotify(IDataItemCore* dataitem)
             ret = setIteminReport(mCache.mInEmergencyCall,
                     SystemStatusInEmergencyCall(
                         *(static_cast<InEmergencyCallDataItem*>(dataitem))));
-            break;
-        case POWER_CONNECTED_STATE_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mPowerConnectState, SystemStatusPowerConnectState(
-                        *(static_cast<PowerConnectStateDataItem*>(dataitem))));
             break;
         case TIMEZONE_CHANGE_DATA_ITEM_ID:
             ret = setIteminReport(mCache.mTimeZoneChange,
@@ -894,12 +908,9 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly,
         getIteminReport(report.mGPSState, mCache.mGPSState);
         getIteminReport(report.mWifiHardwareState, mCache.mWifiHardwareState);
         getIteminReport(report.mNetworkInfo, mCache.mNetworkInfo);
-        getIteminReport(report.mRilServiceInfo, mCache.mRilServiceInfo);
         getIteminReport(report.mRilCellInfo, mCache.mRilCellInfo);
-        getIteminReport(report.mServiceStatus, mCache.mServiceStatus);
         getIteminReport(report.mModel, mCache.mModel);
         getIteminReport(report.mManufacturer, mCache.mManufacturer);
-        getIteminReport(report.mPowerConnectState, mCache.mPowerConnectState);
         getIteminReport(report.mTimeZoneChange, mCache.mTimeZoneChange);
         getIteminReport(report.mTimeChange, mCache.mTimeChange);
         getIteminReport(report.mWifiSupplicantStatus, mCache.mWifiSupplicantStatus);
@@ -928,12 +939,9 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly,
         report.mGPSState.clear();
         report.mWifiHardwareState.clear();
         report.mNetworkInfo.clear();
-        report.mRilServiceInfo.clear();
         report.mRilCellInfo.clear();
-        report.mServiceStatus.clear();
         report.mModel.clear();
         report.mManufacturer.clear();
-        report.mPowerConnectState.clear();
         report.mTimeZoneChange.clear();
         report.mTimeChange.clear();
         report.mWifiSupplicantStatus.clear();
@@ -994,20 +1002,6 @@ bool SystemStatus::eventConnectionStatus(bool connected, int8_t type,
                               (uint64_t) networkHandle, apn);
     mSysStatusObsvr.notify({&s.mDataItem});
 
-    return true;
-}
-
-/******************************************************************************
-@brief      API to update power connect state
-
-@param[In]  power connect status
-
-@return     true when successfully done
-******************************************************************************/
-bool SystemStatus::updatePowerConnectState(bool charging)
-{
-    SystemStatusPowerConnectState s(charging);
-    mSysStatusObsvr.notify({&s.mDataItem});
     return true;
 }
 

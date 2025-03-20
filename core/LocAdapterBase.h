@@ -94,15 +94,11 @@ namespace loc_core {
 class LocAdapterProxyBase;
 
 typedef uint16_t PpFeatureStatusMask;
-#define DLP_FEATURE_STATUS_QPPE_LIBRARY_PRESENT   0X01
-#define DLP_FEATURE_STATUS_QFE_LIBRARY_PRESENT    0X02
-#define DLP_FEATURE_ENABLED_BY_DEFAULT            0X04
-#define DLP_FEATURE_ENABLED_BY_QESDK              0X08
-#define MLP_FEATURE_ENABLED_BY_DEFAULT            0X10
-#define MLP_FEATURE_ENABLED_BY_QESDK              0X20
-#define WOCS_FEATURE_ENABLED_BY_DEFAULT           0X40
-#define DLP_FEATURE_STATUS_LIBRARY_PRESENT   (DLP_FEATURE_STATUS_QPPE_LIBRARY_PRESENT | \
-                                              DLP_FEATURE_STATUS_QFE_LIBRARY_PRESENT)
+#define DLP_FEATURE_ENABLED_BY_DEFAULT            0X01
+#define DLP_FEATURE_ENABLED_BY_QESDK              0X02
+#define MLP_FEATURE_ENABLED_BY_DEFAULT            0X04
+#define MLP_FEATURE_ENABLED_BY_QESDK              0X08
+#define WOCS_FEATURE_ENABLED_BY_DEFAULT           0X10
 
 class LocAdapterBase {
 private:
@@ -243,9 +239,6 @@ public:
     inline virtual bool isInSession() { return false; }
     ContextBase* getContext() const { return mContext; }
     virtual void reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurements);
-    virtual bool reportWwanZppFix(LocGpsLocation &zppLoc);
-    virtual bool reportZppBestAvailableFix(LocGpsLocation &zppLoc,
-            GpsLocationExtended &location_extended, LocPosTechMask tech_mask);
     virtual void reportGnssSvIdConfigEvent(const GnssSvIdConfig& config);
     virtual void reportGnssConfigEvent(uint32_t sessionId, const GnssConfig& gnssConfig);
     virtual bool requestOdcpiEvent(OdcpiRequestInfo& request);
@@ -267,7 +260,6 @@ public:
 
     virtual void reportLocationsEvent(const Location* locations, size_t count,
             BatchingMode batchingMode);
-    virtual void reportCompletedTripsEvent(uint32_t accumulated_distance);
     virtual void reportBatchStatusChangeEvent(BatchingStatus batchStatus);
 
     /* ==== CLIENT ========================================================================= */

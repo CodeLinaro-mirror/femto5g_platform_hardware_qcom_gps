@@ -111,11 +111,6 @@ struct LocSsrMsg;
 struct LocOpenMsg;
 
 typedef struct {
-    uint32_t accumulatedDistance;
-    uint32_t numOfBatchedPositions;
-} LocApiBatchData;
-
-typedef struct {
     uint32_t hwId;
 } LocApiGeofenceData;
 
@@ -141,8 +136,6 @@ public:
             GnssSvMeasurementHeader& svMeasSetHeader,
             GnssMeasurementsData& measurementData) { return false; }
     inline virtual float getGeoidalSeparation(double latitude, double longitude) { return 0.0; }
-    inline virtual bool checkFeatureStatus(int* fids, LocFeatureStatus* status,
-            uint32_t idCount, bool directQwesCall = false) {return false;}
 };
 
 class LocApiBase {
@@ -229,9 +222,6 @@ public:
     void requestNiNotify(GnssNiNotification &notify, const void* data,
                          const LocInEmergency emergencyState);
     void reportGnssMeasurements(GnssMeasurements& gnssMeasurements);
-    void reportWwanZppFix(LocGpsLocation &zppLoc);
-    void reportZppBestAvailableFix(LocGpsLocation &zppLoc, GpsLocationExtended &location_extended,
-            LocPosTechMask tech_mask);
     void reportGnssSvIdConfig(const GnssSvIdConfig& config);
     void requestOdcpi(OdcpiRequestInfo& request);
     void reportGnssEngEnergyConsumedEvent(uint64_t energyConsumedSinceFirstBoot);
@@ -250,12 +240,7 @@ public:
     void geofenceBreach(size_t count, uint32_t* hwIds, Location& location,
             GeofenceBreachType breachType, uint64_t timestamp);
     void geofenceStatus(GeofenceStatusAvailable available);
-    void reportDBTPosition(UlpLocation &location,
-                           GpsLocationExtended &locationExtended,
-                           enum loc_sess_status status,
-                           LocPosTechMask loc_technology_mask);
     void reportLocations(Location* locations, size_t count, BatchingMode batchingMode);
-    void reportCompletedTrips(uint32_t accumulated_distance);
     void handleBatchStatusEvent(BatchingStatus batchStatus);
     void reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask);
     void reportNtnStatusEvent(LocationError status,
@@ -304,8 +289,6 @@ public:
     virtual void setMeasurementCorrections(
             const GnssMeasurementCorrections& gnssMeasurementCorrections);
 
-    virtual void getWwanZppFix();
-    virtual void getBestAvailableZppFix();
     virtual bool getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
             LocPosTechMask &tech_mask);
     virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);
@@ -338,34 +321,12 @@ public:
     virtual void startTimeBasedTracking(const TrackingOptions& options,
              LocApiResponse* adapterResponse);
     virtual void stopTimeBasedTracking(LocApiResponse* adapterResponse);
-    virtual void startDistanceBasedTracking(uint32_t sessionId, const LocationOptions& options,
-             LocApiResponse* adapterResponse);
-    virtual void stopDistanceBasedTracking(uint32_t sessionId,
-             LocApiResponse* adapterResponse = nullptr);
     virtual void startBatching(uint32_t sessionId, const LocationOptions& options,
             uint32_t accuracy, uint32_t timeout, LocApiResponse* adapterResponse);
     virtual void stopBatching(uint32_t sessionId, LocApiResponse* adapterResponse);
-    virtual LocationError startOutdoorTripBatchingSync(uint32_t tripDistance,
-            uint32_t tripTbf, uint32_t timeout);
-    virtual void startOutdoorTripBatching(uint32_t tripDistance,
-            uint32_t tripTbf, uint32_t timeout, LocApiResponse* adapterResponse);
-    virtual void reStartOutdoorTripBatching(uint32_t ongoingTripDistance,
-            uint32_t ongoingTripInterval, uint32_t batchingTimeout,
-            LocApiResponse* adapterResponse);
-    virtual LocationError stopOutdoorTripBatchingSync(bool deallocBatchBuffer = true);
-    virtual void stopOutdoorTripBatching(bool deallocBatchBuffer = true,
-            LocApiResponse* adapterResponse = nullptr);
     virtual LocationError getBatchedLocationsSync(size_t count);
     virtual void getBatchedLocations(size_t count, LocApiResponse* adapterResponse);
-    virtual LocationError getBatchedTripLocationsSync(size_t count, uint32_t accumulatedDistance);
-    virtual void getBatchedTripLocations(size_t count, uint32_t accumulatedDistance,
-            LocApiResponse* adapterResponse);
-    virtual LocationError queryAccumulatedTripDistanceSync(uint32_t &accumulated_trip_distance,
-            uint32_t &numOfBatchedPositions);
-    virtual void queryAccumulatedTripDistance(
-            LocApiResponseData<LocApiBatchData>* adapterResponseData);
     virtual void setBatchSize(size_t size);
-    virtual void setTripBatchSize(size_t size);
     virtual void addToCallQueue(LocApiResponse* adapterResponse);
 
     void updateEvtMask();

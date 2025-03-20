@@ -26,6 +26,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/*
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #include <unistd.h>
 #include <stdio.h>
@@ -35,7 +40,6 @@
 #include <sys/timerfd.h>
 #include <sys/epoll.h>
 #include <log_util.h>
-#include <loc_timer.h>
 #include <LocTimer.h>
 #include <LocHeap.h>
 #include <LocThread.h>
@@ -45,7 +49,6 @@
 #ifdef __HOST_UNIT_TEST__
 #define EPOLLWAKEUP 0
 #define CLOCK_BOOTTIME CLOCK_MONOTONIC
-#define CLOCK_BOOTTIME_ALARM CLOCK_MONOTONIC
 #endif
 
 namespace loc_util {
@@ -68,18 +71,15 @@ LocTimerDelegate - an internal timer entity, which also is a LocRankable obj.
                    in the heap.
 LocTimerContainer - core of the timer service. It is a container (derived from
                     LocHeap) for LocTimerDelegate (implements LocRankable) objs.
-                    There are 2 of such containers, one for sw timers (or Linux
-                    timers) one for hw timers (or Linux alarms). It adds one of
-                    each (those that expire the soonest) to kernel via services
-                    provided by LocTimerPollTask. All the heap management on the
-                    LocTimerDelegate objs are done in the MsgTask context, such
+                    Only container for sw timers (linux timers) are supported.
+                    It adds one of each (those that expire the soonest) to kernel
+                    via services provided by LocTimerPollTask. All the heap management
+                    on the LocTimerDelegate objs are done in the MsgTask context, such
                     that synchronization is ensured.
 LocTimerPollTask - is a class that wraps timerfd and epoll POXIS APIs. It also
                    both implements LocRunnalbe with epoll_wait() in the run()
                    method. It is also a LocThread client, so as to loop the run
                    method.
-LocTimerWrapper - a LocTimer client itself, to implement the existing C API with
-                  APIs, loc_timer_start() and loc_timer_stop().
 
 */
 
@@ -89,8 +89,7 @@ class LocTimerPollTask;
 // * extends the LocHeap class for the detection of head update upon add / remove
 //   events. When that happens, soonest time out changes, so timerfd needs update.
 // * contains the timers, and add / remove them into the heap
-// * provides and maps 2 of such containers, one for timers (or  mSwTimers), one
-//   for alarms (or mHwTimers);
+// * provides and maps 1 of such containers,  timers (or mSwTimers)
 // * provides a polling thread;
 // * provides a MsgTask thread for synchronized add / remove / timer client callback.
 class LocTimerContainer : public LocHeap {
@@ -98,16 +97,14 @@ class LocTimerContainer : public LocHeap {
     static pthread_mutex_t mMutex;
     // Container of timers
     static LocTimerContainer* mSwTimers;
-    // Container of alarms
-    static LocTimerContainer* mHwTimers;
     // Msg task to provider msg Q, sender and reader.
     static MsgTask* mMsgTask;
     // Poll task to provide epoll call and threading to poll.
     static LocTimerPollTask* mPollTask;
-    // timer / alarm fd
+    // sw timer fd
     int mDevFd;
     // ctor
-    LocTimerContainer(bool wakeOnExpire);
+    LocTimerContainer();
     // dtor
     ~LocTimerContainer();
     static MsgTask* getMsgTaskLocked();
@@ -118,16 +115,16 @@ class LocTimerContainer : public LocHeap {
     void updateSoonestTime(LocTimerDelegate* priorTop);
 
 public:
-    // factory method to control the creation of mSwTimers / mHwTimers
-    static LocTimerContainer* get(bool wakeOnExpire);
+    // factory method to control the creation of mSwTimers
+    static LocTimerContainer* get();
 
     LocTimerDelegate* getSoonestTimer();
     int getTimerFd();
-    // add a timer / alarm obj into the container
+    // add a timer obj into the container
     void add(LocTimerDelegate& timer);
-    // remove a timer / alarm obj from the container
+    // remove a timer obj from the container
     void remove(LocTimerDelegate& timer);
-    // handling of timer / alarm expiration
+    // handling of timer expiration
     void expire();
 };
 
@@ -146,17 +143,14 @@ public:
     inline virtual void interrupt() { close(mFd); }
 };
 
-// This class implements the polling thread that epolls imer / alarm fds.
-// The LocRunnable::run() contains the actual polling.  The other methods
-// will be run in the caller's thread context to add / remove timer / alarm
-// fds the kernel, while the polling is blocked on epoll_wait() call.
-// Since the design is that we have maximally 2 polls, one for all the
-// timers; one for all the alarms, we will poll at most on 2 fds.  But it
-// is possile that all we have are only timers or alarms at one time, so we
+// With this design, we may not need to make a system call each time
+// a timer is added/removed, unless that changes the "soonest" time
+// out of that of all the timers. But it
+// is possile that all we have are only timers at one time, so we
 // allow dynamically add / remove fds we poll on. The design decision of
-// having 1 fd per container of timer / alarm is such that, we may not need
-// to make a system call each time a timer / alarm is added / removed, unless
-// that changes the "soonest" time out of that of all the timers / alarms.
+// having 1 fd per container of timer is such that, we may not need
+// to make a system call each time a timer is added / removed, unless
+// that changes the "soonest" time out of that of all the timers.
 class LocTimerPollTask {
     // the epoll fd
     const int mFd;
@@ -169,7 +163,7 @@ public:
     // dtor
     ~LocTimerPollTask() = default;
     // add a container of timers. Each contain has a unique device fd, i.e.
-    // either timer or alarm fd, and a heap of timers / alarms. It is expected
+    // timer fd, and a heap of timers. It is expected
     // that container would have written to the device fd with the soonest
     // time out value in the heap at the time of calling this method. So all
     // this method does is to add the fd of the input container to the poll
@@ -214,15 +208,13 @@ public:
 // once in a while. It might be cheaper keeping them around.
 pthread_mutex_t LocTimerContainer::mMutex = PTHREAD_MUTEX_INITIALIZER;
 LocTimerContainer* LocTimerContainer::mSwTimers = NULL;
-LocTimerContainer* LocTimerContainer::mHwTimers = NULL;
 MsgTask* LocTimerContainer::mMsgTask = NULL;
 LocTimerPollTask* LocTimerContainer::mPollTask = NULL;
 
 // ctor - initialize timer heaps
-// A container for swTimer (timer) is created, when wakeOnExpire is true; or
-// HwTimer (alarm), when wakeOnExpire is false.
-LocTimerContainer::LocTimerContainer(bool wakeOnExpire) :
-    mDevFd(timerfd_create(wakeOnExpire ? CLOCK_BOOTTIME_ALARM : CLOCK_BOOTTIME, 0)) {
+// A container for swTimer (timer) is created
+LocTimerContainer::LocTimerContainer() :
+    mDevFd(timerfd_create(CLOCK_BOOTTIME, 0)) {
     LOC_LOGi("create LocTimerMsgContainer");
 
     if ((-1 == mDevFd) && (errno == EINVAL)) {
@@ -247,13 +239,13 @@ LocTimerContainer::~LocTimerContainer() {
     close(mDevFd);
 }
 
-LocTimerContainer* LocTimerContainer::get(bool wakeOnExpire) {
+LocTimerContainer* LocTimerContainer::get() {
     pthread_mutex_lock(&mMutex);
-    // get the reference of either mHwTimer or mSwTimers per wakeOnExpire
-    LocTimerContainer*& container = wakeOnExpire ? mHwTimers : mSwTimers;
+    // get the reference of mSwTimers
+    LocTimerContainer*& container = mSwTimers;
     // it is cheap to check pointer first than locking mutext unconditionally
     if (!container) {
-        container = new LocTimerContainer(wakeOnExpire);
+        container = new LocTimerContainer();
         // timerfd_create failure
         if (-1 == container->getTimerFd()) {
             delete container;
@@ -554,7 +546,7 @@ bool LocTimer::start(unsigned int timeOutInMs, bool wakeOnExpire) {
         }
 
         LocTimerContainer* container;
-        container = LocTimerContainer::get(wakeOnExpire);
+        container = LocTimerContainer::get();
         if (NULL != container) {
             mTimer = new LocTimerDelegate(*this, futureTime, container);
             // if mTimer is non 0, success should be 0; or vice versa
@@ -579,69 +571,4 @@ bool LocTimer::stop() {
     mLock->unlock();
     return success;
 }
-
-/***************************LocTimerWrapper methods***************************/
-//////////////////////////////////////////////////////////////////////////
-// This section below wraps for the C style APIs
-//////////////////////////////////////////////////////////////////////////
-class LocTimerWrapper : public LocTimer {
-    loc_timer_callback mCb;
-    void* mCallerData;
-    LocTimerWrapper* mMe;
-    static pthread_mutex_t mMutex;
-    inline ~LocTimerWrapper() { mCb = NULL; mMe = NULL; }
-public:
-    inline LocTimerWrapper(loc_timer_callback cb, void* callerData) :
-        mCb(cb), mCallerData(callerData), mMe(this) {
-    }
-    void destroy() {
-        pthread_mutex_lock(&mMutex);
-        if (NULL != mCb && this == mMe) {
-            delete this;
-        }
-        pthread_mutex_unlock(&mMutex);
-    }
-    virtual void timeOutCallback() {
-        loc_timer_callback cb = mCb;
-        void* callerData = mCallerData;
-        if (cb) {
-            cb(callerData, 0);
-        }
-        destroy();
-    }
-};
-
 } // namespace loc_util
-
-//////////////////////////////////////////////////////////////////////////
-// This section below wraps for the C style APIs
-//////////////////////////////////////////////////////////////////////////
-
-using loc_util::LocTimerWrapper;
-
-pthread_mutex_t LocTimerWrapper::mMutex = PTHREAD_MUTEX_INITIALIZER;
-
-void* loc_timer_start(uint64_t msec, loc_timer_callback cb_func,
-                      void *caller_data, bool wake_on_expire)
-{
-    LocTimerWrapper* locTimerWrapper = NULL;
-
-    if (cb_func) {
-        locTimerWrapper = new LocTimerWrapper(cb_func, caller_data);
-
-        if (locTimerWrapper) {
-            locTimerWrapper->start(msec, wake_on_expire);
-        }
-    }
-
-    return locTimerWrapper;
-}
-
-void loc_timer_stop(void*&  handle)
-{
-    if (handle) {
-        LocTimerWrapper* locTimerWrapper = (LocTimerWrapper*)(handle);
-        locTimerWrapper->destroy();
-        handle = NULL;
-    }
-}

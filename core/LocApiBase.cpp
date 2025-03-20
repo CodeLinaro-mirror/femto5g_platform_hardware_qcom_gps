@@ -340,20 +340,6 @@ void LocApiBase::reportPosition(UlpLocation& location,
     );
 }
 
-void LocApiBase::reportWwanZppFix(LocGpsLocation &zppLoc)
-{
-    // loop through adapters, and deliver to the first handling adapter.
-    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->reportWwanZppFix(zppLoc));
-}
-
-void LocApiBase::reportZppBestAvailableFix(LocGpsLocation &zppLoc,
-        GpsLocationExtended &location_extended, LocPosTechMask tech_mask)
-{
-    // loop through adapters, and deliver to the first handling adapter.
-    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->reportZppBestAvailableFix(zppLoc,
-            location_extended, tech_mask));
-}
-
 void LocApiBase::requestOdcpi(OdcpiRequestInfo& request)
 {
     // loop through adapters, and deliver to the first handling adapter.
@@ -562,21 +548,9 @@ void LocApiBase::geofenceStatus(GeofenceStatusAvailable available)
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->geofenceStatusEvent(available));
 }
 
-void LocApiBase::reportDBTPosition(UlpLocation &location, GpsLocationExtended &locationExtended,
-                                   enum loc_sess_status status, LocPosTechMask loc_technology_mask)
-{
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportPositionEvent(location, locationExtended, status,
-                                                            loc_technology_mask));
-}
-
 void LocApiBase::reportLocations(Location* locations, size_t count, BatchingMode batchingMode)
 {
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportLocationsEvent(locations, count, batchingMode));
-}
-
-void LocApiBase::reportCompletedTrips(uint32_t accumulated_distance)
-{
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportCompletedTripsEvent(accumulated_distance));
 }
 
 void LocApiBase::handleBatchStatusEvent(BatchingStatus batchStatus)
@@ -722,14 +696,6 @@ void LocApiBase::setMeasurementCorrections(
         const GnssMeasurementCorrections& /*gnssMeasurementCorrections*/)
 DEFAULT_IMPL()
 
-void LocApiBase::
-   getWwanZppFix()
-DEFAULT_IMPL()
-
-void LocApiBase::
-   getBestAvailableZppFix()
-DEFAULT_IMPL()
-
 bool LocApiBase::
    getBestAvailableZppFixSync(LocGpsLocation &zppLoc, LocPosTechMask &tech_mask)
 DEFAULT_IMPL(false)
@@ -803,39 +769,11 @@ DEFAULT_IMPL()
 void LocApiBase::stopTimeBasedTracking(LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
-void LocApiBase::startDistanceBasedTracking(uint32_t /*sessionId*/,
-        const LocationOptions& /*options*/, LocApiResponse* /*adapterResponse*/)
-DEFAULT_IMPL()
-
-void LocApiBase::stopDistanceBasedTracking(uint32_t /*sessionId*/,
-        LocApiResponse* /*adapterResponse*/)
-DEFAULT_IMPL()
-
 void LocApiBase::startBatching(uint32_t /*sessionId*/, const LocationOptions& /*options*/,
         uint32_t /*accuracy*/, uint32_t /*timeout*/, LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
 void LocApiBase::stopBatching(uint32_t /*sessionId*/, LocApiResponse* /*adapterResponse*/)
-DEFAULT_IMPL()
-
-LocationError LocApiBase::startOutdoorTripBatchingSync(uint32_t /*tripDistance*/,
-        uint32_t /*tripTbf*/, uint32_t /*timeout*/)
-DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
-
-void LocApiBase::startOutdoorTripBatching(uint32_t /*tripDistance*/, uint32_t /*tripTbf*/,
-        uint32_t /*timeout*/, LocApiResponse* /*adapterResponse*/)
-DEFAULT_IMPL()
-
-void LocApiBase::reStartOutdoorTripBatching(uint32_t /*ongoingTripDistance*/,
-        uint32_t /*ongoingTripInterval*/, uint32_t /*batchingTimeout,*/,
-        LocApiResponse* /*adapterResponse*/)
-DEFAULT_IMPL()
-
-LocationError LocApiBase::stopOutdoorTripBatchingSync(bool /*deallocBatchBuffer*/)
-DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
-
-void LocApiBase::stopOutdoorTripBatching(bool /*deallocBatchBuffer*/,
-        LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
 LocationError LocApiBase::getBatchedLocationsSync(size_t /*count*/)
@@ -844,26 +782,7 @@ DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
 void LocApiBase::getBatchedLocations(size_t /*count*/, LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
-LocationError LocApiBase::getBatchedTripLocationsSync(size_t /*count*/,
-        uint32_t /*accumulatedDistance*/)
-DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
-
-void LocApiBase::getBatchedTripLocations(size_t /*count*/, uint32_t /*accumulatedDistance*/,
-        LocApiResponse* /*adapterResponse*/)
-DEFAULT_IMPL()
-
-LocationError LocApiBase::queryAccumulatedTripDistanceSync(uint32_t& /*accumulated_trip_distance*/,
-        uint32_t& /*numOfBatchedPositions*/)
-DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
-
-void LocApiBase::queryAccumulatedTripDistance(
-        LocApiResponseData<LocApiBatchData>* /*adapterResponseData*/)
-DEFAULT_IMPL()
-
 void LocApiBase::setBatchSize(size_t /*size*/)
-DEFAULT_IMPL()
-
-void LocApiBase::setTripBatchSize(size_t /*size*/)
 DEFAULT_IMPL()
 
 void LocApiBase::addToCallQueue(LocApiResponse* /*adapterResponse*/)
