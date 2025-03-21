@@ -124,7 +124,7 @@ public :
     bool updatePowerState(const PowerStateType powerState);
     inline const MsgTask* getMsgTask() { return mMsgTask; }
     void subscribe(bool yes);
-    bool notifySessionStart();
+    bool notifySessionStart(bool trackingStarted);
     bool onStatusRequested(int32_t xtraStatusUpdated);
     void startDgnssSource(const StartDgnssNtripParams& params);
     void restartDgnssSource();
@@ -155,6 +155,7 @@ private:
     shared_ptr<LocIpcSender> mDgnssSender;
     string mNtripParamsString;
     bool mRegisterForXtraStatus;
+    bool mTrackingStarted;
 
     class DelayLocTimer : public LocTimer {
         LocIpcSender& mXtraSender;

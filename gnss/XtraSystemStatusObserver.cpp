@@ -145,6 +145,7 @@ public:
                         mXSSO.restartDgnssSource();
                     }
                     mXSSO.registerXtraStatusUpdate(0, mXSSO.mRegisterForXtraStatus);
+                    mXSSO.notifySessionStart(mXSSO.mTrackingStarted);
                 }
             };
             mMsgTask->sendMsg(new HandleStatusRequestMsg(mXSSO, xtraStatusUpdated, socketName));
@@ -190,7 +191,8 @@ XtraSystemStatusObserver::XtraSystemStatusObserver(GnssAdapter* adapter,
         mXtraSender(LocIpc::getLocIpcLocalSender(LOC_IPC_XTRA)),
         mDgnssSender(LocIpc::getLocIpcLocalSender(LOC_IPC_DGNSS)),
         mRegisterForXtraStatus(false),
-        mDelayLocTimer(*mXtraSender, *mDgnssSender) {
+        mDelayLocTimer(*mXtraSender, *mDgnssSender),
+        mTrackingStarted(false) {
     subscribe(true);
     auto recver = LocIpc::getLocIpcLocalRecver(
             make_shared<XtraIpcListener>(sysStatObs, msgTask, *this),
@@ -293,13 +295,28 @@ bool XtraSystemStatusObserver::updateXtraThrottle(const bool enabled) {
     return ( LocIpc::send(*mXtraSender, (const uint8_t*)s.data(), s.size()) );
 }
 
-bool XtraSystemStatusObserver::notifySessionStart() {
+bool XtraSystemStatusObserver::notifySessionStart(bool trackingStarted) {
+    mTrackingStarted = trackingStarted;
+
     if (!mReqStatusReceived) {
         return true;
     }
 
-    string s = "sessionstart";
-    return ( LocIpc::send(*mXtraSender, (const uint8_t*)s.data(), s.size()) );
+#ifndef FEATURE_AUTOMOTIVE
+    if (false == trackingStarted) {
+        // do not send tracking stop to Xtra on non-automative
+        // reduce IPC traffic
+        return true;
+    }
+#endif
+
+    std::stringstream ss;
+    ss << "sessionstart " << (trackingStarted ? 1 : 0);
+    std::string s = ss.str();
+    bool ret = false;
+    ret = LocIpc::send(*mXtraSender, (const uint8_t*)s.data(), s.size());
+    LOC_LOGi("sessionstart %d sent %d", trackingStarted, ret);
+    return ret;
 }
 
 bool XtraSystemStatusObserver::updatePowerState(const PowerStateType powerState) {
@@ -606,9 +623,7 @@ void XtraSystemStatusObserver::notify(const unordered_set<IDataItemCore*>& dlist
                     {
                         TrackingStartedDataItem* trackingStarted =
                                 static_cast<TrackingStartedDataItem*>(each);
-                        if (trackingStarted->mTrackingStarted) {
-                            mXtraSysStatObj->notifySessionStart();
-                        }
+                        mXtraSysStatObj->notifySessionStart(trackingStarted->mTrackingStarted);
                     }
                     break;
 
