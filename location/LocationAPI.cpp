@@ -26,8 +26,8 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -204,8 +204,8 @@ void LocationAPI::onRemoveClientCompleteCb (LocationAdapterTypeMask adapterType)
 
     if (invokeCallback) {
         LOC_LOGd("invoke client destroy cb");
-        if (!destroyCompleteCb) {
-            (destroyCompleteCb) ();
+        if (destroyCompleteCb) {
+            destroyCompleteCb();
         }
 
         delete this;
