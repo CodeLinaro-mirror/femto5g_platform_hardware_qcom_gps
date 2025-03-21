@@ -203,8 +203,8 @@ void LocationAPI::onRemoveClientCompleteCb (LocationAdapterTypeMask adapterType)
 
     if (invokeCallback) {
         LOC_LOGd("invoke client destroy cb");
-        if (!destroyCompleteCb) {
-            (destroyCompleteCb) ();
+        if (destroyCompleteCb) {
+            destroyCompleteCb();
         }
 
         delete this;
