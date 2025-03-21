@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022, 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022, 2023-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -234,8 +234,8 @@ void LocationAPI::onRemoveClientCompleteCb (LocationAdapterTypeMask adapterType)
 
     if (invokeCallback) {
         LOC_LOGd("invoke client destroy cb");
-        if (!destroyCompleteCb) {
-            (destroyCompleteCb) ();
+        if (destroyCompleteCb) {
+            destroyCompleteCb();
         }
 
         delete this;
