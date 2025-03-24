@@ -26,7 +26,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Changes from Qualcomm Innovation Center are provided under the following license:
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  *
  *
@@ -55,7 +55,6 @@ protected:
     inline LBSProxyBase() {}
 public:
     inline virtual ~LBSProxyBase() {}
-    inline virtual bool hasAgpsExtendedCapabilities() const { return false; }
     inline virtual void modemPowerVote(bool power) const {
 
         (void)power;
@@ -64,7 +63,6 @@ public:
 
         (void)context;
     }
-    inline virtual bool hasNativeXtraClient() const { return false; }
     inline virtual IzatDevId_t getIzatDevId() const { return 0; }
     virtual void setIzatFusedProviderOverride(bool izatFused) {}
     virtual bool getIzatFusedProviderOverride() const { return false; }
