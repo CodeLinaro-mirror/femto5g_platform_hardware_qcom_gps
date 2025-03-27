@@ -173,6 +173,7 @@ GnssAPIClient::GnssAPIClient(const shared_ptr<IGnssCallback>& gpsCb) :
     mGnssCbIface(gpsCb) {
     LOC_LOGd("]: (%p)", &gpsCb);
     initLocationOptions();
+    getVersionString();
 }
 
 GnssAPIClient::~GnssAPIClient() {
