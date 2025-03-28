@@ -333,13 +333,13 @@ LeverArmConfigInfo GnssAdapter::readVrpDataFromNvm()
     //Retrieve those parameters from back up NV memory
     LeverArmConfigInfo configInfo = {};
 
-    const char* paramName = NULL;
+    const char* paramName = LocNvParams::getParamName(LocNvParams::LEVER_ARM_GNSS_TO_VRP);
     nv_param_err_code errorCode = NV_PARAM_ERR_NO_ERR;
-    unsigned int size = sizeof(LeverArmConfigInfo);
-    paramName = LocNvParams::getParamName(LocNvParams::LEVER_ARM_GNSS_TO_VRP);
-    unsigned char* leverArmBlob = reinterpret_cast<unsigned char*>(&configInfo);
+    unsigned int size = 0;
+    unsigned char* leverArmBlob = NULL;
+
     NvParamMgr* nvParamMgr = NvParamMgr::getInstance();
-    if ((nullptr != leverArmBlob) && (nullptr != nvParamMgr)) {
+    if (nullptr != nvParamMgr) {
         errorCode = nvParamMgr->getBlobParam(paramName, leverArmBlob, size);
         if (NV_PARAM_ERR_NO_ERR == errorCode) {
             LeverArmConfigInfo* leverArmConfig =
@@ -348,6 +348,10 @@ LeverArmConfigInfo GnssAdapter::readVrpDataFromNvm()
                 configInfo = *leverArmConfig;
             }
         }
+    }
+    if (leverArmBlob) {
+       free(leverArmBlob);
+       leverArmBlob = nullptr;
     }
     if (nvParamMgr) {
         NvParamMgr::releaseInstance();
