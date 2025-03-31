@@ -442,7 +442,6 @@ class GnssAdapter : public LocAdapterBase {
     void checkUpdateDgnssNtrip(bool isLocationValid);
     void stopDgnssNtrip();
     uint64_t   mDgnssLastNmeaBootTimeMilli;
-    bool mQppeResp;
 
     /*==== Qesdk Feature Status ========================================================*/
     std::string mAppHash;
@@ -623,6 +622,8 @@ public:
     uint32_t configOsnmaEnablementCommand(bool enable);
 #endif
     uint32_t gnssInjectMmfDataCommand(const GnssMapMatchedData& data);
+    uint32_t gnssInjectXtraUserConsentCommand(const bool xtraUserConsent);
+
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
     void initOdcpiCommand(const odcpiRequestCallback& callback,
@@ -852,7 +853,6 @@ public:
     inline void setEsStatusCallback (std::function<void(bool)> esStatusCb) {
             mEsStatusCb = esStatusCb; }
     void setTribandState();
-    void testLaunchQppeBringUp();
     /*==== DGnss Usable Report Flag ====================================================*/
     inline void setDGnssUsableFLag(bool dGnssNeedReport) { mDGnssNeedReport = dGnssNeedReport;}
     inline bool isNMEAPrintEnabled() {
