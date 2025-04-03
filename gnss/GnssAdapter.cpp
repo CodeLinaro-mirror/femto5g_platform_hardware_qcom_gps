@@ -1006,8 +1006,10 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
 
     if (GPS_LOCATION_EXTENDED_HAS_DGNSS_STATION_ID & locationExtended.flags) {
         out.flags |= LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
-        out.numOfDgnssStationId = locationExtended.numOfDgnssStationId;
-        for (uint32_t i = 0; i < locationExtended.numOfDgnssStationId; i++) {
+        out.numOfDgnssStationId = (
+                locationExtended.numOfDgnssStationId > DGNSS_STATION_ID_MAX
+                ) ? DGNSS_STATION_ID_MAX : locationExtended.numOfDgnssStationId;
+        for (uint32_t i = 0; i < out.numOfDgnssStationId; i++) {
             out.dgnssStationId[i] = locationExtended.dgnssStationId[i];
         }
     }
