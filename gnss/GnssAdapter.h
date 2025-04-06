@@ -361,7 +361,6 @@ class GnssAdapter : public LocAdapterBase {
 
     /* === Misc callback from QMI LOC API ============================================== */
     GnssEnergyConsumedCallback mGnssEnergyConsumedCb;
-    std::function<void(bool)> mPowerStateCb;
 
     /*==== CONVERSION ===================================================================*/
     static void convertOptions(LocPosMode& out, const TrackingOptions& trackingOptions);
@@ -470,6 +469,7 @@ public:
     /* ======== RESPONSES ================================================================== */
     void reportResponse(LocationAPI* client, LocationError err, uint32_t sessionId);
     /* ======== UTILITIES ================================================================== */
+    bool isValidTrackingSession(LocationAPI* client, uint32_t sessionId);
     bool hasCallbacksToStartTracking(LocationAPI* client);
     void saveTrackingSession(LocationAPI* client, uint32_t sessionId,
                              const TrackingOptions& trackingOptions);
@@ -821,18 +821,12 @@ public:
                          int blockDurationMsec, double latLonDiffThreshold);
 
     /* ==== MISCELLANEOUS ================================================================== */
-    /* ======== COMMANDS ====(Called from Client Thread)==================================== */
-    void getPowerStateChangesCommand(std::function<void(bool)> powerStateCb);
     /* ======== UTILITIES ================================================================== */
-    void reportPowerStateIfChanged();
-    void savePowerStateCallback(std::function<void(bool)> powerStateCb){
-            mPowerStateCb = powerStateCb; }
-    bool getPowerState() { return mPowerOn; }
     inline PowerStateType getSystemPowerState() { return mSystemPowerState; }
 
     void setSuplHostServer(const char* server, int port, LocServerType type);
-    void notifyClientOfCachedLocationSystemInfo(LocationAPI* client,
-                                                const LocationCallbacks& callbacks);
+
+    /* ======== COMMANDS ====(Called from Client Thread)==================================== */
     void updateSystemPowerStateCommand(PowerStateType systemPowerState);
     void updatePowerConnectStateCommand(bool connected);
     void setEsStatusCallbackCommand(std::function<void(bool)> esStatusCb);

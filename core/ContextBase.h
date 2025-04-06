@@ -206,8 +206,6 @@ public:
     inline const MsgTask* getMsgTask() { return mMsgTask; }
     inline LocApiBase* getLocApi() { return mLocApi; }
     inline LocApiProxyBase* getLocApiProxy() { return mLocApiProxy; }
-    inline bool hasAgpsExtendedCapabilities() { return mLBSProxy->hasAgpsExtendedCapabilities(); }
-    inline bool hasNativeXtraClient() { return mLBSProxy->hasNativeXtraClient(); }
     inline void modemPowerVote(bool power) const { return mLBSProxy->modemPowerVote(power); }
     inline const LBSProxyBase* getLBSProxyBase() { return mLBSProxy; }
     inline IzatDevId_t getIzatDevId() const {

@@ -204,7 +204,6 @@ GnssAdapter::GnssAdapter() :
     mPowerOn(false),
     mNativeAgpsHandler(mSystemStatus->getOsObserver(), *this),
     mGnssEnergyConsumedCb(nullptr),
-    mPowerStateCb(nullptr),
     mSupportNfwControl(true),
     mIsMeasCorrInterfaceOpen(false),
     mLastDeleteAidingDataTime(0),
@@ -334,13 +333,13 @@ LeverArmConfigInfo GnssAdapter::readVrpDataFromNvm()
     //Retrieve those parameters from back up NV memory
     LeverArmConfigInfo configInfo = {};
 
-    const char* paramName = NULL;
+    const char* paramName = LocNvParams::getParamName(LocNvParams::LEVER_ARM_GNSS_TO_VRP);
     nv_param_err_code errorCode = NV_PARAM_ERR_NO_ERR;
-    unsigned int size = sizeof(LeverArmConfigInfo);
-    paramName = LocNvParams::getParamName(LocNvParams::LEVER_ARM_GNSS_TO_VRP);
-    unsigned char* leverArmBlob = reinterpret_cast<unsigned char*>(&configInfo);
+    unsigned int size = 0;
+    unsigned char* leverArmBlob = NULL;
+
     NvParamMgr* nvParamMgr = NvParamMgr::getInstance();
-    if ((nullptr != leverArmBlob) && (nullptr != nvParamMgr)) {
+    if (nullptr != nvParamMgr) {
         errorCode = nvParamMgr->getBlobParam(paramName, leverArmBlob, size);
         if (NV_PARAM_ERR_NO_ERR == errorCode) {
             LeverArmConfigInfo* leverArmConfig =
@@ -349,6 +348,10 @@ LeverArmConfigInfo GnssAdapter::readVrpDataFromNvm()
                 configInfo = *leverArmConfig;
             }
         }
+    }
+    if (leverArmBlob) {
+       free(leverArmBlob);
+       leverArmBlob = nullptr;
     }
     if (nvParamMgr) {
         NvParamMgr::releaseInstance();
@@ -569,6 +572,9 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
     }
     if (LOC_POS_TECH_MASK_PROPAGATED & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_PROPAGATED_BIT;
+    }
+    if (LOC_POS_TECH_MASK_SBAS & locationExtended.tech_mask) {
+        out.techMask |= LOCATION_TECHNOLOGY_SBAS_BIT;
     }
 
     out.qualityType = LOCATION_STANDALONE_QUALITY_TYPE;
@@ -2923,8 +2929,15 @@ GnssAdapter::addClientCommand(LocationAPI* client, const LocationCallbacks& call
             mClient(client),
             mCallbacks(callbacks) {}
         inline virtual void proc() const {
-            // check whether we need to notify client of cached location system info
-            mAdapter.notifyClientOfCachedLocationSystemInfo(mClient, mCallbacks);
+            if (mAdapter.mLocSystemInfo.systemInfoMask && mCallbacks.locationSystemInfoCb) {
+                // notify client of cached location system info
+                mCallbacks.locationSystemInfoCb(mAdapter.mLocSystemInfo);
+            }
+
+            if (mAdapter.mGnssCapabNotification.count > 0 && mCallbacks.gnssSignalTypesCb) {
+                mCallbacks.gnssSignalTypesCb(mAdapter.mGnssCapabNotification);
+            }
+
             mAdapter.saveClient(mClient, mCallbacks);
         }
     };
@@ -3001,15 +3014,7 @@ GnssAdapter::updateClientsEventMask()
             mask |= LOC_API_ADAPTER_BIT_DISASTER_CRISIS_REPORT;
         }
         if (it->second.gnssSignalTypesCb != nullptr) {
-            // GNSS Bands supported
-            LOC_LOGd("GNSS Bands supported, mGnssCapabNotification.count = %d",
-                     mGnssCapabNotification.count);
             mask |= LOC_API_ADAPTER_BIT_GNSS_BANDS_SUPPORTED;
-            // Calling gnssSignalTypesCb here to pass VTS
-            // not necessary during normal operation, but doesn't hurt
-            if (mGnssCapabNotification.count > 0) {
-                it->second.gnssSignalTypesCb(mGnssCapabNotification);
-            }
         }
         if (it->second.svEphemerisCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_GNSS_SV_EPHEMERIS_REPORT;
@@ -3227,19 +3232,9 @@ GnssAdapter::suspendSessions()
     }
 }
 
-void
-GnssAdapter::notifyClientOfCachedLocationSystemInfo(
-        LocationAPI* client, const LocationCallbacks& callbacks) {
-
-    if (mLocSystemInfo.systemInfoMask) {
-        // notify client of cached location system info
-        if (callbacks.locationSystemInfoCb) {
-            auto it = mClientData.find(client);
-            if (it != mClientData.end()) {
-                callbacks.locationSystemInfoCb(mLocSystemInfo);
-            }
-        }
-    }
+bool GnssAdapter::isValidTrackingSession(LocationAPI* client, uint32_t sessionId) {
+    LocationSessionKey key(client, sessionId);
+    return (mTimeBasedTrackingSessions.find(key) != mTimeBasedTrackingSessions.end());
 }
 
 bool
@@ -3265,38 +3260,6 @@ GnssAdapter::hasCallbacksToStartTracking(LocationAPI* client)
 }
 
 void
-GnssAdapter::reportPowerStateIfChanged()
-{
-    bool newPowerOn = !mTimeBasedTrackingSessions.empty();
-    if (newPowerOn != mPowerOn) {
-        mPowerOn = newPowerOn;
-        if (mPowerStateCb != nullptr) {
-            mPowerStateCb(mPowerOn);
-        }
-    }
-}
-
-void
-GnssAdapter::getPowerStateChangesCommand(std::function<void(bool)> powerStateCb)
-{
-    struct MsgReportLocation : public LocMsg {
-        GnssAdapter& mAdapter;
-        std::function<void(bool)> mPowerStateCb;
-        inline MsgReportLocation(GnssAdapter& adapter,
-                                 std::function<void(bool)> powerStateCb) :
-            LocMsg(),
-            mAdapter(adapter),
-            mPowerStateCb(powerStateCb) {}
-        inline virtual void proc() const {
-            mAdapter.savePowerStateCallback(mPowerStateCb);
-            mPowerStateCb(mAdapter.getPowerState());
-        }
-    };
-
-    sendMsg(new MsgReportLocation(*this, powerStateCb));
-}
-
-void
 GnssAdapter::saveTrackingSession(LocationAPI* client, uint32_t sessionId,
                                 const TrackingOptions& options)
 {
@@ -3306,7 +3269,6 @@ GnssAdapter::saveTrackingSession(LocationAPI* client, uint32_t sessionId,
         if (getFgTrackingSessionCount() > 0) {
             configRobustLocation();
         }
-        reportPowerStateIfChanged();
         // notify SystemStatus the engine tracking status
         getSystemStatus()->eventSetTracking(isInSession(), true);
     }
@@ -3324,7 +3286,6 @@ GnssAdapter::eraseTrackingSession(LocationAPI* client, uint32_t sessionId)
                 configRobustLocation();
             }
         }
-        reportPowerStateIfChanged();
         getSystemStatus()->eventSetTracking(isInSession(), true);
     }
 }
@@ -3673,6 +3634,12 @@ GnssAdapter::updateTrackingOptionsCommand(LocationAPI* client, uint32_t id,
             mOptions(options) {}
         inline virtual void proc() const {
             LocationError err = LOCATION_ERROR_SUCCESS;
+            bool isValidSession = mAdapter.isValidTrackingSession(mClient, mSessionId);
+            LOC_LOGd("isValidSession %d ",  isValidSession);
+            if (!isValidSession) {
+                mAdapter.reportResponse(mClient, LOCATION_ERROR_ID_UNKNOWN, mSessionId);
+                return;
+            }
             if (0 == mOptions.size) {
                 err = LOCATION_ERROR_INVALID_PARAMETER;
             }
@@ -3786,6 +3753,12 @@ GnssAdapter::stopTrackingCommand(LocationAPI* client, uint32_t id)
             mClient(client),
             mSessionId(sessionId) {}
         inline virtual void proc() const {
+            bool isValidSession = mAdapter.isValidTrackingSession(mClient, mSessionId);
+            LOC_LOGd("isValidSession %d ",  isValidSession);
+            if (!isValidSession) {
+                mAdapter.reportResponse(mClient, LOCATION_ERROR_ID_UNKNOWN, mSessionId);
+                return;
+            }
             // Api doesn't support multiple clients for time based tracking, so mutiplex
             bool reportToClientWithNoWait =
                     mAdapter.stopTimeBasedTrackingMultiplex(mClient, mSessionId);
@@ -5089,12 +5062,21 @@ GnssAdapter::reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapab
             mAdapter(adapter),
             mGnssCapabNotification(gnssCapabNotification) {}
         inline virtual void proc() const {
-            // cache the data (for VTS only)
-            mAdapter.mGnssCapabNotification = mGnssCapabNotification;
-            for (auto it = mAdapter.mClientData.begin(); it != mAdapter.mClientData.end(); ++it) {
-                if (it->second.gnssSignalTypesCb != nullptr) {
-                    LOC_LOGA("MsgSignalTypeReport: calling gnssSignalTypesCb");
-                    it->second.gnssSignalTypesCb(mGnssCapabNotification);
+            // modem should only send out one signal type event, but
+            // below logic should work in case it send out multiple
+            if (mAdapter.mGnssCapabNotification.gnssSupportedSignals !=
+                    mGnssCapabNotification.gnssSupportedSignals) {
+                mAdapter.mGnssCapabNotification = mGnssCapabNotification;
+                for (auto it = mAdapter.mClientData.begin();
+                        it != mAdapter.mClientData.end(); ++it) {
+                    if (it->second.gnssSignalTypesCb != nullptr) {
+                        LOC_LOGd("MsgSignalTypeReport: client %p,"
+                                 "gnssSignalTypesCb: mGnssCapabNotification.count %d, "
+                                 "mGnssCapabNotification.gnssSupportedSignals 0x%x",
+                                 it->first, mGnssCapabNotification.count,
+                                 mGnssCapabNotification.gnssSupportedSignals);
+                        it->second.gnssSignalTypesCb(mGnssCapabNotification);
+                    }
                 }
             }
         }

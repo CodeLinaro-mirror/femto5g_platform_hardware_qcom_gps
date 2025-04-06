@@ -28,7 +28,7 @@
 
 /*
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #ifndef LOCATION_INTERFACE_H
@@ -91,7 +91,6 @@ struct GnssInterface {
     void (*getGnssEnergyConsumed)(GnssEnergyConsumedCallback energyConsumedCb);
     void (*enableNfwLocationAccess)(const std::vector<std::string>& enabledNfws);
     void (*nfwInit)(const NfwCbInfo& cbInfo);
-    void (*getPowerStateChanges)(std::function<void(bool)> powerStateCb);
     void (*injectLocationExt)(const GnssLocationInfoNotification &locationInfo);
     void (*updateBatteryStatus)(bool charging);
     void (*updateSystemPowerState)(PowerStateType systemPowerState);
