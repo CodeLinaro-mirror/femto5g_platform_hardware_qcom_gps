@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -311,7 +311,7 @@ bool XtraSystemStatusObserver::updatePowerState(const PowerStateType powerState)
         return true;
     }
 
-    int32_t pState;
+    int32_t pState = 0;
     switch (mPowerState) {
         case POWER_STATE_UNKNOWN:
             pState = 0;
