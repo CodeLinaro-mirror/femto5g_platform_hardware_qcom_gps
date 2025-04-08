@@ -195,7 +195,13 @@ public:
                 mEvtMask = event;
                 break;
         }
-        mLocApi->updateEvtMask();
+        // Calling updateEvtMask will result in LocAPIV02::open().
+        // Need to wait for adapter to get added before calling open().
+        if (mAdapterAdded) {
+            mLocApi->updateEvtMask();
+        } else {
+            LOC_LOGe("Don't call updateEvtMask, Wait for Adapter addition");
+        }
     }
 
     inline void updateNmeaMask(uint32_t mask)
