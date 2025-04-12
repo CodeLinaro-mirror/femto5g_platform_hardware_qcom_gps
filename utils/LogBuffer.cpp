@@ -63,6 +63,13 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
+#include <loc_cfg.h>
 #include "LogBuffer.h"
 #ifdef USE_GLIB
 #include <execinfo.h>
@@ -179,8 +186,7 @@ void LogBuffer::setLogBufferConfig() {
     mConfigVec[3].mMaxNumThres = 300;
     mConfigVec[4].mTimeDepthThres = 200;
     mConfigVec[4].mMaxNumThres = 400;
-    loc_read_conf(LOC_PATH_IZAT_CONF_STR, log_buff_config_table,
-            sizeof(log_buff_config_table)/sizeof(log_buff_config_table[0]));
+    UTIL_READ_CONF(LOC_PATH_IZAT_CONF, log_buff_config_table);
 }
 
 void LogBuffer::registerSignalHandler() {

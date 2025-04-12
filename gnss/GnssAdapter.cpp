@@ -8414,14 +8414,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
     std::vector<GnssAntennaInformation> gnssAntennaInformations;
     GnssAntennaInformation gnssAntennaInfo;
 
-    uint32_t antennaInfoVectorSize;
-    loc_param_s_type ant_info_vector_table[] =
-    {
-        { "ANTENNA_INFO_VECTOR_SIZE", &antennaInfoVectorSize, NULL, 'n' }
-    };
-    UTIL_READ_CONF(LOC_PATH_ANT_CORR, ant_info_vector_table);
-
-    for (uint32_t i = 0; i < antennaInfoVectorSize; i++) {
+    for (uint32_t i = 0; i < ContextBase::getAntennaInfoVectorSize(); i++) {
         double carrierFrequencyMHz;
         char pcOffsetStr[LOC_MAX_PARAM_STRING];
         uint32_t numberOfRows = 0;
@@ -8456,7 +8449,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
             { s5.c_str(), &numberOfRowsSGC, NULL, 'n' },
             { s6.c_str(), &numberOfColumnsSGC, NULL, 'n' },
         };
-        UTIL_READ_CONF(LOC_PATH_ANT_CORR, ant_cf_table);
+        UTIL_READ_CONF(LOC_PATH_ANT_CORR_CONF, ant_cf_table);
 
         if (0 == numberOfRowsSGC) {
             numberOfRowsSGC = numberOfRows;
@@ -8495,7 +8488,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
                 { s1.c_str(), &pcVarCorrStr, NULL, 's' },
                 { s2.c_str(), &pcVarCorrUncStr, NULL, 's' },
             };
-            UTIL_READ_CONF_LONG(LOC_PATH_ANT_CORR, ant_row_table, array_size);
+            UTIL_READ_CONF_LONG(LOC_PATH_ANT_CORR_CONF, ant_row_table, array_size);
 
             gnssAntennaInfo.phaseCenterVariationCorrectionMillimeters.push_back(
                     parseDoublesString(pcVarCorrStr));
@@ -8516,7 +8509,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
                 { s3.c_str(), &sigGainCorrStr, NULL, 's' },
                 { s4.c_str(), &sigGainCorrUncStr, NULL, 's' },
             };
-            UTIL_READ_CONF_LONG(LOC_PATH_ANT_CORR, ant_row_table, array_size_SGC);
+            UTIL_READ_CONF_LONG(LOC_PATH_ANT_CORR_CONF, ant_row_table, array_size_SGC);
 
             gnssAntennaInfo.signalGainCorrectionDbi.push_back(
                     parseDoublesString(sigGainCorrStr));
@@ -8525,7 +8518,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
         }
         gnssAntennaInformations.push_back(std::move(gnssAntennaInfo));
     }
-    if (antennaInfoVectorSize > 0 && cb) {
+    if (ContextBase::getAntennaInfoVectorSize() > 0 && cb) {
         (*cb)(gnssAntennaInformations);
     }
 }

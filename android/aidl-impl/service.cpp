@@ -147,10 +147,15 @@ void initializeGnssPowerHandler() {
 }
 
 int main() {
+    // read a copy of gps conf and izat.conf and cache it for future use
+    UTIL_CACHE_CONF_FILE(LOC_PATH_GPS_CONF);
+    UTIL_CACHE_CONF_FILE(LOC_PATH_IZAT_CONF);
+    UTIL_READ_CONF_DEFAULT(LOC_PATH_GPS_CONF);
+
+    ALOGI("%s, start Gnss HAL process", __FUNCTION__);
     sleepIfInShutdown();
     ABinderProcess_setThreadPoolMaxThreadCount(1);
     ABinderProcess_startThreadPool();
-    ALOGI("%s, start Gnss HAL process", __FUNCTION__);
 
     std::shared_ptr<GnssAidl> gnssAidl = ndk::SharedRefBase::make<GnssAidl>();
     const std::string instance = std::string() + GnssAidl::descriptor + "/default";

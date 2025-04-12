@@ -63,6 +63,12 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_misc_utils"
 #include <stdio.h>
@@ -127,44 +133,6 @@ int loc_util_split_string(char *raw_string, char **split_strings_ptr,
 err:
     LOC_LOGD("%s:%d]: num_split_strings: %d\n", __func__, __LINE__, num_split_strings);
     return num_split_strings;
-}
-
-void loc_util_trim_space(char *org_string)
-{
-    char *scan_ptr, *write_ptr;
-    char *first_nonspace = NULL, *last_nonspace = org_string;
-
-    if(org_string == NULL) {
-        LOC_LOGE("%s:%d]: NULL parameter", __func__, __LINE__);
-        goto err;
-    }
-
-    scan_ptr = write_ptr = org_string;
-
-    while (*scan_ptr) {
-        //Find the first non-space character
-        if ( !isspace(*scan_ptr) && first_nonspace == NULL) {
-            first_nonspace = scan_ptr;
-        }
-        //Once the first non-space character is found in the
-        //above check, keep shifting the characters to the left
-        //to replace the spaces
-        if (first_nonspace != NULL) {
-            *(write_ptr++) = *scan_ptr;
-            //Keep track of which was the last non-space character
-            //encountered
-            //last_nonspace will not be updated in the case where
-            //the string ends with spaces
-            if ( !isspace(*scan_ptr)) {
-                last_nonspace = write_ptr;
-            }
-        }
-        scan_ptr++;
-    }
-    //Add NULL terminator after the last non-space character
-    if (last_nonspace) { *last_nonspace = '\0'; }
-err:
-    return;
 }
 
 inline void logDlError(const char* failedCall) {

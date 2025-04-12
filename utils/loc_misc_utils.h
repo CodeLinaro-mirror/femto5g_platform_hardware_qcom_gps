@@ -63,6 +63,12 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef _LOC_MISC_UTILS_H_
 #define _LOC_MISC_UTILS_H_
 #include <stdint.h>
@@ -117,23 +123,6 @@ EXAMPLE
 ===========================================================================*/
 int loc_util_split_string(char *raw_string, char **split_strings_ptr, int max_num_substrings,
                      char delimiter);
-
-/*===========================================================================
-FUNCTION trim_space
-
-DESCRIPTION
-   Removes leading and trailing spaces of the string
-
-DEPENDENCIES
-   N/A
-
-RETURN VALUE
-   None
-
-SIDE EFFECTS
-   N/A
-===========================================================================*/
-void loc_util_trim_space(char *org_string);
 
 /*===========================================================================
 FUNCTION dlGetSymFromLib

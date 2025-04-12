@@ -41,29 +41,24 @@
 #include <unistd.h>
 #include <grp.h>
 
-#define LOC_MAX_PARAM_NAME                 80
-#define LOC_MAX_PARAM_STRING               172
+#define LOC_MAX_PARAM_NAME     80
+#define LOC_MAX_PARAM_STRING   172
 #define LOC_MAX_PARAM_LINE    (LOC_MAX_PARAM_NAME + LOC_MAX_PARAM_STRING)
 
-#define LOC_FEATURE_LAUNCH_TRIGGER_MASK   "launch-trigger-mask"
-
-#define LOC_PROCESS_MAX_NUM_GROUPS     20
-#define LOC_PROCESS_MAX_NUM_ARGS       25
-#define LOC_PROCESS_MAX_ARG_STR_LENGTH 64
-
-#define UTIL_UPDATE_CONF(conf_data, len, config_table) \
-    loc_update_conf((conf_data), (len), config_table, \
-                    sizeof(config_table) / sizeof(config_table[0]))
-
+#define UTIL_CACHE_CONF_FILE(filename) \
+   loc_cache_conf_file((filename), LOC_MAX_PARAM_LINE)
+// Fill default conf entries, e.g.: debug level etc
 #define UTIL_READ_CONF_DEFAULT(filename) \
-    loc_read_conf((filename), NULL, 0);
+    loc_read_gps_conf_default();
 
 #define UTIL_READ_CONF(filename, config_table) \
-    loc_read_conf((filename), config_table, sizeof(config_table) / sizeof(config_table[0]))
+    loc_read_conf((filename), config_table, \
+                   sizeof(config_table) / sizeof(config_table[0]),\
+                   LOC_MAX_PARAM_LINE)
 
 #define UTIL_READ_CONF_LONG(filename, config_table, rec_len) \
-    loc_read_conf_long((filename), config_table, \
-            sizeof(config_table) / sizeof(config_table[0]), (rec_len))
+    loc_read_conf((filename), config_table, \
+                   sizeof(config_table) / sizeof(config_table[0]), rec_len)
 
 /*=============================================================================
  *
@@ -80,22 +75,8 @@ typedef struct
                               'f' for double */
 } loc_param_s_type;
 
-typedef enum {
-    ENABLED,
-    DISABLED,
-    RUNNING
-} loc_process_e_status;
-
-typedef struct {
-    loc_process_e_status proc_status;
-    pid_t                proc_id;
-    char                 name[2][LOC_MAX_PARAM_STRING];
-    gid_t                group_list[LOC_PROCESS_MAX_NUM_GROUPS];
-    unsigned char        num_groups;
-    char                 args[LOC_PROCESS_MAX_NUM_ARGS][LOC_PROCESS_MAX_ARG_STR_LENGTH];
-    char                 argumentString[LOC_MAX_PARAM_STRING];
-    unsigned int         launch_trigger_mask;
-} loc_process_info_s_type;
+#define LOC_PROCESS_MAX_NUM_GROUPS        20
+#define LOC_FEATURE_LAUNCH_TRIGGER_MASK   "launch-trigger-mask"
 
 /*=============================================================================
  *
@@ -112,46 +93,29 @@ extern "C" {
  *                       MODULE EXPORTED FUNCTIONS
  *
  *============================================================================*/
-void loc_read_conf_long(const char* conf_file_name,
-                        const loc_param_s_type config_table[],
-                        uint32_t table_length, uint16_t string_len);
-int loc_read_conf_r_long(FILE *conf_fp, const loc_param_s_type config_table[],
-                         uint32_t table_length, uint16_t string_len);
-int loc_update_conf_long(const char* conf_data, int32_t length,
-                         const loc_param_s_type config_table[], uint32_t table_length,
-                         uint16_t string_len);
-
-inline void loc_read_conf(const char* conf_file_name,
-                          const loc_param_s_type config_table[], uint32_t table_length) {
-    loc_read_conf_long(conf_file_name, config_table, table_length, LOC_MAX_PARAM_STRING);
-}
-
-inline int loc_read_conf_r(FILE *conf_fp, const loc_param_s_type config_table[],
-                    uint32_t table_length) {
-    return (loc_read_conf_r_long(conf_fp, config_table, table_length, LOC_MAX_PARAM_STRING));
-}
-
-inline int loc_update_conf(const char* conf_data, int32_t length,
-                    const loc_param_s_type config_table[], uint32_t table_length) {
-    return (loc_update_conf_long(
-                    conf_data, length, config_table, table_length, LOC_MAX_PARAM_STRING));
-}
-
 // Below are the location conf file paths
 extern const char LOC_PATH_GPS_CONF[];
 extern const char LOC_PATH_IZAT_CONF[];
+extern const char LOC_PATH_IZAT_PROCESS_CONF[];
 extern const char LOC_PATH_LOWI_CONF[];
 extern const char LOC_PATH_SAP_CONF[];
 extern const char LOC_PATH_APDR_CONF[];
 extern const char LOC_PATH_XTWIFI_CONF[];
-extern const char LOC_PATH_QUIPC_CONF[];
-extern const char LOC_PATH_ANT_CORR[];
+extern const char LOC_PATH_ANT_CORR_CONF[];
 extern const char LOC_PATH_SLIM_CONF[];
-extern const char LOC_PATH_VPE_CONF[];
 extern const char LOC_PATH_QPPE_CONF[];
 
-int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_ptr,
-                          loc_process_info_s_type** process_info_table_ptr);
+// cache the conf file to facilitate subsequent read
+void loc_cache_conf_file(const char* file_name, uint16_t max_line_len);
+// fill in the default conf entries from gps.conf regarding DEBUG level
+void loc_read_gps_conf_default();
+// fill up the conf entries from the conf file
+void loc_read_conf(const char* file_name, const loc_param_s_type config_table[],
+                   uint32_t table_length, uint16_t max_line_len);
+// used to fill up entries recursively
+int loc_read_conf_r_long(FILE *conf_fp, const loc_param_s_type config_table[],
+                         uint32_t table_length, uint16_t string_len);
+
 #ifdef __cplusplus
 }
 #endif
