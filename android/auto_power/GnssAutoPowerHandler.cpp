@@ -26,6 +26,15 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
+
 #define LOG_TAG "LocSvc_GnssAutoPowerHandler"
 
 #include <log_util.h>
@@ -40,21 +49,21 @@
 using android::Mutex;
 
 // Power state report
-constexpr int32_t POWER_STATE_WAIT_FOR_VHAL =
+constexpr int32_t AUTO_POWER_STATE_WAIT_FOR_VHAL =
     static_cast<int32_t>(VehicleApPowerStateReport::WAIT_FOR_VHAL);
-constexpr int32_t POWER_STATE_DEEP_SLEEP_ENTRY =
+constexpr int32_t AUTO_POWER_STATE_DEEP_SLEEP_ENTRY =
     static_cast<int32_t>(VehicleApPowerStateReport::DEEP_SLEEP_ENTRY);
-constexpr int32_t POWER_STATE_DEEP_SLEEP_EXIT =
+constexpr int32_t AUTO_POWER_STATE_DEEP_SLEEP_EXIT =
     static_cast<int32_t>(VehicleApPowerStateReport::DEEP_SLEEP_EXIT);
-constexpr int32_t POWER_STATE_SHUTDOWN_POSTPONE =
+constexpr int32_t AUTO_POWER_STATE_SHUTDOWN_POSTPONE =
     static_cast<int32_t>(VehicleApPowerStateReport::SHUTDOWN_POSTPONE);
-constexpr int32_t POWER_STATE_SHUTDOWN_START =
+constexpr int32_t AUTO_POWER_STATE_SHUTDOWN_START =
     static_cast<int32_t>(VehicleApPowerStateReport::SHUTDOWN_START);
-constexpr int32_t POWER_STATE_ON =
+constexpr int32_t AUTO_POWER_STATE_ON =
     static_cast<int32_t>(VehicleApPowerStateReport::ON);
-constexpr int32_t POWER_STATE_SHUTDOWN_PREPARE =
+constexpr int32_t AUTO_POWER_STATE_SHUTDOWN_PREPARE =
     static_cast<int32_t>(VehicleApPowerStateReport::SHUTDOWN_PREPARE);
-constexpr int32_t POWER_STATE_SHUTDOWN_CANCELLED =
+constexpr int32_t AUTO_POWER_STATE_SHUTDOWN_CANCELLED =
     static_cast<int32_t>(VehicleApPowerStateReport::SHUTDOWN_CANCELLED);
 
 static GnssAutoPowerHandler* sGnssAutoPowerHandler = nullptr;
@@ -211,19 +220,23 @@ bool GnssAutoPowerHandler::connectToVhal(void) {
 
 void GnssAutoPowerHandler::handleGnssAutoPowerEvent(int32_t powerState) {
 
-    bool retVal = false;
     LOC_LOGd("Power State: %d", powerState);
 
     switch (powerState) {
-        case POWER_STATE_SHUTDOWN_PREPARE:
+        case AUTO_POWER_STATE_SHUTDOWN_PREPARE:
             LOC_LOGi("Suspend GNSS sessions.");
             sendPowerEventToLocCtrlApi(POWER_STATE_SUSPEND);
             break;
-        case POWER_STATE_DEEP_SLEEP_EXIT:
-        case POWER_STATE_SHUTDOWN_CANCELLED:
+        case AUTO_POWER_STATE_DEEP_SLEEP_EXIT:
+        case AUTO_POWER_STATE_SHUTDOWN_CANCELLED:
             LOC_LOGi("Resume GNSS Sessions.");
             sendPowerEventToLocCtrlApi(POWER_STATE_RESUME);
             break;
+        case AUTO_POWER_STATE_WAIT_FOR_VHAL:
+        case AUTO_POWER_STATE_DEEP_SLEEP_ENTRY:
+        case AUTO_POWER_STATE_SHUTDOWN_POSTPONE:
+        case AUTO_POWER_STATE_SHUTDOWN_START:
+        case AUTO_POWER_STATE_ON:
         default:
             break;
     }//switch

@@ -19,9 +19,9 @@
  */
 
 /*
- * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
  *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -64,8 +64,6 @@
 #include "loc_misc_utils.h"
 #include <dlfcn.h>
 
-#define CAR_POWER_DAEMON_SUPPORTED
-
 extern "C" {
 #include "vndfwk-detect.h"
 }
@@ -88,17 +86,17 @@ typedef int vendorEnhancedServiceMain(int /* argc */, char* /* argv */ []);
 #define GNSS_WEAR_POWER_LIBNAME  "libgnsswear_power.so"
 
 #ifdef CAR_POWER_DAEMON_SUPPORTED
-#define GNSS_POWER_LIBNAME  "/vendor/lib64/libgnss_car_powerpolicy.so"
+#define GNSS_AUTO_POWER_LIBNAME "/vendor/lib64/libgnss_car_powerpolicy.so"
 #else
-#define GNSS_POWER_LIBNAME  "/vendor/lib64/libgnssauto_power.so"
+#define GNSS_AUTO_POWER_LIBNAME "/vendor/lib64/libgnssauto_power.so"
 #endif
 
-typedef const void* (*gnssPowerHandler)(void);
+typedef void (gnssPowerHandler)(void);
 
 int initializeGnssAutoPowerHandler() {
 
     void * handle = nullptr;
-    gnssPowerHandler getter = (gnssPowerHandler) dlGetSymFromLib(handle, GNSS_AUTO_POWER_LIBNAME,
+    gnssPowerHandler* getter = (gnssPowerHandler*) dlGetSymFromLib(handle, GNSS_AUTO_POWER_LIBNAME,
                                                                  "initGnssAutoPowerHandler");
     if (nullptr != getter) {
         getter();
@@ -111,7 +109,7 @@ int initializeGnssAutoPowerHandler() {
 int initializeGnssWearPowerHandler() {
 
     void * handle = nullptr;
-    gnssPowerHandler getter = (gnssPowerHandler) dlGetSymFromLib(handle, GNSS_WEAR_POWER_LIBNAME,
+    gnssPowerHandler* getter = (gnssPowerHandler*) dlGetSymFromLib(handle, GNSS_WEAR_POWER_LIBNAME,
                                                                  "initGnssWearPowerHandler");
     if (nullptr != getter) {
         getter();
