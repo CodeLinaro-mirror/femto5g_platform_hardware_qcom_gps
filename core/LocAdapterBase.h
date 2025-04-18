@@ -178,22 +178,7 @@ public:
         mMsgTask->sendMsg(msg, delayInMs);
     }
 
-    inline void updateEvtMask(LOC_API_ADAPTER_EVENT_MASK_T event,
-                              loc_registration_mask_status status)
-    {
-        switch(status) {
-            case (LOC_REGISTRATION_MASK_ENABLED):
-                mEvtMask = mEvtMask | event;
-                break;
-            case (LOC_REGISTRATION_MASK_DISABLED):
-                mEvtMask = mEvtMask &~ event;
-                break;
-            case (LOC_REGISTRATION_MASK_SET):
-                mEvtMask = event;
-                break;
-        }
-        mLocApi->updateEvtMask();
-    }
+    void updateEvtMask(LOC_API_ADAPTER_EVENT_MASK_T event, loc_registration_mask_status status);
 
     inline bool isFeatureSupported(uint8_t featureVal) {
         return ContextBase::isFeatureSupported(featureVal);

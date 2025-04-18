@@ -1281,65 +1281,12 @@ struct TrackingOptions : LocationOptions {
                qualityLevelAccepted == other.qualityLevelAccepted &&
                preciseType == other.preciseType;
     }
-    inline uint32_t gcd(uint32_t a, uint32_t b) {
-        while (b != 0) {
-            uint32_t temp = b;
-            b = a % b;
-            a = temp;
-        }
-        return a;
-    }
-    inline bool multiplexWithForTimeBasedRequest(const TrackingOptions& other) {
-        bool updated = false;
-        uint32_t tbfNew = 0;
-
-        if (other.powerMode == GNSS_POWER_MODE_M5 || powerMode == GNSS_POWER_MODE_M5) {
-            tbfNew = std::min(minInterval, other.minInterval);
-        } else {
-            tbfNew = gcd(other.minInterval, minInterval);
-        }
-        if (tbfNew < MIN_GNSS_TRACKING_INTERVAL) {
-            tbfNew = MIN_GNSS_TRACKING_INTERVAL;
-        }
-        if (tbfNew != minInterval) {
-            updated = true;
-            minInterval = tbfNew;
-        }
-
-        if (other.powerMode < powerMode) {
-            updated = true;
-            powerMode = other.powerMode;
-        }
-        if (other.tbm < tbm) {
-            updated = true;
-            tbm = other.tbm;
-        }
-        if (other.qualityLevelAccepted > qualityLevelAccepted) {
-            qualityLevelAccepted = other.qualityLevelAccepted;
-        }
-        if (other.preciseType > preciseType) {
-            preciseType = other.preciseType;
-        }
-        if (other.correctionType > correctionType) {
-            correctionType = other.correctionType;
-        }
-        return updated;
-    }
     inline void setLocationOptions(const LocationOptions& options) {
         size = sizeof(TrackingOptions);
         minInterval = options.minInterval;
         mode = options.mode;
         locReqEngTypeMask = options.locReqEngTypeMask;
         qualityLevelAccepted = options.qualityLevelAccepted;
-    }
-    inline LocationOptions getLocationOptions() {
-        LocationOptions locOption;
-        locOption.size = sizeof(locOption);
-        locOption.minInterval = minInterval;
-        locOption.mode = mode;
-        locOption.locReqEngTypeMask = locReqEngTypeMask;
-        locOption.qualityLevelAccepted = qualityLevelAccepted;
-        return locOption;
     }
 };
 
@@ -1786,16 +1733,6 @@ struct GnssConfigSetAssistanceServer {
     GnssAssistanceType type; // SUPL or C2K
     const char* hostName;    // null terminated string
     uint32_t port;           // port of server
-
-    inline bool equals(const GnssConfigSetAssistanceServer& config) {
-        if (config.type == type && config.port == port &&
-               ((NULL == config.hostName && NULL == hostName) ||
-                (NULL != config.hostName && NULL != hostName &&
-                     0 == strcmp(config.hostName, hostName)))) {
-            return true;
-        }
-        return false;
-    }
 };
 
 typedef uint32_t GnssSatellitePvtFlagsMask;
@@ -2053,21 +1990,6 @@ struct GnssSvIdConfig {
     //Navic - SV 401 maps to bit 0
 #define GNSS_SV_CONFIG_NAVIC_INITIAL_SV_ID 401
     uint64_t navicBlacklistSvMask;
-
-    inline bool equals(const GnssSvIdConfig& inConfig) {
-        if ((inConfig.size == size) &&
-                (inConfig.gpsBlacklistSvMask == gpsBlacklistSvMask) &&
-                (inConfig.gloBlacklistSvMask == gloBlacklistSvMask) &&
-                (inConfig.bdsBlacklistSvMask == bdsBlacklistSvMask) &&
-                (inConfig.qzssBlacklistSvMask == qzssBlacklistSvMask) &&
-                (inConfig.galBlacklistSvMask == galBlacklistSvMask) &&
-                (inConfig.sbasBlacklistSvMask == sbasBlacklistSvMask) &&
-                (inConfig.navicBlacklistSvMask == navicBlacklistSvMask)) {
-            return true;
-        } else {
-            return false;
-        }
-    }
 };
 
 // Specify the valid mask for robust location configure
@@ -2086,9 +2008,6 @@ struct GnssConfigRobustLocationVersion {
     uint8_t major;
     // Minor version number
     uint16_t minor;
-    inline bool equals(const GnssConfigRobustLocationVersion& version) const {
-        return (version.major == major && version.minor == minor);
-    }
 };
 
 // specify the robust location configuration used by modem GNSS engine
@@ -2097,16 +2016,6 @@ struct GnssConfigRobustLocation {
    bool enabled;
    bool enabledForE911;
    GnssConfigRobustLocationVersion version;
-
-   inline bool equals(const GnssConfigRobustLocation& config) const {
-        if (config.validMask == validMask &&
-            config.enabled == enabled &&
-            config.enabledForE911 == enabledForE911 &&
-            config.version.equals(version)) {
-            return true;
-        }
-        return false;
-    }
 };
 
 /* Mask indicating enabled or disabled constellations and
@@ -2132,12 +2041,6 @@ struct GnssSvTypeConfig{
     GnssSvTypesMask enabledSvTypesMask;
     // Disabled Constellations
     GnssSvTypesMask blacklistedSvTypesMask;
-
-    inline bool equals (const GnssSvTypeConfig& inConfig) const {
-        return ((inConfig.size == size) &&
-                (inConfig.enabledSvTypesMask == enabledSvTypesMask) &&
-                (inConfig.blacklistedSvTypesMask == blacklistedSvTypesMask));
-    }
 };
 
 // Specify the caller who set SV Type config
@@ -2182,20 +2085,6 @@ struct XtraStatus {
     std::string lastDownloadReasonCode;
 
     bool userConsentStatus;
-
-    inline bool equals (const XtraStatus& inXtraStatus) const {
-        if (inXtraStatus.featureEnabled != featureEnabled) {
-            return false;
-        } else if (featureEnabled == false) {
-            return true;
-        } else if ((inXtraStatus.xtraDataStatus == xtraDataStatus) &&
-                   (inXtraStatus.xtraValidForHours == xtraValidForHours) &&
-                   (0 == inXtraStatus.lastDownloadReasonCode.compare(lastDownloadReasonCode))) {
-            return true;
-        } else {
-            return false;
-        }
-    }
 };
 
 struct GnssConfig {
@@ -2218,29 +2107,6 @@ struct GnssConfig {
     uint8_t minSvElevation;
     GnssSvTypeConfig secondaryBandConfig;
     XtraStatus xtraStatus;
-
-    inline bool equals(const GnssConfig& config) {
-        if (flags == config.flags &&
-                gpsLock == config.gpsLock &&
-                suplVersion == config.suplVersion &&
-                assistanceServer.equals(config.assistanceServer) &&
-                lppProfileMask == config.lppProfileMask &&
-                lppeControlPlaneMask == config.lppeControlPlaneMask &&
-                lppeUserPlaneMask == config.lppeUserPlaneMask &&
-                aGlonassPositionProtocolMask == config.aGlonassPositionProtocolMask &&
-                emergencyPdnForEmergencySupl == config.emergencyPdnForEmergencySupl &&
-                suplEmergencyServices == config.suplEmergencyServices &&
-                suplModeMask == config.suplModeMask  &&
-                blacklistedSvIds == config.blacklistedSvIds &&
-                emergencyExtensionSeconds == config.emergencyExtensionSeconds &&
-                robustLocationConfig.equals(config.robustLocationConfig) &&
-                minGpsWeek == config.minGpsWeek &&
-                minSvElevation == config.minSvElevation &&
-                secondaryBandConfig.equals(config.secondaryBandConfig)) {
-            return true;
-        }
-        return false;
-    }
 };
 
 struct GnssDebugLocation {

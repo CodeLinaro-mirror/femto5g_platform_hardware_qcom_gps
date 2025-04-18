@@ -81,7 +81,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sstream>
 #include <loc_log.h>
 #include <loc_nmea.h>
-#include <Agps.h>
 #include <SystemStatus.h>
 #include <vector>
 #include <loc_misc_utils.h>
@@ -161,6 +160,52 @@ const char* LocNvParams::getParamName(LocNvParamId nvId)
     }
 
     return paramName;
+}
+
+uint32_t gcd(uint32_t a, uint32_t b) {
+    while (b != 0) {
+        uint32_t temp = b;
+        b = a % b;
+        a = temp;
+    }
+    return a;
+}
+
+bool multiplexWithForTimeBasedRequest(TrackingOptions& current, const TrackingOptions& other) {
+    bool updated = false;
+    uint32_t tbfNew = 0;
+
+    if (other.powerMode == GNSS_POWER_MODE_M5 || current.powerMode == GNSS_POWER_MODE_M5) {
+        tbfNew = std::min(current.minInterval, other.minInterval);
+    } else {
+        tbfNew = gcd(other.minInterval, current.minInterval);
+    }
+    if (tbfNew < MIN_GNSS_TRACKING_INTERVAL) {
+        tbfNew = MIN_GNSS_TRACKING_INTERVAL;
+    }
+    if (tbfNew != current.minInterval) {
+        updated = true;
+        current.minInterval = tbfNew;
+    }
+
+    if (other.powerMode < current.powerMode) {
+        updated = true;
+        current.powerMode = other.powerMode;
+    }
+    if (other.tbm < current.tbm) {
+        updated = true;
+        current.tbm = other.tbm;
+    }
+    if (other.qualityLevelAccepted > current.qualityLevelAccepted) {
+        current.qualityLevelAccepted = other.qualityLevelAccepted;
+    }
+    if (other.preciseType > current.preciseType) {
+        current.preciseType = other.preciseType;
+    }
+    if (other.correctionType > current.correctionType) {
+        current.correctionType = other.correctionType;
+    }
+    return updated;
 }
 
 GnssAdapter::GnssAdapter() :
@@ -3445,7 +3490,7 @@ void GnssAdapter::reStartTimeBasedTracking() {
                 multiplexedOptions = it2->second;
                 optionSetOnce = true;
             } else {
-                multiplexedOptions.multiplexWithForTimeBasedRequest(it2->second);
+                multiplexWithForTimeBasedRequest(multiplexedOptions, it2->second);
             }
         }
 
@@ -3474,11 +3519,11 @@ GnssAdapter::startTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t sessi
                 multiplexedOptions = it2->second;
                 optionSetOnce = true;
             } else {
-                multiplexedOptions.multiplexWithForTimeBasedRequest(it2->second);
+                multiplexWithForTimeBasedRequest(multiplexedOptions, it2->second);
             }
         }
         TrackingOptions priorOptions = multiplexedOptions;
-        multiplexedOptions.multiplexWithForTimeBasedRequest(options);
+        multiplexWithForTimeBasedRequest(multiplexedOptions, options);
         if (!priorOptions.equalsInTimeBasedRequest(multiplexedOptions)) {
             startTimeBasedTracking(client, sessionId, multiplexedOptions);
             // need to wait for QMI callback
@@ -3687,7 +3732,7 @@ GnssAdapter::updateTrackingMultiplex(LocationAPI* client, uint32_t id,
                     multiplexedOptions = it2->second;
                     optionSetOnce = true;
                 } else {
-                    multiplexedOptions.multiplexWithForTimeBasedRequest(it2->second);
+                    multiplexWithForTimeBasedRequest(multiplexedOptions, it2->second);
                 }
             }
         }
@@ -3706,8 +3751,8 @@ GnssAdapter::updateTrackingMultiplex(LocationAPI* client, uint32_t id,
             }
         } else {
             TrackingOptions priorOptions = multiplexedOptions;
-            priorOptions.multiplexWithForTimeBasedRequest(it->second);
-            multiplexedOptions.multiplexWithForTimeBasedRequest(trackingOptions);
+            multiplexWithForTimeBasedRequest(priorOptions, it->second);
+            multiplexWithForTimeBasedRequest(multiplexedOptions, trackingOptions);
             if (false == priorOptions.equalsInTimeBasedRequest(multiplexedOptions)) {
                 // restart time based tracking with the newly updated options
                 updateTracking(client, id, multiplexedOptions, it->second);
@@ -3795,12 +3840,12 @@ GnssAdapter::stopTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t id)
                         multiplexedOptions = it2->second;
                         optionSetOnce = true;
                     } else {
-                        multiplexedOptions.multiplexWithForTimeBasedRequest(it2->second);
+                        multiplexWithForTimeBasedRequest(multiplexedOptions, it2->second);
                     }
                 }
             }
             TrackingOptions priorOptions = multiplexedOptions;
-            priorOptions.multiplexWithForTimeBasedRequest(it->second);
+            multiplexWithForTimeBasedRequest(priorOptions, it->second);
 
             if (!priorOptions.equalsInTimeBasedRequest(multiplexedOptions)) {
                 // restart time based tracking with the newly updated options

@@ -96,6 +96,23 @@ LocAdapterBase::LocAdapterBase(const LOC_API_ADAPTER_EVENT_MASK_T mask,
     }
 }
 
+void LocAdapterBase::updateEvtMask(LOC_API_ADAPTER_EVENT_MASK_T event,
+        loc_registration_mask_status status)
+{
+    switch (status) {
+        case (LOC_REGISTRATION_MASK_ENABLED):
+            mEvtMask = mEvtMask | event;
+            break;
+        case (LOC_REGISTRATION_MASK_DISABLED):
+            mEvtMask = mEvtMask &~ event;
+            break;
+        case (LOC_REGISTRATION_MASK_SET):
+            mEvtMask = event;
+            break;
+    }
+    mLocApi->updateEvtMask();
+}
+
 uint32_t LocAdapterBase::mSessionIdCounter(1);
 
 uint32_t LocAdapterBase::generateSessionId()

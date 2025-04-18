@@ -374,16 +374,7 @@ private:
     /* Fetch state machine for handling request ATL call */
     AgpsStateMachine* getAgpsStateMachine(AGpsExtType agpsType);
     AgpsCbPriority mCbPriority;
-    inline void processAltTimerExpiredEvent() {
-        AtlTimer* atlTimer = getAtlTimerInstance();
-        if (atlTimer != NULL) {
-            if (atlTimer->isActive())
-            {
-                handleAtlTimeout();
-                atlTimer->stop();
-            }
-        }
-    }
+    void processAltTimerExpiredEvent();
 };
 
 namespace AgpsUtils {

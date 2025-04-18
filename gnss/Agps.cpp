@@ -99,6 +99,17 @@ void AgpsManager::atlTimerExpiredEvent()
     }
 }
 
+void AgpsManager::processAltTimerExpiredEvent() {
+    AtlTimer* atlTimer = getAtlTimerInstance();
+    if (atlTimer != NULL) {
+        if (atlTimer->isActive())
+        {
+            handleAtlTimeout();
+            atlTimer->stop();
+        }
+    }
+}
+
 /* --------------------------------------------------------------------
  *   AGPS State Machine Methods
  * -------------------------------------------------------------------*/

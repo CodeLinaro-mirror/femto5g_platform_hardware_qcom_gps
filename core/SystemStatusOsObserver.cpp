@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -116,6 +116,28 @@ void SystemStatusOsObserver::setSubscriptionObj(IDataItemSubscription* subscript
     } else {
         mContext.mMsgTask->sendMsg(new SetSubsObj(mContext, subscriptionObj));
     }
+}
+
+void SystemStatusOsObserver::setFrameworkActionReqObj(IFrameworkActionReq* frameworkActionReqObj) {
+    mContext.mFrameworkActionReqObj = frameworkActionReqObj;
+#ifdef USE_GLIB
+    uint32_t numBackHaulClients = mBackHaulConnReqCache.size();
+    if (numBackHaulClients > 0) {
+        // For each client, invoke connectbackhaul.
+        for (auto clientContext : mBackHaulConnReqCache) {
+            LOC_LOGd("Invoke connectBackhaul for client: %s Sub: %d Apn: %s IpType: %d",
+                    clientContext.second.clientName.c_str(), clientContext.second.prefSub,
+                    clientContext.second.prefApn.c_str(), clientContext.second.prefIpType);
+            BackhaulContext ctx = { clientContext.second.clientName,
+                clientContext.second.prefSub,
+                clientContext.second.prefApn,
+                clientContext.second.prefIpType };
+            connectBackhaul(ctx);
+        }
+        // Clear the set
+        mBackHaulConnReqCache.clear();
+    }
+#endif
 }
 
 /******************************************************************************

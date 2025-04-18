@@ -426,20 +426,6 @@ LocApiBase* ContextBase::createLocApi(LOC_API_ADAPTER_EVENT_MASK_T exMask)
                     locApi = (*getter)(exMask, this);
                 }
             }
-            // only RPC is the option now
-            else {
-                LOC_LOGD("%s:%d]: libloc_api_v02.so is NOT present. Trying RPC",
-                        __func__, __LINE__);
-                handle = dlopen("libloc_api-rpc-qc.so", RTLD_NOW);
-                if (NULL != handle) {
-                    getLocApi_t* getter = (getLocApi_t*) dlsym(handle, "getLocApi");
-                    if (NULL != getter) {
-                        LOC_LOGD("%s:%d]: getter is not NULL in RPC", __func__,
-                                __LINE__);
-                        locApi = (*getter)(exMask, this);
-                    }
-                }
-            }
         }
     }
 
@@ -460,6 +446,17 @@ ContextBase::ContextBase(const MsgTask* msgTask,
     mLocApi(createLocApi(exMask)),
     mLocApiProxy(mLocApi->getLocApiProxy())
 {
+}
+
+ContextBase::~ContextBase() {
+    if (nullptr != mLocApi) {
+        mLocApi->destroy();
+        mLocApi = nullptr;
+    }
+    if (nullptr != mLBSProxy) {
+        delete mLBSProxy;
+        mLBSProxy = nullptr;
+    }
 }
 
 void ContextBase::setEngineCapabilities(uint8_t *featureList, bool gnssMeasurementSupported) {
@@ -515,6 +512,170 @@ bool ContextBase::isFeatureSupported(uint8_t featureVal)
 
 bool ContextBase::gnssConstellationConfig() {
     return sGnssMeasurementSupported;
+}
+
+void ContextBase::setQwesFeatureStatus(
+        const std::unordered_map<LocationQwesFeatureType, bool> &featureMap) {
+    std::unordered_map<LocationQwesFeatureType, bool>::const_iterator itr;
+    static LocationQwesFeatureType locQwesFeatType[LOCATION_QWES_FEATURE_TYPE_MAX];
+    for (itr = featureMap.begin(); itr != featureMap.end(); ++itr) {
+        LOC_LOGi("Feature : %d isValid: %d", itr->first, itr->second);
+        locQwesFeatType[itr->first] = itr->second;
+        switch (itr->first) {
+            case LOCATION_QWES_FEATURE_TYPE_CARRIER_PHASE:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_CARRIER_PHASE_BIT;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_CARRIER_PHASE_BIT;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_SV_POLYNOMIAL:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_GNSS_SINGLE_FREQUENCY:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_GNSS_SINGLE_FREQUENCY;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_GNSS_SINGLE_FREQUENCY;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_SV_EPH:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_GNSS_MULTI_FREQUENCY:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_GNSS_MULTI_FREQUENCY;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_GNSS_MULTI_FREQUENCY;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_PPE:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_PPE;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_PPE;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_QDR2:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_QDR2;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_QDR2;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_QDR3:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_QDR3;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_QDR3;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_VPE:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_VPE;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_VPE;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_DGNSS:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_DGNSS;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_DGNSS;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_RSSI_POSITIONING:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_WIFI_RSSI_POSITIONING;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_WIFI_RSSI_POSITIONING;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_RTT_POSITIONING:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_WIFI_RTT_POSITIONING;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_WIFI_RTT_POSITIONING;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_NLOS_ML20:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_NLOS_ML20;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_NLOS_ML20;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_WWAN_STANDARD_POSITIONING:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_WWAN_STANDARD_POSITIONING;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_WWAN_STANDARD_POSITIONING;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_WWAN_PREMIUM_POSITIONING:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_WWAN_PREMIUM_POSITIONING;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_WWAN_PREMIUM_POSITIONING;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_STATUS_GNSS_NHZ:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_WOCS:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_WOCS;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_WOCS;
+                }
+                break;
+            case LOCATION_QWES_FEATURE_TYPE_SBAS:
+                if (itr->second) {
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_SBAS;
+                } else {
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_SBAS;
+                }
+                break;
+        }
+    }
+
+    // Set CV2X basic when time freq and tunc is set
+    // CV2X_BASIC  = LOCATION_QWES_FEATURE_TYPE_TIME_FREQUENCY &
+    //       LOCATION_QWES_FEATURE_TYPE_TIME_UNCERTAINTY
+
+    // Set CV2X premium when time freq and tunc is set
+    // CV2X_PREMIUM = CV2X_BASIC & LOCATION_QWES_FEATURE_TYPE_QDR3 &
+    //       LOCATION_QWES_FEATURE_TYPE_CLOCK_ESTIMATE
+
+    bool cv2xBasicEnabled = (1 == locQwesFeatType[LOCATION_QWES_FEATURE_TYPE_TIME_FREQUENCY]) &&
+        (1 == locQwesFeatType[LOCATION_QWES_FEATURE_TYPE_TIME_UNCERTAINTY]);
+    bool cv2xPremiumEnabled = cv2xBasicEnabled &&
+        (1 == locQwesFeatType[LOCATION_QWES_FEATURE_TYPE_QDR3]) &&
+        (1 == locQwesFeatType[LOCATION_QWES_FEATURE_TYPE_CLOCK_ESTIMATE]);
+
+    LOC_LOGd("CV2X_BASIC:%d, CV2X_PREMIUM:%d", cv2xBasicEnabled, cv2xPremiumEnabled);
+    if (cv2xBasicEnabled) {
+        sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_CV2X_LOCATION_BASIC;
+    } else {
+        sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_CV2X_LOCATION_BASIC;
+    }
+    if (cv2xPremiumEnabled) {
+        sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_CV2X_LOCATION_PREMIUM;
+    } else {
+        sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_CV2X_LOCATION_PREMIUM;
+    }
 }
 
 }
