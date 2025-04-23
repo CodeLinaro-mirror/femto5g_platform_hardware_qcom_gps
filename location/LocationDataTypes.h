@@ -1281,22 +1281,31 @@ struct TrackingOptions : LocationOptions {
                qualityLevelAccepted == other.qualityLevelAccepted &&
                preciseType == other.preciseType;
     }
+    inline uint32_t gcd(uint32_t a, uint32_t b) {
+        while (b != 0) {
+            uint32_t temp = b;
+            b = a % b;
+            a = temp;
+        }
+        return a;
+    }
     inline bool multiplexWithForTimeBasedRequest(const TrackingOptions& other) {
         bool updated = false;
-        if (other.minInterval < minInterval) {
-            updated = true;
-            if (minInterval % other.minInterval != 0) {
-                minInterval = MIN_GNSS_TRACKING_INTERVAL;
-            } else {
-                minInterval = other.minInterval;
-            }
-        } else if (other.minInterval > minInterval) {
-            // Will update option to true only if tbf's are not multiple of each other
-            if (other.minInterval % minInterval != 0) {
-                updated = true;
-                minInterval = MIN_GNSS_TRACKING_INTERVAL;
-            }
+        uint32_t tbfNew = 0;
+
+        if (other.powerMode == GNSS_POWER_MODE_M5 || powerMode == GNSS_POWER_MODE_M5) {
+            tbfNew = std::min(minInterval, other.minInterval);
+        } else {
+            tbfNew = gcd(other.minInterval, minInterval);
         }
+        if (tbfNew < MIN_GNSS_TRACKING_INTERVAL) {
+            tbfNew = MIN_GNSS_TRACKING_INTERVAL;
+        }
+        if (tbfNew != minInterval) {
+            updated = true;
+            minInterval = tbfNew;
+        }
+
         if (other.powerMode < powerMode) {
             updated = true;
             powerMode = other.powerMode;
