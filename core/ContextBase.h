@@ -150,7 +150,6 @@ typedef struct
    they must all be 32 bit fields. */
 typedef struct
 {
-    uint32_t       CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED;
     uint32_t       MODEM_TYPE;
     uint32_t       CONSTRAINED_TIME_UNCERTAINTY_ENABLED;
     double         CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD;

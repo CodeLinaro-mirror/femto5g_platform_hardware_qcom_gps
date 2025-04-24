@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -114,17 +114,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
                                const GpsLocationExtended &locationExtended,
                                const LocationSystemInfo &systemInfo,
                                unsigned char generate_nmea,
-                               bool custom_gga_fix_quality,
                                std::vector<std::string> &nmeaArraystr,
                                int& indexOfGGA,
                                bool isTagBlockGroupingEnabled);
-
-#define DEBUG_NMEA_MINSIZE 6
-#define DEBUG_NMEA_MAXSIZE 4096
-inline bool loc_nmea_is_debug(const char* nmea, int length) {
-    return ((nullptr != nmea) &&
-            (length >= DEBUG_NMEA_MINSIZE) && (length <= DEBUG_NMEA_MAXSIZE) &&
-            (nmea[0] == '$') && (nmea[1] == 'P') && (nmea[2] == 'Q') && (nmea[3] == 'W'));
-}
 
 #endif // LOC_ENG_NMEA_H

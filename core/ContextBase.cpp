@@ -98,9 +98,7 @@ LocationCapabilitiesMask ContextBase::sHwCapabilitiesMask = 0;
 
 const loc_param_s_type ContextBase::mIzat_conf_table[] =
 {
-  {"CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED",
-           &mIzat_conf.CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED, NULL, 'n'},
-  {"MODEM_TYPE",                     &mIzat_conf.MODEM_TYPE,                     NULL, 'n' },
+  {"MODEM_TYPE",                     &mIzat_conf.MODEM_TYPE,     NULL, 'n' },
   {"CONSTRAINED_TIME_UNCERTAINTY_ENABLED",
            &mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED,      NULL, 'n'},
   {"CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD",
@@ -232,7 +230,6 @@ void ContextBase::readConfig()
         /* default configuration value of position assisted clock estimator mode */
         mIzat_conf.POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED = 0;
 
-        mIzat_conf.CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED = 0;
         /* By default we use unknown modem type*/
         mIzat_conf.MODEM_TYPE = 1;
 

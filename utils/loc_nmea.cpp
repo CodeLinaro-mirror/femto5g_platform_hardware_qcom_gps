@@ -1178,17 +1178,17 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_nmea_get_fix_quality(const UlpLocation & location,
                                      const GpsLocationExtended & locationExtended,
-                                     bool custom_gga_fix_quality,
-                                     char ggaGpsQuality[3],
+                                     char & ggaGpsQuality,
                                      char & rmcModeIndicator,
                                      char & vtgModeIndicator,
                                      char gnsModeIndicator[7]) {
 
-    ggaGpsQuality[0] = '0'; // 0 means no fix
+    ggaGpsQuality = '0'; // 0 means no fix
     rmcModeIndicator = 'N'; // N means no fix
     vtgModeIndicator = 'N'; // N means no fix
     memset(gnsModeIndicator, 'N', 6); // N means no fix
     gnsModeIndicator[6] = '\0';
+
     do {
         if (!(location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG)){
             break;
@@ -1197,7 +1197,7 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
         if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_POS_TECH_MASK) {
             if ((LOC_POS_TECH_MASK_SENSORS == locationExtended.tech_mask) ||
                 (LOC_POS_TECH_MASK_PROPAGATED & locationExtended.tech_mask)) {
-                ggaGpsQuality[0] = '6'; // 6 means estimated (dead reckoning)
+                ggaGpsQuality = '6'; // 6 means estimated (dead reckoning)
                 rmcModeIndicator = 'E'; // E means estimated (dead reckoning)
                 vtgModeIndicator = 'E'; // E means estimated (dead reckoning)
                 memset(gnsModeIndicator, 'E', 6); // E means estimated (dead reckoning)
@@ -1207,7 +1207,7 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
         // NOTE: Order of the check is important
         if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_NAV_SOLUTION_MASK) {
             if (LOC_NAV_MASK_PPP_CORRECTION & locationExtended.navSolutionMask) {
-                ggaGpsQuality[0] = '2';    // 2 means DGPS fix
+                ggaGpsQuality = '2';    // 2 means DGPS fix
                 rmcModeIndicator = 'P'; // P means precise
                 vtgModeIndicator = 'P'; // P means precise
                 if (locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask ? 1 : 0)
@@ -1224,7 +1224,7 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                     gnsModeIndicator[5] = 'P'; // P means precise
                 break;
             } else if (LOC_NAV_MASK_RTK_FIXED_CORRECTION & locationExtended.navSolutionMask){
-                ggaGpsQuality[0] = '4';    // 4 means RTK Fixed fix
+                ggaGpsQuality = '4';    // 4 means RTK Fixed fix
                 rmcModeIndicator = 'R'; // use R (RTK fixed)
                 vtgModeIndicator = 'D'; // use D (differential) as
                                         // no RTK fixed defined for VTG in NMEA 183 spec
@@ -1242,7 +1242,7 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                     gnsModeIndicator[5] = 'R'; // R means RTK fixed
                 break;
             } else if (LOC_NAV_MASK_RTK_CORRECTION & locationExtended.navSolutionMask){
-                ggaGpsQuality[0] = '5';    // 5 means RTK float fix
+                ggaGpsQuality = '5';    // 5 means RTK float fix
                 rmcModeIndicator = 'F'; // F means RTK float fix
                 vtgModeIndicator = 'D'; // use D (differential) as
                                         // no RTK float defined for VTG in NMEA 183 spec
@@ -1260,7 +1260,7 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                     gnsModeIndicator[5] = 'F'; // F means RTK float fix
                 break;
             } else if (LOC_NAV_MASK_DGNSS_CORRECTION & locationExtended.navSolutionMask){
-                ggaGpsQuality[0] = '2';    // 2 means DGPS fix
+                ggaGpsQuality = '2';    // 2 means DGPS fix
                 rmcModeIndicator = 'D'; // D means differential
                 vtgModeIndicator = 'D'; // D means differential
                 if (locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask ? 1 : 0)
@@ -1277,7 +1277,7 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                     gnsModeIndicator[5] = 'D'; // D means differential
                 break;
             } else if (LOC_NAV_MASK_SBAS_CORRECTION_IONO & locationExtended.navSolutionMask){
-                ggaGpsQuality[0] = '2';    // 2 means DGPS fix
+                ggaGpsQuality = '2';    // 2 means DGPS fix
                 rmcModeIndicator = 'D'; // D means differential
                 vtgModeIndicator = 'D'; // D means differential
                 if (locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask ? 1 : 0)
@@ -1298,7 +1298,7 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
         // NOTE: Order of the check is important
         if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_POS_TECH_MASK) {
             if (LOC_POS_TECH_MASK_SATELLITE & locationExtended.tech_mask) {
-                ggaGpsQuality[0] = '1'; // 1 means GPS
+                ggaGpsQuality = '1'; // 1 means GPS
                 rmcModeIndicator = 'A'; // A means autonomous
                 vtgModeIndicator = 'A'; // A means autonomous
                 if (locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask ? 1 : 0)
@@ -1318,54 +1318,7 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
         }
     } while (0);
 
-    do {
-        // check for customized nmea enabled or not
-        // with customized GGA quality enabled
-        // PPP fix w/o sensor: 59, PPP fix w/ sensor: 69
-        // DGNSS/SBAS correction fix w/o sensor: 2, w/ sensor: 62
-        // RTK fixed fix w/o sensor: 4, w/ sensor: 64
-        // RTK float fix w/o sensor: 5, w/ sensor: 65
-        // SPE fix w/o sensor: 1, and w/ sensor: 61
-        // Sensor dead reckoning fix: 6
-        if (true == custom_gga_fix_quality) {
-            if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_NAV_SOLUTION_MASK) {
-                // PPP fix w/o sensor: fix quality will now be 59
-                // PPP fix w sensor: fix quality will now be 69
-                if (LOC_NAV_MASK_PPP_CORRECTION & locationExtended.navSolutionMask) {
-                    if ((locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_POS_TECH_MASK) &&
-                        (LOC_POS_TECH_MASK_SENSORS & locationExtended.tech_mask)) {
-                        ggaGpsQuality[0] = '6';
-                        ggaGpsQuality[1] = '9';
-                    } else {
-                        ggaGpsQuality[0] = '5';
-                        ggaGpsQuality[1] = '9';
-                    }
-                    break;
-                }
-            }
-
-            if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_POS_TECH_MASK) {
-                if (LOC_POS_TECH_MASK_SENSORS & locationExtended.tech_mask){
-                    char ggaQuality_copy = ggaGpsQuality[0];
-                    ggaGpsQuality[0] = '6'; // 6 sensor assisted
-                    // RTK fixed fix w/ sensor: fix quality will now be 64
-                    // RTK float fix w/ sensor: 65
-                    // DGNSS and/or SBAS correction fix and w/ sensor: 62
-                    // GPS fix without correction and w/ sensor: 61
-                    if ((LOC_NAV_MASK_RTK_FIXED_CORRECTION & locationExtended.navSolutionMask)||
-                            (LOC_NAV_MASK_RTK_CORRECTION & locationExtended.navSolutionMask)||
-                            (LOC_NAV_MASK_DGNSS_CORRECTION & locationExtended.navSolutionMask)||
-                            (LOC_NAV_MASK_SBAS_CORRECTION_IONO & locationExtended.navSolutionMask)||
-                            (LOC_POS_TECH_MASK_SATELLITE & locationExtended.tech_mask)) {
-                        ggaGpsQuality[1] = ggaQuality_copy;
-                        break;
-                    }
-                }
-            }
-        }
-    } while (0);
-
-    LOC_LOGv("gps quality: %s, rmc mode indicator: %c, vtg mode indicator: %c",
+    LOC_LOGv("gps quality: %c, rmc mode indicator: %c, vtg mode indicator: %c",
              ggaGpsQuality, rmcModeIndicator, vtgModeIndicator);
 }
 
@@ -1397,7 +1350,6 @@ void loc_nmea_generate_pos(const UlpLocation &location,
                                const GpsLocationExtended &locationExtended,
                                const LocationSystemInfo &systemInfo,
                                unsigned char generate_nmea,
-                               bool custom_gga_fix_quality,
                                std::vector<std::string> &nmeaArraystr,
                                int& indexOfGGA,
                                bool isTagBlockGroupingEnabled)
@@ -1610,11 +1562,11 @@ void loc_nmea_generate_pos(const UlpLocation &location,
             talker[1] = sv_meta.talker[1];
         }
 
-        char ggaGpsQuality[3] = {'0', '\0', '\0'};
+        char ggaGpsQuality = '0';
         char rmcModeIndicator = 'N';
         char vtgModeIndicator = 'N';
         char gnsModeIndicator[7] = {'N', 'N', 'N', 'N', 'N', 'N', '\0'};
-        loc_nmea_get_fix_quality(location, locationExtended, custom_gga_fix_quality,
+        loc_nmea_get_fix_quality(location, locationExtended,
                                  ggaGpsQuality, rmcModeIndicator, vtgModeIndicator, gnsModeIndicator);
 
         // -------------------
@@ -2091,15 +2043,15 @@ void loc_nmea_generate_pos(const UlpLocation &location,
                 svUsedCount = MAX_SATELLITES_IN_USE;
             if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_DOP)
             {
-                length = snprintf(pMarker, lengthRemaining, "%s,%02d,%.1f,",
+                length = snprintf(pMarker, lengthRemaining, "%c,%02d,%.1f,",
                                   ggaGpsQuality, svUsedCount, locationExtended.hdop);
             } else if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_EXT_DOP) {
-                length = snprintf(pMarker, lengthRemaining, "%s,%02d,%.1f,",
+                length = snprintf(pMarker, lengthRemaining, "%c,%02d,%.1f,",
                                   ggaGpsQuality, svUsedCount, locationExtended.extDOP.HDOP);
             }
             else
             {   // no hdop
-                length = snprintf(pMarker, lengthRemaining, "%s,%02d,,",
+                length = snprintf(pMarker, lengthRemaining, "%c,%02d,,",
                                   ggaGpsQuality, svUsedCount);
             }
 

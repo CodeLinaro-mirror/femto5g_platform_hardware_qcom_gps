@@ -4427,7 +4427,6 @@ void GnssAdapter::reportPositionNmea(const UlpLocation& ulpLocation,
                           (0 == ulpLocation.gpsLocation.longitude) &&
                           (LOC_RELIABILITY_NOT_SET == locationExtended.horizontal_reliability));
         uint8_t generate_nmea = (LOC_SESS_SUCCESS == status && !blank_fix);
-        bool custom_nmea_gga = (1 == ContextBase::mIzat_conf.CUSTOM_NMEA_GGA_FIX_QUALITY_ENABLED);
         bool isTagBlockGroupingEnabled =
                 (1 == ContextBase::mGps_conf.NMEA_TAG_BLOCK_GROUPING_ENABLED);
         std::vector<std::string> nmeaArraystr;
@@ -4435,7 +4434,7 @@ void GnssAdapter::reportPositionNmea(const UlpLocation& ulpLocation,
         bool nmeaGenerated = false;
         if (needReportEngineNmea || needReportGnssNmea) {
             loc_nmea_generate_pos(ulpLocation, locationExtended, mLocSystemInfo, generate_nmea,
-                     custom_nmea_gga, nmeaArraystr, indexOfGGA, isTagBlockGroupingEnabled);
+                     nmeaArraystr, indexOfGGA, isTagBlockGroupingEnabled);
             nmeaGenerated = true;
             if (false == isPreciseEnabled()) {
                 if (mNmeaReqEngTypeMask & LOC_REQ_ENGINE_FUSED_BIT) {
@@ -4456,7 +4455,7 @@ void GnssAdapter::reportPositionNmea(const UlpLocation& ulpLocation,
         if (isDgnssNmeaRequired()) {
             if (!nmeaGenerated && (LOC_OUTPUT_ENGINE_SPE == locationExtended.locOutputEngType)) {
                 loc_nmea_generate_pos(ulpLocation, locationExtended, mLocSystemInfo, generate_nmea,
-                     custom_nmea_gga, nmeaArraystr, indexOfGGA, isTagBlockGroupingEnabled);
+                     nmeaArraystr, indexOfGGA, isTagBlockGroupingEnabled);
             }
             if (-1 != indexOfGGA) {
                 mDgnssState |= DGNSS_STATE_NO_NMEA_PENDING;
