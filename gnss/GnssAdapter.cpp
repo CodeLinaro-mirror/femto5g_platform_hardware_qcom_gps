@@ -3139,7 +3139,7 @@ GnssAdapter::handleEngineUpEvent()
             // must be called only after capabilities are known
             mAdapter.setConfig();
             mAdapter.setTribandState();
-            mAdapter.setPreciseSessionConfig();
+            mAdapter.setPreciseSessionConfig(mAdapter.mPreciseType);
             mAdapter.notifyPreciseLocation();
             mAdapter.gnssSvConfigUpdate();
             mAdapter.updateSystemPowerState(mAdapter.getSystemPowerState());
@@ -3419,7 +3419,7 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                     mAdapter.startTimeBasedTrackingMultiplex(mClient, mSessionId, mOptions);
                 mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
                 mAdapter.setTribandState();
-                mAdapter.setPreciseSessionConfig();
+                mAdapter.setPreciseSessionConfig(mOptions.preciseType);
                 mAdapter.notifyPreciseLocation();
 
                 if (reportToClientWithNoWait) {
@@ -3532,13 +3532,6 @@ GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId,
     setLocPositionMode(locPosMode);
     mPreciseType = trackingOptions.preciseType;
     mCorrectionType = trackingOptions.correctionType;
-    // inform engine hub that GNSS session is about to start
-    mEngHubProxy->gnssSetFixMode(mLocPositionMode);
-    mEngHubProxy->gnssStartFix(trackingOptions.preciseType);
-    // inform CDFW that GNSS session is about to start
-    if (mCdfwInterface) {
-        mCdfwInterface->updateTrackingStatus(true);
-    }
 
     // want to run SPE session at a fixed min interval in some automotive scenarios
     // use a local copy of TrackingOptions as the TBF may get modified in the
@@ -3575,13 +3568,7 @@ GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
     // save position mode parameters
     setLocPositionMode(locPosMode);
 
-    // inform engine hub that GNSS session is about to start
-    mEngHubProxy->gnssSetFixMode(mLocPositionMode);
-    mEngHubProxy->gnssStartFix(updatedOptions.preciseType);
-    // inform CDFW that GNSS session is about to start
-    if (mCdfwInterface) {
-        mCdfwInterface->updateTrackingStatus(true);
-    }
+    setPreciseSessionConfig(updatedOptions.preciseType);
 
     // want to run SPE session at a fixed min interval in some automotive scenarios
     // use a local copy of TrackingOptions as the TBF may get modified in the
@@ -3743,6 +3730,7 @@ GnssAdapter::stopTrackingCommand(LocationAPI* client, uint32_t id)
         LocApiBase& mApi;
         LocationAPI* mClient;
         uint32_t mSessionId;
+        mutable PreciseType mPreciseType;
         inline MsgStopTracking(GnssAdapter& adapter,
                                LocApiBase& api,
                                LocationAPI* client,
@@ -3759,12 +3747,18 @@ GnssAdapter::stopTrackingCommand(LocationAPI* client, uint32_t id)
                 mAdapter.reportResponse(mClient, LOCATION_ERROR_ID_UNKNOWN, mSessionId);
                 return;
             }
+            // find the session it is going to stop
+            LocationSessionKey key(mClient, mSessionId);
+            auto it = mAdapter.mTimeBasedTrackingSessions.find(key);
+            if (it != mAdapter.mTimeBasedTrackingSessions.end()) {
+                mPreciseType = (it->second).preciseType;
+            }
             // Api doesn't support multiple clients for time based tracking, so mutiplex
             bool reportToClientWithNoWait =
                     mAdapter.stopTimeBasedTrackingMultiplex(mClient, mSessionId);
             mAdapter.eraseTrackingSession(mClient, mSessionId);
             mAdapter.setTribandState();
-            mAdapter.setPreciseSessionConfig();
+            mAdapter.setPreciseSessionConfig(mPreciseType);
             mAdapter.notifyPreciseLocation();
 
             if (reportToClientWithNoWait) {
@@ -3823,9 +3817,6 @@ GnssAdapter::stopTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t id)
 void
 GnssAdapter::stopTracking(LocationAPI* client, uint32_t id)
 {
-    // inform engine hub that GNSS session has stopped
-    mEngHubProxy->gnssStopFix();
-
     // client is nullptr when we want to stop any tracking session,
     // e.g. when suspend.
     mLocApi->stopTimeBasedTracking((nullptr == client) ? nullptr :
@@ -3835,14 +3826,6 @@ GnssAdapter::stopTracking(LocationAPI* client, uint32_t id)
         locReleaseWakeLock();
         mIsWakeLockActive = false;
     }));
-
-    if (isDgnssNmeaRequired()) {
-        mDgnssState &= ~DGNSS_STATE_NO_NMEA_PENDING;
-    }
-    stopDgnssNtrip();
-    if (mCdfwInterface) {
-        mCdfwInterface->updateTrackingStatus(false);
-    }
 
     mPositionElapsedRealTimeCal.reset();
 
@@ -7862,30 +7845,51 @@ void GnssAdapter::configPrecisePositioningCommand(
     sendMsg(new MsgConfigPrecisePositioning(*this, enable, appHash, featureId));
 }
 
-void GnssAdapter::setPreciseSessionConfig() {
+void GnssAdapter::setPreciseSessionConfig(PreciseType preciseType) {
 
     struct MsgConfigPrecisePositioning : public LocMsg {
         GnssAdapter& mAdapter;
-        bool mEnable;
+        bool mIsPreciseRunning;
         PreciseType mPreciseType;
 
         inline MsgConfigPrecisePositioning(GnssAdapter& adapter,
-                                           bool enable,
+                                           bool isPreciseRunning,
                                            PreciseType preciseType) :
             LocMsg(),
             mAdapter(adapter),
-            mEnable(enable),
+            mIsPreciseRunning(isPreciseRunning),
             mPreciseType(preciseType) {}
         inline virtual void proc() const {
-            LOC_LOGd("ConfigPrecisePositioning: enable: %d, preciseType: %d", mEnable,
-                    mPreciseType);
+            if (!mIsPreciseRunning) {
+                // inform engine hub that GNSS session has stopped
+                mAdapter.mEngHubProxy->gnssStopFix(mPreciseType);
+                if (mAdapter.isDgnssNmeaRequired()) {
+                    mAdapter.mDgnssState &= ~DGNSS_STATE_NO_NMEA_PENDING;
+                }
+                mAdapter.stopDgnssNtrip();
+                // inform CDFW that GNSS session has stopped
+                if (mAdapter.mCdfwInterface) {
+                    mAdapter.mCdfwInterface->updateTrackingStatus(false);
+                }
+            } else {
+                // inform engine hub that GNSS session is about to start
+                mAdapter.mEngHubProxy->gnssSetFixMode(mAdapter.mLocPositionMode);
+                mAdapter.mEngHubProxy->gnssStartFix(mPreciseType);
+                // inform CDFW that GNSS session is about to start
+                if (mAdapter.mCdfwInterface) {
+                    mAdapter.mCdfwInterface->updateTrackingStatus(true);
+                }
+            }
+            /** if mIsPreciseRunning is true, notify precise session with mPreciseType will start
+             *  if mIsPreciseRunning is false, noify precise session with mPreciseType will stop
+             */
             if (PRECISE_TYPE_UNKNOWN != mPreciseType) {
-                mAdapter.mLocApi->configPrecisePositioning(mPreciseType, mEnable);
+                mAdapter.mLocApi->configPrecisePositioning(mPreciseType, mIsPreciseRunning);
             }
         }
     };
-    LOC_LOGd("isInSession()=%d", isInSession());
-    sendMsg(new MsgConfigPrecisePositioning(*this, isInSession(), mPreciseType));
+    LOC_LOGd("isPreciseSession()=%d, preciseType=%d", isPreciseSession(), preciseType);
+    sendMsg(new MsgConfigPrecisePositioning(*this, isPreciseSession(), preciseType));
 }
 
 
