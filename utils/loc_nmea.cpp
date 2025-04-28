@@ -47,6 +47,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define BDS_SV_ID_OFFSET     (200)
 #define GALILEO_SV_ID_OFFSET (300)
 #define NAVIC_SV_ID_OFFSET   (400)
+#define GPS_SBAS_PRN_MAX     (158)
 #define MAX_SV_COUNT_SUPPORTED_IN_ONE_CONSTELLATION  64
 #define MAX_SATELLITES_IN_USE 12
 #define MSEC_IN_ONE_WEEK      604800000ULL
@@ -911,7 +912,7 @@ static void loc_nmea_generate_GSV(const GnssSvNotification &svNotify,
                     svIdOffset = 0;
                 } else if (GNSS_SV_TYPE_SBAS == svType) {
                     // only process GPS SBAS
-                    if (svId >= 120 && svId <= 158) {
+                    if (svId >= SBAS_SV_PRN_MIN && svId <= GPS_SBAS_PRN_MAX) {
                         svIdOffset = SBAS_SV_ID_OFFSET;
                     } else {
                         continue;
@@ -2210,7 +2211,9 @@ void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
             } else {
                 // GNSS_SIGNAL_GPS_L1CA, GNSS_SIGNAL_SBAS_L1 or default
                 // If no signal type in report, it means default L1
-                sv_cache_info.gps_l1_count++;
+                if (svNotify.gnssSvs[svOffset].svId <= GPS_SBAS_PRN_MAX) {
+                    sv_cache_info.gps_l1_count++;
+                }
             }
         }
         else if (GNSS_SV_TYPE_GLONASS == svNotify.gnssSvs[svOffset].type)
