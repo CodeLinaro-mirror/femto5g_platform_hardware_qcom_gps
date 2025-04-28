@@ -18,9 +18,9 @@ PRODUCT_PACKAGES += libbatching
 PRODUCT_PACKAGES += libgeofencing
 PRODUCT_PACKAGES += libloc_core
 PRODUCT_PACKAGES += libgnss
+PRODUCT_PACKAGES += libgnssauto_power
 
 ifeq ($(strip $(TARGET_BOARD_AUTO)),true)
-PRODUCT_PACKAGES += libgnssauto_power
 PRODUCT_PACKAGES += libgnss_car_powerpolicy
 endif #TARGET_BOARD_AUTO
 
