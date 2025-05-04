@@ -19,7 +19,7 @@
  */
 /*
 Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -88,6 +88,8 @@ ScopedAStatus Gnss::setCallback(const shared_ptr<IGnssCallback>& callback) {
 ScopedAStatus Gnss::close() {
     mApi.gnssStop();
     mApi.gnssDisable();
+    LOC_LOGv("IGnss::close triggering IGnssMeasurement::close");
+    mGnssMeasurementInterface->close();
     return ScopedAStatus::ok();
 }
 

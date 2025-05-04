@@ -90,8 +90,9 @@ static void sleepIfInShutdown() {
     }
 }
 
-#define GNSS_AUTO_POWER_LIBNAME  "libgnssauto_power.so"
-#define GNSS_WEAR_POWER_LIBNAME  "libgnsswear_power.so"
+#define GNSS_AUTO_POWER_LIBNAME   "libgnssauto_power.so"
+#define GNSS_WEAR_POWER_LIBNAME   "libgnsswear_power.so"
+#define GNSS_WEAR_SMC_HAL_LIBNAME "libgnsswear_smc.so"
 
 typedef const void* (*gnssPowerHandler)(void);
 
@@ -119,6 +120,19 @@ int initializeGnssWearPowerHandler() {
         return 0;
     }
     return -1;
+}
+
+void initializeGnssWearSmcHalHandler() {
+
+    void * handle = nullptr;
+    gnssPowerHandler getter = (gnssPowerHandler) dlGetSymFromLib(handle, GNSS_WEAR_SMC_HAL_LIBNAME,
+                                                                 "initGnssSmcHalHandler");
+    if (nullptr != getter) {
+        getter();
+        ALOGI("initializeGnssWearSmcHalHandler Initialized!");
+    } else {
+        ALOGW("Gnss Wear Smc Hal Handler unavailable.");
+    }
 }
 
 void initializeGnssPowerHandler() {
@@ -170,6 +184,8 @@ int main() {
     }
     // Load gnss power handler
     initializeGnssPowerHandler();
+    //Load gnss wear smc handler
+    initializeGnssWearSmcHalHandler();
     // Loc AIDL service end
     ABinderProcess_joinThreadPool();
 
