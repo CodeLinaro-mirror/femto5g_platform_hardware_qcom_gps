@@ -62,6 +62,12 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+/*
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef __LOC_CONTEXT_BASE__
 #define __LOC_CONTEXT_BASE__
 
@@ -91,6 +97,7 @@ typedef struct loc_gps_cfg_s
     char           XTRA_SERVER_2[LOC_MAX_PARAM_STRING];
     char           XTRA_SERVER_3[LOC_MAX_PARAM_STRING];
     uint32_t       USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL;
+    uint32_t       NMEA_PROVIDER;
     char           NMEA_REPORT_RATE[LOC_MAX_PARAM_NAME];
     GnssConfigGpsLock   GPS_LOCK;
     uint32_t       A_GLONASS_POS_PROTOCOL_SELECT;
@@ -147,6 +154,16 @@ typedef struct
     double         VELOCITY_RANDOM_WALK_SPECTRAL_DENSITY;
 } loc_sap_cfg_s_type;
 
+// data struct to hold izat process info
+struct izat_process_info {
+   bool valueAddedProcessEnabled;
+   bool gtpDaemonEnabled;
+   bool slimDaemonEnabled;
+   bool eDgnssDaemonEnabled;
+   bool engineServiceEnabled;
+   EngineServiceInfo engineServiceInfo;
+};
+
 using namespace loc_util;
 
 namespace loc_core {
@@ -159,6 +176,7 @@ class ContextBase {
     static const loc_param_s_type mGps_conf_table[];
     static const loc_param_s_type mSap_conf_table[];
     static uint32_t mAntennaInfoVectorSize;
+
 protected:
     const LBSProxyBase* mLBSProxy;
     const MsgTask* mMsgTask;
@@ -197,6 +215,7 @@ public:
     }
     static loc_gps_cfg_s_type mGps_conf;
     static loc_sap_cfg_s_type mSap_conf;
+    static izat_process_info   mIzat_process_conf;
     static bool sIsEngineCapabilitiesKnown;
     static uint64_t sSupportedMsgMask;
     static uint8_t sFeaturesSupported[MAX_FEATURE_LENGTH];
@@ -205,7 +224,8 @@ public:
     static LocationCapabilitiesMask sQwesFeatureMask;
     static LocationHwCapabilitiesMask sHwCapabilitiesMask;
 
-    void readConfig();
+    static void readConfig();
+    static void readIZatConfForValueAddedProcess();
     static uint32_t getCarrierCapabilities();
     void setEngineCapabilities(uint64_t supportedMsgMask,
             uint8_t *featureList, bool gnssMeasurementSupported);
