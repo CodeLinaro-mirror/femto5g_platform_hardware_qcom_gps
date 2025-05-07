@@ -3107,10 +3107,6 @@ GnssAdapter::updateClientsEventMask()
             LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO |
             LOC_API_ADAPTER_BIT_FEATURE_STATUS_UPDATE;
 
-#ifdef FEATURE_AUTOMOTIVE
-    // Subscribe to get GNSS BAND supported information on bootup
-    mask |= LOC_API_ADAPTER_BIT_GNSS_BANDS_SUPPORTED;
-#endif
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
         if (it->second.trackingCb != nullptr ||
             it->second.gnssLocationInfoCb != nullptr ||
