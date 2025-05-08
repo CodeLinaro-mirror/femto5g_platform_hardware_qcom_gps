@@ -364,9 +364,9 @@ LocAdapterBase::getCapabilities()
         if (ContextBase::isAntennaInfoAvailable()) {
             mask |= LOCATION_CAPABILITIES_ANTENNA_INFO;
         }
-        //Get QWES feature status mask
-        mask |= ContextBase::getQwesFeatureStatus();
-
+        if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_GNSS_BANDS_SUPPORTED)) {
+            mask |= LOCATION_CAPABILITIES_GNSS_BANDS_BIT;
+        }
     } else {
         LOC_LOGE("%s]: attempt to get capabilities before they are known.", __func__);
     }
@@ -483,5 +483,9 @@ DEFAULT_IMPL(false)
 
 void LocAdapterBase::
     reportDcMessage(const GnssDcReportInfo& /*dcReport*/)
+DEFAULT_IMPL()
+
+void LocAdapterBase::
+    reportSignalTypeCapabilities(const GnssCapabNotification& /*gnssCapabNotification*/)
 DEFAULT_IMPL()
 } // namespace loc_core
