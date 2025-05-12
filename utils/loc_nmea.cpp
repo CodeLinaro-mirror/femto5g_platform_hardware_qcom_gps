@@ -70,6 +70,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <log_util.h>
 #include <loc_pla.h>
 #include <loc_cfg.h>
+#include <loc_misc_utils.h>
 
 #define GLONASS_SV_ID_OFFSET 64
 #define SBAS_SV_ID_OFFSET    (87)
@@ -1384,11 +1385,11 @@ void loc_nmea_generate_pos(const UlpLocation &location,
     inLsTransition = get_utctime_with_leapsecond_transition
                     (location, locationExtended, systemInfo, utcPosTimestamp);
 
-    time_t utcTime(utcPosTimestamp/1000);
-    struct tm result;
-    tm * pTm = gmtime_r(&utcTime, &result);
+    int64_t utcTime = utcPosTimestamp/1000; // Pass UTC time in seconds
+    struct tm calendarTime = {};
+    tm * pTm = getCalendarTimeFields(&utcTime, &calendarTime);
     if (NULL == pTm) {
-        LOC_LOGE("gmtime failed");
+        LOC_LOGE("getCalendarTimeFields failed");
         return;
     }
 

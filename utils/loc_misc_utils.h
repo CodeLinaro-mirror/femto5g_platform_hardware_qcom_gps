@@ -196,6 +196,42 @@ SIDE EFFECTS
 ===========================================================================*/
 uint64_t getBootTimeMilliSec();
 
+/*===========================================================================
+FUNCTION getCalendarTimeFields
+
+DESCRIPTION
+   This function is used to get Calendar Time fields from UTC time stamp in Seconds.
+   This is local equivalent of gmtime_r and is Y2038 time safe
+
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+    struct tm: Calendar time fields
+
+SIDE EFFECTS
+   N/A
+===========================================================================*/
+
+struct tm *getCalendarTimeFields(const int64_t *utcTimeSec, struct tm *calendarTime);
+
+/*===========================================================================
+FUNCTION isLeapYear
+
+DESCRIPTION
+   This function is used to check if a calendar year is Leap or not.
+
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+    True/ False
+
+SIDE EFFECTS
+   N/A
+===========================================================================*/
+int isLeapYear(int year);
+
 #ifdef __cplusplus
 }
 #endif
