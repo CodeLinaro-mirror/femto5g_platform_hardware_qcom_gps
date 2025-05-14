@@ -78,6 +78,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define TIMECHANGE_FIELD_RAW_OFFSET_TZ "RAW_OFFSET_TZ"
 #define TIMECHANGE_FIELD_DST_OFFSET_TZ "DST_OFFSET_TZ"
 
+#define ASSISTEDGPS_FIELD_ENABLED "IS_ASSISTED_GPS_ENABLED"
+
 #define NETWORKINFO_CARD "ACTIVE_NETWORK_INFO"
 #define NETWORKINFO_FIELD_TYPE "TYPE"
 #define NETWORKINFO_FIELD_TYPENAME "TYPE_NAME"
@@ -196,6 +198,18 @@ void TimeChangeDataItem::stringify(string& valueStr) {
         char time [30];
         snprintf (time, 30, "%" PRIi64, d->mCurrTimeMillis);
         valueStr += string (time);
+    } while (0);
+    EXIT_LOG_WITH_ERROR("%d", result);
+}
+void AssistedGpsDataItem::stringify(string& valueStr) {
+    int32_t result = 0;
+    ENTRY_LOG();
+    do {
+        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(AssistedGpsDataItem, ASSISTED_GPS_DATA_ITEM_ID);
+        valueStr.clear ();
+        valueStr = ASSISTEDGPS_FIELD_ENABLED;
+        valueStr += ": ";
+        valueStr += (d->mEnabled) ? ("true") : ("false");
     } while (0);
     EXIT_LOG_WITH_ERROR("%d", result);
 }
@@ -439,6 +453,18 @@ int32_t TimeChangeDataItem::copyFrom(IDataItemCore* src) {
         s->mCurrTimeMillis = d->mCurrTimeMillis;
         s->mRawOffsetTZ = d->mRawOffsetTZ;
         s->mDstOffsetTZ = d->mDstOffsetTZ;
+        result = 0;
+    } while (0);
+    EXIT_LOG_WITH_ERROR("%d", result);
+    return result;
+}
+int32_t AssistedGpsDataItem::copyFrom(IDataItemCore* src) {
+    int32_t result = -1;
+    ENTRY_LOG();
+    do {
+        COPIER_ERROR_CHECK_AND_DOWN_CAST(AssistedGpsDataItem, ASSISTED_GPS_DATA_ITEM_ID);
+        if (s->mEnabled == d->mEnabled) { result = 0; break; }
+        s->mEnabled = d->mEnabled;
         result = 0;
     } while (0);
     EXIT_LOG_WITH_ERROR("%d", result);

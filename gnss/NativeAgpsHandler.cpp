@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -97,6 +97,14 @@ void NativeAgpsHandler::notify(const unordered_set<IDataItemCore*>& dlist) {
                 LOC_LOGd("updated mConnected:%d, mApn: %s", mConnected, mApn.c_str());
                 break;
             }
+
+            case ASSISTED_GPS_DATA_ITEM_ID: {
+                AssistedGpsDataItem* agpsInfo = static_cast<AssistedGpsDataItem*>(each);
+                mAssistedGpsEnabled = agpsInfo->mEnabled;
+                LOC_LOGd("Assisted GPS Enabled: %d", mAssistedGpsEnabled);
+                break;
+            }
+
             default:
                 break;
         }
@@ -107,14 +115,20 @@ NativeAgpsHandler* NativeAgpsHandler::sLocalHandle = nullptr;
 NativeAgpsHandler::NativeAgpsHandler(IOsObserver* sysStatObs, GnssAdapter& adapter) :
         mSystemStatusObsrvr(sysStatObs), mConnected(false), mAdapter(adapter) {
     sLocalHandle = this;
-    unordered_set<DataItemId> subItemIdList = {NETWORKINFO_DATA_ITEM_ID};
+    unordered_set<DataItemId> subItemIdList = {
+        NETWORKINFO_DATA_ITEM_ID,
+        ASSISTED_GPS_DATA_ITEM_ID
+    };
     mSystemStatusObsrvr->subscribe(subItemIdList, this);
 }
 
 NativeAgpsHandler::~NativeAgpsHandler() {
     if (nullptr != mSystemStatusObsrvr) {
         LOC_LOGd("Unsubscribe for network info.");
-        unordered_set<DataItemId> subItemIdList = {NETWORKINFO_DATA_ITEM_ID};
+        unordered_set<DataItemId> subItemIdList = {
+            NETWORKINFO_DATA_ITEM_ID,
+            ASSISTED_GPS_DATA_ITEM_ID
+        };
         mSystemStatusObsrvr->unsubscribe(subItemIdList, this);
     }
     sLocalHandle = nullptr;

@@ -662,6 +662,7 @@ SystemStatus::SystemStatus(const MsgTask* msgTask) :
     mCache.mRilCellInfo.clear();
     mCache.mModel.clear();
     mCache.mManufacturer.clear();
+    mCache.mAssistedGps.clear();
     mCache.mTimeZoneChange.clear();
     mCache.mTimeChange.clear();
     mCache.mWifiSupplicantStatus.clear();
@@ -810,6 +811,10 @@ bool SystemStatus::eventDataItemNotify(IDataItemCore* dataitem)
                     SystemStatusInEmergencyCall(
                         *(static_cast<InEmergencyCallDataItem*>(dataitem))));
             break;
+        case ASSISTED_GPS_DATA_ITEM_ID:
+            ret = setIteminReport(mCache.mAssistedGps,
+                    SystemStatusAssistedGps(*(static_cast<AssistedGpsDataItem*>(dataitem))));
+            break;
         case TIMEZONE_CHANGE_DATA_ITEM_ID:
             ret = setIteminReport(mCache.mTimeZoneChange,
                     SystemStatusTimeZoneChange(*(static_cast<TimeZoneChangeDataItem*>(dataitem))));
@@ -911,6 +916,7 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly,
         getIteminReport(report.mRilCellInfo, mCache.mRilCellInfo);
         getIteminReport(report.mModel, mCache.mModel);
         getIteminReport(report.mManufacturer, mCache.mManufacturer);
+        getIteminReport(report.mAssistedGps, mCache.mAssistedGps);
         getIteminReport(report.mTimeZoneChange, mCache.mTimeZoneChange);
         getIteminReport(report.mTimeChange, mCache.mTimeChange);
         getIteminReport(report.mWifiSupplicantStatus, mCache.mWifiSupplicantStatus);
@@ -942,6 +948,7 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly,
         report.mRilCellInfo.clear();
         report.mModel.clear();
         report.mManufacturer.clear();
+        report.mAssistedGps.clear();
         report.mTimeZoneChange.clear();
         report.mTimeChange.clear();
         report.mWifiSupplicantStatus.clear();
