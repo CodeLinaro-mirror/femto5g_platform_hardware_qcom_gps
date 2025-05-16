@@ -6020,6 +6020,10 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
             // before requesting new ODCPI to avoid spamming ODCPI requests
             } else if (!(mOdcpiStateMask & ODCPI_REQ_ACTIVE) && true == mOdcpiTimer.isActive()) {
                 mOdcpiStateMask |= ODCPI_REQ_ACTIVE;
+                if (nullptr != mEsStatusCb) {
+                    mEsStatusCb(request.isEmergencyMode);
+                }
+                sendEmergencyCallStatusEvent = true;
             }
             mOdcpiRequest = request;
 
