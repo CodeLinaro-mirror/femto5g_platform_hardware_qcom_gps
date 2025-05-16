@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -78,6 +78,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SystemStatus.h>
 #include <SystemStatusOsObserver.h>
 #include <DataItemConcreteTypes.h>
+#include <limits.h>
 
 namespace loc_core
 {
@@ -147,10 +148,10 @@ public:
     uint32_t mGpsBpAmpQ;  // xB
     uint32_t mAdcI;       // xC
     uint32_t mAdcQ;       // xD
-    uint32_t mJammerGps;  // xE
-    uint32_t mJammerGlo;  // xF
-    uint32_t mJammerBds;  // x10
-    uint32_t mJammerGal;  // x11
+    uint32_t mJammerGps = UINT32_MAX;  // xE
+    uint32_t mJammerGlo = UINT32_MAX;  // xF
+    uint32_t mJammerBds = UINT32_MAX;  // x10
+    uint32_t mJammerGal = UINT32_MAX;  // x11
     uint32_t mRecErrorRecovery; // x12
     int32_t  mLeapSeconds;// x17
     int32_t  mLeapSecUnc; // x18
