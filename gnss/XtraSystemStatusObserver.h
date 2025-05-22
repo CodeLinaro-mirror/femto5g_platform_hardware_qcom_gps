@@ -41,10 +41,11 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <LocIpc.h>
 #include <LocTimer.h>
 #include <stdlib.h>
+#include <SystemStatusOsObserver.h>
 
 using namespace std;
 using namespace loc_util;
-using loc_core::IOsObserver;
+using namespace loc_core;
 using loc_core::IDataItemObserver;
 using loc_core::IDataItemCore;
 
@@ -75,7 +76,8 @@ class XtraSystemStatusObserver : public IDataItemObserver {
 
 public :
     // constructor & destructor
-    XtraSystemStatusObserver(GnssAdapter* adapter, IOsObserver* sysStatObs, const MsgTask* msgTask);
+    XtraSystemStatusObserver(GnssAdapter* adapter, SystemStatusOsObserver* sysStatObs,
+            const MsgTask* msgTask);
     inline virtual ~XtraSystemStatusObserver() {
         subscribe(false);
         mIpc.stopNonBlockingListening();
@@ -84,11 +86,11 @@ public :
     void init();
     // IDataItemObserver overrides
     inline virtual void getName(string& name);
-    virtual void notify(const unordered_set<IDataItemCore*>& dlist);
+    virtual void notify(const unordered_set<const IDataItemCore*>& dlist);
 
     bool updateLockStatus(GnssConfigGpsLock lock);
     bool updateConnections(uint64_t allConnections,
-            loc_core::NetworkInfoType* networkHandleInfo, bool roaming);
+            uint64_t networkHandle, NetworkType type, bool roaming);
     bool updateMccMnc(const string& mccmncCountry);
     bool updateXtraThrottle(const bool enabled);
     bool updatePowerState(const PowerStateType powerState);
@@ -110,12 +112,13 @@ public :
 
 private:
     GnssAdapter*   mAdapter;
-    IOsObserver*   mSystemStatusObsrvr;
+    SystemStatusOsObserver*   mSystemStatusObsrvr;
     const MsgTask* mMsgTask;
     GnssConfigGpsLock mGpsLock;
     LocIpc mIpc;
     uint64_t mConnections;
-    loc_core::NetworkInfoType mNetworkHandle[MAX_NETWORK_HANDLES];
+    uint64_t mNetworkHandle;
+    NetworkType mNetworkType;
     bool mRoaming;
     string mTac;
     string mMccmnc;

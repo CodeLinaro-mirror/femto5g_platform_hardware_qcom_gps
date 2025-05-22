@@ -52,7 +52,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <sstream>
 #include <LocAdapterBase.h>
 #include <DataItemId.h>
-#include <DataItemsFactoryProxy.h>
 #include <DataItemConcreteTypes.h>
 #include <GnssAdapter.h>
 #include <XtraSystemStatusObserver.h>
@@ -66,11 +65,11 @@ using namespace loc_core;
 #define LOG_TAG "LocSvc_XSSO"
 
 class XtraIpcListener : public ILocIpcListener {
-    IOsObserver*    mSystemStatusObsrvr;
+    SystemStatusOsObserver*    mSystemStatusObsrvr;
     const MsgTask* mMsgTask;
     XtraSystemStatusObserver& mXSSO;
 public:
-    inline XtraIpcListener(IOsObserver* observer, const MsgTask* msgTask,
+    inline XtraIpcListener(SystemStatusOsObserver* observer, const MsgTask* msgTask,
                            XtraSystemStatusObserver& xsso) :
             mSystemStatusObsrvr(observer), mMsgTask(msgTask), mXSSO(xsso) {}
     virtual void onReceive(const char* data, uint32_t length,
@@ -150,7 +149,7 @@ public:
 };
 
 XtraSystemStatusObserver::XtraSystemStatusObserver(GnssAdapter* adapter,
-                                                   IOsObserver* sysStatObs,
+                                                   SystemStatusOsObserver* sysStatObs,
                                                    const MsgTask* msgTask) :
         mAdapter(adapter), mSystemStatusObsrvr(sysStatObs), mMsgTask(msgTask),
         mGpsLock(-1), mConnections(~0), mRoaming(false), mXtraThrottle(true),
@@ -197,35 +196,27 @@ bool XtraSystemStatusObserver::updateLockStatus(GnssConfigGpsLock lock) {
 }
 
 bool XtraSystemStatusObserver::updateConnections(uint64_t allConnections,
-        NetworkInfoType* networkHandleInfo, bool roaming) {
+        uint64_t networkHandle, NetworkType type, bool roaming) {
     mIsConnectivityStatusKnown = true;
     mConnections = allConnections;
     mRoaming = roaming;
 
     LOC_LOGd("updateConnections mConnections:%" PRIx64 " mRoaming:%u",
         mConnections, mRoaming);
-    for (uint8_t i = 0; i < MAX_NETWORK_HANDLES; ++i) {
-        mNetworkHandle[i] = networkHandleInfo[i];
-        LOC_LOGd("updateConnections [%d] networkHandle:%" PRIx64 " networkType:%u",
-            i, mNetworkHandle[i].networkHandle, mNetworkHandle[i].networkType);
-    }
+    mNetworkHandle = networkHandle;
+    mNetworkType = type;
+    LOC_LOGd("updateConnections networkHandle:%" PRIx64 " networkType:%u",
+        mNetworkHandle, mNetworkType);
 
     if (!mReqStatusReceived) {
         return true;
     }
 
+    string networkHandleStr = std::to_string(mNetworkHandle) +":" +
+        std::to_string(mNetworkType);
     stringstream ss;
     ss << "connection" << endl << mConnections << endl
-            << mNetworkHandle[0].toString() << endl
-            << mNetworkHandle[1].toString() << endl
-            << mNetworkHandle[2].toString() << endl
-            << mNetworkHandle[3].toString() << endl
-            << mNetworkHandle[4].toString() << endl
-            << mNetworkHandle[5].toString() << endl
-            << mNetworkHandle[6].toString() << endl
-            << mNetworkHandle[7].toString() << endl
-            << mNetworkHandle[8].toString() << endl
-            << mNetworkHandle[MAX_NETWORK_HANDLES-1].toString() << endl
+            << networkHandleStr << endl
             << (mRoaming ? 1 : 0);
     string s = ss.str();
     LocIpc::send(*mDgnssSender, (const uint8_t*)s.data(), s.size());
@@ -318,19 +309,12 @@ inline bool XtraSystemStatusObserver::onStatusRequested(int32_t statusUpdated) {
 
     stringstream ss;
 
+    string networkHandleStr = std::to_string(mNetworkHandle) +":" +
+        std::to_string(mNetworkType);
     ss << "respondStatus" << endl;
     (mGpsLock == -1 ? ss : ss << mGpsLock) << endl;
     (mConnections == (uint64_t)~0 ? ss : ss << mConnections) << endl
-            << mNetworkHandle[0].toString() << endl
-            << mNetworkHandle[1].toString() << endl
-            << mNetworkHandle[2].toString() << endl
-            << mNetworkHandle[3].toString() << endl
-            << mNetworkHandle[4].toString() << endl
-            << mNetworkHandle[5].toString() << endl
-            << mNetworkHandle[6].toString() << endl
-            << mNetworkHandle[7].toString() << endl
-            << mNetworkHandle[8].toString() << endl
-            << mNetworkHandle[MAX_NETWORK_HANDLES-1].toString() << endl
+            << networkHandleStr << endl
             << mMccmnc << endl << mIsConnectivityStatusKnown;
 
     string s = ss.str();
@@ -523,72 +507,41 @@ void XtraSystemStatusObserver::getName(string& name)
     name = "XtraSystemStatusObserver";
 }
 
-void XtraSystemStatusObserver::notify(const unordered_set<IDataItemCore*>& dlist)
+void XtraSystemStatusObserver::notify(const unordered_set<const IDataItemCore*>& dlist)
 {
-    struct HandleOsObserverUpdateMsg : public LocMsg {
-        XtraSystemStatusObserver* mXtraSysStatObj;
-        list <IDataItemCore*> mDataItemList;
-
-        inline HandleOsObserverUpdateMsg(XtraSystemStatusObserver* xtraSysStatObs,
-                const unordered_set<IDataItemCore*>& dataItemList) :
-                mXtraSysStatObj(xtraSysStatObs) {
-            for (auto eachItem : dataItemList) {
-                IDataItemCore* dataitem = DataItemsFactoryProxy::createNewDataItem(eachItem);
-                if (NULL == dataitem) {
-                    break;
-                }
-
-                mDataItemList.push_back(dataitem);
+    for (auto each : dlist) {
+        switch (each->getId())
+        {
+            case NETWORKINFO_DATA_ITEM_ID:
+            {
+                const NetworkInfoDataItem* networkInfo =
+                        static_cast<const NetworkInfoDataItem*>(each);
+                const LocNetworkInfo &network = networkInfo->mNetInfo;
+                updateConnections(network.mAllTypes,
+                        network.networkHandle, network.networkType, network.mRoaming);
             }
-        }
+            break;
 
-        inline ~HandleOsObserverUpdateMsg() {
-            for (auto itor = mDataItemList.begin(); itor != mDataItemList.end(); ++itor) {
-                if (*itor != nullptr) {
-                    delete *itor;
-                    *itor = nullptr;
-                }
+            case MCCMNC_DATA_ITEM_ID:
+            {
+                const MccmncDataItem* mccmnc = static_cast<const MccmncDataItem*>(each);
+                updateMccMnc(mccmnc->mMccmnc);
             }
-        }
+            break;
 
-        inline void proc() const {
-            for (auto each : mDataItemList) {
-                switch (each->getId())
-                {
-                    case NETWORKINFO_DATA_ITEM_ID:
-                    {
-                        NetworkInfoDataItem* networkInfo = static_cast<NetworkInfoDataItem*>(each);
-                        NetworkInfoType* networkHandleInfo =
-                                static_cast<NetworkInfoType*>(networkInfo->getNetworkHandle());
-                        mXtraSysStatObj->updateConnections(networkInfo->getAllTypes(),
-                                networkHandleInfo, (*networkInfo).mRoaming);
-                    }
-                    break;
-
-                    case MCCMNC_DATA_ITEM_ID:
-                    {
-                        MccmncDataItem* mccmnc = static_cast<MccmncDataItem*>(each);
-                        mXtraSysStatObj->updateMccMnc(mccmnc->mValue);
-                    }
-                    break;
-
-                    case TRACKING_STARTED_DATA_ITEM_ID:
-                    {
-                        TrackingStartedDataItem* trackingStarted =
-                                static_cast<TrackingStartedDataItem*>(each);
-                        if (trackingStarted->mTrackingStarted) {
-                            mXtraSysStatObj->notifySessionStart();
-                        }
-                    }
-                    break;
-
-                    default:
-                    break;
+            case TRACKING_STARTED_DATA_ITEM_ID:
+            {
+                const TrackingStartedDataItem* trackingStarted =
+                        static_cast<const TrackingStartedDataItem*>(each);
+                if (trackingStarted->mIsEnabled) {
+                    notifySessionStart();
                 }
             }
+            break;
+            default:
+            break;
         }
-    };
-    mMsgTask->sendMsg(new (nothrow) HandleOsObserverUpdateMsg(this, dlist));
+    }
 }
 
 bool XtraSystemStatusObserver::updateXtraUserConsent(bool userConsent){

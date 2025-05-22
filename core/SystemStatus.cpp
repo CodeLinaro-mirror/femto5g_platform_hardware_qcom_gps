@@ -44,7 +44,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <loc_pla.h>
 #include <log_util.h>
 #include <loc_nmea.h>
-#include <DataItemsFactoryProxy.h>
 #include <SystemStatus.h>
 #include <SystemStatusOsObserver.h>
 #include <DataItemConcreteTypes.h>
@@ -558,93 +557,6 @@ void SystemStatusLocation::dump()
              mLocation.gpsLocation.speed);
 }
 
-bool SystemStatusNetworkInfo::equals(const SystemStatusItemBase& peer) {
-    const NetworkInfoDataItem peerDI = ((const SystemStatusNetworkInfo&)peer).mDataItem;
-    bool rtv = (mDataItem.mAllTypes == peerDI.mAllTypes) &&
-        (mDataItem.mConnected == peerDI.mConnected);
-    for (uint8_t i = 0; rtv && i < MAX_NETWORK_HANDLES; ++i) {
-        rtv = (mDataItem.mAllNetworkHandles[i] == peerDI.mAllNetworkHandles[i]) && rtv;
-    }
-    rtv = rtv && !peerDI.mApn.compare(mDataItem.mApn);
-    LOC_LOGv("NetworkInfoDataItem quals: %d", rtv);
-    return rtv;
-}
-
-SystemStatusItemBase& SystemStatusNetworkInfo::collate(SystemStatusItemBase& curInfo) {
-        LOC_LOGv("NetworkInfo: mAllTypes=%" PRIx64 " connected=%u mType=%x mApn=%s",
-                 mDataItem.mAllTypes, mDataItem.mConnected, mDataItem.mType,
-                 mDataItem.mApn.c_str());
-        uint64_t allTypes = (static_cast<SystemStatusNetworkInfo&>(curInfo)).mDataItem.mAllTypes;
-        string& apn = (static_cast<SystemStatusNetworkInfo&>(curInfo)).mDataItem.mApn;
-        // Replace current with cached table for now and then update
-        memcpy(mDataItem.mAllNetworkHandles,
-               static_cast<SystemStatusNetworkInfo&>(curInfo).mDataItem.getNetworkHandle(),
-               sizeof(mDataItem.mAllNetworkHandles));
-        // Update the apn for non-mobile type connections.
-        if (TYPE_MOBILE != mDataItem.mType && apn.compare("") != 0) {
-            mDataItem.mApn = apn;
-        }
-        if (mDataItem.mConnected) {
-            mDataItem.mAllTypes |= allTypes;
-            for (uint8_t i = 0; i < MAX_NETWORK_HANDLES; ++i) {
-                if (mDataItem.mNetworkHandle ==
-                        mDataItem.mAllNetworkHandles[i].networkHandle) {
-                    LOC_LOGD("collate duplicate detected, not updating");
-                    break;
-                }
-                if (NETWORK_HANDLE_UNKNOWN ==
-                        mDataItem.mAllNetworkHandles[i].networkHandle) {
-                    mDataItem.mAllNetworkHandles[i].networkHandle =
-                            mDataItem.mNetworkHandle;
-                    mDataItem.mAllNetworkHandles[i].networkType =
-                            (loc_core::NetworkType) mDataItem.mType;
-                    break;
-                }
-            }
-        } else if (0 != mDataItem.mAllTypes) {
-            uint8_t deletedIndex = MAX_NETWORK_HANDLES;
-            uint8_t lastValidIndex = 0;
-            uint8_t typeCount = 0;
-            for (; lastValidIndex < MAX_NETWORK_HANDLES && NETWORK_HANDLE_UNKNOWN !=
-                    mDataItem.mAllNetworkHandles[lastValidIndex].networkHandle;
-                 ++lastValidIndex) {
-                // Maintain count for number of network handles still
-                // connected for given type
-                if (mDataItem.mType ==
-                        mDataItem.mAllNetworkHandles[lastValidIndex].networkType) {
-                    if (mDataItem.mNetworkHandle ==
-                            mDataItem.mAllNetworkHandles[lastValidIndex].networkHandle) {
-                        deletedIndex = lastValidIndex;
-                    } else {
-                        typeCount++;
-                    }
-                }
-
-            }
-            if (lastValidIndex > 0) {
-                --lastValidIndex;
-            }
-
-            if (MAX_NETWORK_HANDLES != deletedIndex) {
-                LOC_LOGd("deletedIndex:%u, lastValidIndex:%u, typeCount:%u",
-                        deletedIndex, lastValidIndex, typeCount);
-                mDataItem.mAllNetworkHandles[deletedIndex] =
-                        mDataItem.mAllNetworkHandles[lastValidIndex];
-                mDataItem.mAllNetworkHandles[lastValidIndex].networkHandle =
-                        NETWORK_HANDLE_UNKNOWN;
-                mDataItem.mAllNetworkHandles[lastValidIndex].networkType = TYPE_UNKNOWN;
-            }
-
-            // If no more handles of given type, set bitmask
-            if (0 == typeCount) {
-                mDataItem.mAllTypes = (allTypes & (~mDataItem.mAllTypes));
-                LOC_LOGD("mAllTypes:%" PRIx64, mDataItem.mAllTypes);
-            }
-        } // else (mDataItem.mConnected == false && mDataItem.mAllTypes == 0)
-          // we keep mDataItem->mAllTypes as 0, which means no more connections.
-        return *this;
-    }
-
 /******************************************************************************
  SystemStatus
 ******************************************************************************/
@@ -677,22 +589,17 @@ void SystemStatus::destroyInstance()
 }
 
 void SystemStatus::resetNetworkInfo() {
-    for (int i=0; i<mCache.mNetworkInfo.size(); ++i) {
-        // Reset all the cached NetworkInfo Items as disconnected
-        eventConnectionStatus(false, mCache.mNetworkInfo[i].mDataItem.mType,
-                mCache.mNetworkInfo[i].mDataItem.mRoaming,
-                mCache.mNetworkInfo[i].mDataItem.mNetworkHandle,
-                mCache.mNetworkInfo[i].mDataItem.mApn);
-    }
+    // Reset all the cached NetworkInfo Items as disconnected
+    mSysStatusObsvr->eventConnectionStatus(false, 0, false, 0, "");
 }
 
-IOsObserver* SystemStatus::getOsObserver()
+SystemStatusOsObserver* SystemStatus::getOsObserver()
 {
-    return &mSysStatusObsvr;
+    return mSysStatusObsvr;
 }
 
 SystemStatus::SystemStatus(const MsgTask* msgTask) :
-    mSysStatusObsvr(this, msgTask), mTracking(false) {
+    mSysStatusObsvr(SystemStatusOsObserver::getInstance(msgTask)), mTracking(false) {
     int result = 0;
     ENTRY_LOG ();
     mCache.mLocation.clear();
@@ -711,18 +618,6 @@ SystemStatus::SystemStatus(const MsgTask* msgTask) :
     mCache.mNavData.clear();
 
     mCache.mPositionFailure.clear();
-
-    mCache.mENH.clear();
-    mCache.mGPSState.clear();
-    mCache.mWifiHardwareState.clear();
-    mCache.mNetworkInfo.clear();
-    mCache.mRilCellInfo.clear();
-    mCache.mModel.clear();
-    mCache.mManufacturer.clear();
-    mCache.mTimeZoneChange.clear();
-    mCache.mTimeChange.clear();
-    mCache.mWifiSupplicantStatus.clear();
-    mCache.mMccMnc.clear();
 
     EXIT_LOG_WITH_ERROR ("%d",result);
 }
@@ -814,119 +709,6 @@ bool SystemStatus::eventPosition(const UlpLocation& location,
 }
 
 /******************************************************************************
-@brief      API to set report DataItem event into internal buffer
-
-@param[In]  DataItem
-
-@return     true when info is updatated
-******************************************************************************/
-bool SystemStatus::eventDataItemNotify(IDataItemCore* dataitem)
-{
-    bool ret = false;
-    pthread_mutex_lock(&mMutexSystemStatus);
-    switch(dataitem->getId())
-    {
-        case ENH_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mENH,
-                    SystemStatusENH(*(static_cast<ENHDataItem*>(dataitem))));
-            break;
-        case GPSSTATE_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mGPSState,
-                    SystemStatusGpsState(*(static_cast<GPSStateDataItem*>(dataitem))));
-            break;
-        case WIFIHARDWARESTATE_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mWifiHardwareState, SystemStatusWifiHardwareState(
-                        *(static_cast<WifiHardwareStateDataItem*>(dataitem))));
-            break;
-        case NETWORKINFO_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mNetworkInfo,
-                    SystemStatusNetworkInfo(*(static_cast<NetworkInfoDataItem*>(dataitem))));
-            // Update latest mAllTypes/mAllNetworkHandles of original obj to notify clients
-            if (ret) {
-                (static_cast<NetworkInfoDataItem*>(dataitem))->mAllTypes =
-                        mCache.mNetworkInfo.back().mDataItem.mAllTypes;
-                memcpy((static_cast<NetworkInfoDataItem*>(dataitem))->mAllNetworkHandles,
-                        mCache.mNetworkInfo.back().mDataItem.mAllNetworkHandles, sizeof((
-                        static_cast<NetworkInfoDataItem*>(dataitem))->mAllNetworkHandles));
-            }
-            break;
-        case RILCELLINFO_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mRilCellInfo,
-                    SystemStatusRilCellInfo(*(static_cast<RilCellInfoDataItem*>(dataitem))));
-            break;
-        case MODEL_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mModel,
-                    SystemStatusModel(*(static_cast<ModelDataItem*>(dataitem))));
-            break;
-        case MANUFACTURER_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mManufacturer,
-                    SystemStatusManufacturer(*(static_cast<ManufacturerDataItem*>(dataitem))));
-            break;
-        case IN_EMERGENCY_CALL_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mInEmergencyCall,
-                    SystemStatusInEmergencyCall(
-                        *(static_cast<InEmergencyCallDataItem*>(dataitem))));
-            break;
-        case TIMEZONE_CHANGE_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mTimeZoneChange,
-                    SystemStatusTimeZoneChange(*(static_cast<TimeZoneChangeDataItem*>(dataitem))));
-            break;
-        case TIME_CHANGE_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mTimeChange,
-                    SystemStatusTimeChange(*(static_cast<TimeChangeDataItem*>(dataitem))));
-            break;
-        case WIFI_SUPPLICANT_STATUS_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mWifiSupplicantStatus, SystemStatusWifiSupplicantStatus(
-                        *(static_cast<WifiSupplicantStatusDataItem*>(dataitem))));
-            break;
-        case MCCMNC_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mMccMnc,
-                    SystemStatusMccMnc(*(static_cast<MccmncDataItem*>(dataitem))));
-            break;
-        case TRACKING_STARTED_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mTrackingStarted,
-                    SystemStatusTrackingStarted(
-                        *(static_cast<TrackingStartedDataItem*>(dataitem))));
-            break;
-        case NTRIP_STARTED_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mNtripStarted,
-                    SystemStatusNtripStarted(
-                        *(static_cast<NtripStartedDataItem*>(dataitem))));
-            break;
-        case PRECISE_LOCATION_ENABLED_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mPreciseLocationEnabled,
-                    SystemStatusPreciseLocationEnabled(
-                        *(static_cast<PreciseLocationEnabledDataItem*>(dataitem))));
-            break;
-        case LOC_FEATURE_STATUS_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mLocFeatureStatus,
-                    SystemStatusLocFeatureStatus(
-                        *(static_cast<LocFeatureStatusDataItem*>(dataitem))));
-            break;
-        case NETWORK_POSITIONING_STARTED_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mNlpSessionStarted,
-                    SystemStatusNlpSessionStarted(
-                        *(static_cast<NlpSessionStartedDataItem*>(dataitem))));
-            break;
-        case QESDK_WWAN_FEATURE_STATUS_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mQesdkWwanFeatureStatus,
-                    SystemStatusQesdkWwanFeatureStatus(
-                        *(static_cast<QesdkWwanFeatureStatusDataItem*>(dataitem))));
-            break;
-        case WWAN_APP_INFO_DATA_ITEM_ID:
-            ret = setIteminReport(mCache.mWwanAppInfo,
-                    SystemStatusWwanAppInfo(
-                        *(static_cast<WwanAppInfoDataItem*>(dataitem))));
-            break;
-        default:
-            break;
-    }
-    pthread_mutex_unlock(&mMutexSystemStatus);
-    LOC_LOGv("DataItemId: %d, whether to record dateitem in cache: %d", dataitem->getId(), ret);
-    return ret;
-}
-
-/******************************************************************************
 @brief      API to get report data into a given buffer
 
 @param[In]  reference to report buffer
@@ -961,17 +743,6 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly,
 
         getIteminReport(report.mPositionFailure, mCache.mPositionFailure);
 
-        getIteminReport(report.mENH, mCache.mENH);
-        getIteminReport(report.mGPSState, mCache.mGPSState);
-        getIteminReport(report.mWifiHardwareState, mCache.mWifiHardwareState);
-        getIteminReport(report.mNetworkInfo, mCache.mNetworkInfo);
-        getIteminReport(report.mRilCellInfo, mCache.mRilCellInfo);
-        getIteminReport(report.mModel, mCache.mModel);
-        getIteminReport(report.mManufacturer, mCache.mManufacturer);
-        getIteminReport(report.mTimeZoneChange, mCache.mTimeZoneChange);
-        getIteminReport(report.mTimeChange, mCache.mTimeChange);
-        getIteminReport(report.mWifiSupplicantStatus, mCache.mWifiSupplicantStatus);
-        getIteminReport(report.mMccMnc, mCache.mMccMnc);
     }
     else {
         // copy entire reports and return them
@@ -991,19 +762,6 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly,
         report.mNavData.clear();
 
         report.mPositionFailure.clear();
-
-        report.mENH.clear();
-        report.mGPSState.clear();
-        report.mWifiHardwareState.clear();
-        report.mNetworkInfo.clear();
-        report.mRilCellInfo.clear();
-        report.mModel.clear();
-        report.mManufacturer.clear();
-        report.mTimeZoneChange.clear();
-        report.mTimeChange.clear();
-        report.mWifiSupplicantStatus.clear();
-        report.mMccMnc.clear();
-
         report = mCache;
     }
 
@@ -1040,172 +798,6 @@ bool SystemStatus::setDefaultGnssEngineStates(void)
     setDefaultIteminReport(mCache.mPositionFailure, SystemStatusPositionFailure());
 
     pthread_mutex_unlock(&mMutexSystemStatus);
-    return true;
-}
-
-/******************************************************************************
-@brief      API to handle connection status update event from GnssRil
-
-@param[In]  Connection status
-
-@return     true when successfully done
-******************************************************************************/
-bool SystemStatus::eventConnectionStatus(bool connected, int8_t type,
-                                         bool roaming, NetworkHandle networkHandle,
-                                         const string& apn)
-{
-    // send networkinof dataitem to systemstatus observer clients
-    SystemStatusNetworkInfo s(type, "", "", connected, roaming,
-                              (uint64_t) networkHandle, apn);
-    mSysStatusObsvr.notify({&s.mDataItem});
-
-    return true;
-}
-
-/******************************************************************************
-@brief      API to update ENH
-
-@param[In]  user consent
-
-@return     true when successfully done
-******************************************************************************/
-bool SystemStatus::eventOptInStatus(bool userConsent)
-{
-    SystemStatusENH s(userConsent, ENHDataItem::FIELD_CONSENT);
-    mSysStatusObsvr.notify({&s.mDataItem});
-    return true;
-}
-
-/******************************************************************************
-@brief      API to update Region
-
-@param[In]  region
-
-@return     true when successfully done
-******************************************************************************/
-bool SystemStatus::eventRegionStatus(bool region)
-{
-    SystemStatusENH s(region, ENHDataItem::FIELD_REGION);
-    mSysStatusObsvr.notify({&s.mDataItem});
-    return true;
-}
-
-/******************************************************************************
-@brief      API to notify emergency call
-
-@param[In]  is emergency call
-
-@return     true when successfully done
-******************************************************************************/
-bool SystemStatus::eventInEmergencyCall(bool isEmergency)
-{
-    SystemStatusInEmergencyCall s(isEmergency);
-    mSysStatusObsvr.notify({&s.mDataItem});
-    return true;
-}
-
-/******************************************************************************
-@brief      API to update precise location state
-
-@param[In]  precise Location state
-
-@return     true when successfully done
-******************************************************************************/
-bool SystemStatus::eventPreciseLocation(bool preciseLocation) {
-    SystemStatusPreciseLocationEnabled s(preciseLocation);
-    mSysStatusObsvr.notify({&s.mDataItem});
-    return true;
-}
-
-/******************************************************************************
-@brief      API to update Ntrip started state
-
-@param[In]  Ntrip started state
-
-@return     true when successfully done
-******************************************************************************/
-bool SystemStatus::eventNtripStarted(bool ntripStarted) {
-    SystemStatusNtripStarted s(ntripStarted);
-    mSysStatusObsvr.notify({&s.mDataItem});
-    return true;
-}
-
-/******************************************************************************
-@brief      API to update engine tracking state
-
-@param[In]  tracking state
-
-@return     true when successfully done
-******************************************************************************/
-bool SystemStatus::eventSetTracking(bool tracking, bool updateSysStatusTrkState) {
-    pthread_mutex_lock(&mMutexSystemStatus);
-    if (updateSysStatusTrkState) {
-        mTracking = tracking;
-    }
-    SystemStatusTrackingStarted s(tracking);
-    mSysStatusObsvr.notify({&s.mDataItem});
-    pthread_mutex_unlock(&mMutexSystemStatus);
-    return true;
-}
-
-/******************************************************************************
-@brief      API to update Location feature QWES status
-
-@param[In]  Location feature QWES status
-
-@return     true when successfully done
-******************************************************************************/
-bool SystemStatus::eventLocFeatureStatus(std::unordered_set<int> fids) {
-    SystemStatusLocFeatureStatus  s(fids);
-    mSysStatusObsvr.notify({&s.mDataItem});
-    return true;
-}
-/******************************************************************************
-@brief      API to update network positioning session state
-
-@param[In]  session state
-
-@return     true when successfully done
-******************************************************************************/
-bool SystemStatus::eventNlpSessionStatus(bool nlpStarted) {
-    SystemStatusNlpSessionStarted s(nlpStarted);
-    mSysStatusObsvr.notify({&s.mDataItem});
-    return true;
-}
-
-/******************************************************************************
-@brief      API to update gps enable state
-
-@param[In]  enable state
-
-@return     true when successfully done
-******************************************************************************/
-
-bool SystemStatus::eventGpsEnabled(bool gpsEnabled) {
-    SystemStatusGpsState  s(gpsEnabled);
-    mSysStatusObsvr.notify({&s.mDataItem});
-    return true;
-}
-
-/******************************************************************************
-@brief      API to update gps enable state
-
-@param[In]  enable state
-
-@return     true when successfully done
-******************************************************************************/
-
-bool SystemStatus::eventWwanAppInfo(int32_t pid,
-            int32_t uid,
-            bool appHasFinePermission,
-            bool appHasBackgroundPermission,
-            string appHash,
-            string appPackageName,
-            string appCookie,
-            string appQwesLicenseId) {
-    SystemStatusWwanAppInfo s(pid, uid, appHasFinePermission,
-            appHasBackgroundPermission, appHash, appPackageName, appCookie, appQwesLicenseId);
-    mSysStatusObsvr.notify({&s.mDataItem});
     return true;
 }
 

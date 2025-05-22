@@ -175,7 +175,7 @@ typedef std::function<void(const std::unordered_map<LocationQwesFeatureType, boo
 typedef EngineHubProxyBase* (getEngHubProxyFn)(
         const MsgTask * msgTask,
         const ContextBase * context,
-        IOsObserver* osObserver,
+        SystemStatusOsObserver* osObserver,
         EngineServiceInfo& engServiceInfo,
         GnssAdapterReportEnginePositionsEventCb positionEventCb,
         GnssAdapterReqAidingDataCb reqAidingDataCb,

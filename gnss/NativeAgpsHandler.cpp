@@ -38,7 +38,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <LocAdapterBase.h>
 #include <SystemStatus.h>
 #include <DataItemId.h>
-#include <DataItemsFactoryProxy.h>
 #include <DataItemConcreteTypes.h>
 #include <loc_log.h>
 #include <NativeAgpsHandler.h>
@@ -51,19 +50,20 @@ void NativeAgpsHandler::getName(string& name) {
     name = "NativeAgpsHandler";
 }
 
-void NativeAgpsHandler::notify(const unordered_set<IDataItemCore*>& dlist) {
+void NativeAgpsHandler::notify(const unordered_set<const IDataItemCore*>& dlist) {
     for (auto each : dlist) {
         switch (each->getId()) {
             case NETWORKINFO_DATA_ITEM_ID: {
-                NetworkInfoDataItem* networkInfo = static_cast<NetworkInfoDataItem*>(each);
+                const NetworkInfoDataItem* networkInfo =
+                        static_cast<const NetworkInfoDataItem*>(each);
                 uint64_t mobileBit = (uint64_t )1 << loc_core::TYPE_MOBILE;
-                mConnected = ((networkInfo->mAllTypes & mobileBit) == mobileBit);
+                mConnected = ((networkInfo->mNetInfo.mAllTypes & mobileBit) == mobileBit);
                 /**
                  * mApn Telephony preferred Access Point Name to use for
                  * carrier data connection when connected to a cellular network.
                  * Empty string, otherwise.
                  */
-                mApn = networkInfo->mApn;
+                mApn = networkInfo->mNetInfo.mApn;
                 LOC_LOGd("updated mConnected:%d, mApn: %s", mConnected, mApn.c_str());
                 break;
             }
@@ -74,7 +74,7 @@ void NativeAgpsHandler::notify(const unordered_set<IDataItemCore*>& dlist) {
 }
 
 NativeAgpsHandler* NativeAgpsHandler::sLocalHandle = nullptr;
-NativeAgpsHandler::NativeAgpsHandler(IOsObserver* sysStatObs, GnssAdapter& adapter) :
+NativeAgpsHandler::NativeAgpsHandler(SystemStatusOsObserver* sysStatObs, GnssAdapter& adapter) :
         mSystemStatusObsrvr(sysStatObs), mConnected(false), mAdapter(adapter) {
     sLocalHandle = this;
     unordered_set<DataItemId> subItemIdList = {NETWORKINFO_DATA_ITEM_ID};

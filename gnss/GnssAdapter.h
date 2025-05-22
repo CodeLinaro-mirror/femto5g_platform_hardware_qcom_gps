@@ -38,7 +38,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #include <LocAdapterBase.h>
 #include <LocContext.h>
-#include <IOsObserver.h>
+#include <SystemStatusOsObserver.h>
 #include <EngineHubProxyBase.h>
 #include <LocGlinkBase.h>
 #include <ILocationAPI.h>
@@ -66,6 +66,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 class GnssAdapter;
 
 using namespace qc_loc_fw;
+using namespace loc_core;
 typedef std::map<LocationSessionKey, LocationOptions> LocationSessionMap;
 typedef std::map<LocationSessionKey, TrackingOptions> TrackingOptionsMap;
 

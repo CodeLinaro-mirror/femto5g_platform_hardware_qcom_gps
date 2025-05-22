@@ -3159,7 +3159,7 @@ GnssAdapter::saveTrackingSession(LocationAPI* client, uint32_t sessionId,
             configRobustLocation();
         }
         // notify SystemStatus the engine tracking status
-        getSystemStatus()->eventSetTracking(isInSession(), true);
+        getSystemStatus()->getOsObserver()->eventSetTracking(isInSession());
     }
 }
 
@@ -3175,7 +3175,7 @@ GnssAdapter::eraseTrackingSession(LocationAPI* client, uint32_t sessionId)
                 configRobustLocation();
             }
         }
-        getSystemStatus()->eventSetTracking(isInSession(), true);
+        getSystemStatus()->getOsObserver()->eventSetTracking(isInSession());
     }
 }
 
@@ -3858,7 +3858,7 @@ GnssAdapter::enableCommand(LocationTechnologyType techType)
             } else {
                 mContext.modemPowerVote(true);
                 mAdapter.setAfwControlId(mSessionId);
-                mAdapter.mSystemStatus->eventGpsEnabled(true);
+                mAdapter.mSystemStatus->getOsObserver()->eventGpsEnabled(true);
                 GnssConfigGpsLock gpsLock = GNSS_CONFIG_GPS_LOCK_NONE;
                 if (mAdapter.mSupportNfwControl) {
                     ContextBase::mGps_conf.GPS_LOCK &= GNSS_CONFIG_GPS_LOCK_NFW_ALL;
@@ -3914,7 +3914,7 @@ GnssAdapter::disableCommand(uint32_t id)
             } else {
                 mContext.modemPowerVote(false);
                 mAdapter.setAfwControlId(0);
-                mAdapter.mSystemStatus->eventGpsEnabled(false);
+                mAdapter.mSystemStatus->getOsObserver()->eventGpsEnabled(false);
 
                 if (mAdapter.mSupportNfwControl) {
                     /* We need to disable MO (AFW) */
@@ -4235,7 +4235,7 @@ bool GnssAdapter::needReportEnginePosition()
 
 void GnssAdapter::notifyPreciseLocation() {
     bool enable = isEngineServiceEnable();
-    getSystemStatus()->eventPreciseLocation(enable);
+    getSystemStatus()->getOsObserver()->eventPreciseLocation(enable);
     updateClientsEventMask();
     setTribandState();
 }
@@ -5533,7 +5533,7 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
         if (sendEmergencyCallStatusEvent && request.isEmergencyMode) {
             SystemStatus* systemstatus = getSystemStatus();
             if (nullptr != systemstatus) {
-                systemstatus->eventInEmergencyCall(0 != mOdcpiStateMask);
+                systemstatus->getOsObserver()->eventInEmergencyCall(0 != mOdcpiStateMask);
             } else {
                 LOC_LOGe("Failed to get system status instance.");
             }
@@ -8592,7 +8592,7 @@ void GnssAdapter::handleEnablePPENtrip(const GnssNtripConnectionParams& params,
     mDgnssState |= DGNSS_STATE_ENABLE_NTRIP_COMMAND;
     mDgnssState |= DGNSS_STATE_NO_NMEA_PENDING;
     mDgnssState &= ~DGNSS_STATE_NTRIP_SESSION_STARTED;
-    getSystemStatus()->eventNtripStarted(true);
+    getSystemStatus()->getOsObserver()->eventNtripStarted(true);
 
     mStartDgnssNtripParams.ntripParams = std::move(params);
     mStartDgnssNtripParams.ntripParams.nmeaUpdateInterval = nmeaUpdateInterval;
@@ -8625,7 +8625,7 @@ void GnssAdapter::handleDisablePPENtrip() {
     mDgnssState &= ~DGNSS_STATE_ENABLE_NTRIP_COMMAND;
     mDgnssState |= DGNSS_STATE_NO_NMEA_PENDING;
     stopDgnssNtrip();
-    getSystemStatus()->eventNtripStarted(false);
+    getSystemStatus()->getOsObserver()->eventNtripStarted(false);
 }
 
 void GnssAdapter::checkUpdateDgnssNtrip(bool isLocationValid) {
@@ -8726,7 +8726,7 @@ void GnssAdapter::readPPENtripConfig() {
     mDgnssState |= DGNSS_STATE_ENABLE_NTRIP_COMMAND;
     mDgnssState |= DGNSS_STATE_NO_NMEA_PENDING;
     mDgnssState &= ~DGNSS_STATE_NTRIP_SESSION_STARTED;
-    getSystemStatus()->eventNtripStarted(true);
+    getSystemStatus()->getOsObserver()->eventNtripStarted(true);
 
     mStartDgnssNtripParams.nmea.clear();
     if (pNtripParams->requiresNmeaLocation) {

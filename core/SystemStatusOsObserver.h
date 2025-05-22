@@ -39,14 +39,16 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <map>
 #include <new>
 #include <vector>
-
 #include <MsgTask.h>
 #include <DataItemId.h>
-#include <IOsObserver.h>
 #include <loc_pla.h>
 #include <log_util.h>
 #include <gps_extended.h>
-#include <LocUnorderedSetMap.h>
+#include <unordered_set>
+#include <unordered_map>
+#include <DataItemConcreteTypes.h>
+#include <IDataItemObserver.h>
+#include <IFrameworkActionReq.h>
 
 namespace loc_core
 {
@@ -56,106 +58,111 @@ namespace loc_core
 using namespace std;
 using namespace loc_util;
 
+enum SubscribeAction {
+    SUBSCRIBE_DATA_ITEM_ID    = (1<<0),
+    UNSUBSCRIBE_DATA_ITEM_ID  = (1<<1),
+    REQUEST_DATA_ITEM_ID      = (1<<2),
+};
+
+typedef std::function<void(const unordered_set<DataItemId>& idList, SubscribeAction toReqData)>
+    updateDataitemIdListFunc;
+
 // Forward Declarations
 class IDataItemCore;
-class SystemStatus;
 class SystemStatusOsObserver;
-typedef LocUnorderedSetMap<IDataItemObserver*, DataItemId> ClientToDataItems;
-typedef LocUnorderedSetMap<DataItemId, IDataItemObserver*> DataItemToClients;
-typedef unordered_map<DataItemId, IDataItemCore*> DataItemIdToCore;
-typedef unordered_map<DataItemId, int> DataItemIdToInt;
 #ifdef USE_GLIB
 // Cache details of backhaul client requests
 typedef std::map<string, BackhaulContext> ClientBackhaulReqCache;
 #endif
 
-struct ObserverContext {
-    IDataItemSubscription* mSubscriptionObj;
-    IFrameworkActionReq* mFrameworkActionReqObj;
-    const MsgTask* mMsgTask;
-    SystemStatusOsObserver* mSSObserver;
-
-    inline ObserverContext(const MsgTask* msgTask, SystemStatusOsObserver* observer) :
-            mSubscriptionObj(NULL), mFrameworkActionReqObj(NULL),
-            mMsgTask(msgTask), mSSObserver(observer) {}
-};
-
-// Clients wanting to get data from OS/Framework would need to
-// subscribe with OSObserver using IDataItemSubscription interface.
-// Such clients would need to implement IDataItemObserver interface
-// to receive data when it becomes available.
-class SystemStatusOsObserver : public IOsObserver {
+class SystemStatusOsObserver : public IFrameworkActionReq {
 
 public:
+    static SystemStatusOsObserver* getInstance(const MsgTask* msgTask) {
+        std::call_once(sFlag, [&](){ sInstance = new SystemStatusOsObserver(msgTask);});
+        return sInstance;
+    }
     // ctor
-    inline SystemStatusOsObserver(SystemStatus* systemstatus, const MsgTask* msgTask) :
-            mSystemStatus(systemstatus), mContext(msgTask, this),
-            mAddress("SystemStatusOsObserver"),
-            mClientToDataItems(MAX_DATA_ITEM_ID), mDataItemToClients(MAX_DATA_ITEM_ID) {}
+    inline SystemStatusOsObserver(const MsgTask* msgTask) :
+            mMsgTask(msgTask), mFrameworkActionReqObj(NULL) {}
 
     // dtor
     ~SystemStatusOsObserver();
 
-    template <typename CINT, typename COUT>
-    static COUT containerTransfer(CINT& s);
-    template <typename CINT, typename COUT>
-    inline static COUT containerTransfer(CINT&& s) {
-        return containerTransfer<CINT, COUT>(s);
+    // Public functions used by IDataItemObserver
+    inline void subscribe(const unordered_set<DataItemId>& li, IDataItemObserver* client) {
+        subscribe(li, client, false);
     }
-
-    // To set the subscription object
-    virtual void setSubscriptionObj(IDataItemSubscription* subscriptionObj);
-
-    // To set the framework action request object
-    void setFrameworkActionReqObj(IFrameworkActionReq* frameworkActionReqObj);
-
-    // IDataItemSubscription Overrides
-    inline virtual void subscribe(const unordered_set<DataItemId>& l, IDataItemObserver* client) override {
-        subscribe(l, client, false);
+    void updateSubscription(const unordered_set<DataItemId>& li, IDataItemObserver* client) {
+        subscribe(li, client, false);
     }
-    virtual void updateSubscription(const unordered_set<DataItemId>& l, IDataItemObserver* client) override;
-    inline virtual void requestData(const unordered_set<DataItemId>& l, IDataItemObserver* client) override {
-        subscribe(l, client, true);
+    inline void requestData(const unordered_set<DataItemId>& li, IDataItemObserver* client) {
+        subscribe(li, client, true);
     }
-    virtual void unsubscribe(const unordered_set<DataItemId>& l, IDataItemObserver* client) override;
-    virtual void unsubscribeAll(IDataItemObserver* client) override;
+    void unsubscribe(const unordered_set<DataItemId>& li, IDataItemObserver* client);
+    void unsubscribeAll(IDataItemObserver* client);
 
-    // IDataItemObserver Overrides
-    virtual void notify(const unordered_set<IDataItemCore*>& dlist) override;
-    inline virtual void getName(string& name) override {
-        name = mAddress;
-    }
+    // To set the subscription callback function from LocAidl
+    void setSubscriptionObj(updateDataitemIdListFunc& fun,
+            const unordered_set<DataItemId>& li);
 
+    //Event system status events, each data item should map to one function below
+    void eventConnectionStatus(bool connected, int8_t type,
+                           bool roaming, NetworkHandle networkHandle, const string& apn);
+    void eventOptInStatus(bool userConsent);
+    void eventRegionAllowedStatus(bool regionAllowed);
+    void eventWifiHardwareStatus(bool isWifiEnabled);
+    void eventTimeZoneChange(int64_t currentTimeMillis,
+        int32_t rawOffsetTZ, int32_t dstOffsetTZ);
+    void eventTimeChange(int64_t currentTimeMillis,
+        int32_t rawOffsetTZ, int32_t dstOffsetTZ);
+    void eventModelData(const std::string& data);
+    void eventManufacturerData(const std::string& data);
+    void eventLocRilCellInfo(const LocRilCellInfo& info);
+    void eventWifiSupplicantInfo(const LocWifiSupplicantInfo& info);
+    void eventMccmnc(const std::string& mccmnc);
+    void eventInEmergencyCall(bool isEmergency);
+    void eventSetTracking(bool tracking);
+    void eventNtripStarted(bool ntripStarted);
+    void eventPreciseLocation(bool preciseLocation);
+    void eventLocFeatureStatus(std::unordered_set<int> fids);
+    void eventNlpSessionStatus(bool nlpStarted);
+    void eventGpsEnabled(bool gpsEnabled);
+    void eventWwanAppInfo(int32_t pid = 0,
+            int32_t uid = 0,
+            bool appHasFinePermission = false,
+            bool appHasBackgroundPermission = false,
+            string appHash = "",
+            string appPackageName = "",
+            string appCookie = "",
+            string appQwesLicenseId = "");
+
+/*****************  None Android specific start ***************************/
 #ifdef USE_GLIB
     virtual bool connectBackhaul(const BackhaulContext& ctx) override;
     virtual bool disconnectBackhaul(const BackhaulContext& ctx) override;
 #endif
 
-private:
-    SystemStatus*                                    mSystemStatus;
-    ObserverContext                                  mContext;
-    const string                                     mAddress;
-    ClientToDataItems                                mClientToDataItems;
-    DataItemToClients                                mDataItemToClients;
-    DataItemIdToCore                                 mDataItemCache;
+    // To set the framework action request object
+    void setFrameworkActionReqObj(IFrameworkActionReq* frameworkActionReqObj);
+/*****************  None Android specific end ***************************/
 
+private:
+    static SystemStatusOsObserver* sInstance;
+    static std::once_flag sFlag;
+    const MsgTask* mMsgTask;
+    IFrameworkActionReq* mFrameworkActionReqObj;
+
+    unordered_map<DataItemId, unordered_set<IDataItemObserver*>> mClientMap;
+    unordered_map<DataItemId, IDataItemCore*> mCachedDataItemMap;
+    std::vector<std::pair<updateDataitemIdListFunc, unordered_set<DataItemId>>> mSubscriptionVec;
 #ifdef USE_GLIB
     // Cache the framework action request for connect/disconnect
     ClientBackhaulReqCache  mBackHaulConnReqCache;
 #endif
-
-    void subscribe(const unordered_set<DataItemId>& l, IDataItemObserver* client, bool toRequestData);
-
-    // Helpers
-    void sendCachedDataItems(const unordered_set<DataItemId>& s, IDataItemObserver* to);
-    bool updateCache(IDataItemCore* d);
-    inline void logMe(const unordered_set<DataItemId>& l) {
-        IF_LOC_LOGD {
-            for (auto id : l) {
-                LOC_LOGD("DataItem %d", id);
-            }
-        }
-    }
+    void notify(IDataItemCore* di);
+    void subscribe(const unordered_set<DataItemId>& li, IDataItemObserver* client,
+            bool toRequestData);
 };
 
 } // namespace loc_core

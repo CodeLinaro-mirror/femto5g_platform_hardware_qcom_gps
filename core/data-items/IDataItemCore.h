@@ -26,7 +26,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -34,12 +34,11 @@
 #define __IDATAITEMCORE_H__
 
 #include <string>
+#include <cstring>
 #include <inttypes.h>
 #include <DataItemId.h>
 
 namespace loc_core {
-
-using namespace std;
 
 /**
  * @brief IDataItemCore interface.
@@ -49,11 +48,12 @@ using namespace std;
 class IDataItemCore {
 public:
     /**
-     * @brief Gets Data item id.
-     * @details Gets Data item id.
-     * @return Data item id.
+     * @brief Gets Data item id/blob pointer and blob size.
      */
-    inline DataItemId getId() { return mId; }
+    inline DataItemId getId() const { return mId; }
+    inline std::string getName() const { return mName; }
+    inline void* getBlobPtr() const { return mBlob; }
+    inline size_t getBlobSize() const { return mLen; }
 
     /**
      * @brief Stringify.
@@ -61,18 +61,22 @@ public:
      *
      * @param valueStr Reference to string.
      */
-    virtual void stringify (string & valueStr) = 0;
+    virtual void stringify (std::string & valueStr) = 0;
 
     /**
-     * @brief copy.
-     * @details copy.
+     * @brief equal
+     * @details equal.
      *
-     * @param src Where to copy from.
-     * @param dataItemCopied Boolean flag indicated whether or not copied.
+     * @param rls another data item to be compared.
      *
-     * @return Zero for success or non zero for failure.
+     * @return bool if rls is equal to this.
      */
-    virtual int32_t copyFrom(IDataItemCore * src) = 0;
+    inline bool equal(const IDataItemCore* rls) {
+        if (mBlob == nullptr || rls->getBlobPtr() == nullptr || mLen != rls->getBlobSize()) {
+            return false;
+        }
+        return (0 == memcmp(mBlob, rls->getBlobPtr(), mLen));
+    }
 
     /**
      * @brief Destructor.
@@ -80,7 +84,15 @@ public:
      */
     virtual ~IDataItemCore () {}
 protected:
+
+    //Must be called after all member variables are determined in data item,
+    //mBlob and mLen are used for data serialization
+    inline void setBlobPtr(void* blob, size_t len) { mBlob = blob; mLen = len; }
+
     DataItemId mId = INVALID_DATA_ITEM_ID;
+    const char* mName = nullptr;
+    void * mBlob = nullptr;
+    size_t mLen = 0;
 };
 
 } // namespace loc_core

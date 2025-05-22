@@ -25,6 +25,9 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #ifndef __IDATAITEMOBSERVER_H__
@@ -42,7 +45,8 @@ class IDataItemCore;
 /**
  * @brief IDataItemObserver interface
  * @details IDataItemObserver interface;
- *          In OS dependent code this type serves as a handle to an OS independent instance of this interface.
+ *          In OS dependent code this type serves as
+ *          a handle to an OS independent instance of this interface.
  */
 class IDataItemObserver {
 
@@ -62,7 +66,7 @@ public:
      *
      * @param dunordered_set Set of updated data items
      */
-    virtual void notify (const std :: unordered_set <IDataItemCore *> & dlist)  = 0;
+    virtual void notify (const std :: unordered_set <const IDataItemCore *> & dlist)  = 0;
 
     /**
      * @brief Destructor

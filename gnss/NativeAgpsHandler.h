@@ -25,6 +25,9 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #ifndef NATIVEAGPSHANDLER_H
 #define NATIVEAGPSHANDLER_H
@@ -34,10 +37,10 @@
 #include <gps_extended_c.h>
 #include <IDataItemObserver.h>
 #include <IDataItemCore.h>
-#include <IOsObserver.h>
+#include <SystemStatusOsObserver.h>
 
 using namespace std;
-using loc_core::IOsObserver;
+using namespace loc_core;
 using loc_core::IDataItemObserver;
 using loc_core::IDataItemCore;
 
@@ -45,17 +48,17 @@ class GnssAdapter;
 
 class NativeAgpsHandler : public IDataItemObserver {
 public:
-    NativeAgpsHandler(IOsObserver* sysStatObs, GnssAdapter& adapter);
+    NativeAgpsHandler(SystemStatusOsObserver* sysStatObs, GnssAdapter& adapter);
     ~NativeAgpsHandler();
     AgpsCbInfo getAgpsCbInfo();
     // IDataItemObserver overrides
-    virtual void notify(const unordered_set<IDataItemCore*>& dlist) override;
+    virtual void notify(const unordered_set<const IDataItemCore*>& dlist) override;
     virtual void getName(string& name) override;
 private:
     static NativeAgpsHandler* sLocalHandle;
     static void agnssStatusIpV4Cb(AGnssExtStatusIpV4 statusInfo);
     void processATLRequestRelease(AGnssExtStatusIpV4 statusInfo);
-    IOsObserver* mSystemStatusObsrvr;
+    SystemStatusOsObserver* mSystemStatusObsrvr;
     bool mConnected;
     string mApn;
     GnssAdapter& mAdapter;

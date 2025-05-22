@@ -44,38 +44,12 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <gps_extended_c.h>
 #include <inttypes.h>
 #include <unordered_set>
-#define MAC_ADDRESS_LENGTH    6
-// MAC address length in bytes
-#define WIFI_SUPPLICANT_DEFAULT_STATE    0
-
-#define TIME_DEFAULT_CURRTIME 0
-#define TIMEZONE_DEFAULT_RAWOFFSET 0
-#define TIMEZONE_DEFAULT_DSTOFFSET 0
-
-#define NETWORKINFO_DEFAULT_TYPE 300
-#define NETWORKINFO_DEFAULT_APN_NAME ""
-#define SERVICESTATUS_DEFAULT_STATE 3 /// OOO
-
-#define BATTERY_PCT_DEFAULT 50
-
-#define STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(T, ID) \
-if (getId() != ID) { result = 1; break; } \
-T * d = static_cast<T *>(this);
-
-// macro for copier
-#define COPIER_ERROR_CHECK_AND_DOWN_CAST(T, ID) \
-   if (src == NULL) { result = 1; break; } \
-   if (getId() != src->getId()) { result = 2; break; } \
-   if (getId() != ID) { result = 3; break; } \
-   T * s = static_cast<T *>(this); \
-   T * d = static_cast<T *>(src);
-
-
-static constexpr char sDelimit = ':';
+#include <log_util.h>
 
 namespace loc_core {
-using namespace std;
-
+/************** C style data item related data structure definitions ******************/
+//Network connection data structure
+#define NETWORKINFO_DEFAULT_TYPE 300
 enum NetworkType {
     TYPE_MOBILE = 0,
     TYPE_WIFI,
@@ -90,192 +64,126 @@ enum NetworkType {
     TYPE_UNKNOWN,
 };
 
-typedef struct NetworkInfoType {
+#define MAX_NETWORK_INFO_STR_LEN 20
+struct LocNetworkInfo {
+    uint64_t mAllTypes;
+    int32_t mType;
+    bool mAvailable;
+    bool mConnected;
+    bool mRoaming;
     // Unique network handle ID
     uint64_t networkHandle;
     // Type of network for corresponding network handle
     NetworkType networkType;
-    NetworkInfoType() : networkHandle(NETWORK_HANDLE_UNKNOWN), networkType(TYPE_UNKNOWN) {}
-    NetworkInfoType(string strObj) {
-        size_t posDelimit = strObj.find(sDelimit);
-
-        if ( posDelimit != string::npos) {
-            int32_t type = TYPE_UNKNOWN;
-            string handleStr = strObj.substr(0, posDelimit);
-            string typeStr = strObj.substr(posDelimit + 1, strObj.length() - posDelimit - 1);
-            stringstream(handleStr) >> networkHandle;
-            stringstream(typeStr) >> type;
-            networkType = (NetworkType) type;
-        } else {
-            networkHandle = NETWORK_HANDLE_UNKNOWN;
-            networkType = TYPE_UNKNOWN;
-        }
-    }
-    bool operator== (const NetworkInfoType& other) {
-        return ((networkHandle == other.networkHandle) && (networkType == other.networkType));
-    }
-    string toString() {
-        string valueStr;
-        valueStr.clear ();
-        char nethandle [32];
-        memset (nethandle, 0, 32);
-        snprintf(nethandle, sizeof(nethandle), "%" PRIu64, networkHandle);
-        valueStr += string(nethandle);
-        valueStr += sDelimit;
-        char type [12];
-        memset (type, 0, 12);
-        snprintf (type, 12, "%u", networkType);
-        valueStr += string (type);
-        return valueStr;
-    }
-} NetworkInfoType;
-
-
-class ENHDataItem: public IDataItemCore {
-public:
-    enum Fields { FIELD_CONSENT, FIELD_REGION, FIELD_MAX };
-    enum Actions { NO_OP, SET, CLEAR };
-    ENHDataItem(bool enabled = false, Fields updateBit = FIELD_MAX) :
-            mEnhFields(0), mFieldUpdate(updateBit) {
-        mId = ENH_DATA_ITEM_ID;
-        setAction(enabled ? SET : CLEAR);
-    }
-    virtual ~ENHDataItem() {}
-    virtual void stringify(string& /*valueStr*/) override;
-    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-    inline bool isEnabled() const {
-        uint8_t combinedBits = (1 << FIELD_MAX) - 1;
-        return (combinedBits == (mEnhFields & combinedBits));
-    }
-
-    inline bool isUserConsentEnabled() const {
-        uint8_t consentMask = (1 << FIELD_CONSENT);
-        return ((mEnhFields & consentMask) != 0) ;
-    }
-
-    void setAction(Actions action = NO_OP) {
-        mAction = action;
-        if (NO_OP != mAction) {
-            updateFields();
-        }
-    }
-    void updateFields() {
-        if (FIELD_MAX > mFieldUpdate) {
-            switch (mAction) {
-                case SET:
-                    mEnhFields |= (1 << mFieldUpdate);
-                    break;
-                case CLEAR:
-                    mEnhFields &= ~(1 << mFieldUpdate);
-                    break;
-                case NO_OP:
-                default:
-                    break;
-            }
-        }
-    }
-    // Data members
-    uint32_t mEnhFields;
-private:
-    Actions mAction;
-    Fields mFieldUpdate;
+    char mApn[MAX_NETWORK_INFO_STR_LEN];
 };
 
-class GPSStateDataItem: public IDataItemCore {
-public:
-    GPSStateDataItem(bool enabled = false) :
-        mEnabled(enabled) {mId = GPSSTATE_DATA_ITEM_ID;}
-    virtual ~GPSStateDataItem() {}
-    virtual void stringify(string& /*valueStr*/) override;
-    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-// Data members
-    bool mEnabled;
+//LocRil data structure
+enum LocRilCellType {
+    UNKNOWN = 0,
+    GSM     = 1,
+    WCDMA   = 2,
+    CDMA    = 3,
+    LTE     = 4,
+    NR      = 5,
 };
 
-class WifiHardwareStateDataItem: public IDataItemCore {
-public:
-    WifiHardwareStateDataItem(bool enabled = false) :
-        mEnabled(enabled) {mId = WIFIHARDWARESTATE_DATA_ITEM_ID;}
-    virtual ~WifiHardwareStateDataItem() {}
-    virtual void stringify(string& /*valueStr*/) override;
-    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-// Data members
-    bool mEnabled;
+#define LOC_RIL_CELL_INFO_UNAVAILABLE UINT32_MAX
+struct LocRilCellInfo {
+    LocRilCellType cellType;
+    uint16_t regionId1;  // MCC
+    uint16_t regionId2;  // MNC
+    uint32_t regionId3;  // TAC (24-bit) or LAC (16-bit) or UNAVAILABLE
+    uint64_t regionId4;  // Global Cell ID (64-bit for NR, and 32-bit for WCDMA and LTE)
+    uint32_t frequency;  // ARFCN, or UNAVAILABLE
+    uint32_t physicalId; // physical id: PSC (UMTS), PCI (LTE/NR), or UNAVAILABLE
 };
 
-class TimeZoneChangeDataItem: public IDataItemCore {
-public:
-    TimeZoneChangeDataItem(int64_t currTimeMillis = TIME_DEFAULT_CURRTIME,
-            int32_t rawOffset = TIMEZONE_DEFAULT_RAWOFFSET,
-            int32_t dstOffset = TIMEZONE_DEFAULT_DSTOFFSET) :
-        mCurrTimeMillis (currTimeMillis),
-        mRawOffsetTZ (rawOffset),
-        mDstOffsetTZ (dstOffset) {mId = TIMEZONE_CHANGE_DATA_ITEM_ID;}
-    virtual ~TimeZoneChangeDataItem() {}
-    virtual void stringify(string& /*valueStr*/) override;
-    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-// Data members
+//Time zone data structure
+struct LocTimezoneInfo {
     int64_t mCurrTimeMillis;
     int32_t mRawOffsetTZ;
     int32_t mDstOffsetTZ;
 };
 
-class TimeChangeDataItem: public IDataItemCore {
-public:
-    TimeChangeDataItem(int64_t currTimeMillis = TIME_DEFAULT_CURRTIME,
-            int32_t rawOffset = TIMEZONE_DEFAULT_RAWOFFSET,
-            int32_t dstOffset = TIMEZONE_DEFAULT_DSTOFFSET) :
-        mCurrTimeMillis (currTimeMillis),
-        mRawOffsetTZ (rawOffset),
-        mDstOffsetTZ (dstOffset) {mId = TIME_CHANGE_DATA_ITEM_ID;}
-    virtual ~TimeChangeDataItem() {}
-    virtual void stringify(string& /*valueStr*/) override;
-    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-// Data members
-    int64_t mCurrTimeMillis;
-    int32_t mRawOffsetTZ;
-    int32_t mDstOffsetTZ;
+// WiFi supplicant info data structure
+enum WifiSupplicantState {
+    DISCONNECTED,
+    INTERFACE_DISABLED,
+    INACTIVE,
+    SCANNING,
+    AUTHENTICATING,
+    ASSOCIATING,
+    ASSOCIATED,
+    FOUR_WAY_HANDSHAKE,
+    GROUP_HANDSHAKE,
+    COMPLETED,
+    DORMANT,
+    UNINITIALIZED,
+    INVALID
 };
 
+#define MAC_ADDRESS_LENGTH    6
+#define WIFI_AP_SSID_LENGTH 33
+struct LocWifiSupplicantInfo {
+    /* Represents whether access point attach state*/
+    WifiSupplicantState mState;
+    /* Represents info on whether ap mac address is valid */
+    bool mApMacAddressValid;
+    /* Represents mac address of the wifi access point*/
+    uint8_t mApMacAddress[MAC_ADDRESS_LENGTH];
+    /* Represents info on whether ap SSID is valid */
+    bool mWifiApSsidValid;
+    /* Represents Wifi SSID string*/
+    char mWifiApSsid[WIFI_AP_SSID_LENGTH];
+};
+
+//Feature status data structure
+#define MAX_LOC_FID_NUM 20
+struct LocFeatureStatusInfo {
+    uint8_t len;
+    uint32_t mFids[MAX_LOC_FID_NUM];
+};
+
+//WWAN app info data structure
+#define APP_COOKIE_MAX_SIZE 40
+#define APP_HASH_KEY_MAX_SIZE 64
+#define PACKAGE_NAME_MAX_SIZE 256
+struct LocWwanAppInfo {
+    uint32_t mPid;
+    uint32_t mUid;
+    bool mAppHasFinePermission;
+    bool mAppHasBackgroundPermission;
+    char mAppHash[APP_HASH_KEY_MAX_SIZE];
+    char mAppPackageName[PACKAGE_NAME_MAX_SIZE];
+    char mAppCookie[APP_COOKIE_MAX_SIZE];
+};
+
+bool copyStringToCharArray(const std::string& src, char* dest, size_t destSize);
+
+/************** Data item classes definitions ******************/
 class NetworkInfoDataItem: public IDataItemCore {
 public:
-    NetworkInfoDataItem(
-            int32_t type = NETWORKINFO_DEFAULT_TYPE,
-            std::string typeName = "",
-            std::string subTypeName = "",
-            bool available = false,
-            bool connected = false,
-            bool roaming = false,
-            uint64_t networkHandle = NETWORK_HANDLE_UNKNOWN,
-            std::string apn = NETWORKINFO_DEFAULT_APN_NAME):
-        NetworkInfoDataItem(getNormalizedType(type), type, typeName, subTypeName, available,
-                            connected, roaming, networkHandle, apn) {}
-    NetworkInfoDataItem(NetworkType initialType, int32_t type, string typeName,
-                        string subTypeName, bool available, bool connected, bool roaming,
-                        uint64_t networkHandle, std::string apn):
-            mAllTypes(typeToAllTypes(initialType)),
-            mType(type),
-            mTypeName(typeName),
-            mSubTypeName(subTypeName),
-            mAvailable(available),
-            mConnected(connected),
-            mRoaming(roaming),
-            mNetworkHandle(networkHandle),
-            mApn(apn) {
-                mId = NETWORKINFO_DATA_ITEM_ID;
-                mAllNetworkHandles[0].networkHandle = networkHandle;
-                mAllNetworkHandles[0].networkType = initialType;
-            }
-    virtual ~NetworkInfoDataItem() {}
-    virtual void stringify(string& /*valueStr*/) override;
-    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-    inline uint64_t getAllTypes() { return mAllTypes; }
-    inline NetworkInfoType* getNetworkHandle() {
-        return &mAllNetworkHandles[0];
+    NetworkInfoDataItem(int32_t type = 0,
+                        bool available = false,
+                        bool connected = false,
+                        bool roaming = false,
+                        uint64_t networkHandle = 0,
+                        std::string apn = "") {
+        mId = NETWORKINFO_DATA_ITEM_ID;
+        mName = NETWORKINFO_CARD;
+        mNetInfo.mType = type;
+        mNetInfo.networkType = (NetworkType)type;
+        mNetInfo.mAllTypes = typeToAllTypes(mNetInfo.networkType);
+        mNetInfo.networkHandle = networkHandle;
+        mNetInfo.mConnected = connected;
+        mNetInfo.mAvailable = available;
+        mNetInfo.mRoaming = roaming;
+        copyStringToCharArray(apn, mNetInfo.mApn, sizeof(mNetInfo.mApn));
+        setBlobPtr((void*)(&mNetInfo), sizeof(LocNetworkInfo));
     }
-    inline virtual NetworkType getType(void) const {
-        return getNormalizedType(mType);
-    }
+    virtual void stringify(std::string& valueStr) override;
+    inline uint64_t getAllTypes() { return mNetInfo.mAllTypes; }
     inline static NetworkType getNormalizedType(int32_t type) {
         NetworkType typeout = TYPE_UNKNOWN;
         switch (type) {
@@ -313,272 +221,304 @@ public:
         }
         return typeout;
    }
-    // Data members
-    uint64_t mAllTypes;
-    int32_t mType;
-    string mTypeName;
-    string mSubTypeName;
-    bool mAvailable;
-    bool mConnected;
-    bool mRoaming;
-    NetworkInfoType mAllNetworkHandles[MAX_NETWORK_HANDLES];
-    uint64_t mNetworkHandle;
-    std::string mApn;
-protected:
-    inline uint64_t typeToAllTypes(NetworkType type) {
-        return (type >= TYPE_UNKNOWN || type < TYPE_MOBILE) ?  0 : (1<<type);
+   inline uint64_t typeToAllTypes(NetworkType type) {
+       return (type >= TYPE_UNKNOWN || type < TYPE_MOBILE) ?  0 : (1<<type);
+   }
+
+//Data members
+   LocNetworkInfo mNetInfo;
+};
+
+class ENHDataItem: public IDataItemCore {
+public:
+    enum ENHDataItemStatusMasks {
+        ENH_USER_CONSENT_ALLOWED_MASK = 0x01,
+        ENH_EMBARGO_REGION_ALLOWED_MASK = 0x02,
+    };
+
+    ENHDataItem(bool isEnabled = false,
+            uint8_t mask = (ENH_USER_CONSENT_ALLOWED_MASK|ENH_EMBARGO_REGION_ALLOWED_MASK)) {
+         mId = ENH_DATA_ITEM_ID;
+         mName = ENH_CARD;
+         mEnhStatusMask = currentEnhStatusMask;
+         if (isEnabled) {
+             mEnhStatusMask |= mask;
+         } else {
+             mEnhStatusMask &= ~mask;
+         }
+         setBlobPtr((void*)(&mEnhStatusMask), sizeof(uint8_t));
+         currentEnhStatusMask = mEnhStatusMask;
     }
-private:
-    inline void setType(NetworkType type) {
-        switch (type) {
-            case TYPE_WIFI:
-                mType = 100;
-                break;
-            case TYPE_ETHERNET:
-                mType = 101;
-                break;
-            case TYPE_BLUETOOTH:
-                mType = 102;
-                break;
-            case TYPE_MOBILE:
-                mType = 201;
-                break;
-            case TYPE_DUN:
-                mType = 202;
-                break;
-            case TYPE_HIPRI:
-                mType = 203;
-                break;
-            case TYPE_MMS:
-                mType = 204;
-                break;
-            case TYPE_SUPL:
-                mType = 205;
-                break;
-            case TYPE_WIMAX:
-                mType = 220;
-                break;
-            default:
-                mType = 300;
-                break;
-        }
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    //Mask for ENH status,
+    //bit 0 - true if user consent is true
+    //bit 1 - true if device is not in embrago region
+    //Consolidated user consent is true if both bits are set to true
+    uint8_t mEnhStatusMask;
+    //currentEnhStatusMask is used to cache latest ENH status
+    //then when eventOptInStatus or eventRegionAllowedStatus is called,
+    //we can update consolidated ENH combined with latest status and
+    //current status.
+    static uint8_t currentEnhStatusMask;
+};
+
+class GPSStateDataItem: public IDataItemCore {
+public:
+    GPSStateDataItem(bool enabled = false) :
+            mIsEnabled(enabled) {
+        mId = GPSSTATE_DATA_ITEM_ID;
+        mName = GPSSTATE_CARD;
+        setBlobPtr((void*)(&mIsEnabled), sizeof(bool));
     }
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    bool mIsEnabled;
+};
+
+class WifiHardwareStateDataItem: public IDataItemCore {
+public:
+    WifiHardwareStateDataItem(bool enabled = false) :
+            mIsEnabled(enabled) {
+        mId = WIFIHARDWARESTATE_DATA_ITEM_ID;
+        mName = WIFIHARDWARESTATE_CARD;
+        setBlobPtr((void*)(&mIsEnabled), sizeof(bool));
+    }
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    bool mIsEnabled;
+};
+
+class TimeZoneChangeDataItem: public IDataItemCore {
+public:
+    TimeZoneChangeDataItem(int64_t currentTimeMillis = 0,
+                           int32_t rawOffsetTZ = 0,
+                           int32_t dstOffsetTZ = 0) {
+        mId = TIMEZONE_CHANGE_DATA_ITEM_ID;
+        mName = TIMEZONECHANGE_CARD;
+        mTimezoneInfo.mCurrTimeMillis = currentTimeMillis;
+        mTimezoneInfo.mRawOffsetTZ = rawOffsetTZ;
+        mTimezoneInfo.mDstOffsetTZ = dstOffsetTZ;
+        setBlobPtr((void*)(&mTimezoneInfo), sizeof(LocTimezoneInfo));
+    }
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    LocTimezoneInfo mTimezoneInfo;
+};
+
+class TimeChangeDataItem: public IDataItemCore {
+public:
+    TimeChangeDataItem(int64_t currTimeMillis = 0,
+                       int32_t rawOffset = 0,
+                       int32_t dstOffset = 0) {
+        mId = TIME_CHANGE_DATA_ITEM_ID;
+        mName = TIMECHANGE_CARD;
+        mTimeInfo.mCurrTimeMillis = currTimeMillis;
+        mTimeInfo.mRawOffsetTZ = rawOffset;
+        mTimeInfo.mDstOffsetTZ = dstOffset;
+        setBlobPtr((void*)(&mTimeInfo), sizeof(LocTimezoneInfo));
+    }
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    LocTimezoneInfo mTimeInfo;
 };
 
 class ModelDataItem: public IDataItemCore {
 public:
-    ModelDataItem(const string & name = "") :
-        mModel (name) {mId = MODEL_DATA_ITEM_ID;}
-    virtual ~ModelDataItem() {}
-    virtual void stringify(string& /*valueStr*/) override;
-    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-// Data members
-    string mModel;
+    ModelDataItem(const std::string& name = "0") :
+            mModel (name) {
+        mId = MODEL_DATA_ITEM_ID;
+        mName = MODEL_CARD;
+        setBlobPtr((void*)(mModel.c_str()), mModel.size() + 1);
+    }
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    std::string mModel;
 };
 
 class ManufacturerDataItem: public IDataItemCore {
 public:
-    ManufacturerDataItem(const string & name = "") :
-        mManufacturer (name) {mId = MANUFACTURER_DATA_ITEM_ID;}
-    virtual ~ManufacturerDataItem() {}
-    virtual void stringify(string& /*valueStr*/) override;
-    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-// Data members
-    string mManufacturer;
+    ManufacturerDataItem(const std::string& name = "0") :
+            mManufacturer(name) {
+        mId = MANUFACTURER_DATA_ITEM_ID;
+        mName = MANUFACTURER_CARD;
+        setBlobPtr((void*)(mManufacturer.c_str()), mManufacturer.size() + 1);
+    }
+    virtual void stringify(std::string& valueStr) override;
+//Data members
+    std::string mManufacturer;
 };
 
-class RilCellInfoDataItem : public IDataItemCore {
+class RilCellInfoDataItem: public IDataItemCore {
 public:
-    inline RilCellInfoDataItem() :
-            mData(nullptr) {mId = RILCELLINFO_DATA_ITEM_ID;}
-    inline virtual ~RilCellInfoDataItem() { if (nullptr != mData) free(mData); }
-    virtual void stringify(string& /*valueStr*/) {}
-    virtual int32_t copyFrom(IDataItemCore* src) {
-        if (nullptr != mData && nullptr != src) {
-            memcpy(mData,  ((RilCellInfoDataItem*)src)->mData, mLength);
-        }
-        return 0;
+    RilCellInfoDataItem(const LocRilCellInfo& cellInfo = {UNKNOWN, 0, 0, 0, 0, 0, 0}) :
+            mRilInfo(cellInfo) {
+        mId = RILCELLINFO_DATA_ITEM_ID;
+        mName = RILCELLINFO_CARD;
+        setBlobPtr((void*)(&mRilInfo), sizeof(LocRilCellInfo));
     }
-    inline RilCellInfoDataItem(const RilCellInfoDataItem& peer) :
-            RilCellInfoDataItem() {
-        mLength = peer.mLength;
-        mData = malloc(mLength);
-        if (nullptr != mData) {
-            memcpy(mData,  peer.mData, mLength);
-        }
-    }
-    inline virtual bool operator==(const RilCellInfoDataItem& other) const {
-        return other.mData == mData;
-    }
-    void* mData;
-    int mLength;
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    LocRilCellInfo mRilInfo;
 };
 
 class WifiSupplicantStatusDataItem: public IDataItemCore {
 public:
-    WifiSupplicantStatusDataItem() :
-        mState((WifiSupplicantState)WIFI_SUPPLICANT_DEFAULT_STATE),
-        mApMacAddressValid(false),
-        mWifiApSsidValid(false) {
-            mId = WIFI_SUPPLICANT_STATUS_DATA_ITEM_ID;
-            memset (mApMacAddress, 0, sizeof (mApMacAddress));
-            mWifiApSsid.clear();
-        }
-    virtual ~WifiSupplicantStatusDataItem() {}
-    virtual void stringify(string& /*valueStr*/) override;
-    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-    // Data members
-    typedef enum WifiSupplicantState {
-        DISCONNECTED,
-        INTERFACE_DISABLED,
-        INACTIVE,
-        SCANNING,
-        AUTHENTICATING,
-        ASSOCIATING,
-        ASSOCIATED,
-        FOUR_WAY_HANDSHAKE,
-        GROUP_HANDSHAKE,
-        COMPLETED,
-        DORMANT,
-        UNINITIALIZED,
-        INVALID
-    } WifiSupplicantState;
-    /* Represents whether access point attach state*/
-    WifiSupplicantState mState;
-    /* Represents info on whether ap mac address is valid */
-    bool mApMacAddressValid;
-    /* Represents mac address of the wifi access point*/
-    uint8_t mApMacAddress[MAC_ADDRESS_LENGTH];
-    /* Represents info on whether ap SSID is valid */
-    bool mWifiApSsidValid;
-    /* Represents Wifi SSID string*/
-    string mWifiApSsid;
+    WifiSupplicantStatusDataItem(
+        const LocWifiSupplicantInfo& info = {INVALID, false, "", false, ""}) :
+            mWifiSupplicantInfo(info) {
+        mId = WIFI_SUPPLICANT_STATUS_DATA_ITEM_ID;
+        mName = WIFI_SUPPLICANT_STATUS_CARD;
+        setBlobPtr((void*)(&mWifiSupplicantInfo), sizeof(LocWifiSupplicantInfo));
+    }
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    LocWifiSupplicantInfo mWifiSupplicantInfo;
 };
 
 class MccmncDataItem: public IDataItemCore {
 public:
-    MccmncDataItem(const string & name = "") :
-        mValue(name) {mId = MCCMNC_DATA_ITEM_ID;}
-    virtual ~MccmncDataItem() {}
-    virtual void stringify(string& /*valueStr*/) override;
-    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-// Data members
-    string mValue;
+    MccmncDataItem(const std::string& name = "0") :
+            mMccmnc(name) {
+        mId = MCCMNC_DATA_ITEM_ID;
+        mName = MCCMNC_CARD;
+        setBlobPtr((void*)(mMccmnc.c_str()), mMccmnc.size() + 1);
+    }
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    std::string mMccmnc;
 };
 
 class InEmergencyCallDataItem: public IDataItemCore {
 public:
-    InEmergencyCallDataItem(bool isEmergency = false) :
-            mIsEmergency(isEmergency) {mId = IN_EMERGENCY_CALL_DATA_ITEM_ID;}
-    virtual ~InEmergencyCallDataItem() {}
-    virtual void stringify(string& /*valueStr*/) override;
-    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-    // Data members
-    bool mIsEmergency;
+    InEmergencyCallDataItem(bool enabled = false) :
+            mIsEnabled(enabled) {
+        mId = IN_EMERGENCY_CALL_DATA_ITEM_ID;
+        mName = IN_EMERGENCY_CALL_CARD;
+        setBlobPtr((void*)(&mIsEnabled), sizeof(bool));
+    }
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    bool mIsEnabled;
 };
 
 class PreciseLocationEnabledDataItem: public IDataItemCore {
-    public:
-        PreciseLocationEnabledDataItem(bool preciseLocationEnabled = false) :
-            mPreciseLocationEnabled(preciseLocationEnabled) {
-                mId = PRECISE_LOCATION_ENABLED_DATA_ITEM_ID;
-            }
-        virtual ~PreciseLocationEnabledDataItem() {}
-        virtual void stringify(string& /*valueStr*/) override;
-        virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-        // Data members
-        bool mPreciseLocationEnabled;
+public:
+    PreciseLocationEnabledDataItem(bool enabled = false) :
+            mIsEnabled(enabled) {
+        mId = PRECISE_LOCATION_ENABLED_DATA_ITEM_ID;
+        mName = PRECISE_LOCATION_ENABLED_CARD;
+        setBlobPtr((void*)(&mIsEnabled), sizeof(bool));
+    }
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    bool mIsEnabled;
 };
 
 class TrackingStartedDataItem: public IDataItemCore {
-    public:
-        TrackingStartedDataItem(bool trackingStarted = false) :
-            mTrackingStarted(trackingStarted) {mId = TRACKING_STARTED_DATA_ITEM_ID;}
-        virtual ~TrackingStartedDataItem() {}
-        virtual void stringify(string& /*valueStr*/) override;
-        virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-        // Data members
-        bool mTrackingStarted;
+public:
+    TrackingStartedDataItem(bool enabled = false) :
+            mIsEnabled(enabled) {
+        mId = TRACKING_STARTED_DATA_ITEM_ID;
+        mName = TRACKING_STARTED_CARD;
+        setBlobPtr((void*)(&mIsEnabled), sizeof(bool));
+    }
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    bool mIsEnabled;
 };
 
 class NtripStartedDataItem: public IDataItemCore {
-    public:
-        NtripStartedDataItem(bool ntripStarted = false) :
-            mNtripStarted(ntripStarted) {mId = NTRIP_STARTED_DATA_ITEM_ID;}
-        virtual ~NtripStartedDataItem() {}
-        virtual void stringify(string& /*valueStr*/) override;
-        virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-        // Data members
-        bool mNtripStarted;
+public:
+    NtripStartedDataItem(bool enabled = false) :
+            mIsEnabled(enabled) {
+        mId = NTRIP_STARTED_DATA_ITEM_ID;
+        mName = NTRIP_STARTED_CARD;
+        setBlobPtr((void*)(&mIsEnabled), sizeof(bool));
+    }
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    bool mIsEnabled;
 };
 
 class LocFeatureStatusDataItem: public IDataItemCore {
-    public:
-        LocFeatureStatusDataItem(std::unordered_set<int> fids) :
-            mFids(fids) {mId = LOC_FEATURE_STATUS_DATA_ITEM_ID;}
-        virtual ~LocFeatureStatusDataItem() {}
-        virtual void stringify(string& /*valueStr*/) override;
-        virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-        // Data members
-        std::unordered_set<int> mFids;
+public:
+    LocFeatureStatusDataItem(std::unordered_set<int> fids = {}) {
+        mId = LOC_FEATURE_STATUS_DATA_ITEM_ID;
+        mName = LOC_FEATURE_STATUS_CARD;
+        mInfo.len = fids.size();
+        int i = 0;
+        for (const auto& elem : fids) {
+            if (i < MAX_LOC_FID_NUM) {
+                mInfo.mFids[i] = elem;
+            }
+            i++;
+        }
+        setBlobPtr((void*)(&mInfo), sizeof(LocFeatureStatusInfo));
+    }
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    LocFeatureStatusInfo mInfo;
 };
 
 class NlpSessionStartedDataItem: public IDataItemCore {
-    public:
-        NlpSessionStartedDataItem(bool nlpStarted = false) :
-            mNlpStarted(nlpStarted) {mId = NETWORK_POSITIONING_STARTED_DATA_ITEM_ID;}
-        virtual ~NlpSessionStartedDataItem() {}
-        virtual void stringify(string& /*valueStr*/) override;
-        virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-        // Data members
-        bool mNlpStarted;
-};
+public:
+    NlpSessionStartedDataItem(bool enabled = false) :
+            mIsEnabled(enabled) {
+        mId = NETWORK_POSITIONING_STARTED_DATA_ITEM_ID;
+        mName = NLP_SESSION_STARTED_CARD;
+        setBlobPtr((void*)(&mIsEnabled), sizeof(bool));
+    }
+    virtual void stringify(std::string& valueStr) override;
 
-class QesdkWwanFeatureStatusDataItem: public IDataItemCore {
-    public:
-        QesdkWwanFeatureStatusDataItem(
-                uint32_t qesdkFeatureId = 0,
-                string appHash = ""):
-            mQesdkFeatureId(qesdkFeatureId),
-            mAppHash(appHash) { mId = QESDK_WWAN_FEATURE_STATUS_DATA_ITEM_ID; }
-
-        virtual ~QesdkWwanFeatureStatusDataItem() {}
-
-        virtual void stringify(string& /*valueStr*/) override;
-        virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-
-        // Data members
-        uint32_t mQesdkFeatureId;
-        string mAppHash;
+//Data members
+    bool mIsEnabled;
 };
 
 class WwanAppInfoDataItem: public IDataItemCore {
-    public:
-        WwanAppInfoDataItem(uint32_t pid = 0,
+public:
+    WwanAppInfoDataItem(uint32_t pid = 0,
                 uint32_t uid = 0,
                 bool appHasFinePermission = false,
                 bool appHasBackgroundPermission = false,
-                string appHash = "",
-                string appPackageName = "",
-                string appCookie = ""):
-            mPid(pid), mUid(uid), mAppHasFinePermission(appHasFinePermission),
-            mAppHasBackgroundPermission(appHasBackgroundPermission), mAppHash(appHash),
-            mAppPackageName(appPackageName), mAppCookie(appCookie)
-            { mId = WWAN_APP_INFO_DATA_ITEM_ID; }
+                std::string appHash = "",
+                std::string appPackageName = "",
+                std::string appCookie = "") {
+        mId = WWAN_APP_INFO_DATA_ITEM_ID;
+        mName = WWAN_APP_INFO_CARD;
+        mWwanAppInfo.mPid = pid;
+        mWwanAppInfo.mUid = uid;
+        mWwanAppInfo.mAppHasFinePermission = appHasFinePermission;
+        mWwanAppInfo.mAppHasBackgroundPermission = appHasBackgroundPermission;
+        copyStringToCharArray(appHash, mWwanAppInfo.mAppHash, sizeof(mWwanAppInfo.mAppHash));
+        copyStringToCharArray(appPackageName, mWwanAppInfo.mAppPackageName,
+                sizeof(mWwanAppInfo.mAppPackageName));
+        copyStringToCharArray(appCookie, mWwanAppInfo.mAppCookie, sizeof(mWwanAppInfo.mAppCookie));
+        setBlobPtr((void*)(&mWwanAppInfo), sizeof(LocWwanAppInfo));
+    }
+    virtual void stringify(std::string& valueStr) override;
 
-        virtual ~WwanAppInfoDataItem() {}
+//Data members
+    LocWwanAppInfo mWwanAppInfo;
+};
 
-        virtual void stringify(string& /*valueStr*/) override;
-        virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
-
-        // Data members
-        uint32_t mPid;
-        uint32_t mUid;
-        bool mAppHasFinePermission;
-        bool mAppHasBackgroundPermission;
-        string mAppHash;
-        string mAppPackageName;
-        string mAppCookie;
+class DataItemsFactory {
+public:
+    static IDataItemCore* createNewDataItem(const DataItemId& id);
 };
 
 } // namespace loc_core

@@ -392,7 +392,7 @@ static void updateConnectionStatus(bool connected, int8_t type,
                                    bool roaming, NetworkHandle networkHandle,
                                    const string& apn) {
     if (NULL != gGnssAdapter) {
-        gGnssAdapter->getSystemStatus()->eventConnectionStatus(
+        gGnssAdapter->getSystemStatus()->getOsObserver()->eventConnectionStatus(
                 connected, type, roaming, networkHandle, apn);
     }
 }
@@ -643,9 +643,9 @@ static uint32_t setOptInStatus(bool userConsent) {
         };
 
         uint32_t sessionId = gGnssAdapter->generateSessionId();
-        gGnssAdapter->getSystemStatus()->eventOptInStatus(userConsent);
+        gGnssAdapter->getSystemStatus()->getOsObserver()->eventOptInStatus(userConsent);
 #ifdef USE_GLIB
-        gGnssAdapter->getSystemStatus()->eventRegionStatus(true);
+        gGnssAdapter->getSystemStatus()->getOsObserver()->eventRegionAllowedStatus(true);
 #endif
         gGnssAdapter->sendMsg(new RespMsg(sessionId));
 

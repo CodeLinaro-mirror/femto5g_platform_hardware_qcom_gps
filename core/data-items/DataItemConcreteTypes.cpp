@@ -37,765 +37,221 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #include "DataItemConcreteTypes.h"
 #include <inttypes.h>
-#include <log_util.h>
 
-#define ENH_FIELD_ENABLED "IS_QUALCOMM_ENHANCED_PROVIDER_ENABLED"
-#define GPSSTATE_FIELD_ENABLED "IS_GPS_PROVIDER_ENABLED"
-#define WIFIHARDWARESTATE_FIELD_ENABLED "IS_WIFI_HARDWARE_ON"
-#define TIMEZONECHANGE_FIELD_ENABLED "IS_TIMEZONE_CHANGED"
-#define TIMECHANGE_FIELD_ENABLED "IS_TIME_CHANGED"
-#define TIMECHANGE_FIELD_CURRENT_TIME_MILLIS "CURR_TIME_MILLIS"
-#define TIMECHANGE_FIELD_RAW_OFFSET_TZ "RAW_OFFSET_TZ"
-#define TIMECHANGE_FIELD_DST_OFFSET_TZ "DST_OFFSET_TZ"
-
-#define NETWORKINFO_CARD "ACTIVE_NETWORK_INFO"
-#define NETWORKINFO_FIELD_TYPE "TYPE"
-#define NETWORKINFO_FIELD_TYPENAME "TYPE_NAME"
-#define NETWORKINFO_FIELD_SUBTYPENAME "SUB_TYPE_NAME"
-#define NETWORKINFO_FIELD_AVAILABLE "IS_AVAILABLE"
-#define NETWORKINFO_FIELD_CONNECTED "IS_CONNECTED"
-#define NETWORKINFO_FIELD_ROAMING "IS_ROAMING"
-#define NETWORKINFO_FIELD_NETWORKHANDLE_0 "NETWORK_HANDLE_0"
-#define NETWORKINFO_FIELD_NETWORKHANDLE_1 "NETWORK_HANDLE_1"
-#define NETWORKINFO_FIELD_NETWORKHANDLE_2 "NETWORK_HANDLE_2"
-#define NETWORKINFO_FIELD_NETWORKHANDLE_3 "NETWORK_HANDLE_3"
-#define NETWORKINFO_FIELD_NETWORKHANDLE_4 "NETWORK_HANDLE_4"
-#define NETWORKINFO_FIELD_NETWORKHANDLE_5 "NETWORK_HANDLE_5"
-#define NETWORKINFO_FIELD_NETWORKHANDLE_6 "NETWORK_HANDLE_6"
-#define NETWORKINFO_FIELD_NETWORKHANDLE_7 "NETWORK_HANDLE_7"
-#define NETWORKINFO_FIELD_NETWORKHANDLE_8 "NETWORK_HANDLE_8"
-#define NETWORKINFO_FIELD_NETWORKHANDLE_9 "NETWORK_HANDLE_9"
-#define NETWORKINFO_FIELD_APN_NAME "APN_NAME"
-
-#define MODEL_FIELD_NAME "MODEL"
-#define MANUFACTURER_FIELD_NAME "MANUFACTURER"
-#define OSSTATUS_CARD "ACTIVE_NETWORK_INFO"
-
-#define WIFI_SUPPLICANT_FIELD_STATE "WIFI-SUPPLICANT-STATE"
-#define MCCMNC_FIELD_NAME "MCCMNC"
-
-#define OEM_GTP_UPLAOD_TRIGGER_READY_FIELD_NAME "OEM-GTP-UPLOAD-TRIGGER-READY"
-
-#define IN_EMERGENCY_CALL_FIELD_NAME "IS_EMERGENCY"
-#define PRECISE_LOCATION_ENABLED_FIELD_NAME "PRECISE_LOCATION_ENABLED"
-#define TRACKING_STARTED_FIELD_NAME "TRACKING_STARTED"
-#define NTRIP_STARTED_FIELD_NAME "NTRIP_STARTED"
-#define NLP_STARTED_FIELD_NAME "NLP_SESSION_STARTED"
-#define LOC_FEATURE_STATUS_FIELD_NAME "LOC_FEATURE_STATUS"
-
-#define QESDK_WWAN_FEATURE_STATUS_CARD "QESDK_WWAN_FEATURE_STATUS_CARD"
-#define QESDK_WWAN_FEATURE_STATUS_FIELD_QESDK_FEATURE_ID "WWAN_FEATURE_ID"
-#define QESDK_WWAN_FEATURE_STATUS_FIELD_APPHASH "WWAN_FEATURE_APP_HASH"
-
-#define WWAN_APP_INFO_CARD "WWAN_APP_INFO_CARD"
-#define WWAN_APP_INFO_FIELD_PID "PID"
-#define WWAN_APP_INFO_FIELD_UID "UID"
-#define WWAN_APP_INFO_FIELD_APPHASFINEPERMISSION "APPHASFINEPERMISSION"
-#define WWAN_APP_INFO_FIELD_APPHASBACKGROUNDPERMISSION "APPHASBACKGROUNDPERMISSION"
-#define WWAN_APP_INFO_FIELD_APPHASH "APPHASH"
-#define WWAN_APP_INFO_FIELD_APPPACKAGENAME "APPPACKAGENAME"
-#define WWAN_APP_INFO_FIELD_APPCOOKIE "APPCOOKIE"
 
 namespace loc_core
 {
-// stringify
+using namespace std;
+bool copyStringToCharArray(const std::string& src, char* dest, size_t destSize) {
+    memset(dest, 0, destSize);
+    if (dest == nullptr || destSize == 0) {
+        return false;
+    }
+    size_t copyLength = src.size() >= (destSize - 1) ? (destSize - 1) : src.size();
+    memcpy(dest, src.c_str(), copyLength);
+    dest[copyLength] = '\0';
+    return true;
+}
+
+void NetworkInfoDataItem::stringify(string& valueStr) {
+    valueStr = mName;
+    valueStr += ": mAllTypes: " + std::to_string(mNetInfo.mAllTypes);
+    valueStr += " mType: " + std::to_string(mNetInfo.mType);
+    valueStr += " mAvailable: " + std::to_string(mNetInfo.mAvailable);
+    valueStr += " mConnected: " + std::to_string(mNetInfo.mConnected);
+    valueStr += " mRoaming: " + std::to_string(mNetInfo.mRoaming);
+    valueStr += " networkHandle: " + std::to_string(mNetInfo.networkHandle);
+    string apnStr(mNetInfo.mApn);
+    valueStr += " mApn: " + apnStr;
+}
+
+uint8_t ENHDataItem::currentEnhStatusMask = 0;
 void ENHDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(ENHDataItem, ENH_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr = ENH_FIELD_ENABLED;
-        valueStr += ": ";
-        valueStr += (d->isEnabled()) ? "true" : "false";
-        valueStr += " IS_QUALCOMM_ENHANCED_PROVIDER_ENABLED_CONSENT: ";
-        valueStr += (((1 << FIELD_CONSENT) & d->mEnhFields) != 0) ? "true" : "false";
-        valueStr += " IS_QUALCOMM_ENHANCED_PROVIDER_ENABLED_REGION: ";
-        valueStr += (((1 << FIELD_REGION) & d->mEnhFields) != 0) ? "true" : "false";
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
+    valueStr = mName;
+    valueStr += ": user consent: ";
+    valueStr += mEnhStatusMask & ENH_USER_CONSENT_ALLOWED_MASK ? "true" : "false";
+    valueStr += ", is region allowed: ";
+    valueStr += mEnhStatusMask & ENH_EMBARGO_REGION_ALLOWED_MASK ? "true" : "false";
 }
+
 void GPSStateDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(GPSStateDataItem, GPSSTATE_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr = GPSSTATE_FIELD_ENABLED;
-        valueStr += ": ";
-        valueStr += (d->mEnabled) ? ("true") : ("false");
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
+    valueStr = mName;
+    valueStr += mIsEnabled ? ": true" : ": false";
 }
+
 void WifiHardwareStateDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(WifiHardwareStateDataItem,
-                WIFIHARDWARESTATE_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr = WIFIHARDWARESTATE_FIELD_ENABLED;
-        valueStr += ": ";
-        valueStr += (d->mEnabled) ? ("true") : ("false");
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
+    valueStr = mName;
+    valueStr += mIsEnabled ? ": true" : ": false";
 }
 
 void TimeZoneChangeDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(TimeZoneChangeDataItem, TIMEZONE_CHANGE_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr = TIMEZONECHANGE_FIELD_ENABLED;
-        valueStr += ": ";
-        char time [30];
-        snprintf (time, 30, "%" PRIi64, d->mCurrTimeMillis);
-        valueStr += string (time);
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
+    valueStr = mName;
+    valueStr += ": currentTimeMillis: " + std::to_string(mTimezoneInfo.mCurrTimeMillis);
+    valueStr += " rawOffset: " + std::to_string(mTimezoneInfo.mRawOffsetTZ);
+    valueStr += " dstOffset: " + std::to_string(mTimezoneInfo.mDstOffsetTZ);
 }
+
 void TimeChangeDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(TimeChangeDataItem, TIME_CHANGE_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr = TIMECHANGE_FIELD_ENABLED;
-        valueStr += ": ";
-        char time [30];
-        snprintf (time, 30, "%" PRIi64, d->mCurrTimeMillis);
-        valueStr += string (time);
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
+    valueStr = mName;
+    valueStr += ": currentTimeMillis: " + std::to_string(mTimeInfo.mCurrTimeMillis);
+    valueStr += " rawOffset: " + std::to_string(mTimeInfo.mRawOffsetTZ);
+    valueStr += " dstOffset: " + std::to_string(mTimeInfo.mDstOffsetTZ);
 }
-void NetworkInfoDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(NetworkInfoDataItem, NETWORKINFO_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr = NETWORKINFO_CARD;
-        valueStr += "::";
-        valueStr += NETWORKINFO_FIELD_TYPE;
-        valueStr += "s_MASK: ";
-        char type [12];
-        snprintf (type, 12, "%" PRIu64, mAllTypes);
-        valueStr += string (type);
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_TYPENAME;
-        valueStr += ": ";
-        valueStr += d->mTypeName;
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_SUBTYPENAME;
-        valueStr += ": ";
-        valueStr += d->mSubTypeName;
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_AVAILABLE;
-        valueStr += ": ";
-        valueStr += (d->mAvailable) ? ("true") : ("false");
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_CONNECTED;
-        valueStr += ": ";
-        valueStr += (d->mConnected) ? ("true") : ("false");
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_ROAMING;
-        valueStr += ": ";
-        valueStr += (d->mRoaming) ? ("true") : ("false");
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_NETWORKHANDLE_0;
-        valueStr += ": ";
-        valueStr += d->mAllNetworkHandles[0].toString();
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_NETWORKHANDLE_1;
-        valueStr += ": ";
-        valueStr += d->mAllNetworkHandles[1].toString();
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_NETWORKHANDLE_2;
-        valueStr += ": ";
-        valueStr += d->mAllNetworkHandles[2].toString();
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_NETWORKHANDLE_3;
-        valueStr += ": ";
-        valueStr += d->mAllNetworkHandles[3].toString();
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_NETWORKHANDLE_4;
-        valueStr += ": ";
-        valueStr += d->mAllNetworkHandles[4].toString();
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_NETWORKHANDLE_5;
-        valueStr += ": ";
-        valueStr += d->mAllNetworkHandles[5].toString();
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_NETWORKHANDLE_6;
-        valueStr += ": ";
-        valueStr += d->mAllNetworkHandles[6].toString();
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_NETWORKHANDLE_7;
-        valueStr += ": ";
-        valueStr += d->mAllNetworkHandles[7].toString();
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_NETWORKHANDLE_8;
-        valueStr += ": ";
-        valueStr += d->mAllNetworkHandles[8].toString();
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_NETWORKHANDLE_9;
-        valueStr += ": ";
-        valueStr += d->mAllNetworkHandles[9].toString();
-        valueStr += ", ";
-        valueStr += NETWORKINFO_FIELD_APN_NAME;
-        valueStr += ": ";
-        valueStr += d->mApn;
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-}
+
 void ModelDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(ModelDataItem, MODEL_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr += MODEL_FIELD_NAME;
-        valueStr += ": ";
-        valueStr += d->mModel;
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
+    valueStr = mName;
+    valueStr += ": " + mModel;
 }
+
 void ManufacturerDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(ManufacturerDataItem, MANUFACTURER_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr += MANUFACTURER_FIELD_NAME;
-        valueStr += ": ";
-        valueStr += d->mManufacturer;
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
+    valueStr = mName;
+    valueStr += ": " + mManufacturer;
 }
+
+void RilCellInfoDataItem::stringify(string& valueStr) {
+    valueStr = mName;
+    valueStr += ": cellType: " + std::to_string((int)mRilInfo.cellType);
+    valueStr += " regionId1: " + std::to_string(mRilInfo.regionId1);
+    valueStr += " regionId2: " + std::to_string(mRilInfo.regionId2);
+    valueStr += " regionId3: " + std::to_string(mRilInfo.regionId3);
+    valueStr += " regionId4: " + std::to_string(mRilInfo.regionId4);
+    valueStr += " frequency: " + std::to_string(mRilInfo.frequency);
+    valueStr += " physicalId: " + std::to_string(mRilInfo.physicalId);
+}
+
 void WifiSupplicantStatusDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(WifiSupplicantStatusDataItem,
-                WIFI_SUPPLICANT_STATUS_DATA_ITEM_ID);
-        valueStr += "Attach state: ";
-        char t[50];
-        memset (t, '\0', 50);
-        snprintf (t, 50, "%d", d->mState);
-        valueStr += t;
-
-        valueStr += ", Mac address valid: ";
-        valueStr += (d->mApMacAddressValid) ? ("true") : ("false");
-
-        valueStr += ", AP MAC address: ";
-        memset (t, '\0', 50);
-        snprintf(t, 50, "[%02x:%02x:%02x:%02x:%02x:%02x]", d->mApMacAddress[0], d->mApMacAddress[1],
-            d->mApMacAddress[2], d->mApMacAddress[3], d->mApMacAddress[4], d->mApMacAddress[5]);
-        valueStr += t;
-
-        valueStr += ", Wifi-Ap SSID Valid: ";
-        valueStr += (d->mWifiApSsidValid) ? ("true") : ("false");
-
-        valueStr += ", SSID: ";
-        valueStr += d->mWifiApSsid;
-
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
+    valueStr = mName;
+    valueStr += ": mState:" + std::to_string((int)mWifiSupplicantInfo.mState);
+    valueStr += " mApMacAddressValid: " + std::to_string(mWifiSupplicantInfo.mApMacAddressValid);
+    valueStr += " mApMacAddress: ";
+    string marAddrStr(mWifiSupplicantInfo.mApMacAddress,
+            mWifiSupplicantInfo.mApMacAddress + sizeof(mWifiSupplicantInfo.mApMacAddress));
+    valueStr += marAddrStr;
+    valueStr += " mWifiApSsidValid: " + std::to_string(mWifiSupplicantInfo.mWifiApSsidValid);
+    valueStr += " mWifiApSsid: ";
+    string ssidStr(mWifiSupplicantInfo.mWifiApSsid,
+            mWifiSupplicantInfo.mWifiApSsid + sizeof(mWifiSupplicantInfo.mWifiApSsid));
+    valueStr += ssidStr;
 }
 
 void MccmncDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(MccmncDataItem, MCCMNC_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr += MCCMNC_FIELD_NAME;
-        valueStr += ": ";
-        valueStr += d->mValue;
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
+    valueStr = mName;
+    valueStr += ": " + mMccmnc;
 }
 
-// copy
 void InEmergencyCallDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(
-                InEmergencyCallDataItem, IN_EMERGENCY_CALL_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr += IN_EMERGENCY_CALL_FIELD_NAME;
-        valueStr += ": ";
-        valueStr += (d->mIsEmergency) ? ("true") : ("false");
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-}
-int32_t ENHDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(ENHDataItem,  ENH_DATA_ITEM_ID);
-        if (s->mEnhFields == d->mEnhFields) { result = true; break; }
-        switch (d->mAction) {
-            case SET:
-                s->mEnhFields |= (1 << d->mFieldUpdate);
-                break;
-            case CLEAR:
-                s->mEnhFields &= ~(1 << d->mFieldUpdate);
-                break;
-            default:
-                break;
-        }
-        result = 0;
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-    return result;
-}
-int32_t GPSStateDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(GPSStateDataItem,  GPSSTATE_DATA_ITEM_ID);
-        if (s->mEnabled == d->mEnabled) { result = 0; break; }
-        s->mEnabled = d->mEnabled;
-        result = 0;
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-    return result;
- }
-int32_t WifiHardwareStateDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(WifiHardwareStateDataItem, WIFIHARDWARESTATE_DATA_ITEM_ID);
-        if (s->mEnabled == d->mEnabled) { result = 0; break; }
-        s->mEnabled = d->mEnabled;
-        result = 0;
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-    return result;
-}
-int32_t TimeZoneChangeDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(TimeZoneChangeDataItem, TIMEZONE_CHANGE_DATA_ITEM_ID);
-        if (s->mCurrTimeMillis == d->mCurrTimeMillis &&
-           s->mRawOffsetTZ == d->mRawOffsetTZ &&
-           s->mDstOffsetTZ == d->mDstOffsetTZ) {
-            result = 0;
-            break;
-        }
-        s->mCurrTimeMillis = d->mCurrTimeMillis;
-        s->mRawOffsetTZ = d->mRawOffsetTZ;
-        s->mDstOffsetTZ = d->mDstOffsetTZ;
-        result = 0;
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-    return result;
-}
-int32_t TimeChangeDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(TimeChangeDataItem, TIME_CHANGE_DATA_ITEM_ID);
-        if (s->mCurrTimeMillis == d->mCurrTimeMillis &&
-           s->mRawOffsetTZ == d->mRawOffsetTZ &&
-           s->mDstOffsetTZ == d->mDstOffsetTZ) {
-            result = 0;
-            break;
-        }
-        s->mCurrTimeMillis = d->mCurrTimeMillis;
-        s->mRawOffsetTZ = d->mRawOffsetTZ;
-        s->mDstOffsetTZ = d->mDstOffsetTZ;
-        result = 0;
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-    return result;
-}
-int32_t NetworkInfoDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(NetworkInfoDataItem, NETWORKINFO_DATA_ITEM_ID);
-        NetworkType type = ((NetworkInfoDataItem*)d)->getType();
-        if ((s->mAllTypes == d->mAllTypes) &&
-            (s->getType() == type) && (0 == s->mTypeName.compare(d->mTypeName)) &&
-            (0 == s->mSubTypeName.compare(d->mSubTypeName)) &&
-            (s->mAvailable == d->mAvailable) &&
-            (s->mConnected == d->mConnected) &&
-            (s->mRoaming == d->mRoaming) &&
-            (memcmp(s->mAllNetworkHandles, d->mAllNetworkHandles,
-                    sizeof(s->mAllNetworkHandles)) == 0) &&
-            (s->mNetworkHandle == d->mNetworkHandle) &&
-            (s->mApn.compare(d->mApn))) {
-            result = 0;
-            break;
-        }
-
-        s->mAllTypes = (d->mAllTypes == 0) ? typeToAllTypes(type) : d->mAllTypes;
-        if (s->getType() != type) { s->setType(type);}
-        if (0 != s->mTypeName.compare(d->mTypeName)) { s->mTypeName = d->mTypeName;}
-        if (0 != s->mSubTypeName.compare(d->mSubTypeName)) {s->mSubTypeName = d->mSubTypeName;}
-        if (0 != s->mApn.compare(d->mApn)) {s->mApn = d->mApn;}
-        if (s->mAvailable != d->mAvailable) {s->mAvailable = d->mAvailable;}
-        if (s->mConnected != d->mConnected) {s->mConnected = d->mConnected;}
-        if (s->mRoaming != d->mRoaming) {s->mRoaming = d->mRoaming;}
-        if (memcmp(s->mAllNetworkHandles, d->mAllNetworkHandles,
-                sizeof(s->mAllNetworkHandles)) != 0) {
-            memcpy(static_cast<void*>(s->mAllNetworkHandles),
-                    static_cast<void *>(d->mAllNetworkHandles), sizeof(s->mAllNetworkHandles));
-        }
-        if (s->mNetworkHandle != d->mNetworkHandle) {s->mNetworkHandle = d->mNetworkHandle;}
-
-        result = 0;
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-    return result;
-}
-int32_t ModelDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(ModelDataItem, MODEL_DATA_ITEM_ID);
-        if (0 == s->mModel.compare(d->mModel)) { result = 0; break; }
-        s->mModel = d->mModel;
-        result = 0;
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-    return result;
-}
-int32_t ManufacturerDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(ManufacturerDataItem, MANUFACTURER_DATA_ITEM_ID);
-        if (0 == s->mManufacturer.compare(d->mManufacturer)) { result = 0; break; }
-        s->mManufacturer = d->mManufacturer;
-        result = 0;
-    } while (0);
-    EXIT_LOG("%d", result);
-    return result;
-}
-int32_t WifiSupplicantStatusDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(WifiSupplicantStatusDataItem,
-                WIFI_SUPPLICANT_STATUS_DATA_ITEM_ID);
-        if ( (s->mState == d->mState) &&
-            (s->mApMacAddressValid == d->mApMacAddressValid) &&
-            (s->mWifiApSsidValid == d->mWifiApSsidValid)) {
-
-            // compare mac address
-            if (memcmp(s->mApMacAddress, d->mApMacAddress, sizeof(s->mApMacAddress)) == 0) {
-
-                // compare ssid
-                if (s->mWifiApSsid.compare(d->mWifiApSsid) == 0) {
-                    result = 0;
-                    break;
-                }
-            }
-        }
-
-        if (s->mState != d->mState) { s->mState = d->mState;}
-        if (s->mApMacAddressValid != d->mApMacAddressValid) {
-            s->mApMacAddressValid = d->mApMacAddressValid;
-        }
-        if (s->mWifiApSsidValid != d->mWifiApSsidValid) {s->mWifiApSsidValid = d->mWifiApSsidValid;}
-        if (memcmp(s->mApMacAddress, d->mApMacAddress, sizeof(s->mApMacAddress)) != 0) {
-            memcpy(static_cast<void*>(s->mApMacAddress), static_cast<void *>(d->mApMacAddress),
-                    sizeof(s->mApMacAddress));
-        }
-        if (s->mWifiApSsid.compare(d->mWifiApSsid) != 0) {
-            s->mWifiApSsid = d->mWifiApSsid;
-        }
-
-        result = 0;
-    } while (0);
-
-    EXIT_LOG_WITH_ERROR("%d", result);
-    return result;
-}
-
-int32_t MccmncDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(MccmncDataItem, MCCMNC_DATA_ITEM_ID);
-        if (0 == s->mValue.compare(d->mValue)) { result = 0; break; }
-        s->mValue= d->mValue;
-        result = 0;
-    } while (0);
-    EXIT_LOG("%d", result);
-    return result;
-}
-int32_t InEmergencyCallDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(
-                InEmergencyCallDataItem, IN_EMERGENCY_CALL_DATA_ITEM_ID);
-        s->mIsEmergency = d->mIsEmergency;
-        result = 0;
-    } while (0);
-    EXIT_LOG("%d", result);
-    return result;
+    valueStr = mName;
+    valueStr += mIsEnabled ? ": true" : ": false";
 }
 
 void PreciseLocationEnabledDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(
-                PreciseLocationEnabledDataItem, PRECISE_LOCATION_ENABLED_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr += PRECISE_LOCATION_ENABLED_FIELD_NAME;
-        valueStr += ": ";
-        valueStr += (d->mPreciseLocationEnabled) ? ("true") : ("false");
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-}
-
-int32_t PreciseLocationEnabledDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(
-                PreciseLocationEnabledDataItem, PRECISE_LOCATION_ENABLED_DATA_ITEM_ID);
-        s->mPreciseLocationEnabled = d->mPreciseLocationEnabled;
-        result = 0;
-    } while (0);
-    EXIT_LOG("%d", result);
-    return result;
+    valueStr = mName;
+    valueStr += mIsEnabled ? ": true" : ": false";
 }
 
 void TrackingStartedDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(
-                TrackingStartedDataItem, TRACKING_STARTED_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr += TRACKING_STARTED_FIELD_NAME;
-        valueStr += ": ";
-        valueStr += (d->mTrackingStarted) ? ("true") : ("false");
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-}
-
-int32_t TrackingStartedDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(
-                TrackingStartedDataItem, TRACKING_STARTED_DATA_ITEM_ID);
-        s->mTrackingStarted = d->mTrackingStarted;
-        result = 0;
-    } while (0);
-    EXIT_LOG("%d", result);
-    return result;
+    valueStr = mName;
+    valueStr += mIsEnabled ? ": true" : ": false";
 }
 
 void NtripStartedDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(
-                NtripStartedDataItem, NTRIP_STARTED_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr += NTRIP_STARTED_FIELD_NAME;
-        valueStr += ": ";
-        valueStr += (d->mNtripStarted) ? ("true") : ("false");
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-}
-
-int32_t NtripStartedDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(
-                NtripStartedDataItem, NTRIP_STARTED_DATA_ITEM_ID);
-        s->mNtripStarted = d->mNtripStarted;
-        result = 0;
-    } while (0);
-    EXIT_LOG("%d", result);
-    return result;
+    valueStr = mName;
+    valueStr += mIsEnabled ? ": true" : ": false";
 }
 
 void LocFeatureStatusDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(
-                LocFeatureStatusDataItem, LOC_FEATURE_STATUS_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr += LOC_FEATURE_STATUS_FIELD_NAME;
-        valueStr += ": {";
-        for (int item : d->mFids) {
-            valueStr += std::to_string(item) + ", ";
-        }
-        valueStr += "}";
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-}
-
-int32_t LocFeatureStatusDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(
-                LocFeatureStatusDataItem, LOC_FEATURE_STATUS_DATA_ITEM_ID);
-        s->mFids = d->mFids;
-        result = 0;
-    } while (0);
-    EXIT_LOG("%d", result);
-    return result;
+    valueStr = mName;
+    valueStr += ": ";
+    for (int i = 0; i < mInfo.len; i++) {
+        valueStr += std::to_string(mInfo.mFids[i]);
+        valueStr += " ";
+    }
 }
 
 void NlpSessionStartedDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(
-                NlpSessionStartedDataItem, NETWORK_POSITIONING_STARTED_DATA_ITEM_ID);
-        valueStr.clear ();
-        valueStr += NLP_STARTED_FIELD_NAME;
-        valueStr += ": ";
-        valueStr += (d->mNlpStarted) ? ("true") : ("false");
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-}
-
-int32_t NlpSessionStartedDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(
-                NlpSessionStartedDataItem, NETWORK_POSITIONING_STARTED_DATA_ITEM_ID);
-        s->mNlpStarted = d->mNlpStarted;
-        result = 0;
-    } while (0);
-    EXIT_LOG("%d", result);
-    return result;
-}
-
-void QesdkWwanFeatureStatusDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(
-            QesdkWwanFeatureStatusDataItem, QESDK_WWAN_FEATURE_STATUS_DATA_ITEM_ID);
-
-        valueStr.clear ();
-
-        valueStr = QESDK_WWAN_FEATURE_STATUS_CARD;
-        valueStr += "::";
-
-        valueStr += QESDK_WWAN_FEATURE_STATUS_FIELD_QESDK_FEATURE_ID;
-        valueStr += ": ";
-        char fid[12];
-        snprintf(fid, 12, "%d", d->mQesdkFeatureId);
-        valueStr += string(fid);
-        valueStr += ", ";
-
-        valueStr += QESDK_WWAN_FEATURE_STATUS_FIELD_APPHASH;
-        valueStr += ": ";
-        valueStr += d->mAppHash;
-        valueStr += ", ";
-
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
-}
-
-int32_t QesdkWwanFeatureStatusDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(
-                QesdkWwanFeatureStatusDataItem, QESDK_WWAN_FEATURE_STATUS_DATA_ITEM_ID);
-        s->mQesdkFeatureId = d->mQesdkFeatureId;
-        s->mAppHash = d->mAppHash;
-        result = 0;
-    } while (0);
-    EXIT_LOG("%d", result);
-    return result;
+    valueStr = mName;
+    valueStr += mIsEnabled ? ": true" : ": false";
 }
 
 void WwanAppInfoDataItem::stringify(string& valueStr) {
-    int32_t result = 0;
-    ENTRY_LOG();
-    do {
-        STRINGIFY_ERROR_CHECK_AND_DOWN_CAST(
-            WwanAppInfoDataItem, WWAN_APP_INFO_DATA_ITEM_ID);
-
-        valueStr.clear ();
-
-        valueStr = WWAN_APP_INFO_CARD;
-        valueStr += "::";
-
-        valueStr += WWAN_APP_INFO_FIELD_PID;
-        valueStr += ": ";
-        char pid[12];
-        snprintf(pid, 12, "%d", d->mPid);
-        valueStr += string(pid);
-        valueStr += ", ";
-
-        valueStr += WWAN_APP_INFO_FIELD_UID;
-        valueStr += ": ";
-        char uid[12];
-        snprintf(uid, 12, "%d", d->mUid);
-        valueStr += string(uid);
-        valueStr += ", ";
-
-        valueStr += WWAN_APP_INFO_FIELD_APPHASFINEPERMISSION;
-        valueStr += ": ";
-        valueStr += (d->mAppHasFinePermission) ? ("true") : ("false");
-        valueStr += ", ";
-
-        valueStr += WWAN_APP_INFO_FIELD_APPHASBACKGROUNDPERMISSION;
-        valueStr += ": ";
-        valueStr += (d->mAppHasBackgroundPermission) ? ("true") : ("false");
-        valueStr += ", ";
-
-        valueStr += WWAN_APP_INFO_FIELD_APPHASH;
-        valueStr += ": ";
-        valueStr += d->mAppHash;
-        valueStr += ", ";
-
-        valueStr += WWAN_APP_INFO_FIELD_APPPACKAGENAME;
-        valueStr += ": ";
-        valueStr += d->mAppPackageName;
-        valueStr += ", ";
-
-        valueStr += WWAN_APP_INFO_FIELD_APPCOOKIE;
-        valueStr += ": ";
-        valueStr += d->mAppCookie;
-        valueStr += ", ";
-
-    } while (0);
-    EXIT_LOG_WITH_ERROR("%d", result);
+    valueStr = mName;
+    valueStr += ": mPid: " + std::to_string(mWwanAppInfo.mPid);
+    valueStr += " mUid: " + std::to_string(mWwanAppInfo.mUid);
+    valueStr += " mAppHasFinePermission: " + std::to_string(mWwanAppInfo.mAppHasFinePermission);
+    valueStr += " mAppHasBackgroundPermission: " +
+        std::to_string(mWwanAppInfo.mAppHasBackgroundPermission);
+    string appHashStr(mWwanAppInfo.mAppHash, mWwanAppInfo.mAppHash + sizeof(mWwanAppInfo.mAppHash));
+    valueStr += " mAppHash: " + appHashStr;
+    string appPkgStr(mWwanAppInfo.mAppPackageName,
+            mWwanAppInfo.mAppPackageName + sizeof(mWwanAppInfo.mAppPackageName));
+    valueStr += " mAppPackageName: " + appPkgStr;
+    string appCookieStr(mWwanAppInfo.mAppCookie,
+            mWwanAppInfo.mAppCookie + sizeof(mWwanAppInfo.mAppCookie));
+    valueStr += " mAppCookie: " + appCookieStr;
 }
 
-int32_t WwanAppInfoDataItem::copyFrom(IDataItemCore* src) {
-    int32_t result = -1;
-    ENTRY_LOG();
-    do {
-        COPIER_ERROR_CHECK_AND_DOWN_CAST(
-                WwanAppInfoDataItem, WWAN_APP_INFO_DATA_ITEM_ID);
-        s->mPid = d->mPid;
-        s->mUid = d->mUid;
-        s->mAppHasFinePermission = d->mAppHasFinePermission;
-        s->mAppHasBackgroundPermission = d->mAppHasBackgroundPermission;
-        s->mAppHash = d->mAppHash;
-        s->mAppPackageName = d->mAppPackageName;
-        s->mAppCookie = d->mAppCookie;
-        result = 0;
-    } while (0);
-    EXIT_LOG("%d", result);
-    return result;
+IDataItemCore* DataItemsFactory::createNewDataItem(const DataItemId& id) {
+    IDataItemCore *mydi = nullptr;
+    switch (id) {
+        case NETWORKINFO_DATA_ITEM_ID:
+            mydi = new NetworkInfoDataItem();
+            break;
+        case ENH_DATA_ITEM_ID:
+            mydi = new ENHDataItem();
+            break;
+        case GPSSTATE_DATA_ITEM_ID:
+            mydi = new GPSStateDataItem();
+            break;
+        case WIFIHARDWARESTATE_DATA_ITEM_ID:
+            mydi = new WifiHardwareStateDataItem();
+            break;
+        case TIMEZONE_CHANGE_DATA_ITEM_ID:
+            mydi = new TimeZoneChangeDataItem();
+            break;
+        case TIME_CHANGE_DATA_ITEM_ID:
+            mydi = new TimeChangeDataItem();
+            break;
+        case MODEL_DATA_ITEM_ID:
+            mydi = new ModelDataItem();
+            break;
+        case MANUFACTURER_DATA_ITEM_ID:
+            mydi = new ManufacturerDataItem();
+            break;
+        case RILCELLINFO_DATA_ITEM_ID:
+            mydi = new RilCellInfoDataItem();
+            break;
+        case WIFI_SUPPLICANT_STATUS_DATA_ITEM_ID:
+            mydi = new WifiSupplicantStatusDataItem();
+            break;
+        case MCCMNC_DATA_ITEM_ID:
+            mydi = new MccmncDataItem();
+            break;
+        case IN_EMERGENCY_CALL_DATA_ITEM_ID:
+            mydi = new InEmergencyCallDataItem();
+            break;
+        case PRECISE_LOCATION_ENABLED_DATA_ITEM_ID:
+            mydi = new PreciseLocationEnabledDataItem();
+            break;
+        case TRACKING_STARTED_DATA_ITEM_ID:
+            mydi = new TrackingStartedDataItem();
+            break;
+        case NTRIP_STARTED_DATA_ITEM_ID:
+            mydi = new NtripStartedDataItem();
+            break;
+        case LOC_FEATURE_STATUS_DATA_ITEM_ID:
+            mydi = new LocFeatureStatusDataItem();
+            break;
+        case NETWORK_POSITIONING_STARTED_DATA_ITEM_ID:
+            mydi = new NlpSessionStartedDataItem();
+            break;
+        case WWAN_APP_INFO_DATA_ITEM_ID:
+            mydi = new WwanAppInfoDataItem();
+            break;
+        default:
+            LOC_LOGd("unsupported data item");
+            break;
+    };
+    return mydi;
 }
 
 } //namespace loc_core
