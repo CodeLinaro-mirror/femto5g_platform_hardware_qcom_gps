@@ -3452,6 +3452,11 @@ GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId,
         return;
     }
 
+    if (mLocApi->getEngineLockState() == ENGINE_LOCK_STATE_DISABLED) {
+        LOC_LOGe("engine lock disabled, return!");
+        reportResponse(client, LOCATION_ERROR_NOT_SUPPORTED, sessionId);
+        return;
+    }
     LOC_LOGd("minInterval %u mode %u powermode %u tbm %u "
              "preciseType %u corrtionType %u",
             trackingOptions.minInterval,
@@ -3471,8 +3476,7 @@ GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId,
     if (!checkAndSetSPEToRunforNHz(tempOptions)) {
         mLocApi->startTimeBasedTracking(tempOptions, new LocApiResponse(*getContext(),
                           [this, client, sessionId, tempOptions] (LocationError err) {
-                if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
-                    LOCATION_ERROR_SUCCESS != err) {
+                if (LOCATION_ERROR_SUCCESS != err) {
                     eraseTrackingSession(client, sessionId);
                     locReleaseWakeLock();
                     mIsWakeLockActive = false;
@@ -3494,6 +3498,11 @@ void
 GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
         const TrackingOptions& updatedOptions, const TrackingOptions& oldOptions)
 {
+    if (mLocApi->getEngineLockState() == ENGINE_LOCK_STATE_DISABLED) {
+        LOC_LOGe("engine lock disabled, return!");
+        reportResponse(client, LOCATION_ERROR_NOT_SUPPORTED, sessionId);
+        return;
+    }
     LocPosMode locPosMode = {};
     convertOptions(locPosMode, updatedOptions);
     // save position mode parameters
@@ -3508,8 +3517,7 @@ GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
     if (!checkAndSetSPEToRunforNHz(tempOptions)) {
         mLocApi->startTimeBasedTracking(tempOptions, new LocApiResponse(*getContext(),
                           [this, client, sessionId, oldOptions, tempOptions] (LocationError err) {
-                if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
-                    LOCATION_ERROR_SUCCESS != err) {
+                if (LOCATION_ERROR_SUCCESS != err) {
                     // restore the old LocationOptions
                     saveTrackingSession(client, sessionId, oldOptions);
                     //Release wakelock
