@@ -1,3 +1,4 @@
+ifeq ($(TARGET_BOARD_PLATFORM), monaco)
 ifneq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE),)
 
 # Set required flags
@@ -45,3 +46,4 @@ LOCAL_PATH := $(call my-dir)
 include $(call all-makefiles-under,$(LOCAL_PATH))
 
 endif # ifneq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE),)
+endif #TARGET_BOARD_PLATFORM
