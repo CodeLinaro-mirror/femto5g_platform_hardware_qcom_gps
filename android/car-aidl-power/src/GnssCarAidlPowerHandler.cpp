@@ -75,7 +75,9 @@
 #include <vector>
 #include <LocationAPI.h>
 
+#ifndef LOG_TAG
 #define LOG_TAG "LocSvc_GnssCARAidlPowerPolicy"
+#endif
 
 using aidl::android::frameworks::automotive::powerpolicy::CarPowerPolicy;
 using aidl::android::frameworks::automotive::powerpolicy::PowerComponent;
