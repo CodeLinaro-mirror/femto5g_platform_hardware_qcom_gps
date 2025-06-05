@@ -64,7 +64,8 @@ static void sleepIfInShutdown() {
 #define GNSS_WEAR_POWER_LIBNAME   "libgnsswear_power.so"
 #define GNSS_WEAR_SMC_HAL_LIBNAME "libgnsswear_smc.so"
 
-typedef const void* (*gnssPowerHandler)(void);
+typedef void (*gnssPowerHandler)(void);
+typedef void (*gnssSmcHandler)(void);
 
 int initializeGnssAutoPowerHandler() {
 
@@ -95,7 +96,7 @@ int initializeGnssWearPowerHandler() {
 void initializeGnssWearSmcHalHandler() {
 
     void * handle = nullptr;
-    gnssPowerHandler getter = (gnssPowerHandler) dlGetSymFromLib(handle, GNSS_WEAR_SMC_HAL_LIBNAME,
+    gnssSmcHandler getter = (gnssSmcHandler) dlGetSymFromLib(handle, GNSS_WEAR_SMC_HAL_LIBNAME,
                                                                  "initGnssSmcHalHandler");
     if (nullptr != getter) {
         getter();
