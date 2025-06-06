@@ -4673,6 +4673,7 @@ GnssAdapter::reportEnginePositions(unsigned int count,
         }
 
         GnssLocationInfoNotification locationInfo[LOC_OUTPUT_ENGINE_COUNT] = {};
+        memset(locationInfo, 0, (sizeof(GnssLocationInfoNotification) * LOC_OUTPUT_ENGINE_COUNT));
         for (unsigned int i = 0; i < count; i++) {
             const EngineLocationInfo* engLocation = (locationArr+i);
             // if it is fused/default location, call reportPosition maintain legacy behavior
@@ -7200,7 +7201,7 @@ bool GnssAdapter::measCorrSetCorrectionsCommand(const GnssMeasurementCorrections
                 }
             }
             char mapDataTestMode[LOC_MAX_PARAM_STRING];
-            memset(mapDataTestMode, 0, sizeof(mapDataTestMode));
+            memset(mapDataTestMode, 0, (sizeof(char) * LOC_MAX_PARAM_STRING));
             loc_param_s_type izatMapDataTable[] =
             {
                 { "MAP_DATA_TEST_MODE", &mapDataTestMode, NULL, 's' },
@@ -7883,7 +7884,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
     std::vector<GnssAntennaInformation> gnssAntennaInformations;
     GnssAntennaInformation gnssAntennaInfo;
 
-    uint32_t antennaInfoVectorSize;
+    uint32_t antennaInfoVectorSize = 0;
     loc_param_s_type ant_info_vector_table[] =
     {
         { "ANTENNA_INFO_VECTOR_SIZE", &antennaInfoVectorSize, NULL, 'n' }
