@@ -3414,6 +3414,18 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                             mOptions.tbm, TRACKING_TBM_THRESHOLD_MILLIS);
                     mOptions.powerMode = GNSS_POWER_MODE_M2;
                 }
+
+                // Update request SUPL mode if not specified
+                if (mOptions.mode == GNSS_SUPL_MODE_UNKNOWN) {
+                    if (mAdapter.isAssistedGpsEnabled() &&
+                            (ContextBase::mGps_conf.SUPL_MODE & GNSS_SUPL_MODE_MSB) != 0) {
+                        mOptions.mode = GNSS_SUPL_MODE_MSB;
+                    } else {
+                        mOptions.mode = GNSS_SUPL_MODE_STANDALONE;
+                    }
+                    LOC_LOGd("Updated UNKNOWN SUPL mode to %d", mOptions.mode);
+                }
+
                 // Api doesn't support multiple clients for time based tracking, so mutiplex
                 bool reportToClientWithNoWait =
                     mAdapter.startTimeBasedTrackingMultiplex(mClient, mSessionId, mOptions);
@@ -3431,7 +3443,6 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
 
     sendMsg(new MsgStartTracking(*this, *mLocApi, client, sessionId, options));
     return sessionId;
-
 }
 
 // Restarting the session after suspend

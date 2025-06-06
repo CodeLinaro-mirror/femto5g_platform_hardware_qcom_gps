@@ -267,6 +267,17 @@ public:
     int32_t mDstOffsetTZ;
 };
 
+class AssistedGpsDataItem: public IDataItemCore {
+public:
+    AssistedGpsDataItem(bool enabled = false) :
+        mEnabled(enabled) {mId = ASSISTED_GPS_DATA_ITEM_ID;}
+    virtual ~AssistedGpsDataItem() {}
+    virtual void stringify(string& /*valueStr*/) override;
+    virtual int32_t copyFrom(IDataItemCore* /*src*/) override;
+// Data members
+    bool mEnabled;
+};
+
 class NetworkInfoDataItem: public IDataItemCore {
 public:
     NetworkInfoDataItem(
