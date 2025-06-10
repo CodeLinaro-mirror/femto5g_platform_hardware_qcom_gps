@@ -27,7 +27,7 @@
  */
 /*
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -87,10 +87,6 @@ static bool gGeofenceLoadFailed = false;
 static uint32_t gEnableMDMGnssHal = 0;
 static bool gReadGnssDeploymentConfigOnce = false;
 
-const loc_param_s_type gps_conf_params[] = {
-    {"GNSS_DEPLOYMENT", &gEnableMDMGnssHal, nullptr, 'n'}
-};
-
 template <typename T1, typename T2>
 static const T1* loadLocationInterface(const char* library, const char* name) {
     void* libhandle = nullptr;
@@ -104,6 +100,9 @@ static const T1* loadLocationInterface(const char* library, const char* name) {
 
 bool LocationAPI::isInfotainmentHalConfigured() {
     if (!gReadGnssDeploymentConfigOnce) {
+        const loc_param_s_type gps_conf_params[] = {
+            {"GNSS_DEPLOYMENT", &gEnableMDMGnssHal, nullptr, 'n'}
+        };
         UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_params);
         gReadGnssDeploymentConfigOnce = true;
     }

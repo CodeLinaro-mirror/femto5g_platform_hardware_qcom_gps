@@ -41,8 +41,8 @@
 #include <unistd.h>
 #include <grp.h>
 
-#define LOC_MAX_PARAM_NAME     80
-#define LOC_MAX_PARAM_STRING   172
+#define LOC_MAX_PARAM_NAME     60
+#define LOC_MAX_PARAM_STRING   100
 #define LOC_MAX_PARAM_LINE    (LOC_MAX_PARAM_NAME + LOC_MAX_PARAM_STRING)
 
 #define UTIL_CACHE_CONF_FILE(filename) \

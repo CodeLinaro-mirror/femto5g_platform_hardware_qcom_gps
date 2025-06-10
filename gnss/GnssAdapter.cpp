@@ -74,16 +74,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 using namespace loc_core;
 
-static int loadEngHubForExternalEngine = 0;
-static int loadLocSlatePUNCModel = 0;
-static loc_param_s_type izatConfParamTable[] = {
-    {"LOAD_ENGHUB_FOR_EXTERNAL_ENGINE", &loadEngHubForExternalEngine, nullptr, 'n'},
-};
-
-static loc_param_s_type izatConfLocGlinkParamTable[] = {
-    {"LOAD_LOC_SLATE_PUNC_MODEL", &loadLocSlatePUNCModel, nullptr, 'n'}
-};
-
 /* Method to fetch status cb from loc_net_iface library */
 typedef AgpsCbInfo& (*LocAgpsGetAgpsCbInfo)(LocAgpsOpenResultCb openResultCb,
         LocAgpsCloseResultCb closeResultCb, void* userDataPtr);
@@ -245,10 +235,11 @@ GnssAdapter::GnssAdapter() :
     mNtnSignalTypeConfigMask(GNSS_SIGNAL_GPS_L1CA|GNSS_SIGNAL_GPS_L5),
     mIsWakeLockActive(false),
 #ifdef _ANDROID_
-    mWakeLockEnableTbfThreshold(10000)
+    mWakeLockEnableTbfThreshold(10000),
 #else
-    mWakeLockEnableTbfThreshold(0)
+    mWakeLockEnableTbfThreshold(0),
 #endif
+    mLoadLocSlatePUNCModel(0)
 {
     LOC_LOGd("Constructor %p", this);
     mLocPositionMode.mode = LOC_POSITION_MODE_INVALID;
@@ -2869,7 +2860,7 @@ GnssAdapter::updateSystemPowerState(PowerStateType systemPowerState) {
             case POWER_STATE_DEEP_SLEEP_EXIT:
                 LOC_LOGd("Re-starting all active sessions -- powerState: %d", systemPowerState);
                 restartSessions(false);
-                if (loadLocSlatePUNCModel && mLocGlinkProxy) {
+                if (mLoadLocSlatePUNCModel && mLocGlinkProxy) {
                     mLocGlinkProxy->getPropogatedPuncFromSlate();
                 }
                 break;
@@ -4181,7 +4172,7 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
             if (GPS_LOCATION_DESIRED_FLAGS ==
                     (mUlpLocation.gpsLocation.flags & (GPS_LOCATION_DESIRED_FLAGS)) &&
                    ((int)mUlpLocation.gpsLocation.accuracy < 15000)) {
-                if (loadLocSlatePUNCModel && mAdapter.mLocGlinkProxy) {
+                if (mAdapter.mLoadLocSlatePUNCModel && mAdapter.mLocGlinkProxy) {
                     LOC_LOGA("reportPositionEvent, inject location to slate");
                     mAdapter.mLocGlinkProxy->injectLocation(mUlpLocation.gpsLocation);
                 }
@@ -5911,7 +5902,6 @@ void GnssAdapter::initOdcpi(const odcpiRequestCallback& callback,
         //Will overwrite callback with same priority in this map
         mNonEsOdcpiReqCbMap[priority] = callback;
     }
-    UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izatConfParamTable);
 }
 
 void GnssAdapter::injectOdcpiCommand(const Location& location)
@@ -8179,21 +8169,23 @@ void GnssAdapter::reportGnssConfigEvent(uint32_t sessionId, const GnssConfig& gn
 
 void
 GnssAdapter::initLocGlinkCommand() {
-
-    UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izatConfLocGlinkParamTable);
-    LOC_LOGd("LOAD_LOC_SLATE_PUNC_MODEL %d", loadLocSlatePUNCModel);
     struct MsgInitLocGlink: public LocMsg {
         GnssAdapter* mAdapter;
         inline MsgInitLocGlink(GnssAdapter* adapter) :
             LocMsg(),
             mAdapter(adapter) {}
         inline virtual void proc() const {
-            mAdapter->initLocGlinkProxy();
+           const loc_param_s_type izatConfLocGlinkParamTable[] = {
+               {"LOAD_LOC_SLATE_PUNC_MODEL", &mAdapter->mLoadLocSlatePUNCModel, nullptr, 'n'}
+           };
+           UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izatConfLocGlinkParamTable);
+           LOC_LOGd("LOAD_LOC_SLATE_PUNC_MODEL %d", mAdapter->mLoadLocSlatePUNCModel);
+           if (mAdapter->mLoadLocSlatePUNCModel) {
+              mAdapter->initLocGlinkProxy();
+           }
         }
     };
-    if (loadLocSlatePUNCModel) {
-        sendMsg(new MsgInitLocGlink(this));
-    }
+    sendMsg(new MsgInitLocGlink(this));
 }
 
 bool
@@ -8306,12 +8298,16 @@ bool
 GnssAdapter::initEngineHub() {
     bool retVal = true;
     const char *error = nullptr;
+    int loadEngHubForExternalEngine = 0;
 
     do {
         // no engine service is enabled for this platform,
         // check if external engine is present for which we need
         // libloc_eng_hub.so to be loaded
         if (ContextBase::mIzat_process_conf.engineServiceEnabled == false) {
+            const loc_param_s_type izatConfParamTable[] = {
+               {"LOAD_ENGHUB_FOR_EXTERNAL_ENGINE", &loadEngHubForExternalEngine, nullptr, 'n'},
+            };
             UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izatConfParamTable);
             if (!loadEngHubForExternalEngine) {
                break;
@@ -8458,7 +8454,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
         s6 += to_string(i);
 
         gnssAntennaInfo.size = sizeof(gnssAntennaInfo);
-        loc_param_s_type ant_cf_table[] =
+        const loc_param_s_type ant_cf_table[] =
         {
             { s1.c_str(), &carrierFrequencyMHz, NULL, 'f' },
             { s2.c_str(), &pcOffsetStr, NULL, 's' },
@@ -8501,7 +8497,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
             string s2 = "PC_VARIATION_CORRECTION_UNC_" + to_string(i) + "_ROW_";
             s2 += to_string(j);
 
-            loc_param_s_type ant_row_table[] =
+            const loc_param_s_type ant_row_table[] =
             {
                 { s1.c_str(), &pcVarCorrStr, NULL, 's' },
                 { s2.c_str(), &pcVarCorrUncStr, NULL, 's' },
@@ -8522,7 +8518,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
             string s4 = "SIGNAL_GAIN_CORRECTION_UNC_" + to_string(i) + "_ROW_";
             s4 += to_string(j);
 
-            loc_param_s_type ant_row_table[] =
+            const loc_param_s_type ant_row_table[] =
             {
                 { s3.c_str(), &sigGainCorrStr, NULL, 's' },
                 { s4.c_str(), &sigGainCorrUncStr, NULL, 's' },
@@ -8795,7 +8791,7 @@ void GnssAdapter::readPPENtripConfig() {
     }
 
     // A sample Ntrip_Params -> 199.106.116.10 5000 Avante_Ref CV2X 1234 1 0 0 0
-    static loc_param_s_type gpsConfParamTable[] = {
+    const loc_param_s_type gpsConfParamTable[] = {
         {"Ntrip_Params", &NtripParamsString, nullptr, 's'}
     };
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, gpsConfParamTable);

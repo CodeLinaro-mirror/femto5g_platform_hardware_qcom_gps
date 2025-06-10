@@ -50,31 +50,27 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
    they must all be 32 bit fields. */
 typedef struct loc_gps_cfg_s
 {
-    uint32_t       SUPL_VER;
-    uint32_t       SUPL_MODE;
-    uint32_t       SUPL_ES;
-    uint32_t       CAPABILITIES;
-    uint32_t       LPP_PROFILE;
-    char           XTRA_SERVER_1[LOC_MAX_PARAM_STRING];
-    char           XTRA_SERVER_2[LOC_MAX_PARAM_STRING];
-    char           XTRA_SERVER_3[LOC_MAX_PARAM_STRING];
-    uint32_t       USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL;
-    char           NMEA_REPORT_RATE[LOC_MAX_PARAM_NAME];
-    GnssConfigGpsLock   GPS_LOCK;
-    uint32_t       A_GLONASS_POS_PROTOCOL_SELECT;
-    uint32_t       AGPS_CONFIG_INJECT;
-    uint32_t       LPPE_CP_TECHNOLOGY;
-    uint32_t       LPPE_UP_TECHNOLOGY;
-    uint32_t       EXTERNAL_DR_ENABLED;
-    char           SUPL_HOST[LOC_MAX_PARAM_STRING];
-    uint32_t       SUPL_PORT;
-    char           MO_SUPL_HOST[LOC_MAX_PARAM_STRING];
-    uint32_t       MO_SUPL_PORT;
-    uint32_t       CP_MTLR_ES;
-    uint32_t       GNSS_DEPLOYMENT;
-    uint32_t       NI_SUPL_DENY_ON_NFW_LOCKED;
-    uint32_t       ENABLE_NMEA_PRINT;
-    uint32_t       NMEA_TAG_BLOCK_GROUPING_ENABLED;
+    uint32_t           GNSS_DEPLOYMENT;
+    uint32_t           CAPABILITIES;
+    GnssConfigGpsLock  GPS_LOCK;
+    uint32_t           ENABLE_NMEA_PRINT;
+    uint32_t           NMEA_TAG_BLOCK_GROUPING_ENABLED;
+    uint32_t           EXTERNAL_DR_ENABLED;
+    uint32_t           CP_MTLR_ES;
+    uint32_t           SUPL_ES;
+    uint32_t           USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL;
+    uint32_t           NI_SUPL_DENY_ON_NFW_LOCKED;
+    uint32_t           AGPS_CONFIG_INJECT;
+    uint32_t           LPPE_CP_TECHNOLOGY;
+    uint32_t           LPPE_UP_TECHNOLOGY;
+    uint32_t           SUPL_VER;
+    uint32_t           SUPL_MODE;
+    char               SUPL_HOST[LOC_MAX_PARAM_STRING];
+    uint32_t           SUPL_PORT;
+    char               MO_SUPL_HOST[LOC_MAX_PARAM_STRING];
+    uint32_t           MO_SUPL_PORT;
+    uint32_t           LPP_PROFILE;
+    uint32_t           A_GLONASS_POS_PROTOCOL_SELECT;
 } loc_gps_cfg_s_type;
 
 /* NOTE: the implementation of the parser casts number
@@ -140,9 +136,6 @@ class LocAdapterBase;
 class ContextBase {
     static LBSProxyBase* getLBSProxy(const char* libName);
     LocApiBase* createLocApi(LOC_API_ADAPTER_EVENT_MASK_T excludedMask);
-    static const loc_param_s_type mGps_conf_table[];
-    static const loc_param_s_type mSap_conf_table[];
-    static const loc_param_s_type mIzat_conf_table[];
     static uint32_t mAntennaInfoVectorSize;
 
 protected:

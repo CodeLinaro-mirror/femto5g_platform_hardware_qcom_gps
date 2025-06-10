@@ -327,11 +327,18 @@ bool fill_conf_entry(const ConfPair& pair, const loc_param_s_type config_table[]
       switch (config_entry->param_type)
       {
          case 's':
-            if (pair.value) {
-               strlcpy((char*) config_entry->param_ptr, pair.value, string_len);
-            }
             // we allow value to be empty for a string field, e.g.: for process info
             entry_filled = true;
+            if (pair.value) {
+               int value_len = strlen(pair.value);
+               if (value_len >= string_len) {
+                  LOC_LOGe("config too long, actual len %d, buffer len %d",
+                           value_len, string_len);
+                  entry_filled = false;
+               } else {
+                  strlcpy((char*) config_entry->param_ptr, pair.value, string_len);
+               }
+            }
             break;
          case 'n':
             if ((strlen(pair.value) >= 3) && (pair.value[0] == '0') &&
@@ -352,7 +359,7 @@ bool fill_conf_entry(const ConfPair& pair, const loc_param_s_type config_table[]
                        config_entry->param_name);
              break;
       }
-      LOC_LOGe("param %s %s type: %d",
+      LOC_LOGd("param %s %s type: %d",
                config_entry->param_name, pair.value, config_entry->param_type);
    }
    return entry_filled;

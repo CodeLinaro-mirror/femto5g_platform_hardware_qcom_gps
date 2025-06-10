@@ -222,6 +222,7 @@ typedef uint16_t  DGnssStateBitMask;
 class GnssAdapter : public LocAdapterBase {
 
     LocGlinkBase* mLocGlinkProxy;
+    int mLoadLocSlatePUNCModel;
     /* ==== Engine Hub ===================================================================== */
     EngineHubProxyBase* mEngHubProxy;
     bool mNHzNeeded;

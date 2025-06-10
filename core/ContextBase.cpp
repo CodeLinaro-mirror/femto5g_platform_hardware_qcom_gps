@@ -59,184 +59,216 @@ GnssNMEARptRate ContextBase::sNmeaReportRate = GNSS_NMEA_REPORT_RATE_NHZ;
 LocationCapabilitiesMask ContextBase::sQwesFeatureMask = 0;
 LocationCapabilitiesMask ContextBase::sHwCapabilitiesMask = 0;
 
-const loc_param_s_type ContextBase::mIzat_conf_table[] =
-{
-  {"MODEM_TYPE",                     &mIzat_conf.MODEM_TYPE,     NULL, 'n' },
-  {"CONSTRAINED_TIME_UNCERTAINTY_ENABLED",
-           &mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED,      NULL, 'n'},
-  {"CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD",
-           &mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD,    NULL, 'f'},
-  {"CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET",
-           &mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET, NULL, 'n'},
-  {"POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED",
-           &mIzat_conf.POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED, NULL, 'n'},
-};
-
-const loc_param_s_type ContextBase::mGps_conf_table[] =
-{
-  {"GPS_LOCK",                       &mGps_conf.GPS_LOCK,                       NULL, 'n'},
-  {"SUPL_VER",                       &mGps_conf.SUPL_VER,                       NULL, 'n'},
-  {"LPP_PROFILE",                    &mGps_conf.LPP_PROFILE,                    NULL, 'n'},
-  {"A_GLONASS_POS_PROTOCOL_SELECT",  &mGps_conf.A_GLONASS_POS_PROTOCOL_SELECT,  NULL, 'n'},
-  {"LPPE_CP_TECHNOLOGY",             &mGps_conf.LPPE_CP_TECHNOLOGY,             NULL, 'n'},
-  {"LPPE_UP_TECHNOLOGY",             &mGps_conf.LPPE_UP_TECHNOLOGY,             NULL, 'n'},
-  {"SUPL_MODE",                      &mGps_conf.SUPL_MODE,                      NULL, 'n'},
-  {"SUPL_ES",                        &mGps_conf.SUPL_ES,                        NULL, 'n'},
-  {"NMEA_REPORT_RATE",               &mGps_conf.NMEA_REPORT_RATE,               NULL, 's'},
-  {"CAPABILITIES",                   &mGps_conf.CAPABILITIES,                   NULL, 'n'},
-  {"XTRA_SERVER_1",                  &mGps_conf.XTRA_SERVER_1,                  NULL, 's'},
-  {"XTRA_SERVER_2",                  &mGps_conf.XTRA_SERVER_2,                  NULL, 's'},
-  {"XTRA_SERVER_3",                  &mGps_conf.XTRA_SERVER_3,                  NULL, 's'},
-  {"USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL",
-           &mGps_conf.USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL,          NULL, 'n'},
-  {"AGPS_CONFIG_INJECT",             &mGps_conf.AGPS_CONFIG_INJECT,             NULL, 'n'},
-  {"EXTERNAL_DR_ENABLED",            &mGps_conf.EXTERNAL_DR_ENABLED,                  NULL, 'n'},
-  {"SUPL_HOST",                      &mGps_conf.SUPL_HOST,                      NULL, 's'},
-  {"SUPL_PORT",                      &mGps_conf.SUPL_PORT,                      NULL, 'n'},
-  {"MO_SUPL_HOST",                   &mGps_conf.MO_SUPL_HOST,                   NULL, 's' },
-  {"MO_SUPL_PORT",                   &mGps_conf.MO_SUPL_PORT,                   NULL, 'n' },
-  {"CP_MTLR_ES",                     &mGps_conf.CP_MTLR_ES,                     NULL, 'n' },
-  {"GNSS_DEPLOYMENT",  &mGps_conf.GNSS_DEPLOYMENT, NULL, 'n'},
-  {"NMEA_TAG_BLOCK_GROUPING_ENABLED", &mGps_conf.NMEA_TAG_BLOCK_GROUPING_ENABLED, NULL, 'n'},
-  {"NI_SUPL_DENY_ON_NFW_LOCKED",  &mGps_conf.NI_SUPL_DENY_ON_NFW_LOCKED, NULL, 'n'},
-  {"ENABLE_NMEA_PRINT",  &mGps_conf.ENABLE_NMEA_PRINT, NULL, 'n'},
-};
-
-const loc_param_s_type ContextBase::mSap_conf_table[] =
-{
-  {"GYRO_BIAS_RANDOM_WALK",          &mSap_conf.GYRO_BIAS_RANDOM_WALK,          &mSap_conf.GYRO_BIAS_RANDOM_WALK_VALID, 'f'},
-  {"ACCEL_RANDOM_WALK_SPECTRAL_DENSITY",     &mSap_conf.ACCEL_RANDOM_WALK_SPECTRAL_DENSITY,    &mSap_conf.ACCEL_RANDOM_WALK_SPECTRAL_DENSITY_VALID, 'f'},
-  {"ANGLE_RANDOM_WALK_SPECTRAL_DENSITY",     &mSap_conf.ANGLE_RANDOM_WALK_SPECTRAL_DENSITY,    &mSap_conf.ANGLE_RANDOM_WALK_SPECTRAL_DENSITY_VALID, 'f'},
-  {"RATE_RANDOM_WALK_SPECTRAL_DENSITY",      &mSap_conf.RATE_RANDOM_WALK_SPECTRAL_DENSITY,     &mSap_conf.RATE_RANDOM_WALK_SPECTRAL_DENSITY_VALID, 'f'},
-  {"VELOCITY_RANDOM_WALK_SPECTRAL_DENSITY",  &mSap_conf.VELOCITY_RANDOM_WALK_SPECTRAL_DENSITY, &mSap_conf.VELOCITY_RANDOM_WALK_SPECTRAL_DENSITY_VALID, 'f'},
-  {"SENSOR_ACCEL_BATCHES_PER_SEC",   &mSap_conf.SENSOR_ACCEL_BATCHES_PER_SEC,   NULL, 'n'},
-  {"SENSOR_ACCEL_SAMPLES_PER_BATCH", &mSap_conf.SENSOR_ACCEL_SAMPLES_PER_BATCH, NULL, 'n'},
-  {"SENSOR_GYRO_BATCHES_PER_SEC",    &mSap_conf.SENSOR_GYRO_BATCHES_PER_SEC,    NULL, 'n'},
-  {"SENSOR_GYRO_SAMPLES_PER_BATCH",  &mSap_conf.SENSOR_GYRO_SAMPLES_PER_BATCH,  NULL, 'n'},
-  {"SENSOR_ACCEL_BATCHES_PER_SEC_HIGH",   &mSap_conf.SENSOR_ACCEL_BATCHES_PER_SEC_HIGH,   NULL, 'n'},
-  {"SENSOR_ACCEL_SAMPLES_PER_BATCH_HIGH", &mSap_conf.SENSOR_ACCEL_SAMPLES_PER_BATCH_HIGH, NULL, 'n'},
-  {"SENSOR_GYRO_BATCHES_PER_SEC_HIGH",    &mSap_conf.SENSOR_GYRO_BATCHES_PER_SEC_HIGH,    NULL, 'n'},
-  {"SENSOR_GYRO_SAMPLES_PER_BATCH_HIGH",  &mSap_conf.SENSOR_GYRO_SAMPLES_PER_BATCH_HIGH,  NULL, 'n'},
-  {"SENSOR_CONTROL_MODE",            &mSap_conf.SENSOR_CONTROL_MODE,            NULL, 'n'},
-  {"SENSOR_ALGORITHM_CONFIG_MASK",   &mSap_conf.SENSOR_ALGORITHM_CONFIG_MASK,   NULL, 'n'}
-};
-
 uint32_t ContextBase::mAntennaInfoVectorSize = 0;
 
 void ContextBase::readConfig()
 {
     static bool confReadDone = false;
-    if (!confReadDone) {
-        confReadDone = true;
-        /*Defaults for gps.conf*/
+    LOC_LOGi("confReadDone %d", confReadDone);
+
+    if (confReadDone) {
+        return;
+    }
+    confReadDone = true;
+
+    // default configuration QTI GNSS H/W
+    mGps_conf.GNSS_DEPLOYMENT = 0;
+    mGps_conf.CAPABILITIES = 0x7;
+    // initialize config items from gps.conf
 #ifdef FEATURE_AUTOMOTIVE
-        mGps_conf.GPS_LOCK = GNSS_CONFIG_GPS_LOCK_MO_AND_NI & (~GNSS_CONFIG_GPS_LOCK_NFW_V2X);
+    mGps_conf.GPS_LOCK = GNSS_CONFIG_GPS_LOCK_MO_AND_NI & (~GNSS_CONFIG_GPS_LOCK_NFW_V2X);
 #else
-        mGps_conf.GPS_LOCK = GNSS_CONFIG_GPS_LOCK_MO_AND_NI;
+    mGps_conf.GPS_LOCK = GNSS_CONFIG_GPS_LOCK_MO_AND_NI;
 #endif
-        mGps_conf.SUPL_VER = 0x00020004;
-        mGps_conf.SUPL_MODE = 0x1;
-        mGps_conf.SUPL_ES = 0;
-        mGps_conf.CP_MTLR_ES = 0;
-        mGps_conf.SUPL_HOST[0] = 0;
-        mGps_conf.SUPL_PORT = 0;
-        mGps_conf.CAPABILITIES = 0x7;
-        /* LTE Positioning Profile configuration is disable by default*/
-        mGps_conf.LPP_PROFILE = 0;
-        /*By default no positioning protocol is selected on A-GLONASS system*/
-        mGps_conf.A_GLONASS_POS_PROTOCOL_SELECT = 0;
-        /*Use emergency PDN by default*/
-        mGps_conf.USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL = 1;
-        /* By default no LPPe CP technology is enabled*/
-        mGps_conf.LPPE_CP_TECHNOLOGY = 0;
-        /* By default no LPPe UP technology is enabled*/
-        mGps_conf.LPPE_UP_TECHNOLOGY = 0;
 
-        /*Defaults for sap.conf*/
-        mSap_conf.GYRO_BIAS_RANDOM_WALK = 0;
-        mSap_conf.SENSOR_ACCEL_BATCHES_PER_SEC = 2;
-        mSap_conf.SENSOR_ACCEL_SAMPLES_PER_BATCH = 5;
-        mSap_conf.SENSOR_GYRO_BATCHES_PER_SEC = 2;
-        mSap_conf.SENSOR_GYRO_SAMPLES_PER_BATCH = 5;
-        mSap_conf.SENSOR_ACCEL_BATCHES_PER_SEC_HIGH = 4;
-        mSap_conf.SENSOR_ACCEL_SAMPLES_PER_BATCH_HIGH = 25;
-        mSap_conf.SENSOR_GYRO_BATCHES_PER_SEC_HIGH = 4;
-        mSap_conf.SENSOR_GYRO_SAMPLES_PER_BATCH_HIGH = 25;
-        mSap_conf.SENSOR_CONTROL_MODE = 0; /* AUTO */
-        mSap_conf.SENSOR_ALGORITHM_CONFIG_MASK = 0; /* INS Disabled = FALSE*/
-        /* Values MUST be set by OEMs in configuration for sensor-assisted
-          navigation to work. There are NO default values */
-        mSap_conf.ACCEL_RANDOM_WALK_SPECTRAL_DENSITY = 0;
-        mSap_conf.ANGLE_RANDOM_WALK_SPECTRAL_DENSITY = 0;
-        mSap_conf.RATE_RANDOM_WALK_SPECTRAL_DENSITY = 0;
-        mSap_conf.VELOCITY_RANDOM_WALK_SPECTRAL_DENSITY = 0;
-        mSap_conf.GYRO_BIAS_RANDOM_WALK_VALID = 0;
-        mSap_conf.ACCEL_RANDOM_WALK_SPECTRAL_DENSITY_VALID = 0;
-        mSap_conf.ANGLE_RANDOM_WALK_SPECTRAL_DENSITY_VALID = 0;
-        mSap_conf.RATE_RANDOM_WALK_SPECTRAL_DENSITY_VALID = 0;
-        mSap_conf.VELOCITY_RANDOM_WALK_SPECTRAL_DENSITY_VALID = 0;
+    // By default NMEA Printing is disabled
+    mGps_conf.ENABLE_NMEA_PRINT = 0;
+    // default NMEA Tag Block Grouping is disabled
+    mGps_conf.NMEA_TAG_BLOCK_GROUPING_ENABLED = 0;
+    // external DR disabled by default
+    mGps_conf.EXTERNAL_DR_ENABLED = 0;
+    mGps_conf.CP_MTLR_ES = 0;
+    mGps_conf.SUPL_ES = 0;
+    // Use emergency PDN by default
+    mGps_conf.USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL = 1;
+    // default configuration for NI_SUPL_DENY_ON_NFW_LOCKED
+    mGps_conf.NI_SUPL_DENY_ON_NFW_LOCKED = 1;
+    // inject supl config to modem with config values from config.xml or gps.conf, default 0
+    mGps_conf.AGPS_CONFIG_INJECT = 0;
+    // By default no LPPe CP technology is enabled
+    mGps_conf.LPPE_CP_TECHNOLOGY = 0;
+    // By default no LPPe UP technology is enabled
+    mGps_conf.LPPE_UP_TECHNOLOGY = 0;
+    mGps_conf.SUPL_VER = 0x00020004;
+    mGps_conf.SUPL_MODE = 0x1;
+    mGps_conf.SUPL_HOST[0] = 0;
+    mGps_conf.SUPL_PORT = 0;
+    mGps_conf.MO_SUPL_HOST[0] = 0;
+    mGps_conf.MO_SUPL_PORT = 0;
+    // LTE Positioning Profile configuration is disable by default
+    mGps_conf.LPP_PROFILE = 0;
+    // By default no positioning protocol is selected on A-GLONASS system
+    mGps_conf.A_GLONASS_POS_PROTOCOL_SELECT = 0;
 
-        /* inject supl config to modem with config values from config.xml or gps.conf, default 0 */
-        mGps_conf.AGPS_CONFIG_INJECT = 0;
+    char   NMEA_REPORT_RATE[LOC_MAX_PARAM_STRING]; // 1HZ or NHZ
+    {
+       const loc_param_s_type gps_conf_table[] =
+       {
+           {"GNSS_DEPLOYMENT",                &mGps_conf.GNSS_DEPLOYMENT,               NULL, 'n'},
+           {"CAPABILITIES",                   &mGps_conf.CAPABILITIES,                  NULL, 'n'},
+           {"GPS_LOCK",                       &mGps_conf.GPS_LOCK,                      NULL, 'n'},
+           {"NMEA_REPORT_RATE",               &NMEA_REPORT_RATE,                        NULL, 's'},
+           {"ENABLE_NMEA_PRINT",              &mGps_conf.ENABLE_NMEA_PRINT,             NULL, 'n'},
+           {"NMEA_TAG_BLOCK_GROUPING_ENABLED",
+                  &mGps_conf.NMEA_TAG_BLOCK_GROUPING_ENABLED,                           NULL, 'n'},
+           {"EXTERNAL_DR_ENABLED",            &mGps_conf.EXTERNAL_DR_ENABLED,           NULL, 'n'},
+           {"CP_MTLR_ES",                     &mGps_conf.CP_MTLR_ES,                    NULL, 'n' },
+           {"SUPL_ES",                        &mGps_conf.SUPL_ES,                       NULL, 'n'},
+           {"USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL",
+                  &mGps_conf.USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL,                      NULL, 'n'},
+           {"NI_SUPL_DENY_ON_NFW_LOCKED",     &mGps_conf.NI_SUPL_DENY_ON_NFW_LOCKED,    NULL, 'n'},
+           {"AGPS_CONFIG_INJECT",             &mGps_conf.AGPS_CONFIG_INJECT,            NULL, 'n'},
+           {"LPPE_CP_TECHNOLOGY",             &mGps_conf.LPPE_CP_TECHNOLOGY,            NULL, 'n'},
+           {"LPPE_UP_TECHNOLOGY",             &mGps_conf.LPPE_UP_TECHNOLOGY,            NULL, 'n'},
+           {"SUPL_VER",                       &mGps_conf.SUPL_VER,                      NULL, 'n'},
+           {"SUPL_MODE",                      &mGps_conf.SUPL_MODE,                     NULL, 'n'},
+           {"SUPL_HOST",                      &mGps_conf.SUPL_HOST,                     NULL, 's'},
+           {"SUPL_PORT",                      &mGps_conf.SUPL_PORT,                     NULL, 'n'},
+           {"MO_SUPL_HOST",                   &mGps_conf.MO_SUPL_HOST,                  NULL, 's' },
+           {"MO_SUPL_PORT",                   &mGps_conf.MO_SUPL_PORT,                  NULL, 'n' },
+           {"LPP_PROFILE",                    &mGps_conf.LPP_PROFILE,                   NULL, 'n'},
+           {"A_GLONASS_POS_PROTOCOL_SELECT",  &mGps_conf.A_GLONASS_POS_PROTOCOL_SELECT, NULL, 'n'}
+       };
 
-        /* default configuration value of constrained time uncertainty mode:
-           feature disabled, time uncertainty threshold defined by modem,
-           and unlimited power budget */
-#ifdef FEATURE_AUTOMOTIVE
-        mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED = 1;
-#else
-        mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED = 0;
-#endif
-        mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD = 0.0;
-        mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET = 0;
+       UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_table);
+       if (strncmp(NMEA_REPORT_RATE, "1HZ", sizeof(NMEA_REPORT_RATE)) == 0) {
+           /* NMEA reporting is configured at 1Hz*/
+           sNmeaReportRate = GNSS_NMEA_REPORT_RATE_1HZ;
+       } else {
+           sNmeaReportRate = GNSS_NMEA_REPORT_RATE_NHZ;
+       }
 
-        /* default configuration value of position assisted clock estimator mode */
-        mIzat_conf.POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED = 0;
-
-        /* By default we use unknown modem type*/
-        mIzat_conf.MODEM_TYPE = 1;
-
-        /* default configuration QTI GNSS H/W */
-        mGps_conf.GNSS_DEPLOYMENT = 0;
-        /* default NMEA Tag Block Grouping is disabled */
-        mGps_conf.NMEA_TAG_BLOCK_GROUPING_ENABLED = 0;
-        /* default configuration for NI_SUPL_DENY_ON_NFW_LOCKED */
-        mGps_conf.NI_SUPL_DENY_ON_NFW_LOCKED = 1;
-        /* By default NMEA Printing is disabled */
-        mGps_conf.ENABLE_NMEA_PRINT = 0;
-
-        UTIL_READ_CONF(LOC_PATH_GPS_CONF, mGps_conf_table);
-        UTIL_READ_CONF(LOC_PATH_SAP_CONF, mSap_conf_table);
-        UTIL_READ_CONF(LOC_PATH_IZAT_CONF, mIzat_conf_table);
-
-        loc_param_s_type ant_info_vector_table[] =
-        {
-            { "ANTENNA_INFO_VECTOR_SIZE", &mAntennaInfoVectorSize, NULL, 'n' }
-        };
-        UTIL_READ_CONF(LOC_PATH_ANT_CORR_CONF, ant_info_vector_table);
-
-        if (strncmp(mGps_conf.NMEA_REPORT_RATE, "1HZ", sizeof(mGps_conf.NMEA_REPORT_RATE)) == 0) {
-            /* NMEA reporting is configured at 1Hz*/
-            sNmeaReportRate = GNSS_NMEA_REPORT_RATE_1HZ;
-        } else {
-            sNmeaReportRate = GNSS_NMEA_REPORT_RATE_NHZ;
-        }
-        LOC_LOGI("%s] GNSS Deployment: %s", __FUNCTION__,
+       LOC_LOGi("GNSS Deployment: %s",
                 ((mGps_conf.GNSS_DEPLOYMENT == QCSR_SS5_ENABLED) ? "SS5" :
                 ((mGps_conf.GNSS_DEPLOYMENT == PDS_API_ENABLED) ? "QFUSION" : "QGNSS")));
 
-        switch (getTargetGnssType(loc_get_target())) {
-          case GNSS_GSS:
-          case GNSS_AUTO:
-             // For APQ targets, MSA/MSB capabilities should be reset
-             mGps_conf.CAPABILITIES &= ~(LOC_GPS_CAPABILITY_MSA | LOC_GPS_CAPABILITY_MSB);
-             break;
-          default:
-             break;
-        }
-
-        readIZatConfForValueAddedProcess();
+       switch (getTargetGnssType(loc_get_target())) {
+           case GNSS_GSS:
+           case GNSS_AUTO:
+               // For APQ targets, MSA/MSB capabilities should be reset
+               mGps_conf.CAPABILITIES &= ~(LOC_GPS_CAPABILITY_MSA | LOC_GPS_CAPABILITY_MSB);
+               break;
+           default:
+               break;
+       }
     }
+
+    /* initialize config items from sap.conf*/
+    mSap_conf.GYRO_BIAS_RANDOM_WALK = 0;
+    mSap_conf.SENSOR_ACCEL_BATCHES_PER_SEC = 2;
+    mSap_conf.SENSOR_ACCEL_SAMPLES_PER_BATCH = 5;
+    mSap_conf.SENSOR_GYRO_BATCHES_PER_SEC = 2;
+    mSap_conf.SENSOR_GYRO_SAMPLES_PER_BATCH = 5;
+    mSap_conf.SENSOR_ACCEL_BATCHES_PER_SEC_HIGH = 4;
+    mSap_conf.SENSOR_ACCEL_SAMPLES_PER_BATCH_HIGH = 25;
+    mSap_conf.SENSOR_GYRO_BATCHES_PER_SEC_HIGH = 4;
+    mSap_conf.SENSOR_GYRO_SAMPLES_PER_BATCH_HIGH = 25;
+    mSap_conf.SENSOR_CONTROL_MODE = 0; /* AUTO */
+    mSap_conf.SENSOR_ALGORITHM_CONFIG_MASK = 0; /* INS Disabled = FALSE*/
+    /* Values MUST be set by OEMs in configuration for sensor-assisted
+       navigation to work. There are NO default values */
+    mSap_conf.ACCEL_RANDOM_WALK_SPECTRAL_DENSITY = 0;
+    mSap_conf.ANGLE_RANDOM_WALK_SPECTRAL_DENSITY = 0;
+    mSap_conf.RATE_RANDOM_WALK_SPECTRAL_DENSITY = 0;
+    mSap_conf.VELOCITY_RANDOM_WALK_SPECTRAL_DENSITY = 0;
+    mSap_conf.GYRO_BIAS_RANDOM_WALK_VALID = 0;
+    mSap_conf.ACCEL_RANDOM_WALK_SPECTRAL_DENSITY_VALID = 0;
+    mSap_conf.ANGLE_RANDOM_WALK_SPECTRAL_DENSITY_VALID = 0;
+    mSap_conf.RATE_RANDOM_WALK_SPECTRAL_DENSITY_VALID = 0;
+    mSap_conf.VELOCITY_RANDOM_WALK_SPECTRAL_DENSITY_VALID = 0;
+    {
+       const loc_param_s_type sap_conf_table[] =
+       {
+         {"GYRO_BIAS_RANDOM_WALK",
+               &mSap_conf.GYRO_BIAS_RANDOM_WALK,
+               &mSap_conf.GYRO_BIAS_RANDOM_WALK_VALID, 'f'},
+         {"ACCEL_RANDOM_WALK_SPECTRAL_DENSITY",
+               &mSap_conf.ACCEL_RANDOM_WALK_SPECTRAL_DENSITY,
+               &mSap_conf.ACCEL_RANDOM_WALK_SPECTRAL_DENSITY_VALID, 'f'},
+         {"ANGLE_RANDOM_WALK_SPECTRAL_DENSITY",
+               &mSap_conf.ANGLE_RANDOM_WALK_SPECTRAL_DENSITY,
+               &mSap_conf.ANGLE_RANDOM_WALK_SPECTRAL_DENSITY_VALID, 'f'},
+         {"RATE_RANDOM_WALK_SPECTRAL_DENSITY",
+               &mSap_conf.RATE_RANDOM_WALK_SPECTRAL_DENSITY,
+               &mSap_conf.RATE_RANDOM_WALK_SPECTRAL_DENSITY_VALID, 'f'},
+         {"VELOCITY_RANDOM_WALK_SPECTRAL_DENSITY",
+               &mSap_conf.VELOCITY_RANDOM_WALK_SPECTRAL_DENSITY,
+               &mSap_conf.VELOCITY_RANDOM_WALK_SPECTRAL_DENSITY_VALID, 'f'},
+         {"SENSOR_ACCEL_BATCHES_PER_SEC",
+               &mSap_conf.SENSOR_ACCEL_BATCHES_PER_SEC,        NULL, 'n'},
+         {"SENSOR_ACCEL_SAMPLES_PER_BATCH",
+               &mSap_conf.SENSOR_ACCEL_SAMPLES_PER_BATCH,      NULL, 'n'},
+         {"SENSOR_GYRO_BATCHES_PER_SEC",
+               &mSap_conf.SENSOR_GYRO_BATCHES_PER_SEC,         NULL, 'n'},
+         {"SENSOR_GYRO_SAMPLES_PER_BATCH",
+               &mSap_conf.SENSOR_GYRO_SAMPLES_PER_BATCH,       NULL, 'n'},
+         {"SENSOR_ACCEL_BATCHES_PER_SEC_HIGH",
+               &mSap_conf.SENSOR_ACCEL_BATCHES_PER_SEC_HIGH,   NULL, 'n'},
+         {"SENSOR_ACCEL_SAMPLES_PER_BATCH_HIGH",
+               &mSap_conf.SENSOR_ACCEL_SAMPLES_PER_BATCH_HIGH, NULL, 'n'},
+         {"SENSOR_GYRO_BATCHES_PER_SEC_HIGH",
+               &mSap_conf.SENSOR_GYRO_BATCHES_PER_SEC_HIGH,    NULL, 'n'},
+         {"SENSOR_GYRO_SAMPLES_PER_BATCH_HIGH",
+               &mSap_conf.SENSOR_GYRO_SAMPLES_PER_BATCH_HIGH,  NULL, 'n'},
+         {"SENSOR_CONTROL_MODE",
+               &mSap_conf.SENSOR_CONTROL_MODE,                 NULL, 'n'},
+         {"SENSOR_ALGORITHM_CONFIG_MASK",
+               &mSap_conf.SENSOR_ALGORITHM_CONFIG_MASK,        NULL, 'n'}
+       };
+
+       UTIL_READ_CONF(LOC_PATH_SAP_CONF, sap_conf_table);
+    }
+
+    /* initialize config items from izat.conf */
+    /* default configuration value of constrained time uncertainty mode:
+      feature disabled, time uncertainty threshold defined by modem,
+      and unlimited power budget */
+#ifdef FEATURE_AUTOMOTIVE
+    mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED = 1;
+#else
+    mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED = 0;
+#endif
+    mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD = 0.0;
+    mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET = 0;
+
+    /* default configuration value of position assisted clock estimator mode */
+    mIzat_conf.POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED = 0;
+
+    /* By default we use unknown modem type*/
+    mIzat_conf.MODEM_TYPE = 1;
+    {
+        const loc_param_s_type izat_conf_table[] =
+        {
+           {"MODEM_TYPE",      &mIzat_conf.MODEM_TYPE,                      NULL, 'n' },
+           {"CONSTRAINED_TIME_UNCERTAINTY_ENABLED",
+                    &mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENABLED,       NULL, 'n'},
+           {"CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD",
+                    &mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_THRESHOLD,     NULL, 'f'},
+           {"CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET",
+                    &mIzat_conf.CONSTRAINED_TIME_UNCERTAINTY_ENERGY_BUDGET, NULL, 'n'},
+           {"POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED",
+                    &mIzat_conf.POSITION_ASSISTED_CLOCK_ESTIMATOR_ENABLED,  NULL, 'n'},
+        };
+        UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izat_conf_table);
+    }
+
+    loc_param_s_type ant_info_vector_table[] =
+    {
+       { "ANTENNA_INFO_VECTOR_SIZE", &mAntennaInfoVectorSize, NULL, 'n' }
+    };
+    UTIL_READ_CONF(LOC_PATH_ANT_CORR_CONF, ant_info_vector_table);
+
+    readIZatConfForValueAddedProcess();
 }
 
 void ContextBase::readIZatConfForValueAddedProcess() {
