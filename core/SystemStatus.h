@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -89,7 +89,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define NAVIC_MIN  (401) //401-420
 
 #define GPS_NUM     (32)
-#define GLO_NUM     (32)
+#define GLO_NUM     (24)
 #define QZSS_NUM    (5)
 #define BDS_NUM     (63)
 #define GAL_NUM     (36)

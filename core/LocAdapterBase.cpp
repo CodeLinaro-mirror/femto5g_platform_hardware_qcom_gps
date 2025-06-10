@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -192,11 +192,12 @@ DEFAULT_IMPL(false)
 
 bool LocAdapterBase::
     requestATL(int /*connHandle*/, LocAGpsType /*agps_type*/,
-               LocApnTypeMask /*apn_type_mask*/, SubId /*sub_id*/)
+               LocApnTypeMask /*apn_type_mask*/, SubId /*sub_id*/,
+               uint32_t /*timeout*/)
 DEFAULT_IMPL(false)
 
 bool LocAdapterBase::
-    releaseATL(int /*connHandle*/)
+    releaseATL(int /*connHandle*/, uint32_t /*timeout*/)
 DEFAULT_IMPL(false)
 
 bool LocAdapterBase::
