@@ -317,6 +317,7 @@ class GnssAdapter : public LocAdapterBase {
     bool mRlFeatureQwesEnabled;
 
     /* ==== ODCPI ========================================================================== */
+    bool mInEmergency;
     typedef uint8_t OdcpiStateMask;
     OdcpiStateMask mOdcpiStateMask;
     typedef enum {
