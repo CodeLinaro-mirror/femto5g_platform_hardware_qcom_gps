@@ -6423,6 +6423,10 @@ GnssAdapter::invokeGnssEnergyConsumedCallback(uint64_t energyConsumedSinceFirstB
 
         mBootReferenceEnergy = energyConsumedSinceFirstBoot;
         if (NULL != (fp = fopen("/data/vendor/location/energy.conf", "a+b"))) {
+            int result = chmod("/data/vendor/location/energy.conf", S_IRUSR | S_IWUSR | S_IRGRP);
+            if (result != 0) {
+                LOC_LOGw("chmod failed");
+            }
             rewind(fp);
             if (RealtimeEstimator::getCurrentTime(currentTime, sinceBootTimeNanos)) {
                 LOC_LOGv("sinceBootTimeNanos: %" PRIu64 " ", sinceBootTimeNanos);
