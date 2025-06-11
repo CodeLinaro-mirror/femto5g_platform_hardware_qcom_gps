@@ -3405,7 +3405,7 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                 if (mOptions.minInterval < minIntervalToSet) {
                     mOptions.minInterval = minIntervalToSet;
                 }
-                LOC_LOGd("Updated min Interval: %d, nHzEnabled: %s",
+                LOC_LOGd("Updated min Interval: %u, nHzEnabled: %s",
                         mOptions.minInterval, nHzStatus ? "true" : "false");
 
                 if (GNSS_POWER_MODE_M4 == mOptions.powerMode &&
