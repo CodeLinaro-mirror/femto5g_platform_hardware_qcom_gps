@@ -250,7 +250,7 @@ void ContextBase::readConfig()
         {
             { "ANTENNA_INFO_VECTOR_SIZE", &mAntennaInfoVectorSize, NULL, 'n' }
         };
-        UTIL_READ_CONF(LOC_PATH_ANT_CORR, ant_info_vector_table);
+        UTIL_READ_CONF(LOC_PATH_ANT_CORR_CONF, ant_info_vector_table);
 
         if (strncmp(mGps_conf.NMEA_REPORT_RATE, "1HZ", sizeof(mGps_conf.NMEA_REPORT_RATE)) == 0) {
             /* NMEA reporting is configured at 1Hz*/
@@ -277,55 +277,65 @@ void ContextBase::readConfig()
 }
 
 void ContextBase::readIZatConfForValueAddedProcess() {
-    bool retVal = true;
-    const char *error = nullptr;
-    unsigned int processListLength = 0;
-    loc_process_info_s_type* processInfoList = nullptr;
+   FILE* conf_fp = nullptr;
+   /* location process conf, process name and enable state */
+   char process_name[LOC_MAX_PARAM_STRING];
+   char process_status[LOC_MAX_PARAM_STRING];
+   char process_argument[LOC_MAX_PARAM_STRING];
 
-    int rc = loc_read_process_conf(LOC_PATH_IZAT_CONF, &processListLength,
-                                   &processInfoList);
-    if (rc != 0) {
-        LOC_LOGe("failed to parse conf file for value added process");
-        return;
-    }
+   const loc_param_s_type loc_process_enable_table[] = {
+    {"PROCESS_NAME",     &process_name,     NULL, 's'},
+    {"PROCESS_STATE",    &process_status,   NULL, 's'},
+    {"PROCESS_ARGUMENT", &process_argument, NULL, 's'}
+   };
 
-    // go over the conf table to see whether any plugin daemon is enabled
-    for (unsigned int i = 0; i < processListLength; i++) {
-        LOC_LOGi("process %s, enabled %d",
-                 processInfoList[i].name[0], processInfoList[i].proc_status);
-        if (processInfoList[i].proc_status == ENABLED) {
-            mIzat_process_conf.valueAddedProcessEnabled = true;
+   conf_fp = fopen(LOC_PATH_IZAT_PROCESS_CONF, "r");
+   if (!conf_fp) {
+      LOC_LOGe("failed to open process conf file: %s", LOC_PATH_IZAT_PROCESS_CONF);
+      return;
+   }
+   uint32_t paramCnt = sizeof (loc_process_enable_table)/ sizeof(loc_param_s_type);
+   do {
+      process_name[0] = 0;
+      if (loc_read_conf_r_long(conf_fp, loc_process_enable_table,
+                               paramCnt, LOC_MAX_PARAM_STRING)) {
+         break;
+      }
 
-            if (strncmp(processInfoList[i].name[0], "engine-service",
-                        strlen("engine-service")) == 0) {
-                mIzat_process_conf.engineServiceEnabled = true;
+      if (strcmp(process_status, "ENABLED") == 0) {
+         mIzat_process_conf.valueAddedProcessEnabled = true;
 
-                if (processInfoList[i].args[1]!= nullptr) {
-                    // check if this is DRE-INT engine
-                    if (strncmp(processInfoList[i].args[1], "DRE-INT",
-                                sizeof("DRE-INT")) == 0) {
-                        mIzat_process_conf.engineServiceInfo.dreIntEnabled = true;
-                    } else if (strncmp(processInfoList[i].args[1], "PPE",
-                                       sizeof("PPE")) == 0) {
-                        mIzat_process_conf.engineServiceInfo.ppeEnabled = true;
-                    } else if (strncmp(processInfoList[i].args[1], "PPE-INT",
-                                       sizeof("PPE-INT")) == 0) {
-                        mIzat_process_conf.engineServiceInfo.ppeIntEnabled = true;
-                        mIzat_process_conf.engineServiceInfo.ppeEnabled = true;
-                    }
-                }
-            } else if (strncmp(processInfoList[i].name[0], "xtwifi-client",
-                               strlen("xtwifi-client")) == 0) {
-                mIzat_process_conf.gtpDaemonEnabled = true;
-            } else if (strncmp(processInfoList[i].name[0], "slim_daemon",
-                               strlen("slim_daemon")) == 0) {
-                mIzat_process_conf.slimDaemonEnabled = true;
-            } else if (strncmp(processInfoList[i].name[0], "edgnss-daemon",
-                               strlen("edgnss-daemon")) == 0) {
-                mIzat_process_conf.eDgnssDaemonEnabled = true;
+         if (strncmp(process_name, "engine-service",
+                     strlen("engine-service")) == 0) {
+            mIzat_process_conf.engineServiceEnabled = true;
+            // check if this is DRE-INT engine
+            if (strncmp(process_argument, "DRE-INT ",
+                        sizeof("DRE-INT")) == 0) {
+               mIzat_process_conf.engineServiceInfo.dreIntEnabled = true;
+            } else if (strncmp(process_argument, "PPE ",
+                               sizeof("PPE")) == 0) {
+               mIzat_process_conf.engineServiceInfo.ppeEnabled = true;
+            } else if (strncmp(process_argument, "PPE-INT ",
+                               sizeof("PPE-INT")) == 0) {
+               mIzat_process_conf.engineServiceInfo.ppeIntEnabled = true;
+               mIzat_process_conf.engineServiceInfo.ppeEnabled = true;
             }
-        }
-    }
+         } else if (strncmp(process_name, "xtwifi-client",
+                            strlen("xtwifi-client")) == 0) {
+            mIzat_process_conf.gtpDaemonEnabled = true;
+         } else if (strncmp(process_name, "slim_daemon",
+                            strlen("slim_daemon")) == 0) {
+            mIzat_process_conf.slimDaemonEnabled = true;
+         } else if (strncmp(process_name, "edgnss-daemon",
+                            strlen("edgnss-daemon")) == 0) {
+            mIzat_process_conf.eDgnssDaemonEnabled = true;
+         }
+      }
+   } while (1);
+
+   // close the file
+   fclose(conf_fp);
+   conf_fp = nullptr;
 
 #ifdef _ANDROID_
     // set the property to launch loc_launcher
@@ -340,11 +350,6 @@ void ContextBase::readIZatConfForValueAddedProcess() {
         LOC_LOGe ("failed to set property vendor.qti.izat.value_added_process");
     }
 #endif
-
-    if (processInfoList != nullptr) {
-        free (processInfoList);
-        processInfoList = nullptr;
-    }
 
     LOC_LOGd ("value added process enabled %d, gtp enabled %d, slim daemon enabled %d, "
               "edgnss enabled %d, engine service enabled %d (ppe: %d, ppe-int:%d, dre: %d)",

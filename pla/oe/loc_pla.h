@@ -28,7 +28,7 @@
 
 /*
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -100,17 +100,16 @@ extern "C" {
 #define UID_LOCCLIENT (4021)
 #define GID_LOCCLIENT (4021)
 
-#define LOC_PATH_GPS_CONF_STR      "/etc/gps.conf"
-#define LOC_PATH_IZAT_CONF_STR     "/etc/izat.conf"
-#define LOC_PATH_LOWI_CONF_STR     "/etc/lowi.conf"
-#define LOC_PATH_SAP_CONF_STR      "/etc/sap.conf"
-#define LOC_PATH_APDR_CONF_STR     "/etc/apdr.conf"
-#define LOC_PATH_XTWIFI_CONF_STR   "/etc/xtwifi.conf"
-#define LOC_PATH_QUIPC_CONF_STR    "/etc/quipc.conf"
-#define LOC_PATH_ANT_CORR_STR      "/etc/gnss_antenna_info.conf"
-#define LOC_PATH_SLIM_CONF_STR     "/etc/slim.conf"
-#define LOC_PATH_VPE_CONF_STR      "/etc/vpeglue.conf"
-#define LOC_PATH_QPPE_CONF_STR     "/etc/qppe.conf"
+#define LOC_PATH_GPS_CONF_STR              "/etc/gps.conf"
+#define LOC_PATH_IZAT_CONF_STR             "/etc/izat.conf"
+#define LOC_PATH_IZAT_PROCESS_CONF_STR     "/etc/izat.conf"
+#define LOC_PATH_LOWI_CONF_STR             "/etc/lowi.conf"
+#define LOC_PATH_SAP_CONF_STR              "/etc/sap.conf"
+#define LOC_PATH_APDR_CONF_STR             "/etc/apdr.conf"
+#define LOC_PATH_XTWIFI_CONF_STR           "/etc/xtwifi.conf"
+#define LOC_PATH_ANT_CORR_CONF_STR         "/etc/gnss_antenna_info.conf"
+#define LOC_PATH_SLIM_CONF_STR             "/etc/slim.conf"
+#define LOC_PATH_QPPE_CONF_STR             "/etc/qppe.conf"
 
 extern char *program_invocation_short_name;
 

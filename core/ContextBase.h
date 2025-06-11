@@ -429,8 +429,8 @@ public:
         return (ContextBase::sHwCapabilitiesMask);
     }
 
-    static inline bool isAntennaInfoAvailable() {
-        return mAntennaInfoVectorSize != 0;
+    static inline uint32_t getAntennaInfoVectorSize() {
+        return mAntennaInfoVectorSize;
     }
 };
 

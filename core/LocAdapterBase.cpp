@@ -324,7 +324,7 @@ LocAdapterBase::getCapabilities()
         }
         //Get QWES feature status mask
         mask |= ContextBase::getQwesFeatureStatus();
-        if (ContextBase::isAntennaInfoAvailable()) {
+        if (ContextBase::getAntennaInfoVectorSize() > 0) {
             mask |= LOCATION_CAPABILITIES_ANTENNA_INFO;
         }
         if (ContextBase::mIzat_process_conf.engineServiceEnabled) {
