@@ -1317,6 +1317,12 @@ struct TrackingOptions : LocationOptions {
         if (other.qualityLevelAccepted > qualityLevelAccepted) {
             qualityLevelAccepted = other.qualityLevelAccepted;
         }
+        if (other.preciseType > preciseType) {
+            preciseType = other.preciseType;
+        }
+        if (other.correctionType > correctionType) {
+            correctionType = other.correctionType;
+        }
         return updated;
     }
     inline void setLocationOptions(const LocationOptions& options) {
