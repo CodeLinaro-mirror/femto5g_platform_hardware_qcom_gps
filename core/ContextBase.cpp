@@ -213,8 +213,8 @@ void ContextBase::readConfig()
         mSap_conf.RATE_RANDOM_WALK_SPECTRAL_DENSITY_VALID = 0;
         mSap_conf.VELOCITY_RANDOM_WALK_SPECTRAL_DENSITY_VALID = 0;
 
-        /* inject supl config to modem with config values from config.xml or gps.conf, default 1 */
-        mGps_conf.AGPS_CONFIG_INJECT = 1;
+        /* inject supl config to modem with config values from config.xml or gps.conf, default 0 */
+        mGps_conf.AGPS_CONFIG_INJECT = 0;
 
         /* default configuration value of constrained time uncertainty mode:
            feature disabled, time uncertainty threshold defined by modem,
