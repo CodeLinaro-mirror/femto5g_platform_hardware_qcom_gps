@@ -60,7 +60,6 @@ static uint32_t* gnssUpdateConfig(const GnssConfig& config);
 static uint32_t* gnssGetConfig(GnssConfigFlagsMask mask);
 
 static void injectLocation(double latitude, double longitude, float accuracy);
-static void injectLocationExt(const GnssLocationInfoNotification &locationInfo);
 static void injectTime(int64_t time, int64_t timeReference, int32_t uncertainty);
 
 static void agpsInit(const AgpsCbInfo& cbInfo);
@@ -79,8 +78,6 @@ static void odcpiInit(const odcpiRequestCallback& callback, OdcpiPrioritytype pr
 static void deRegisterOdcpi(OdcpiPrioritytype priority, OdcpiCallbackTypeMask typeMask);
 static void odcpiInject(const Location& location);
 
-static void blockCPI(double latitude, double longitude, float accuracy,
-                     int blockDurationMsec, double latLonDiffThreshold);
 static void setEsStatusCallback(std::function<void(bool)> esStatusCb);
 static void updateBatteryStatus(bool charging);
 static void updateSystemPowerState(PowerStateType systemPowerState);
@@ -156,12 +153,10 @@ static const GnssInterface gGnssInterface = {
     odcpiInit,
     deRegisterOdcpi,
     odcpiInject,
-    blockCPI,
     setEsStatusCallback,
     getGnssEnergyConsumed,
     enableNfwLocationAccess,
     nfwInit,
-    injectLocationExt,
     updateBatteryStatus,
     updateSystemPowerState,
     setConstrainedTunc,
@@ -423,14 +418,6 @@ static void odcpiInject(const Location& location)
     }
 }
 
-static void blockCPI(double latitude, double longitude, float accuracy,
-                     int blockDurationMsec, double latLonDiffThreshold) {
-    if (NULL != gGnssAdapter) {
-        gGnssAdapter->blockCPICommand(latitude, longitude, accuracy,
-                                      blockDurationMsec, latLonDiffThreshold);
-    }
-}
-
 static void setEsStatusCallback(std::function<void(bool)> esStatusCb)
 {
     if (NULL != gGnssAdapter) {
@@ -454,13 +441,6 @@ static void nfwInit(const NfwCbInfo& cbInfo) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->initNfwCommand(cbInfo);
     }
-}
-
-static void injectLocationExt(const GnssLocationInfoNotification &locationInfo)
-{
-   if (NULL != gGnssAdapter) {
-       gGnssAdapter->injectLocationExtCommand(locationInfo);
-   }
 }
 
 static void updateBatteryStatus(bool charging) {
