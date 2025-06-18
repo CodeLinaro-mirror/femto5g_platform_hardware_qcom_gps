@@ -4505,37 +4505,6 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
     }
 }
 
-void
-GnssAdapter::reportEnginePositionsEvent(unsigned int count,
-                                        EngineLocationInfo* locationArr)
-{
-    struct MsgReportEnginePositions : public LocMsg {
-        GnssAdapter& mAdapter;
-        unsigned int mCount;
-        EngineLocationInfo mEngLocInfo[LOC_OUTPUT_ENGINE_COUNT];
-        inline MsgReportEnginePositions(GnssAdapter& adapter,
-                                        unsigned int count,
-                                        EngineLocationInfo* locationArr) :
-            LocMsg(),
-            mAdapter(adapter),
-            mCount(count) {
-            if (mCount > LOC_OUTPUT_ENGINE_COUNT) {
-                mCount = LOC_OUTPUT_ENGINE_COUNT;
-            }
-            if (mCount > 0) {
-                memcpy(mEngLocInfo, locationArr, sizeof(EngineLocationInfo)*mCount);
-            }
-        }
-        inline virtual void proc() const {
-            mAdapter.reportEnginePositions(mCount, mEngLocInfo);
-        }
-    };
-
-    if (isPreciseEnabled()) {
-        sendMsg(new MsgReportEnginePositions(*this, count, locationArr));
-    }
-}
-
 bool
 GnssAdapter::needReportForAllClients(const UlpLocation& ulpLocation,
                                      enum loc_sess_status status,
@@ -8574,8 +8543,9 @@ GnssAdapter::initEngHubProxy() {
         // callback function for engine hub to report back position event
         GnssAdapterReportEnginePositionsEventCb reportPositionEventCb =
             [this](int count, EngineLocationInfo* locationArr) {
-                    // report from engine hub on behalf of PPE will be treated as fromUlp
-                    reportEnginePositionsEvent(count, locationArr);
+                if (isPreciseEnabled()) {
+                    reportEnginePositions(count, locationArr);
+                }
             };
 
         // callback function for engine hub to request for complete aiding data
