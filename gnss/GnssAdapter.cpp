@@ -988,6 +988,18 @@ void GnssAdapter::readNfwLockConfig()
     char nfwR2PackageName[LOC_MAX_PARAM_STRING];
     char nfwR3PackageName[LOC_MAX_PARAM_STRING];
 
+    memset(nfwCpPackageName,   0, sizeof(nfwCpPackageName));
+    memset(nfwSuplPackageName, 0, sizeof(nfwSuplPackageName));
+    memset(nfwImsPackageName,  0, sizeof(nfwImsPackageName));
+    memset(nfwSimPackageName,  0, sizeof(nfwSimPackageName));
+    memset(nfwMdtPackageName,  0, sizeof(nfwMdtPackageName));
+    memset(nfwTlocPackageName, 0, sizeof(nfwTlocPackageName));
+    memset(nfwRlocPackageName, 0, sizeof(nfwRlocPackageName));
+    memset(nfwV2xPackageName,  0, sizeof(nfwV2xPackageName));
+    memset(nfwR1PackageName,   0, sizeof(nfwR1PackageName));
+    memset(nfwR2PackageName,   0, sizeof(nfwR2PackageName));
+    memset(nfwR3PackageName,   0, sizeof(nfwR3PackageName));
+
     const loc_param_s_type nfw_packages_table[] =
     {
         { "NFW_CLIENT_CP",      &nfwCpPackageName,      NULL, 's' },
