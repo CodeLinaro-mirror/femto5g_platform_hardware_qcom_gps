@@ -100,9 +100,6 @@ const char LOC_PATH_ANT_CORR_CONF[]     = LOC_PATH_ANT_CORR_CONF_STR;
 const char LOC_PATH_SLIM_CONF[]         = LOC_PATH_SLIM_CONF_STR;
 const char LOC_PATH_QPPE_CONF[]         = LOC_PATH_QPPE_CONF_STR;
 
-#define BREAK_IF_ZERO(ERR, X) if (0==(X)) {result = (ERR); break;}
-#define BREAK_IF_NON_ZERO(ERR, X) if (0!=(X)) {result = (ERR); break;}
-
 // trim the line between cursor_begin and cursor_end
 void trim(size_t & cursor_begin, size_t & cursor_end, const char * const line)
 {

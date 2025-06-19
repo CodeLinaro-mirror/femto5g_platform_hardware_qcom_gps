@@ -423,6 +423,16 @@ static int LOCAL_LOG_LEVEL = -1;
 // Used for logging callflow to Android Framework
 #define CALLBACK_LOG_CALLFLOW(CB, SPEC, VAL) LOG_I(TO_AFW, CB, SPEC, VAL)
 
+// Used for verify the values of parameters
+#define BREAK_IF_ZERO(ERR,X) if(0==(X)) {result = (ERR); break;}
+#define BREAK_IF_NON_ZERO(ERR,X) if(0!=(X)) {result = (ERR); break;}
+#define BREAK_IF_NON_ZERO_RC(ERR,RC,X) if(0!=(RC=(X))) {result = (ERR); break;}
+#define BREAK_IF_TRUE(ERR,X) if((true == X)) {result = (ERR); break;}
+#define BREAK_IF_FALSE(ERR,X) if((false == X)) {result = (ERR); break;}
+#define UNUSED(x) (void)(x)
+#define BREAK_AND_DELETE_IF_NON_ZERO(ERR, X, OBJ) \
+if (0!=(X)) {result = (ERR); delete (OBJ); break;}
+
 #ifdef __cplusplus
 }
 #endif
