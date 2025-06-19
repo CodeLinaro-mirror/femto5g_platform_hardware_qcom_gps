@@ -317,6 +317,7 @@ class GnssAdapter : public LocAdapterBase {
     bool mRlFeatureQwesEnabled;
 
     /* ==== ODCPI ========================================================================== */
+    bool mInEmergency;
     typedef uint8_t OdcpiStateMask;
     OdcpiStateMask mOdcpiStateMask;
     typedef enum {
@@ -441,6 +442,7 @@ protected:
     virtual void stopClientSessions(LocationAPI* client, bool eraseSession = true);
     inline void setNmeaReportRateConfig();
     halResponseTimer mResponseTimer;
+    inline bool isAssistedGpsEnabled() { return mNativeAgpsHandler.isAssistedGpsEnabled(); }
 
 public:
     GnssAdapter();

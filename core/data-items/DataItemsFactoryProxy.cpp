@@ -105,6 +105,9 @@ IDataItemCore* DataItemsFactoryProxy::createNewDataItem(IDataItemCore* dataItem)
     case IN_EMERGENCY_CALL_DATA_ITEM_ID:
         mydi = new InEmergencyCallDataItem(*((InEmergencyCallDataItem*)dataItem));
         break;
+    case ASSISTED_GPS_DATA_ITEM_ID:
+        mydi = new AssistedGpsDataItem(*((AssistedGpsDataItem*)dataItem));
+        break;
     case TIMEZONE_CHANGE_DATA_ITEM_ID:
         mydi = new TimeZoneChangeDataItem(*((TimeZoneChangeDataItem*)dataItem));
         break;

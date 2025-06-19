@@ -104,7 +104,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define GPS_LOCATION_DESIRED_FLAGS (LOC_GPS_LOCATION_HAS_LAT_LONG | LOC_GPS_LOCATION_HAS_ACCURACY)
 
 using namespace loc_core;
-
 static int loadEngHubForExternalEngine = 0;
 static int loadLocSlatePUNCModel = 0;
 static loc_param_s_type izatConfParamTable[] = {
@@ -187,6 +186,7 @@ GnssAdapter::GnssAdapter() :
     mCdfwInterface(nullptr),
     mDGnssNeedReport(false),
     mDGnssDataUsage(false),
+    mInEmergency(false),
     mOdcpiStateMask(0),
     mCallbackPriority(OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_LOW),
     mOdcpiTimer(this),
@@ -1454,7 +1454,7 @@ std::vector<LocationError> GnssAdapter::gnssUpdateConfig(const std::string& oldM
                 GNSS_CONFIG_FLAGS_AGLONASS_POSITION_PROTOCOL_VALID_BIT |
                 GNSS_CONFIG_FLAGS_LPP_PROFILE_VALID_BIT |
                 GNSS_CONFIG_FLAGS_LPPE_CONTROL_PLANE_VALID_BIT |
-                GNSS_CONFIG_FLAGS_LPPE_CONTROL_PLANE_VALID_BIT);
+                GNSS_CONFIG_FLAGS_LPPE_USER_PLANE_VALID_BIT);
     }
 
     if (gnssConfigRequested.flags & GNSS_CONFIG_FLAGS_GPS_LOCK_VALID_BIT) {
@@ -3405,8 +3405,6 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                 if (mOptions.minInterval < minIntervalToSet) {
                     mOptions.minInterval = minIntervalToSet;
                 }
-                LOC_LOGd("Updated min Interval: %u, nHzEnabled: %s",
-                        mOptions.minInterval, nHzStatus ? "true" : "false");
 
                 if (GNSS_POWER_MODE_M4 == mOptions.powerMode &&
                         mOptions.tbm > TRACKING_TBM_THRESHOLD_MILLIS) {
@@ -3414,6 +3412,26 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                             mOptions.tbm, TRACKING_TBM_THRESHOLD_MILLIS);
                     mOptions.powerMode = GNSS_POWER_MODE_M2;
                 }
+
+                // In emergency: force request SUPL mode as standalone
+                // Non emergency: Update request SUPL mode if not specified
+                if (mAdapter.mInEmergency) {
+                    mOptions.mode = GNSS_SUPL_MODE_STANDALONE;
+                } else if (mOptions.mode == GNSS_SUPL_MODE_UNKNOWN) {
+                    if (mAdapter.isAssistedGpsEnabled() &&
+                            (ContextBase::mGps_conf.SUPL_MODE & GNSS_SUPL_MODE_MSB) != 0) {
+                        mOptions.mode = GNSS_SUPL_MODE_MSB;
+                    } else {
+                        mOptions.mode = GNSS_SUPL_MODE_STANDALONE;
+                    }
+                    LOC_LOGd("Updated UNKNOWN SUPL mode to %d", mOptions.mode);
+                }
+                LOC_LOGd("Updated min Interval: %u, nHzEnabled: %s, emergency: %d mode: %u, "
+                        "agps : %d, SUPL_MODE: %d",
+                        mOptions.minInterval, nHzStatus ? "true" : "false", mAdapter.mInEmergency,
+                        mOptions.mode, mAdapter.isAssistedGpsEnabled(),
+                        ContextBase::mGps_conf.SUPL_MODE);
+
                 // Api doesn't support multiple clients for time based tracking, so mutiplex
                 bool reportToClientWithNoWait =
                     mAdapter.startTimeBasedTrackingMultiplex(mClient, mSessionId, mOptions);
@@ -3431,7 +3449,6 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
 
     sendMsg(new MsgStartTracking(*this, *mLocApi, client, sessionId, options));
     return sessionId;
-
 }
 
 // Restarting the session after suspend
@@ -5586,6 +5603,7 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
         // so the mOdcpiTimer helps avoid spamming the framework as well as
         // extending the odcpi session past 30 seconds if needed
         if (ODCPI_REQUEST_TYPE_START == request.type) {
+            mInEmergency = request.isEmergencyMode;
             if (!(mOdcpiStateMask & ODCPI_REQ_ACTIVE)  && false == mOdcpiTimer.isActive()) {
                 fireOdcpiRequest(request);
                 mOdcpiStateMask |= ODCPI_REQ_ACTIVE;
@@ -6020,6 +6038,7 @@ void GnssAdapter::odcpiTimerExpire()
         fireOdcpiRequest(mOdcpiRequest);
         mOdcpiTimer.restart();
     } else {
+        mInEmergency = false;
         mOdcpiTimer.stop();
     }
 }

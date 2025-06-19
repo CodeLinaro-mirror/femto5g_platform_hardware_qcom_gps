@@ -607,6 +607,16 @@ public:
     }
 };
 
+class SystemStatusAssistedGps : public SystemStatusItemBase {
+public:
+    AssistedGpsDataItem mDataItem;
+    inline SystemStatusAssistedGps(bool enabled=false): mDataItem(enabled) {}
+    inline SystemStatusAssistedGps(const AssistedGpsDataItem& itemBase): mDataItem(itemBase) {}
+    inline bool equals(const SystemStatusItemBase& peer) override {
+        return mDataItem.mEnabled == ((const SystemStatusAssistedGps&)peer).mDataItem.mEnabled;
+    }
+};
+
 class SystemStatusTimeZoneChange : public SystemStatusItemBase {
 public:
     TimeZoneChangeDataItem mDataItem;
@@ -856,6 +866,7 @@ public:
     std::vector<SystemStatusModel>            mModel;
     std::vector<SystemStatusManufacturer>     mManufacturer;
     std::vector<SystemStatusInEmergencyCall>  mInEmergencyCall;
+    std::vector<SystemStatusAssistedGps>      mAssistedGps;
     std::vector<SystemStatusTimeZoneChange>   mTimeZoneChange;
     std::vector<SystemStatusTimeChange>       mTimeChange;
     std::vector<SystemStatusWifiSupplicantStatus> mWifiSupplicantStatus;
