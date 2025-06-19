@@ -317,6 +317,7 @@ class GnssAdapter : public LocAdapterBase {
     bool mRlFeatureQwesEnabled;
 
     /* ==== ODCPI ========================================================================== */
+    bool mInEmergency;
     typedef uint8_t OdcpiStateMask;
     OdcpiStateMask mOdcpiStateMask;
     typedef enum {
@@ -441,6 +442,7 @@ protected:
     virtual void stopClientSessions(LocationAPI* client, bool eraseSession = true);
     inline void setNmeaReportRateConfig();
     halResponseTimer mResponseTimer;
+    inline bool isAssistedGpsEnabled() { return mNativeAgpsHandler.isAssistedGpsEnabled(); }
 
 public:
     GnssAdapter();
@@ -598,7 +600,7 @@ public:
     uint32_t registerXtraStatusUpdateCommand(bool registerUpdate);
     void configPrecisePositioningCommand(uint32_t featureId, bool enable,
             const std::string& appHash);
-    void setPreciseSessionConfig();
+    void setPreciseSessionConfig(PreciseType preciseType);
     uint32_t configMerkleTreeCommand(const char * merkleTreeConfigBuffer, int bufferLength);
     uint32_t configOsnmaEnablementCommand(bool enable);
     uint32_t gnssInjectMmfDataCommand(const GnssMapMatchedData& data);
@@ -627,6 +629,7 @@ public:
     void setAfwControlId(uint32_t id) { mAfwControlId = id; }
     uint32_t getAfwControlId() { return mAfwControlId; }
     virtual bool isInSession() { return !mTimeBasedTrackingSessions.empty(); }
+    bool isPreciseSession() { return isInSession() && (mPreciseType != PRECISE_TYPE_UNKNOWN); }
     uint32_t getFgTrackingSessionCount();
     void initDefaultAgps();
     bool initEngineHub();

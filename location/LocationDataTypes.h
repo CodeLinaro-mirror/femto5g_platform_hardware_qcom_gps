@@ -703,6 +703,7 @@ enum GnssAssistanceType {
 };
 
 enum GnssSuplMode {
+    GNSS_SUPL_MODE_UNKNOWN = -1,
     GNSS_SUPL_MODE_STANDALONE = 0,
     GNSS_SUPL_MODE_MSB,
     GNSS_SUPL_MODE_MSA,
