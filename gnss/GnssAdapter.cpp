@@ -3107,10 +3107,6 @@ GnssAdapter::updateClientsEventMask()
             LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO |
             LOC_API_ADAPTER_BIT_FEATURE_STATUS_UPDATE;
 
-#ifdef FEATURE_AUTOMOTIVE
-    // Subscribe to get GNSS BAND supported information on bootup
-    mask |= LOC_API_ADAPTER_BIT_GNSS_BANDS_SUPPORTED;
-#endif
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
         if (it->second.trackingCb != nullptr ||
             it->second.gnssLocationInfoCb != nullptr ||
@@ -4828,9 +4824,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                     engLocationsInfo[1] = locationInfo;
                     it->second.engineLocationsInfoCb(2, engLocationsInfo);
                 } else if (nullptr != it->second.trackingCb) {
-                    it->second.trackingCb(locationInfo.location);
-                } else if (reportToAnyClient) {
-                    if (nullptr != it->second.trackingCb) {
+                    if (reportToAnyClient) {
                         cbRunnables.emplace_back([ cb=it->second.trackingCb ] (Location location) {
                             cb(location);
                         });
@@ -6026,6 +6020,10 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
             // before requesting new ODCPI to avoid spamming ODCPI requests
             } else if (!(mOdcpiStateMask & ODCPI_REQ_ACTIVE) && true == mOdcpiTimer.isActive()) {
                 mOdcpiStateMask |= ODCPI_REQ_ACTIVE;
+                if (nullptr != mEsStatusCb) {
+                    mEsStatusCb(request.isEmergencyMode);
+                }
+                sendEmergencyCallStatusEvent = true;
             }
             mOdcpiRequest = request;
 
