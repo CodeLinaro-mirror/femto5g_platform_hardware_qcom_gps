@@ -31,7 +31,6 @@ libgps_utils_la_h_sources = \
         log_util.h \
         LocSharedLock.h \
         LocUnorderedSetMap.h\
-        LocLoggerBase.h
 
 libgps_utils_la_c_sources = \
         linked_list.c \
