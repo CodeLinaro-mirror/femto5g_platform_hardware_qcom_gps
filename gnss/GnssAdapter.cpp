@@ -5673,6 +5673,14 @@ bool GnssAdapter::reportQwesCapabilities(
             if (ppeInFeatureMap != mFeatureMap.end() || qfeInFeatureMap != mFeatureMap.end()) {
                 if ((ppeInFeatureMap != mFeatureMap.end() && ppeInFeatureMap->second) ||
                         (qfeInFeatureMap != mFeatureMap.end() && qfeInFeatureMap->second)) {
+                    // when DLP feature is enabled and the session is precise session, stop the
+                    // current tracking session, and then restart the session to apply the updated
+                    // configurations
+                    if (!(mAdapter.mPpFeatureStatusMask & DLP_FEATURE_ENABLED_BY_DEFAULT) &&
+                            mAdapter.isPreciseSession()) {
+                        mAdapter.stopTracking();
+                        mAdapter.restartSessions();
+                    }
                     mAdapter.mPpFeatureStatusMask |= DLP_FEATURE_ENABLED_BY_DEFAULT;
                     mAdapter.notifyPreciseLocation();
                 } else {
