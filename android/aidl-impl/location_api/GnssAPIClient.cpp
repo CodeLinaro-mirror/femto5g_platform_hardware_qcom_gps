@@ -249,7 +249,9 @@ void GnssAPIClient::setCallbacks() {
 void GnssAPIClient::gnssUpdateCallbacks(const shared_ptr<IGnssCallback>& gpsCb) {
     LOC_LOGd("]: ()");
     if (gpsCb != nullptr) {
+        mMutex.lock();
         mSignalTypeCbExpected = true;
+        mMutex.unlock();
         setCallbacks();
     }
 }
@@ -444,7 +446,9 @@ void GnssAPIClient::gnssDisable() {
     if (mControlClient == nullptr) {
         return;
     }
+    mMutex.lock();
     mSignalTypeCbExpected = false;
+    mMutex.unlock();
     mControlClient->locAPIDisable();
     if (nullptr != sGnssStatusCb) {
         sGnssStatusCb(false);
@@ -663,10 +667,11 @@ void GnssAPIClient::onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNo
     LOC_LOGd("Enter");
     mMutex.lock();
     auto gnssCbIface(mGnssCbIface);
+    bool signalTypeCbExpected = mSignalTypeCbExpected;
     mMutex.unlock();
 
-    LOC_LOGd("mSignalTypeCbExpected = %d ", mSignalTypeCbExpected);
-    if ((gnssCbIface != nullptr) && (true == mSignalTypeCbExpected)) {
+    LOC_LOGd("signalTypeCbExpected = %d ", signalTypeCbExpected);
+    if ((gnssCbIface != nullptr) && (true == signalTypeCbExpected)) {
        LOC_LOGd("report to aidl, new 0x%x ",
                 gnssCapabNotification.gnssSupportedSignals);
        std::vector<GnssSignalType> gnssSignalTypes;
@@ -675,7 +680,9 @@ void GnssAPIClient::onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNo
        if (!r.isOk()) {
           LOC_LOGe("Error from gnssSvStatusCb");
        }
+       mMutex.lock();
        mSignalTypeCbExpected = false;
+       mMutex.unlock();
     }
 }
 
