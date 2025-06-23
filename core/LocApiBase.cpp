@@ -110,6 +110,24 @@ struct LocSsrMsg : public LocMsg {
     }
     inline virtual void proc() const {
         mLocApi->close();
+        // Reset all QWES feature flags to false during SSR
+        std::unordered_map<LocationQwesFeatureType, bool> featureMap;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_CARRIER_PHASE] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_SV_POLYNOMIAL] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_SV_EPH] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_GNSS_SINGLE_FREQUENCY] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_GNSS_MULTI_FREQUENCY] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_TIME_FREQUENCY] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_TIME_UNCERTAINTY] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_CLOCK_ESTIMATE] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_DGNSS] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_PPE] = false;
+        featureMap[LOCATION_QWES_FEATURE_NLOS_ML20] = false;
+        featureMap[LOCATION_QWES_FEATURE_STATUS_GNSS_NHZ] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_SBAS] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_ROBUST_LOCATION] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_WOCS] = false;
+        mLocApi->reportQwesCapabilities(featureMap);
         if (LOC_API_ADAPTER_ERR_SUCCESS == mLocApi->open(mLocApi->getEvtMask())) {
             // Notify adapters that engine up after SSR
             mLocApi->handleEngineUpEvent();
