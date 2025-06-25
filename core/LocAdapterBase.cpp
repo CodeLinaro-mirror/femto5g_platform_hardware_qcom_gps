@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -125,7 +125,8 @@ void LocAdapterBase::
                         const GpsLocationExtended& locationExtended,
                         enum loc_sess_status status,
                         LocPosTechMask loc_technology_mask,
-                        GnssDataNotification* pDataNotify)
+                        GnssDataNotification* pDataNotify,
+                        int msInWeek)
 {
     if (mLocAdapterProxyBase != NULL) {
         mLocAdapterProxyBase->reportPositionEvent((UlpLocation&)location,
@@ -160,7 +161,8 @@ void LocAdapterBase::
 DEFAULT_IMPL()
 
 void LocAdapterBase::
-    reportDataEvent(const GnssDataNotification& /*dataNotify*/)
+    reportDataEvent(const GnssDataNotification& /*dataNotify*/,
+                    int /*msInWeek*/)
 DEFAULT_IMPL()
 
 bool LocAdapterBase::
@@ -190,11 +192,12 @@ DEFAULT_IMPL(false)
 
 bool LocAdapterBase::
     requestATL(int /*connHandle*/, LocAGpsType /*agps_type*/,
-               LocApnTypeMask /*apn_type_mask*/, SubId /*sub_id*/)
+               LocApnTypeMask /*apn_type_mask*/, SubId /*sub_id*/,
+               uint32_t /*timeout*/)
 DEFAULT_IMPL(false)
 
 bool LocAdapterBase::
-    releaseATL(int /*connHandle*/)
+    releaseATL(int /*connHandle*/, uint32_t /*timeout*/)
 DEFAULT_IMPL(false)
 
 bool LocAdapterBase::
@@ -204,7 +207,8 @@ bool LocAdapterBase::
 DEFAULT_IMPL(false)
 
 void LocAdapterBase::
-reportGnssMeasurementsEvent(const GnssMeasurements& /*gnssMeasurements*/)
+reportGnssMeasurementsEvent(const GnssMeasurements& /*gnssMeasurements*/,
+                                   int /*msInWeek*/)
 DEFAULT_IMPL()
 
 bool LocAdapterBase::

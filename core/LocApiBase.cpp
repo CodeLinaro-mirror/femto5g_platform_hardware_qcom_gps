@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -330,6 +330,30 @@ void LocApiBase::updateEvtMask()
     sendMsg(new LocOpenMsg(this));
 }
 
+void LocApiBase::updateNmeaMask(uint32_t mask)
+{
+    struct LocSetNmeaMsg : public LocMsg {
+        LocApiBase* mLocApi;
+        uint32_t mMask;
+        inline LocSetNmeaMsg(LocApiBase* locApi, uint32_t mask) :
+            LocMsg(), mLocApi(locApi), mMask(mask)
+        {
+            locallog();
+        }
+        inline virtual void proc() const {
+            mLocApi->setNMEATypesSync(mMask);
+        }
+        inline void locallog() const {
+            LOC_LOGv("LocSyncNmea NmeaMask: %" PRIx32 "\n", mMask);
+        }
+        inline virtual void log() const {
+            locallog();
+        }
+    };
+
+    sendMsg(new LocSetNmeaMsg(this, mask));
+}
+
 void LocApiBase::handleEngineUpEvent()
 {
     // loop through adapters, and deliver to all adapters.
@@ -348,7 +372,8 @@ void LocApiBase::reportPosition(UlpLocation& location,
                                 GpsLocationExtended& locationExtended,
                                 enum loc_sess_status status,
                                 LocPosTechMask loc_technology_mask,
-                                GnssDataNotification* pDataNotify)
+                                GnssDataNotification* pDataNotify,
+                                int msInWeek)
 {
     // print the location info before delivering
     LOC_LOGd("\n  flags: 0x%x\n  source: %d\n  latitude: %f\n  longitude: %f\n  "
@@ -373,7 +398,7 @@ void LocApiBase::reportPosition(UlpLocation& location,
     TO_ALL_LOCADAPTERS(
         mLocAdapters[i]->reportPositionEvent(location, locationExtended,
                                              status, loc_technology_mask,
-                                             pDataNotify)
+                                             pDataNotify, msInWeek)
     );
 }
 
@@ -485,10 +510,10 @@ void LocApiBase::reportStatus(LocGpsStatusValue status)
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportStatus(status));
 }
 
-void LocApiBase::reportData(GnssDataNotification& dataNotify)
+void LocApiBase::reportData(GnssDataNotification& dataNotify, int msInWeek)
 {
     // loop through adapters, and deliver to all adapters.
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportDataEvent(dataNotify));
+    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportDataEvent(dataNotify, msInWeek));
 }
 
 void LocApiBase::reportNmea(const char* nmea, int length)
@@ -564,17 +589,18 @@ void LocApiBase::requestLocation()
 }
 
 void LocApiBase::requestATL(int connHandle, LocAGpsType agps_type,
-                            LocApnTypeMask apn_type_mask, SubId sub_id)
+                            LocApnTypeMask apn_type_mask, SubId sub_id,
+                            uint32_t timeout)
 {
     // loop through adapters, and deliver to the first handling adapter.
     TO_1ST_HANDLING_LOCADAPTERS(
-            mLocAdapters[i]->requestATL(connHandle, agps_type, apn_type_mask, sub_id));
+            mLocAdapters[i]->requestATL(connHandle, agps_type, apn_type_mask, sub_id, timeout));
 }
 
-void LocApiBase::releaseATL(int connHandle)
+void LocApiBase::releaseATL(int connHandle, uint32_t timeout)
 {
     // loop through adapters, and deliver to the first handling adapter.
-    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->releaseATL(connHandle));
+    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->releaseATL(connHandle, timeout));
 }
 
 void LocApiBase::requestNiNotify(GnssNiNotification &notify, const void* data,
@@ -593,10 +619,10 @@ void* LocApiBase :: getSibling()
 LocApiProxyBase* LocApiBase :: getLocApiProxy()
     DEFAULT_IMPL(NULL)
 
-void LocApiBase::reportGnssMeasurements(GnssMeasurements& gnssMeasurements)
+void LocApiBase::reportGnssMeasurements(GnssMeasurements& gnssMeasurements, int msInWeek)
 {
     // loop through adapters, and deliver to all adapters.
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportGnssMeasurementsEvent(gnssMeasurements));
+    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportGnssMeasurementsEvent(gnssMeasurements, msInWeek));
 }
 
 void LocApiBase::reportGnssSvIdConfig(const GnssSvIdConfig& config)
