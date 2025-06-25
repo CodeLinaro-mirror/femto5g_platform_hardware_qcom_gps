@@ -664,16 +664,14 @@ void GnssAPIClient::onEngineLocationsInfoCb(uint32_t count,
 }
 
 void GnssAPIClient::onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNotification) {
-    LOC_LOGd("Enter");
     mMutex.lock();
     auto gnssCbIface(mGnssCbIface);
     bool signalTypeCbExpected = mSignalTypeCbExpected;
     mMutex.unlock();
 
-    LOC_LOGd("signalTypeCbExpected = %d ", signalTypeCbExpected);
+    LOC_LOGd("signalTypeCbExpected = %d, gnssSupportedSignals = 0x%x",
+            signalTypeCbExpected, gnssCapabNotification.gnssSupportedSignals);
     if ((gnssCbIface != nullptr) && (true == signalTypeCbExpected)) {
-       LOC_LOGd("report to aidl, new 0x%x ",
-                gnssCapabNotification.gnssSupportedSignals);
        std::vector<GnssSignalType> gnssSignalTypes;
        convertGnssSignalType(gnssCapabNotification, gnssSignalTypes);
        auto r = gnssCbIface->gnssSetSignalTypeCapabilitiesCb(gnssSignalTypes);
