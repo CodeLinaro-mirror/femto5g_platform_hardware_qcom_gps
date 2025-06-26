@@ -397,8 +397,8 @@ LocationAPI::destroy(locationApiDestroyCompleteCallback destroyCompleteCb)
 
     pthread_mutex_unlock(&gDataMutex);
     if (invokeDestroyCb) {
-        if (!destroyCompleteCb) {
-            (destroyCompleteCb) ();
+        if (destroyCompleteCb) {
+            destroyCompleteCb();
         }
         delete this;
     }
