@@ -26,42 +26,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_GnssAdapter"
@@ -8715,6 +8684,7 @@ void GnssAdapter::handleEnablePPENtrip(const GnssNtripConnectionParams& params,
              params.requiresNmeaLocation, nmeaUpdateInterval, mSendNmeaConsent);
 
     GnssNtripConnectionParams* pNtripParams = &(mStartDgnssNtripParams.ntripParams);
+    SystemStatus* systemStatus = getSystemStatus();
 
     if (pNtripParams->useSSL == params.useSSL &&
             0 == pNtripParams->hostNameOrIp.compare(params.hostNameOrIp) &&
@@ -8726,13 +8696,18 @@ void GnssAdapter::handleEnablePPENtrip(const GnssNtripConnectionParams& params,
             pNtripParams->nmeaUpdateInterval == nmeaUpdateInterval &&
             mDgnssState & DGNSS_STATE_ENABLE_NTRIP_COMMAND) {
         LOC_LOGd("received same Ntrip param");
+        if (nullptr != systemStatus) {
+            systemStatus->eventNtripStarted(true);
+        }
         return;
     }
 
     mDgnssState |= DGNSS_STATE_ENABLE_NTRIP_COMMAND;
     mDgnssState |= DGNSS_STATE_NO_NMEA_PENDING;
     mDgnssState &= ~DGNSS_STATE_NTRIP_SESSION_STARTED;
-    getSystemStatus()->eventNtripStarted(true);
+    if (nullptr != systemStatus) {
+        systemStatus->eventNtripStarted(true);
+    }
 
     mStartDgnssNtripParams.ntripParams = std::move(params);
     mStartDgnssNtripParams.ntripParams.nmeaUpdateInterval = nmeaUpdateInterval;
@@ -8762,10 +8737,13 @@ void GnssAdapter::disablePPENtripStreamCommand() {
 }
 
 void GnssAdapter::handleDisablePPENtrip() {
+    SystemStatus* systemStatus = getSystemStatus();
     mDgnssState &= ~DGNSS_STATE_ENABLE_NTRIP_COMMAND;
     mDgnssState |= DGNSS_STATE_NO_NMEA_PENDING;
     stopDgnssNtrip();
-    getSystemStatus()->eventNtripStarted(false);
+    if (nullptr != systemStatus) {
+        systemStatus->eventNtripStarted(false);
+    }
 }
 
 void GnssAdapter::checkUpdateDgnssNtrip(bool isLocationValid) {
@@ -8785,6 +8763,10 @@ void GnssAdapter::checkUpdateDgnssNtrip(bool isLocationValid) {
         uint64_t curBootTime = getBootTimeMilliSec();
         if (mDgnssState == (DGNSS_STATE_ENABLE_NTRIP_COMMAND | DGNSS_STATE_NO_NMEA_PENDING)) {
             mDgnssState |= DGNSS_STATE_NTRIP_SESSION_STARTED;
+            SystemStatus* systemStatus = getSystemStatus();
+            if (nullptr != systemStatus) {
+                systemStatus->eventNtripStarted(true);
+            }
             mXtraObserver.startDgnssSource(mStartDgnssNtripParams);
             if (isDgnssNmeaRequired()) {
                 mDgnssLastNmeaBootTimeMilli = curBootTime;
@@ -8812,6 +8794,7 @@ void GnssAdapter::stopDgnssNtrip() {
 void GnssAdapter::readPPENtripConfig() {
 
     static char NtripParamsString[LOC_MAX_PARAM_STRING];
+    SystemStatus* systemStatus = getSystemStatus();
 
     if (mDgnssState & DGNSS_STATE_ENABLE_NTRIP_COMMAND) {
         return;
@@ -8866,7 +8849,9 @@ void GnssAdapter::readPPENtripConfig() {
     mDgnssState |= DGNSS_STATE_ENABLE_NTRIP_COMMAND;
     mDgnssState |= DGNSS_STATE_NO_NMEA_PENDING;
     mDgnssState &= ~DGNSS_STATE_NTRIP_SESSION_STARTED;
-    getSystemStatus()->eventNtripStarted(true);
+    if (nullptr != systemStatus) {
+        systemStatus->eventNtripStarted(true);
+    }
 
     mStartDgnssNtripParams.nmea.clear();
     if (pNtripParams->requiresNmeaLocation) {
