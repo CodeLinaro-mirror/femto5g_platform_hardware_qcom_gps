@@ -245,7 +245,6 @@ GnssAdapter::GnssAdapter() :
     mPositionElapsedRealTimeCal(30000000),
     mAddressRequestCb(nullptr),
     mHmacConfig(HMAC_CONFIG_UNKNOWN),
-    mNvParamMgr(NvParamMgr::getInstance()),
     mNmeaReqEngTypeMask(LOC_REQ_ENGINE_FUSED_BIT),
     mAppHash(""),
     m3GppSourceMask(QDGNSS_3GPP_SOURCE_UNKNOWN),
@@ -312,20 +311,22 @@ void GnssAdapter::restoreConfigFromNvm()
             LocMsg(),
             mAdapter(adapter) {}
         inline virtual void proc() const {
-            //Read GNSS VRP data
+            //restore Configuration parameters only when engine hub is loaded
+            if (false == mAdapter.mEngHubLoadSuccessful) {
+                LOC_LOGd("EHUB not enabled, return");
+                return;
+            }
             mAdapter.mLocConfigInfo.leverArmConfigInfo = mAdapter.readVrpDataFromNvm();
             LOC_LOGi("0x%x %f %f %f", mAdapter.mLocConfigInfo.leverArmConfigInfo.leverArmValidMask,
                 mAdapter.mLocConfigInfo.leverArmConfigInfo.gnssToVRP.forwardOffsetMeters,
                 mAdapter.mLocConfigInfo.leverArmConfigInfo.gnssToVRP.sidewaysOffsetMeters,
                 mAdapter.mLocConfigInfo.leverArmConfigInfo.gnssToVRP.upOffsetMeters);
             if (mAdapter.mLocConfigInfo.leverArmConfigInfo.leverArmValidMask) {
-                if (true == mAdapter.mEngHubLoadSuccessful) {
-                    if (false == mAdapter.mEngHubProxy->configLeverArm(
-                            mAdapter.mLocConfigInfo.leverArmConfigInfo)) {
-                        LOC_LOGe("configLeverArm Failed");
-                    } else {
-                        LOC_LOGd("configLeverArm Success");
-                    }
+                if (false == mAdapter.mEngHubProxy->configLeverArm(
+                        mAdapter.mLocConfigInfo.leverArmConfigInfo)) {
+                    LOC_LOGe("configLeverArm Failed");
+                } else {
+                    LOC_LOGd("configLeverArm Success");
                 }
             }
         }
@@ -343,8 +344,9 @@ LeverArmConfigInfo GnssAdapter::readVrpDataFromNvm()
     unsigned int size = sizeof(LeverArmConfigInfo);
     paramName = LocNvParams::getParamName(LocNvParams::LEVER_ARM_GNSS_TO_VRP);
     unsigned char* leverArmBlob = reinterpret_cast<unsigned char*>(&configInfo);
-    if ((nullptr != leverArmBlob) && (nullptr != mNvParamMgr)) {
-        errorCode = mNvParamMgr->getBlobParam(paramName, leverArmBlob, size);
+    NvParamMgr* nvParamMgr = NvParamMgr::getInstance();
+    if ((nullptr != leverArmBlob) && (nullptr != nvParamMgr)) {
+        errorCode = nvParamMgr->getBlobParam(paramName, leverArmBlob, size);
         if (NV_PARAM_ERR_NO_ERR == errorCode) {
             LeverArmConfigInfo* leverArmConfig =
                   reinterpret_cast<LeverArmConfigInfo*>(leverArmBlob);
@@ -352,6 +354,10 @@ LeverArmConfigInfo GnssAdapter::readVrpDataFromNvm()
                 configInfo = *leverArmConfig;
             }
         }
+    }
+    if (nvParamMgr) {
+        NvParamMgr::releaseInstance();
+        nvParamMgr = nullptr;
     }
     return configInfo;
 }
@@ -368,10 +374,15 @@ bool GnssAdapter::storeVrpData2Nvm(const LeverArmConfigInfo& configInfo)
         const char* paramName = NULL;
         nv_param_err_code errorCode = NV_PARAM_ERR_NO_ERR;
         unsigned int size = sizeof(LeverArmConfigInfo);
-        if (nullptr != mNvParamMgr) {
+        NvParamMgr* nvParamMgr = NvParamMgr::getInstance();
+        if (nullptr != nvParamMgr) {
             paramName = LocNvParams::getParamName(LocNvParams::LEVER_ARM_GNSS_TO_VRP);
-            errorCode = mNvParamMgr->saveBlobParam(paramName,
+            errorCode = nvParamMgr->saveBlobParam(paramName,
                     (const unsigned char*)&configInfo, size);
+        }
+        if (nvParamMgr) {
+            NvParamMgr::releaseInstance();
+            nvParamMgr = nullptr;
         }
     }
     if (NV_PARAM_ERR_NO_ERR == errorCode) {
@@ -986,8 +997,10 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
 
     if (GPS_LOCATION_EXTENDED_HAS_DGNSS_STATION_ID & locationExtended.flags) {
         out.flags |= LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
-        out.numOfDgnssStationId = locationExtended.numOfDgnssStationId;
-        for (uint32_t i = 0; i < locationExtended.numOfDgnssStationId; i++) {
+        out.numOfDgnssStationId = (
+                locationExtended.numOfDgnssStationId > DGNSS_STATION_ID_MAX
+                ) ? DGNSS_STATION_ID_MAX : locationExtended.numOfDgnssStationId;
+        for (uint32_t i = 0; i < out.numOfDgnssStationId; i++) {
             out.dgnssStationId[i] = locationExtended.dgnssStationId[i];
         }
     }
@@ -3093,6 +3106,7 @@ GnssAdapter::updateClientsEventMask()
     LOC_API_ADAPTER_EVENT_MASK_T mask = LOC_API_ADAPTER_BIT_LOC_SYSTEM_INFO |
             LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO |
             LOC_API_ADAPTER_BIT_FEATURE_STATUS_UPDATE;
+
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
         if (it->second.trackingCb != nullptr ||
             it->second.gnssLocationInfoCb != nullptr ||
@@ -4810,9 +4824,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                     engLocationsInfo[1] = locationInfo;
                     it->second.engineLocationsInfoCb(2, engLocationsInfo);
                 } else if (nullptr != it->second.trackingCb) {
-                    it->second.trackingCb(locationInfo.location);
-                } else if (reportToAnyClient) {
-                    if (nullptr != it->second.trackingCb) {
+                    if (reportToAnyClient) {
                         cbRunnables.emplace_back([ cb=it->second.trackingCb ] (Location location) {
                             cb(location);
                         });
@@ -6008,6 +6020,10 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
             // before requesting new ODCPI to avoid spamming ODCPI requests
             } else if (!(mOdcpiStateMask & ODCPI_REQ_ACTIVE) && true == mOdcpiTimer.isActive()) {
                 mOdcpiStateMask |= ODCPI_REQ_ACTIVE;
+                if (nullptr != mEsStatusCb) {
+                    mEsStatusCb(request.isEmergencyMode);
+                }
+                sendEmergencyCallStatusEvent = true;
             }
             mOdcpiRequest = request;
 
