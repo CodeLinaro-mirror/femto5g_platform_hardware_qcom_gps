@@ -32,7 +32,6 @@
 static GeofenceAdapter* gGeofenceAdapter = NULL;
 
 static void initialize();
-static void deinitialize();
 
 static void addClient(LocationAPI* client, const LocationCallbacks& callbacks);
 static void removeClient(LocationAPI* client, removeClientCompleteCallback rmClientCb);
@@ -50,7 +49,6 @@ static void updateSystemPowerState(PowerStateType systemPowerState);
 static const GeofenceInterface gGeofenceInterface = {
     sizeof(GeofenceInterface),
     initialize,
-    deinitialize,
     addClient,
     removeClient,
     requestCapabilities,
@@ -75,14 +73,6 @@ static void initialize()
 {
     if (NULL == gGeofenceAdapter) {
         gGeofenceAdapter = new GeofenceAdapter();
-    }
-}
-
-static void deinitialize()
-{
-    if (NULL != gGeofenceAdapter) {
-        delete gGeofenceAdapter;
-        gGeofenceAdapter = NULL;
     }
 }
 
