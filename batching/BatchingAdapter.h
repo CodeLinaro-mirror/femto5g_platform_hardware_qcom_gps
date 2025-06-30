@@ -31,7 +31,7 @@
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
- */
+*/
 
 #ifndef BATCHING_ADAPTER_H
 #define BATCHING_ADAPTER_H
@@ -105,11 +105,10 @@ public:
     virtual void handleEngineLockStatusEvent(EngineLockState engineLockState);
     void handleEngineLockStatus(EngineLockState engineLockState);
     /* ======== EVENTS ====(Called from QMI Thread)========================================= */
-    void reportLocationsEvent(const Location* locations, size_t count,
-            BatchingMode batchingMode);
+    void reportLocationsEvent(const Location* locations, size_t count);
     void reportBatchStatusChangeEvent(BatchingStatus batchStatus);
     /* ======== UTILITIES ================================================================== */
-    void reportLocations(Location* locations, size_t count, BatchingMode batchingMode);
+    void reportLocations(Location* locations, size_t count);
     void reportBatchStatusChange(BatchingStatus batchStatus,
             std::list<uint32_t> & completedTripsList);
 
@@ -118,9 +117,7 @@ public:
     /* ======== UTILITIES ================================================================== */
     void setBatchSize(size_t batchSize) { mBatchSize = batchSize; }
     size_t getBatchSize() { return mBatchSize; }
-    void setBatchingTimeout(uint32_t batchingTimeout) { mBatchingTimeout = batchingTimeout; }
     uint32_t getBatchingTimeout() { return mBatchingTimeout; }
-    void setBatchingAccuracy(uint32_t accuracy) { mBatchingAccuracy = accuracy; }
     uint32_t getBatchingAccuracy() { return mBatchingAccuracy; }
 };
 

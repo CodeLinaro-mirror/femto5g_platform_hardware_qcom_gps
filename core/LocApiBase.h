@@ -210,7 +210,7 @@ public:
     void geofenceBreach(size_t count, uint32_t* hwIds, Location& location,
             GeofenceBreachType breachType, uint64_t timestamp);
     void geofenceStatus(GeofenceStatusAvailable available);
-    void reportLocations(Location* locations, size_t count, BatchingMode batchingMode);
+    void reportLocations(Location* locations, size_t count);
     void handleBatchStatusEvent(BatchingStatus batchStatus);
     void reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask);
     void reportNtnStatusEvent(LocationError status,

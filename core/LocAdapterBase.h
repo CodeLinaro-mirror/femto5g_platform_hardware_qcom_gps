@@ -213,8 +213,7 @@ public:
                                      enum loc_sess_status status,
                                      LocPosTechMask loc_technology_mask);
 
-    virtual void reportLocationsEvent(const Location* locations, size_t count,
-            BatchingMode batchingMode);
+    virtual void reportLocationsEvent(const Location* locations, size_t count);
     virtual void reportBatchStatusChangeEvent(BatchingStatus batchStatus);
 
     /* ==== CLIENT ========================================================================= */

@@ -218,8 +218,7 @@ LocAdapterBase::geofenceStatusEvent(GeofenceStatusAvailable /*available*/)
 DEFAULT_IMPL()
 
 void
-LocAdapterBase::reportLocationsEvent(const Location* /*locations*/, size_t /*count*/,
-                                     BatchingMode /*batchingMode*/)
+LocAdapterBase::reportLocationsEvent(const Location* /*locations*/, size_t /*count*/)
 DEFAULT_IMPL()
 
 void

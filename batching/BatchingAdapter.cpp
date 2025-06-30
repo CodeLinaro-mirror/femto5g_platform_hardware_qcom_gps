@@ -77,14 +77,13 @@ BatchingAdapter::stopClientSessions(LocationAPI* client, bool eraseSession)
     typedef struct pairKeyBatchMode {
         LocationAPI* client;
         uint32_t id;
-        BatchingMode batchingMode;
-        inline pairKeyBatchMode(LocationAPI* _client, uint32_t _id, BatchingMode _bMode) :
-            client(_client), id(_id), batchingMode(_bMode) {}
+        inline pairKeyBatchMode(LocationAPI* _client, uint32_t _id) :
+            client(_client), id(_id) {}
     } pairKeyBatchMode;
     std::vector<pairKeyBatchMode> vBatchingClient;
     for (auto it : mBatchingSessions) {
         if (client == it.first.client) {
-            vBatchingClient.emplace_back(it.first.client, it.first.id, it.second.batchingMode);
+            vBatchingClient.emplace_back(it.first.client, it.first.id);
         }
     }
     for (auto keyBatchingMode : vBatchingClient) {
@@ -296,12 +295,9 @@ BatchingAdapter::startBatchingCommand(
                 err = LOCATION_ERROR_INVALID_PARAMETER;
             }
             if (LOCATION_ERROR_SUCCESS == err) {
-                if (mBatchingOptions.batchingMode == BATCHING_MODE_ROUTINE ||
-                    mBatchingOptions.batchingMode == BATCHING_MODE_NO_AUTO_REPORT) {
-                    mAdapter.startBatching(mClient, mSessionId, mBatchingOptions);
-                } else {
-                    mAdapter.reportResponse(mClient, LOCATION_ERROR_INVALID_PARAMETER, mSessionId);
-                }
+                mAdapter.startBatching(mClient, mSessionId, mBatchingOptions);
+            } else {
+                mAdapter.reportResponse(mClient, err, mSessionId);
             }
         }
     };
@@ -438,18 +434,15 @@ BatchingAdapter::stopBatching(LocationAPI* client, uint32_t sessionId, bool rest
     auto it = mBatchingSessions.find(key);
     if (it != mBatchingSessions.end()) {
         auto flpOptions = it->second;
-        // Assume stop will be OK, restore session if not
-        if (eraseSession)
-            eraseBatchingSession(client, sessionId);
         mLocApi->stopBatching(sessionId,
                 new LocApiResponse(*getContext(),
                 [this, client, sessionId, flpOptions, restartNeeded, batchOptions, eraseSession]
                 (LocationError err) {
             if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
                 LOCATION_ERROR_SUCCESS != err) {
-                if (eraseSession)
-                    saveBatchingSession(client, sessionId, batchOptions);
             } else {
+                //erase batching session when stop successfully
+                eraseBatchingSession(client, sessionId);
                 // if stopBatching is success, unregister for batch full event if this was the last
                 // batching session that is interested in batch full event
                 if (0 == autoReportBatchingSessionsCount() &&
@@ -519,25 +512,21 @@ BatchingAdapter::getBatchedLocationsCommand(LocationAPI* client, uint32_t id, si
 }
 
 void
-BatchingAdapter::reportLocationsEvent(const Location* locations, size_t count,
-        BatchingMode batchingMode)
+BatchingAdapter::reportLocationsEvent(const Location* locations, size_t count)
 {
-    LOC_LOGD("%s]: count %zu batchMode %d", __func__, count, batchingMode);
+    LOC_LOGD("%s]: count %zu ", __func__, count);
 
     struct MsgReportLocations : public LocMsg {
         BatchingAdapter& mAdapter;
         Location* mLocations;
         size_t mCount;
-        BatchingMode mBatchingMode;
         inline MsgReportLocations(BatchingAdapter& adapter,
                                   const Location* locations,
-                                  size_t count,
-                                  BatchingMode batchingMode) :
+                                  size_t count) :
             LocMsg(),
             mAdapter(adapter),
             mLocations(new Location[count]),
-            mCount(count),
-            mBatchingMode(batchingMode)
+            mCount(count)
         {
             if (nullptr == mLocations) {
                 LOC_LOGE("%s]: new failed to allocate mLocations", __func__);
@@ -552,17 +541,17 @@ BatchingAdapter::reportLocationsEvent(const Location* locations, size_t count,
                 delete[] mLocations;
         }
         inline virtual void proc() const {
-            mAdapter.reportLocations(mLocations, mCount, mBatchingMode);
+            mAdapter.reportLocations(mLocations, mCount);
         }
     };
 
-    sendMsg(new MsgReportLocations(*this, locations, count, batchingMode));
+    sendMsg(new MsgReportLocations(*this, locations, count));
 }
 
 void
-BatchingAdapter::reportLocations(Location* locations, size_t count, BatchingMode batchingMode)
+BatchingAdapter::reportLocations(Location* locations, size_t count)
 {
-    BatchingOptions batchOptions = {sizeof(BatchingOptions), batchingMode};
+    BatchingOptions batchOptions = {sizeof(BatchingOptions), BATCHING_MODE_ROUTINE};
 
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
         if (nullptr != it->second.batchingCb) {

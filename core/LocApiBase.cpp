@@ -518,9 +518,9 @@ void LocApiBase::geofenceStatus(GeofenceStatusAvailable available)
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->geofenceStatusEvent(available));
 }
 
-void LocApiBase::reportLocations(Location* locations, size_t count, BatchingMode batchingMode)
+void LocApiBase::reportLocations(Location* locations, size_t count)
 {
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportLocationsEvent(locations, count, batchingMode));
+    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportLocationsEvent(locations, count));
 }
 
 void LocApiBase::handleBatchStatusEvent(BatchingStatus batchStatus)
