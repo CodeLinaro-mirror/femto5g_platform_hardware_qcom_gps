@@ -57,7 +57,6 @@ typedef void (*removeClientCompleteCallback)(LocationAPI* client);
 struct GnssInterface {
     size_t size;
     void (*initialize)(void);
-    void (*deinitialize)(void);
     void (*addClient)(LocationAPI* client, const LocationCallbacks& callbacks);
     void (*removeClient)(LocationAPI* client, removeClientCompleteCallback rmClientCb);
     void (*requestCapabilities)(LocationAPI* client);
@@ -140,7 +139,6 @@ struct GnssInterface {
 struct BatchingInterface {
     size_t size;
     void (*initialize)(void);
-    void (*deinitialize)(void);
     void (*addClient)(LocationAPI* client, const LocationCallbacks& callbacks);
     void (*removeClient)(LocationAPI* client, removeClientCompleteCallback rmClientCb);
     void (*requestCapabilities)(LocationAPI* client);
@@ -155,7 +153,6 @@ struct BatchingInterface {
 struct GeofenceInterface {
     size_t size;
     void (*initialize)(void);
-    void (*deinitialize)(void);
     void (*addClient)(LocationAPI* client, const LocationCallbacks& callbacks);
     void (*removeClient)(LocationAPI* client, removeClientCompleteCallback rmClientCb);
     void (*requestCapabilities)(LocationAPI* client);

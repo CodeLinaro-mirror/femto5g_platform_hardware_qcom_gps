@@ -37,7 +37,6 @@
 static BatchingAdapter* gBatchingAdapter = NULL;
 
 static void initialize();
-static void deinitialize();
 
 static void addClient(LocationAPI* client, const LocationCallbacks& callbacks);
 static void removeClient(LocationAPI* client, removeClientCompleteCallback rmClientCb);
@@ -54,7 +53,6 @@ static void updateSystemPowerState(PowerStateType systemPowerState);
 static const BatchingInterface gBatchingInterface = {
     sizeof(BatchingInterface),
     initialize,
-    deinitialize,
     addClient,
     removeClient,
     requestCapabilities,
@@ -79,14 +77,6 @@ static void initialize()
 {
     if (NULL == gBatchingAdapter) {
         gBatchingAdapter = new BatchingAdapter();
-    }
-}
-
-static void deinitialize()
-{
-    if (NULL != gBatchingAdapter) {
-        delete gBatchingAdapter;
-        gBatchingAdapter = NULL;
     }
 }
 

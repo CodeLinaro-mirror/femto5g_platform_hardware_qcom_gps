@@ -40,7 +40,6 @@ static GnssAdapter* gGnssAdapter = NULL;
 typedef void (createOSFramework)();
 
 static void initialize();
-static void deinitialize();
 
 static void addClient(LocationAPI* client, const LocationCallbacks& callbacks);
 static void removeClient(LocationAPI* client, removeClientCompleteCallback rmClientCb);
@@ -132,7 +131,6 @@ static void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplC
 static const GnssInterface gGnssInterface = {
     sizeof(GnssInterface),
     initialize,
-    deinitialize,
     addClient,
     removeClient,
     requestCapabilities,
@@ -233,14 +231,6 @@ static void initialize()
     if (NULL == gGnssAdapter) {
         gGnssAdapter = new GnssAdapter();
         createOSFrameworkInstance();
-    }
-}
-
-static void deinitialize()
-{
-    if (NULL != gGnssAdapter) {
-        delete gGnssAdapter;
-        gGnssAdapter = NULL;
     }
 }
 
