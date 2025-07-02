@@ -26,42 +26,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
-
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_GnssAPIClient"
 #define SINGLE_SHOT_MIN_TRACKING_INTERVAL_MSEC (590 * 60 * 60 * 1000) // 590 hours
@@ -247,9 +217,9 @@ void GnssAPIClient::setCallbacks() {
 
 // for GpsInterface
 void GnssAPIClient::gnssUpdateCallbacks(const shared_ptr<IGnssCallback>& gpsCb) {
-    LOC_LOGd("]: ()");
     if (gpsCb != nullptr) {
         mMutex.lock();
+        LOC_LOGd("mSignalTypeCbExpected = %d, set to true", mSignalTypeCbExpected);
         mSignalTypeCbExpected = true;
         mMutex.unlock();
         setCallbacks();
@@ -442,11 +412,12 @@ void GnssAPIClient::gnssEnable(LocationTechnologyType techType) {
 }
 
 void GnssAPIClient::gnssDisable() {
-    LOC_LOGd("]: ()");
     if (mControlClient == nullptr) {
         return;
     }
+
     mMutex.lock();
+    LOC_LOGd("mSignalTypeCbExpected = %d, set to false", mSignalTypeCbExpected);
     mSignalTypeCbExpected = false;
     mMutex.unlock();
     mControlClient->locAPIDisable();
@@ -665,23 +636,25 @@ void GnssAPIClient::onEngineLocationsInfoCb(uint32_t count,
 
 void GnssAPIClient::onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNotification) {
     mMutex.lock();
-    auto gnssCbIface(mGnssCbIface);
-    bool signalTypeCbExpected = mSignalTypeCbExpected;
-    mMutex.unlock();
 
-    LOC_LOGd("signalTypeCbExpected = %d, gnssSupportedSignals = 0x%x",
-            signalTypeCbExpected, gnssCapabNotification.gnssSupportedSignals);
-    if ((gnssCbIface != nullptr) && (true == signalTypeCbExpected)) {
-       std::vector<GnssSignalType> gnssSignalTypes;
-       convertGnssSignalType(gnssCapabNotification, gnssSignalTypes);
-       auto r = gnssCbIface->gnssSetSignalTypeCapabilitiesCb(gnssSignalTypes);
-       if (!r.isOk()) {
-          LOC_LOGe("Error from gnssSvStatusCb");
+    LOC_LOGd("mSignalTypeCbExpected = %d", mSignalTypeCbExpected);
+    if (mGnssCbIface != nullptr) {
+       if (true == mSignalTypeCbExpected) {
+          LOC_LOGd("report to aidl, suppored signal 0x%x ",
+                   gnssCapabNotification.gnssSupportedSignals);
+          std::vector<GnssSignalType> gnssSignalTypes;
+          convertGnssSignalType(gnssCapabNotification, gnssSignalTypes);
+          auto r = mGnssCbIface->gnssSetSignalTypeCapabilitiesCb(gnssSignalTypes);
+          if (!r.isOk()) {
+             LOC_LOGe("Error from gnssSvStatusCb");
+          }
+          mSignalTypeCbExpected = false;
        }
-       mMutex.lock();
-       mSignalTypeCbExpected = false;
-       mMutex.unlock();
+    } else {
+       LOC_LOGd("mGnssCbIface is null");
     }
+
+    mMutex.unlock();
 }
 
 void GnssAPIClient::onStartTrackingCb(LocationError error) {
