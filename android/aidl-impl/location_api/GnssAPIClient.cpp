@@ -26,12 +26,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+
 /*
 Changes from Qualcomm Technologies, Inc. are provided under the following license:
 Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
-
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_GnssAPIClient"
 #define SINGLE_SHOT_MIN_TRACKING_INTERVAL_MSEC (590 * 60 * 60 * 1000) // 590 hours
@@ -203,9 +203,9 @@ void GnssAPIClient::setCallbacks() {
 
 // for GpsInterface
 void GnssAPIClient::gnssUpdateCallbacks(const shared_ptr<IGnssCallback>& gpsCb) {
-    LOC_LOGd("]: ()");
     if (gpsCb != nullptr) {
         mMutex.lock();
+        LOC_LOGd("mSignalTypeCbExpected = %d, set to true", mSignalTypeCbExpected);
         mSignalTypeCbExpected = true;
         mMutex.unlock();
         setCallbacks();
@@ -398,11 +398,12 @@ void GnssAPIClient::gnssEnable(LocationTechnologyType techType) {
 }
 
 void GnssAPIClient::gnssDisable() {
-    LOC_LOGd("]: ()");
     if (mControlClient == nullptr) {
         return;
     }
+
     mMutex.lock();
+    LOC_LOGd("mSignalTypeCbExpected = %d, set to false", mSignalTypeCbExpected);
     mSignalTypeCbExpected = false;
     mMutex.unlock();
     mControlClient->locAPIDisable();
@@ -621,23 +622,25 @@ void GnssAPIClient::onEngineLocationsInfoCb(uint32_t count,
 
 void GnssAPIClient::onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNotification) {
     mMutex.lock();
-    auto gnssCbIface(mGnssCbIface);
-    bool signalTypeCbExpected = mSignalTypeCbExpected;
-    mMutex.unlock();
 
-    LOC_LOGd("signalTypeCbExpected = %d, gnssSupportedSignals = 0x%x",
-            signalTypeCbExpected, gnssCapabNotification.gnssSupportedSignals);
-    if ((gnssCbIface != nullptr) && (true == signalTypeCbExpected)) {
-       std::vector<GnssSignalType> gnssSignalTypes;
-       convertGnssSignalType(gnssCapabNotification, gnssSignalTypes);
-       auto r = gnssCbIface->gnssSetSignalTypeCapabilitiesCb(gnssSignalTypes);
-       if (!r.isOk()) {
-          LOC_LOGe("Error from gnssSvStatusCb");
+    LOC_LOGd("mSignalTypeCbExpected = %d", mSignalTypeCbExpected);
+    if (mGnssCbIface != nullptr) {
+       if (true == mSignalTypeCbExpected) {
+          LOC_LOGd("report to aidl, suppored signal 0x%x ",
+                   gnssCapabNotification.gnssSupportedSignals);
+          std::vector<GnssSignalType> gnssSignalTypes;
+          convertGnssSignalType(gnssCapabNotification, gnssSignalTypes);
+          auto r = mGnssCbIface->gnssSetSignalTypeCapabilitiesCb(gnssSignalTypes);
+          if (!r.isOk()) {
+             LOC_LOGe("Error from gnssSvStatusCb");
+          }
+          mSignalTypeCbExpected = false;
        }
-       mMutex.lock();
-       mSignalTypeCbExpected = false;
-       mMutex.unlock();
+    } else {
+       LOC_LOGd("mGnssCbIface is null");
     }
+
+    mMutex.unlock();
 }
 
 void GnssAPIClient::onStartTrackingCb(LocationError error) {
