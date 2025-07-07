@@ -62,6 +62,11 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_GnssAdapter"
@@ -1300,7 +1305,9 @@ GnssAdapter::setConfig()
         // Modem does not provide noraml NMEA if ENGINE_DEBUG_DATA feature is available
         // ensuring AP to nmea generation in this case
         ContextBase::mGps_conf.NMEA_PROVIDER =  NMEA_PROVIDER_AP;
+#ifndef FEATURE_AUTOMOTIVE
         updateEvtMask(LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT, LOC_REGISTRATION_MASK_ENABLED);
+#endif
     }
 
     std::string oldMoServerUrl = getMoServerUrl();
@@ -1368,7 +1375,9 @@ GnssAdapter::setConfig()
         // set nmea mask type
         uint32_t mask = 0;
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_ENGINE_DEBUG_DATA)) {
+#ifndef FEATURE_AUTOMOTIVE
             mask |= LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT;
+#endif
         } else {
             if (NMEA_PROVIDER_MP == gpsConf.NMEA_PROVIDER) {
                 mask |= LOC_NMEA_ALL_GENERAL_SUPPORTED_MASK;
@@ -3121,7 +3130,9 @@ GnssAdapter::updateClientsEventMask()
             mask |= LOC_API_ADAPTER_BIT_SATELLITE_REPORT;
         }
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_ENGINE_DEBUG_DATA)) {
+#ifndef FEATURE_AUTOMOTIVE
             mask |= LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT;
+#endif
         } else {
             if ((it->second.gnssNmeaCb != nullptr) && (mNmeaMask)) {
                 mask |= LOC_API_ADAPTER_BIT_NMEA_1HZ_REPORT;
@@ -4971,6 +4982,7 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify)
     int numSv = svNotify.count;
     uint16_t gnssSvId = 0;
     uint64_t svUsedIdMask = 0;
+    bool needToReportNmea = false;
 
     for (int i=0; i < numSv; i++) {
         svUsedIdMask = 0;
@@ -5115,10 +5127,14 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify)
         if (nullptr != it->second.gnssSvCb) {
             it->second.gnssSvCb(svNotify);
         }
+        if (!needToReportNmea && (nullptr != it->second.gnssNmeaCb ||
+                nullptr != it->second.engineNmeaCb)) {
+            needToReportNmea = true;
+        }
     }
 
-    if (NMEA_PROVIDER_AP == ContextBase::mGps_conf.NMEA_PROVIDER &&
-        !mTimeBasedTrackingSessions.empty()) {
+    if (needToReportNmea && (NMEA_PROVIDER_AP == ContextBase::mGps_conf.NMEA_PROVIDER &&
+            !mTimeBasedTrackingSessions.empty())) {
         std::vector<std::string> nmeaArraystr;
         LocOutputEngineType engineType = LOC_OUTPUT_ENGINE_SPE;
         loc_nmea_generate_sv(svNotify, nmeaArraystr);
