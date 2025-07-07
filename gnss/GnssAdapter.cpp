@@ -86,42 +86,6 @@ typedef const CdfwInterface* (*getCdfwInterface)();
 
 typedef void getPdnTypeFromWds(const std::string& apnName, std::function<void(int)> pdnCb);
 
-class LocNvParams
-{
-public:
-
-    enum LocNvParamId {
-       LEVER_ARM_GNSS_TO_VRP = 0, // Blob for LeverArmParams
-       MAX_NUM_OF_LOC_NV_PARAMS,
-       NV_PARAM_E_SIZE   = 0x10000000      // force enum to be 32-bit
-    };
-
-    static const char* getParamName (LocNvParamId nvId);
-
-};
-
-
-const char* LocNvParamNameTable[] =
-{
-    "LEVER_ARM_GNSS_TO_VRP", // 0 LeverArmParams blob
-};
-
-const char* LocNvParams::getParamName(LocNvParamId nvId)
-{
-    int paramNameCnt = 0;
-    const char* paramName = NULL;
-
-    paramNameCnt = sizeof (LocNvParamNameTable)/ sizeof (char*);
-
-    if ((nvId < MAX_NUM_OF_LOC_NV_PARAMS) && (nvId < paramNameCnt)) {
-        paramName = LocNvParamNameTable[nvId];
-    } else {
-        LOC_LOGw("getParamName: name for nv item id %d not set", nvId);
-    }
-
-    return paramName;
-}
-
 uint32_t gcd(uint32_t a, uint32_t b) {
     while (b != 0) {
         uint32_t temp = b;
@@ -338,14 +302,13 @@ LeverArmConfigInfo GnssAdapter::readVrpDataFromNvm()
     //Retrieve those parameters from back up NV memory
     LeverArmConfigInfo configInfo = {};
 
-    const char* paramName = LocNvParams::getParamName(LocNvParams::LEVER_ARM_GNSS_TO_VRP);
     nv_param_err_code errorCode = NV_PARAM_ERR_NO_ERR;
     unsigned int size = 0;
     unsigned char* leverArmBlob = NULL;
 
     NvParamMgr* nvParamMgr = NvParamMgr::getInstance();
     if (nullptr != nvParamMgr) {
-        errorCode = nvParamMgr->getBlobParam(paramName, leverArmBlob, size);
+        errorCode = nvParamMgr->getBlobParam(PARAM_NAME_LEVER_ARM_GNSS_TO_VRP, leverArmBlob, size);
         if (NV_PARAM_ERR_NO_ERR == errorCode) {
             LeverArmConfigInfo* leverArmConfig =
                   reinterpret_cast<LeverArmConfigInfo*>(leverArmBlob);
@@ -374,13 +337,11 @@ bool GnssAdapter::storeVrpData2Nvm(const LeverArmConfigInfo& configInfo)
             configInfo.gnssToVRP.sidewaysOffsetMeters,
             configInfo.gnssToVRP.upOffsetMeters);
     if (configInfo.leverArmValidMask & LEVER_ARM_TYPE_GNSS_TO_VRP_BIT) {
-        const char* paramName = NULL;
         nv_param_err_code errorCode = NV_PARAM_ERR_NO_ERR;
         unsigned int size = sizeof(LeverArmConfigInfo);
         NvParamMgr* nvParamMgr = NvParamMgr::getInstance();
         if (nullptr != nvParamMgr) {
-            paramName = LocNvParams::getParamName(LocNvParams::LEVER_ARM_GNSS_TO_VRP);
-            errorCode = nvParamMgr->saveBlobParam(paramName,
+            errorCode = nvParamMgr->saveBlobParam(PARAM_NAME_LEVER_ARM_GNSS_TO_VRP,
                     (const unsigned char*)&configInfo, size);
         }
         if (nvParamMgr) {
