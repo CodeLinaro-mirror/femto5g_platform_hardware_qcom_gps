@@ -1,3 +1,12 @@
+soong_namespace {
+  imports: [
+            "device/qcom/monaco",
+            "vendor/qcom/proprietary/monaco",
+            "device/qcom/vendor-common/monaco",
+            "device/qcom/common/monaco",
+            "vendor/qcom/opensource/monaco/location",
+    ],
+}
 GNSS_CFLAGS = [
     "-Werror",
     "-Wformat",
