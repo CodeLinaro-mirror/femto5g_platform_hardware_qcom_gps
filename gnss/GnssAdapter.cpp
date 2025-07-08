@@ -1083,7 +1083,7 @@ GnssAdapter::setSuplHostServer(const char* server, int port, LocServerType type)
                 getServerUrl().assign(serverUrl);
                 strlcpy(ContextBase::mGps_conf.SUPL_HOST,
                         (nullptr == server) ? serverUrl : server,
-                        LOC_MAX_PARAM_STRING);
+                        (sizeof(char) * LOC_MAX_PARAM_STRING));
                 ContextBase::mGps_conf.SUPL_PORT = port;
             } else {
                 if (strncasecmp(getMoServerUrl().c_str(), serverUrl, sizeof(serverUrl)) != 0) {
