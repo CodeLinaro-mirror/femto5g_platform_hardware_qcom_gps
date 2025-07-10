@@ -203,7 +203,6 @@ GnssAdapter::GnssAdapter() :
     mLocSystemInfo{},
     mSystemPowerState(POWER_STATE_UNKNOWN),
     mPowerConnectState(POWER_CONNECT_UNKNOWN),
-    mBlockCPIInfo{},
     mEsStatusCb(nullptr),
     mEngHubLoadSuccessful(false),
     mPowerOn(false),
@@ -2665,7 +2664,6 @@ GnssAdapter::injectLocationCommand(double latitude, double longitude, float accu
         GnssAdapter& mAdapter;
         LocApiBase& mApi;
         ContextBase& mContext;
-        BlockCPIInfo& mBlockCPI;
         double mLatitude;
         double mLongitude;
         float mAccuracy;
@@ -2673,7 +2671,6 @@ GnssAdapter::injectLocationCommand(double latitude, double longitude, float accu
         inline MsgInjectLocation(GnssAdapter& adapter,
                                  LocApiBase& api,
                                  ContextBase& context,
-                                 BlockCPIInfo& blockCPIInfo,
                                  double latitude,
                                  double longitude,
                                  float accuracy,
@@ -2682,65 +2679,29 @@ GnssAdapter::injectLocationCommand(double latitude, double longitude, float accu
             mAdapter(adapter),
             mApi(api),
             mContext(context),
-            mBlockCPI(blockCPIInfo),
             mLatitude(latitude),
             mLongitude(longitude),
             mAccuracy(accuracy),
             mOnDemandCpi(onDemandCpi) {}
         inline virtual void proc() const {
-            if ((uptimeMillis() <= mBlockCPI.blockedTillTsMs) &&
-                    (fabs(mLatitude-mBlockCPI.latitude) <= mBlockCPI.latLonDiffThreshold) &&
-                    (fabs(mLongitude-mBlockCPI.longitude) <= mBlockCPI.latLonDiffThreshold)) {
-                LOC_LOGD("MsgInjectLocation, pos injection blocked for "
-                         "lat: %f, lon: %f, accuracy: %f",
-                         mLatitude, mLongitude, mAccuracy);
-            } else {
-                if ((mAdapter.mOdcpiStateMask & CIVIC_ADDRESS_REQ_ACTIVE) &&
-                        mAdapter.mAddressRequestCb != nullptr) {
-                    Location location = {};
-                    location.flags |= LOCATION_HAS_LAT_LONG_BIT;
-                    location.latitude = mLatitude;
-                    location.longitude = mLongitude;
-                    location.flags |= LOCATION_HAS_ACCURACY_BIT;
-                    location.accuracy = mAccuracy;
-                    mAdapter.mAddressRequestCb(location);
-                }
-
-                mApi.injectPosition(mLatitude, mLongitude, mAccuracy, mOnDemandCpi);
+            if ((mAdapter.mOdcpiStateMask & CIVIC_ADDRESS_REQ_ACTIVE) &&
+                    mAdapter.mAddressRequestCb != nullptr) {
+                Location location = {};
+                location.flags |= LOCATION_HAS_LAT_LONG_BIT;
+                location.latitude = mLatitude;
+                location.longitude = mLongitude;
+                location.flags |= LOCATION_HAS_ACCURACY_BIT;
+                location.accuracy = mAccuracy;
+                mAdapter.mAddressRequestCb(location);
             }
+
+            mApi.injectPosition(mLatitude, mLongitude, mAccuracy, mOnDemandCpi);
         }
     };
 
-    sendMsg(new MsgInjectLocation(*this, *mLocApi, *mContext, mBlockCPIInfo,
+    sendMsg(new MsgInjectLocation(*this, *mLocApi, *mContext,
                                   latitude, longitude, accuracy,
                                   mOdcpiStateMask & ODCPI_REQ_ACTIVE));
-}
-
-void
-GnssAdapter::injectLocationExtCommand(const GnssLocationInfoNotification &locationInfo)
-{
-    LOC_LOGd("latitude %8.4f longitude %8.4f accuracy %8.4f, tech mask 0x%x",
-             locationInfo.location.latitude, locationInfo.location.longitude,
-             locationInfo.location.accuracy, locationInfo.location.techMask);
-
-    struct MsgInjectLocationExt : public LocMsg {
-        LocApiBase& mApi;
-        ContextBase& mContext;
-        GnssLocationInfoNotification mLocationInfo;
-        inline MsgInjectLocationExt(LocApiBase& api,
-                                    ContextBase& context,
-                                    GnssLocationInfoNotification locationInfo) :
-            LocMsg(),
-            mApi(api),
-            mContext(context),
-            mLocationInfo(locationInfo) {}
-        inline virtual void proc() const {
-            // false to indicate for none-ODCPI
-            mApi.injectPosition(mLocationInfo, false);
-        }
-    };
-
-    sendMsg(new MsgInjectLocationExt(*mLocApi, *mContext, locationInfo));
 }
 
 void
@@ -2772,43 +2733,6 @@ GnssAdapter::injectTimeCommand(int64_t time, int64_t timeReference, int32_t unce
     };
 
     sendMsg(new MsgInjectTime(*mLocApi, *mContext, time, timeReference, uncertainty));
-}
-
-// This command is to called to block the position to be injected to the modem.
-// This can happen for network position that comes from modem.
-void
-GnssAdapter::blockCPICommand(double latitude, double longitude,
-                             float accuracy, int blockDurationMsec,
-                             double latLonDiffThreshold)
-{
-    struct MsgBlockCPI : public LocMsg {
-        BlockCPIInfo& mDstCPIInfo;
-        BlockCPIInfo mSrcCPIInfo;
-
-        inline MsgBlockCPI(BlockCPIInfo& dstCPIInfo,
-                           BlockCPIInfo& srcCPIInfo) :
-            mDstCPIInfo(dstCPIInfo),
-            mSrcCPIInfo(srcCPIInfo) {}
-        inline virtual void proc() const {
-            // in the same hal thread, save the cpi to be blocked
-            // the global variable
-            mDstCPIInfo = mSrcCPIInfo;
-        }
-    };
-
-    // construct the new block CPI info and queue on the same thread
-    // for processing
-    BlockCPIInfo blockCPIInfo;
-    blockCPIInfo.latitude = latitude;
-    blockCPIInfo.longitude = longitude;
-    blockCPIInfo.accuracy = accuracy;
-    blockCPIInfo.blockedTillTsMs = uptimeMillis() + blockDurationMsec;
-    blockCPIInfo.latLonDiffThreshold = latLonDiffThreshold;
-
-    LOC_LOGd("block CPI lat: %f, lon: %f ", latitude, longitude);
-    // send a message to record down the coarse position
-    // to be blocked from injection in the master copy (mBlockCPIInfo)
-    sendMsg(new MsgBlockCPI(mBlockCPIInfo, blockCPIInfo));
 }
 
 void

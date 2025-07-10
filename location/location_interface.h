@@ -28,7 +28,7 @@
 
 /*
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #ifndef LOCATION_INTERFACE_H
@@ -84,13 +84,10 @@ struct GnssInterface {
            OdcpiCallbackTypeMask typeMask);
     void (*deRegisterOdcpi)(OdcpiPrioritytype priority, OdcpiCallbackTypeMask typeMask);
     void (*odcpiInject)(const Location& location);
-    void (*blockCPI)(double latitude, double longitude, float accuracy,
-                     int blockDurationMsec, double latLonDiffThreshold);
     void (*setEsStatusCallback)(std::function<void(bool)> esStatusCb);
     void (*getGnssEnergyConsumed)(GnssEnergyConsumedCallback energyConsumedCb);
     void (*enableNfwLocationAccess)(const std::vector<std::string>& enabledNfws);
     void (*nfwInit)(const NfwCbInfo& cbInfo);
-    void (*injectLocationExt)(const GnssLocationInfoNotification &locationInfo);
     void (*updateBatteryStatus)(bool charging);
     void (*updateSystemPowerState)(PowerStateType systemPowerState);
     uint32_t (*setConstrainedTunc) (bool enable, float tuncConstraint, uint32_t energyBudget);

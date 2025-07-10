@@ -152,19 +152,6 @@ enum PowerConnectState {
 };
 
 typedef struct {
-    double latitude;
-    double longitude;
-    float  accuracy;
-    // the CPI will be blocked until the boot time
-    // specified in blockedTillTsMs
-    int64_t blockedTillTsMs;
-    // CPIs whose both latitude and longitude differ
-    // no more than latLonThreshold will be blocked
-    // in units of degree
-    double latLonDiffThreshold;
-} BlockCPIInfo;
-
-typedef struct {
     bool isValid;
     bool enable;
     float tuncThresholdMs; // need to be specified if enable is true
@@ -322,7 +309,6 @@ class GnssAdapter : public LocAdapterBase {
     PowerConnectState mPowerConnectState;
 
     /* === Misc ===================================================================== */
-    BlockCPIInfo mBlockCPIInfo;
     bool mPowerOn;
     bool mEngHubLoadSuccessful;
     RealtimeEstimator mPositionElapsedRealTimeCal;
@@ -594,7 +580,6 @@ public:
     /* ======== UTILITIES ================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
     void initCDFWServiceCommand();
-    LocationControlCallbacks& getControlCallbacks() { return mControlCallbacks; }
     void setAfwControlId(uint32_t id) { mAfwControlId = id; }
     uint32_t getAfwControlId() { return mAfwControlId; }
     virtual bool isInSession() { return !mTimeBasedTrackingSessions.empty(); }
@@ -786,11 +771,8 @@ public:
                                    const LeverArmConfigInfo& leverArmConfigInfo);
 
     void injectLocationCommand(double latitude, double longitude, float accuracy);
-    void injectLocationExtCommand(const GnssLocationInfoNotification &locationInfo);
 
     void injectTimeCommand(int64_t time, int64_t timeReference, int32_t uncertainty);
-    void blockCPICommand(double latitude, double longitude, float accuracy,
-                         int blockDurationMsec, double latLonDiffThreshold);
 
     /* ==== MISCELLANEOUS ================================================================== */
     /* ======== UTILITIES ================================================================== */
