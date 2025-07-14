@@ -7227,12 +7227,9 @@ void GnssAdapter::configRobustLocation() {
             enable = false;
             enableFor911 = mLocConfigInfo.robustLocationConfigInfo.enableFor911;
         }
-    } else {
-        enable = false;
-        enableFor911 = false;
-    }
 
-    mLocApi->configRobustLocation(enable, enableFor911, nullptr, true);
+        mLocApi->configRobustLocation(enable, enableFor911, nullptr, true);
+    }
 }
 
 uint32_t GnssAdapter::configRobustLocationCommand(
@@ -7258,8 +7255,12 @@ uint32_t GnssAdapter::configRobustLocationCommand(
             mEnable(enable),
             mEnableForE911(enableForE911) {}
         inline virtual void proc() const {
-            mAdapter.configRobustLocation(mEnable, mEnableForE911);
-            mAdapter.reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
+            LocationError err = LOCATION_ERROR_NOT_SUPPORTED;
+            if (mAdapter.mRlFeatureQwesEnabled) {
+                err = LOCATION_ERROR_SUCCESS;
+                mAdapter.configRobustLocation(mEnable, mEnableForE911);
+            }
+            mAdapter.reportResponse(err, mSessionId);
         }
     };
 
