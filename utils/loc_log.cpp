@@ -43,7 +43,9 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "loc_log.h"
 #include "msg_q.h"
 #include <loc_pla.h>
+#ifdef USE_GLIB
 #include "LogBuffer.h"
+#endif
 #include <unordered_map>
 #include <fstream>
 #include <algorithm>
@@ -230,6 +232,7 @@ RETURN VALUE
    N/A
 
 ===========================================================================*/
+#ifdef USE_GLIB
 void log_buffer_insert(char *str, unsigned long buf_size, int level)
 {
     timespec tv = {};
@@ -238,6 +241,7 @@ void log_buffer_insert(char *str, unsigned long buf_size, int level)
     string ss = str;
     loc_util::LogBuffer::getInstance()->append(ss, level, elapsedTime);
 }
+#endif
 
 void log_tag_level_map_init()
 {

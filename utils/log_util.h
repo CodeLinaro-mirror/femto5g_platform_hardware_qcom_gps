@@ -176,7 +176,6 @@ inline static void log_buffer_init(bool enabled) {
 extern void log_tag_level_map_init();
 extern int get_tag_log_level(const char* tag);
 extern char* get_timestamp(char* str, unsigned long buf_size);
-extern void log_buffer_insert(char *str, unsigned long buf_size, int level);
 /*=============================================================================
  *
  *                          LOGGING BUFFER MACROS
@@ -185,6 +184,7 @@ extern void log_buffer_insert(char *str, unsigned long buf_size, int level);
 #ifndef LOG_NDEBUG
 #define LOG_NDEBUG 0
 #endif
+#ifdef USE_GLIB
 #define TOTAL_LOG_LEVELS 5
 #define LOGGING_BUFFER_MAX_LEN 1024
 #define IF_LOG_BUFFER_ENABLE if (loc_logger.LOG_BUFFER_ENABLE)
@@ -201,6 +201,10 @@ extern void log_buffer_insert(char *str, unsigned long buf_size, int level);
         }                                                                                     \
     }                                                                                         \
 }
+extern void log_buffer_insert(char *str, unsigned long buf_size, int level);
+#else
+#define INSERT_BUFFER(flag, level, format, x...) {}
+#endif
 
 #define MSG_QXDM_LOW    0
 #define MSG_QXDM_MED    1
