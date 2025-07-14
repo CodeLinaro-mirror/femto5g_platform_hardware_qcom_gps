@@ -8662,7 +8662,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
     UTIL_READ_CONF(LOC_PATH_ANT_CORR, ant_info_vector_table);
 
     for (uint32_t i = 0; i < antennaInfoVectorSize; i++) {
-        double carrierFrequencyMHz;
+        double carrierFrequencyMHz = 0.0;
         char pcOffsetStr[LOC_MAX_PARAM_STRING];
         uint32_t numberOfRows = 0;
         uint32_t numberOfColumns = 0;
