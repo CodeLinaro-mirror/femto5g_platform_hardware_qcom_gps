@@ -449,9 +449,7 @@ GnssAdapter::convertOptions(LocPosMode& out, const TrackingOptions& trackingOpti
         out.mode = LOC_POSITION_MODE_STANDALONE;
         break;
     }
-    out.share_position = true;
     out.min_interval = trackingOptions.minInterval;
-    out.powerMode = trackingOptions.powerMode;
     out.timeBetweenMeasurements = trackingOptions.tbm;
 }
 
