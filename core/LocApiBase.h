@@ -278,7 +278,7 @@ public:
     virtual void getWwanZppFix();
     virtual void getBestAvailableZppFix();
     virtual bool getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
-            LocPosTechMask &tech_mask);
+            LocPosTechMask &tech_mask, float* vertUnc = nullptr);
     virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);
     virtual void requestForAidingData(GnssAidingDataSvMask svDataMask);
     virtual LocationError setXtraVersionCheckSync(uint32_t check);

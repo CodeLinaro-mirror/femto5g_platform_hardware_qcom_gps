@@ -792,7 +792,7 @@ void LocApiBase::
 DEFAULT_IMPL()
 
 bool LocApiBase::
-   getBestAvailableZppFixSync(LocGpsLocation &zppLoc, LocPosTechMask &tech_mask)
+   getBestAvailableZppFixSync(LocGpsLocation &zppLoc, LocPosTechMask &tech_mask, float* vertUnc)
 DEFAULT_IMPL(false)
 
 LocationError LocApiBase::
