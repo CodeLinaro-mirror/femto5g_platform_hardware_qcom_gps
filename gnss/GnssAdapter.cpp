@@ -984,17 +984,17 @@ GnssAdapter::convertSuplMode(const GnssConfigSuplModeMask suplModeMask)
 
 void GnssAdapter::readNfwLockConfig()
 {
-    char nfwCpPackageName[LOC_MAX_PARAM_STRING];
-    char nfwSuplPackageName[LOC_MAX_PARAM_STRING];
-    char nfwImsPackageName[LOC_MAX_PARAM_STRING];
-    char nfwSimPackageName[LOC_MAX_PARAM_STRING];
-    char nfwMdtPackageName[LOC_MAX_PARAM_STRING];
-    char nfwTlocPackageName[LOC_MAX_PARAM_STRING];
-    char nfwRlocPackageName[LOC_MAX_PARAM_STRING];
-    char nfwV2xPackageName[LOC_MAX_PARAM_STRING];
-    char nfwR1PackageName[LOC_MAX_PARAM_STRING];
-    char nfwR2PackageName[LOC_MAX_PARAM_STRING];
-    char nfwR3PackageName[LOC_MAX_PARAM_STRING];
+    char nfwCpPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwSuplPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwImsPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwSimPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwMdtPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwTlocPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwRlocPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwV2xPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwR1PackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwR2PackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwR3PackageName[LOC_MAX_PARAM_STRING] = {};
 
     const loc_param_s_type nfw_packages_table[] =
     {
