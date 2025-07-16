@@ -137,18 +137,6 @@ typedef struct {
       - Units: Seconds */
 } GnssNavDataInfo;
 
-
-typedef struct {
-    uint32_t hours;
-    /**<   Hours of timestamp */
-
-    uint32_t mins;
-    /**<   Minutes of timestamp */
-
-    float secs;
-    /**<   Seconds of timestamp */
-} GnssTimeInfo;
-
 typedef enum {
     GPS_XTRA_VALID_BIT     = 1 << 0,
     GLONASS_XTRA_VALID_BIT = 1 << 1,
@@ -200,9 +188,6 @@ typedef struct {
     uint64_t jammedSignalsMask;
     /* Jammer Signal Mask */
 
-    GnssTimeInfo epiTime;
-    /**<   UTC Time associated with EPI. */
-
     uint8_t epiValidity;
     /**<   Epi validity >*/
 
@@ -232,9 +217,6 @@ typedef struct {
     /**<   EPI Source
         valid if 2nd bit set in epiValidity*/
 
-    GnssTimeInfo bestPosTime;
-    /**<   UTC Time associated with Best Position. */
-
     float bestPosLat;
     /**<   Best Position Latitude.
       - Units: Radians */
@@ -254,9 +236,6 @@ typedef struct {
     float bestPosAltUnc;
     /**<   Best Position Altitude Uncertainty.
       - Units: Meters */
-
-    GnssTimeInfo xtraInfoTime;
-    /**<   UTC time when XTRA debug information was generated. */
 
     uint8_t xtraValidMask;
     /**<xtra valid mask>*/
@@ -309,9 +288,6 @@ typedef struct {
     /**<   Specifies the NAVIC SV mask.
       - SV ID mapping: SV 401 maps to bits 0. */
 
-    GnssTimeInfo ephInfoTime;
-    /**<   UTC time when ephemeris debug information was generated. */
-
     uint32_t gpsEphMask;
     /**<   Specifies the GPS SV mask.
       - SV ID mapping: SV 1 maps to bit 0. */
@@ -335,9 +311,6 @@ typedef struct {
     uint32_t navicEphMask;
     /**<   Specifies the NAVIC SV mask.
       - SV ID mapping: SV 401 maps to bits 0. */
-
-    GnssTimeInfo healthInfoTime;
-    /**<   UTC time when SV health information was generated. */
 
     uint32_t gpsHealthUnknownMask;
     /**<   Specifies the GPS SV mask.
@@ -411,23 +384,14 @@ typedef struct {
     /**<   Specifies the NAVIC SV mask.
       - SV ID mapping: SV 401 maps to bits 0. */
 
-    GnssTimeInfo fixInfoTime;
-    /**<   UTC time when fix information was generated. */
-
     uint32_t fixInfoMask;
     /**<   Fix Information Mask*/
-
-    GnssTimeInfo navDataTime;
-    /**<   UTC time when navigation data was generated. */
 
     uint32_t navDataLen;
     /**<   Length of satellite navigation data. */
 
     GnssNavDataInfo navData[GNSS_MAX_SV_INFO_LIST_SIZE];
     /**<   Satellite navigation data. */
-
-    GnssTimeInfo fixStatusTime;
-    /**<   UTC time when fix status was generated. */
 
     uint32_t fixStatusMask;
     /**<   Fix Status Mask */
