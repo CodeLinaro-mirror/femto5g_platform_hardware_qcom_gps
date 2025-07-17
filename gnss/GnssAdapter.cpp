@@ -3127,6 +3127,7 @@ GnssAdapter::updateClientsEventMask()
         }
         if (it->second.gnssMeasurementsCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT;
+            mask |= LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT;
             if (nullptr != mPowerIndicationCb) {
                 /* If power reporting is requested this implies Android 'S' or higher,
                    meaning we need to enable poly message (necessary for satellite
@@ -3138,6 +3139,7 @@ GnssAdapter::updateClientsEventMask()
         }
         if (it->second.gnssNHzMeasurementsCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT;
+            mask |= LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT;
         }
         if (it->second.gnssDataCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_PARSED_POSITION_REPORT;
