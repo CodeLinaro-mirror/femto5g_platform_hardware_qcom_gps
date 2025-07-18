@@ -73,8 +73,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "LocationUtil.h"
 
 #define QCSR_SS5_ENABLED  1
+#define GNSS_OVER_SOME_IP_ENABLED 4
 #define MIN_TRACKING_INTERVAL 1000
-#define MIN_TRACKING_INTERVAL_SIRF 100
+#define MIN_TRACKING_INTERVAL_10HZ 100
 
 namespace android {
 namespace hardware {
@@ -278,8 +279,9 @@ bool GnssAPIClient::gnssSetPositionMode(IGnss::GnssPositionMode mode,
         };
         UTIL_READ_CONF(LOC_PATH_GPS_CONF, gnss_deployment_conf_params);
 
-        if (QCSR_SS5_ENABLED == gnssDeployment) {
-            minIntervalMs = MIN_TRACKING_INTERVAL_SIRF;
+        if ((QCSR_SS5_ENABLED == gnssDeployment) ||
+            (GNSS_OVER_SOME_IP_ENABLED == gnssDeployment)) {
+            minIntervalMs = MIN_TRACKING_INTERVAL_10HZ;
         } else {
             minIntervalMs = MIN_TRACKING_INTERVAL;
         }
