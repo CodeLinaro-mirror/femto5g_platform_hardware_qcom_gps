@@ -154,6 +154,7 @@ static uint32_t getXtraStatus();
 static uint32_t registerXtraStatusUpdate(bool registerUpdate);
 static void configPrecisePositioning(uint32_t featureId, bool enable, std::string appHash);
 static bool isSS5HWEnabled();
+static bool isFIDLIfEnabled();
 
 static const GnssInterface gGnssInterface = {
     sizeof(GnssInterface),
@@ -225,6 +226,7 @@ static const GnssInterface gGnssInterface = {
     registerXtraStatusUpdate,
     configPrecisePositioning,
     isSS5HWEnabled,
+    isFIDLIfEnabled,
 };
 
 #ifndef DEBUG_X86
@@ -600,6 +602,13 @@ static uint32_t getAntennaInfo(AntennaInfoCallback* antennaInfoCallback) {
 static bool isSS5HWEnabled() {
     if (NULL != gGnssAdapter) {
         return gGnssAdapter->isSS5HWEnabled();
+    }
+    return false;
+}
+
+static bool isFIDLIfEnabled() {
+    if (NULL != gGnssAdapter) {
+        return gGnssAdapter->isFIDLIfEnabled();
     }
     return false;
 }
