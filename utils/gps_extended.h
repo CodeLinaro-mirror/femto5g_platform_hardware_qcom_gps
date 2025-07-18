@@ -27,9 +27,9 @@
  */
 
 /*
-Changes from Qualcomm Technologies, Inc. are provided under the following license:
-Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
-SPDX-License-Identifier: BSD-3-Clause-Clear
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef GPS_EXTENDED_H
@@ -110,6 +110,13 @@ struct BackhaulContext {
             return (std::hash<std::string>()(i.clientName));
         }
     };
+};
+
+//struct for holding profile details fetched from modem using QMI WDS
+struct ModemProfileDetails {
+    std::string apn;
+    uint16_t ipType;
+    uint8_t profileIndex;
 };
 
 /* Engine Debug data Information */
