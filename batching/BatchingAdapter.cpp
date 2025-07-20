@@ -315,6 +315,13 @@ void
 BatchingAdapter::startBatching(LocationAPI* client, uint32_t sessionId,
         const BatchingOptions& batchingOptions)
 {
+    if (ENGINE_LOCK_STATE_DISABLED == mLocApi->getEngineLockState()) {
+        LOC_LOGe("engine lock disabled, return!");
+        //cache batching session to restore session when engine lock enabled
+        saveBatchingSession(client, sessionId, batchingOptions);
+        reportResponse(client, LOCATION_ERROR_NOT_SUPPORTED, sessionId);
+        return;
+    }
     if (batchingOptions.batchingMode != BATCHING_MODE_NO_AUTO_REPORT &&
         0 == autoReportBatchingSessionsCount()) {
         // if there is currenty no batching sessions interested in batch full event, then this
@@ -325,11 +332,10 @@ BatchingAdapter::startBatching(LocationAPI* client, uint32_t sessionId,
 
     // Assume start will be OK, remove session if not
     saveBatchingSession(client, sessionId, batchingOptions);
-    mLocApi->startBatching(sessionId, batchingOptions, getBatchingAccuracy(), getBatchingTimeout(),
-            new LocApiResponse(*getContext(),
+    mLocApi->startBatching(sessionId, batchingOptions, getBatchingAccuracy(),
+            getBatchingTimeout(), new LocApiResponse(*getContext(),
             [this, client, sessionId, batchingOptions] (LocationError err) {
-        if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
-            LOCATION_ERROR_SUCCESS != err) {
+        if (LOCATION_ERROR_SUCCESS != err) {
             eraseBatchingSession(client, sessionId);
         }
 
@@ -441,32 +447,35 @@ BatchingAdapter::stopBatching(LocationAPI* client, uint32_t sessionId, bool rest
         // Assume stop will be OK, restore session if not
         if (eraseSession)
             eraseBatchingSession(client, sessionId);
-        mLocApi->stopBatching(sessionId,
+        if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState()) {
+            mLocApi->stopBatching(sessionId,
                 new LocApiResponse(*getContext(),
-                [this, client, sessionId, flpOptions, restartNeeded, batchOptions, eraseSession]
+                [this, client, sessionId, flpOptions, restartNeeded,
+                batchOptions, eraseSession]
                 (LocationError err) {
-            if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
-                LOCATION_ERROR_SUCCESS != err) {
-                if (eraseSession)
-                    saveBatchingSession(client, sessionId, batchOptions);
-            } else {
-                // if stopBatching is success, unregister for batch full event if this was the last
-                // batching session that is interested in batch full event
-                if (0 == autoReportBatchingSessionsCount() &&
-                    flpOptions.batchingMode != BATCHING_MODE_NO_AUTO_REPORT) {
-                    updateEvtMask(LOC_API_ADAPTER_BIT_BATCH_FULL,
-                                  LOC_REGISTRATION_MASK_DISABLED);
-                }
+                if (LOCATION_ERROR_SUCCESS != err) {
+                    if (eraseSession)
+                        saveBatchingSession(client, sessionId, batchOptions);
+                } else {
+                    // if stopBatching is success,
+                    // unregister for batch full event if this was the last
+                    // batching session that is interested in batch full event
+                    if (0 == autoReportBatchingSessionsCount() &&
+                        flpOptions.batchingMode != BATCHING_MODE_NO_AUTO_REPORT) {
+                        updateEvtMask(LOC_API_ADAPTER_BIT_BATCH_FULL,
+                                      LOC_REGISTRATION_MASK_DISABLED);
+                    }
 
-                if (restartNeeded) {
-                    if (batchOptions.batchingMode == BATCHING_MODE_ROUTINE ||
-                            batchOptions.batchingMode == BATCHING_MODE_NO_AUTO_REPORT) {
-                        startBatching(client, sessionId, batchOptions);
+                    if (restartNeeded) {
+                        if (batchOptions.batchingMode == BATCHING_MODE_ROUTINE ||
+                                batchOptions.batchingMode == BATCHING_MODE_NO_AUTO_REPORT) {
+                            startBatching(client, sessionId, batchOptions);
+                        }
                     }
                 }
-            }
-            reportResponse(client, err, sessionId);
-        }));
+                reportResponse(client, err, sessionId);
+            }));
+        }
     }
 }
 

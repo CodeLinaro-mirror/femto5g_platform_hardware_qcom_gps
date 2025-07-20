@@ -135,6 +135,7 @@ struct GnssInterface {
     void (*getNtnConfigSignalMask)();
     void (*setNtnConfigSignalMask)(GnssSignalTypeMask gpsSignalTypeConfigMask);
     void (*injectSuplCert)(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
+    void (*updateMccMnc)(std::string& mccmncCountry);
 };
 
 struct BatchingInterface {
