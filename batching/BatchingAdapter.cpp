@@ -315,9 +315,10 @@ void
 BatchingAdapter::startBatching(LocationAPI* client, uint32_t sessionId,
         const BatchingOptions& batchingOptions)
 {
-    saveBatchingSession(client, sessionId, batchingOptions);
     if (ENGINE_LOCK_STATE_DISABLED == mLocApi->getEngineLockState()) {
         LOC_LOGe("engine lock disabled, return!");
+        //cache batching session to restore session when engine lock enabled
+        saveBatchingSession(client, sessionId, batchingOptions);
         reportResponse(client, LOCATION_ERROR_NOT_SUPPORTED, sessionId);
         return;
     }
@@ -330,6 +331,7 @@ BatchingAdapter::startBatching(LocationAPI* client, uint32_t sessionId,
     }
 
     // Assume start will be OK, remove session if not
+    saveBatchingSession(client, sessionId, batchingOptions);
     mLocApi->startBatching(sessionId, batchingOptions, getBatchingAccuracy(),
             getBatchingTimeout(), new LocApiResponse(*getContext(),
             [this, client, sessionId, batchingOptions] (LocationError err) {
