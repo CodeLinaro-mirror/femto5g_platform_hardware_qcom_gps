@@ -28,40 +28,10 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_GnssAdapter"
@@ -107,10 +77,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace loc_core;
 
 static int loadEngHubForExternalEngine = 0;
-static int sUseZppInDBH = 0;
+
 static loc_param_s_type izatConfParamTable[] = {
     {"LOAD_ENGHUB_FOR_EXTERNAL_ENGINE", &loadEngHubForExternalEngine, nullptr, 'n'},
-    {"USE_ZPP_IN_DBH", &sUseZppInDBH, nullptr, 'n'}
 };
 
 /* Method to fetch status cb from loc_net_iface library */
@@ -1215,13 +1184,7 @@ GnssAdapter::readConfigCommand()
             mAdapter(adapter),
             mContext(context) {}
         inline virtual void proc() const {
-            static bool confReadDone = false;
-            if (!confReadDone) {
-                confReadDone = true;
-                // reads config into mContext->mGps_conf
-                mContext.readConfig();
-                mAdapter->readNfwLockConfig();
-            }
+            mAdapter->readNfwLockConfig();
         }
     };
 
@@ -1300,7 +1263,9 @@ GnssAdapter::setConfig()
         // Modem does not provide noraml NMEA if ENGINE_DEBUG_DATA feature is available
         // ensuring AP to nmea generation in this case
         ContextBase::mGps_conf.NMEA_PROVIDER =  NMEA_PROVIDER_AP;
+#ifndef FEATURE_AUTOMOTIVE
         updateEvtMask(LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT, LOC_REGISTRATION_MASK_ENABLED);
+#endif
     }
 
     std::string oldMoServerUrl = getMoServerUrl();
@@ -1368,7 +1333,9 @@ GnssAdapter::setConfig()
         // set nmea mask type
         uint32_t mask = 0;
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_ENGINE_DEBUG_DATA)) {
+#ifndef FEATURE_AUTOMOTIVE
             mask |= LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT;
+#endif
         } else {
             if (NMEA_PROVIDER_MP == gpsConf.NMEA_PROVIDER) {
                 mask |= LOC_NMEA_ALL_GENERAL_SUPPORTED_MASK;
@@ -3106,6 +3073,7 @@ GnssAdapter::updateClientsEventMask()
     LOC_API_ADAPTER_EVENT_MASK_T mask = LOC_API_ADAPTER_BIT_LOC_SYSTEM_INFO |
             LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO |
             LOC_API_ADAPTER_BIT_FEATURE_STATUS_UPDATE;
+
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
         if (it->second.trackingCb != nullptr ||
             it->second.gnssLocationInfoCb != nullptr ||
@@ -3120,7 +3088,9 @@ GnssAdapter::updateClientsEventMask()
             mask |= LOC_API_ADAPTER_BIT_SATELLITE_REPORT;
         }
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_ENGINE_DEBUG_DATA)) {
+#ifndef FEATURE_AUTOMOTIVE
             mask |= LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT;
+#endif
         } else {
             if ((it->second.gnssNmeaCb != nullptr) && (mNmeaMask)) {
                 mask |= LOC_API_ADAPTER_BIT_NMEA_1HZ_REPORT;
@@ -3330,7 +3300,6 @@ GnssAdapter::handleEngineUpEvent()
         }
     };
 
-    readConfigCommand();
     sendMsg(new MsgHandleEngineUpEvent(*this, *mLocApi));
 }
 
@@ -4504,37 +4473,6 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
     }
 }
 
-void
-GnssAdapter::reportEnginePositionsEvent(unsigned int count,
-                                        EngineLocationInfo* locationArr)
-{
-    struct MsgReportEnginePositions : public LocMsg {
-        GnssAdapter& mAdapter;
-        unsigned int mCount;
-        EngineLocationInfo mEngLocInfo[LOC_OUTPUT_ENGINE_COUNT];
-        inline MsgReportEnginePositions(GnssAdapter& adapter,
-                                        unsigned int count,
-                                        EngineLocationInfo* locationArr) :
-            LocMsg(),
-            mAdapter(adapter),
-            mCount(count) {
-            if (mCount > LOC_OUTPUT_ENGINE_COUNT) {
-                mCount = LOC_OUTPUT_ENGINE_COUNT;
-            }
-            if (mCount > 0) {
-                memcpy(mEngLocInfo, locationArr, sizeof(EngineLocationInfo)*mCount);
-            }
-        }
-        inline virtual void proc() const {
-            mAdapter.reportEnginePositions(mCount, mEngLocInfo);
-        }
-    };
-
-    if (isPreciseEnabled()) {
-        sendMsg(new MsgReportEnginePositions(*this, count, locationArr));
-    }
-}
-
 bool
 GnssAdapter::needReportForAllClients(const UlpLocation& ulpLocation,
                                      enum loc_sess_status status,
@@ -4823,9 +4761,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                     engLocationsInfo[1] = locationInfo;
                     it->second.engineLocationsInfoCb(2, engLocationsInfo);
                 } else if (nullptr != it->second.trackingCb) {
-                    it->second.trackingCb(locationInfo.location);
-                } else if (reportToAnyClient) {
-                    if (nullptr != it->second.trackingCb) {
+                    if (reportToAnyClient) {
                         cbRunnables.emplace_back([ cb=it->second.trackingCb ] (Location location) {
                             cb(location);
                         });
@@ -5003,6 +4939,7 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify)
     int numSv = svNotify.count;
     uint16_t gnssSvId = 0;
     uint64_t svUsedIdMask = 0;
+    bool needToReportNmea = false;
 
     for (int i=0; i < numSv; i++) {
         svUsedIdMask = 0;
@@ -5147,10 +5084,14 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify)
         if (nullptr != it->second.gnssSvCb) {
             it->second.gnssSvCb(svNotify);
         }
+        if (!needToReportNmea && (nullptr != it->second.gnssNmeaCb ||
+                nullptr != it->second.engineNmeaCb)) {
+            needToReportNmea = true;
+        }
     }
 
-    if (NMEA_PROVIDER_AP == ContextBase::mGps_conf.NMEA_PROVIDER &&
-        !mTimeBasedTrackingSessions.empty()) {
+    if (needToReportNmea && (NMEA_PROVIDER_AP == ContextBase::mGps_conf.NMEA_PROVIDER &&
+            !mTimeBasedTrackingSessions.empty())) {
         std::vector<std::string> nmeaArraystr;
         LocOutputEngineType engineType = LOC_OUTPUT_ENGINE_SPE;
         loc_nmea_generate_sv(svNotify, nmeaArraystr);
@@ -6021,6 +5962,10 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
             // before requesting new ODCPI to avoid spamming ODCPI requests
             } else if (!(mOdcpiStateMask & ODCPI_REQ_ACTIVE) && true == mOdcpiTimer.isActive()) {
                 mOdcpiStateMask |= ODCPI_REQ_ACTIVE;
+                if (nullptr != mEsStatusCb) {
+                    mEsStatusCb(request.isEmergencyMode);
+                }
+                sendEmergencyCallStatusEvent = true;
             }
             mOdcpiRequest = request;
 
@@ -8571,8 +8516,9 @@ GnssAdapter::initEngHubProxy() {
         // callback function for engine hub to report back position event
         GnssAdapterReportEnginePositionsEventCb reportPositionEventCb =
             [this](int count, EngineLocationInfo* locationArr) {
-                    // report from engine hub on behalf of PPE will be treated as fromUlp
-                    reportEnginePositionsEvent(count, locationArr);
+                if (isPreciseEnabled()) {
+                    reportEnginePositions(count, locationArr);
+                }
             };
 
         // callback function for engine hub to request for complete aiding data
@@ -8680,7 +8626,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
     UTIL_READ_CONF(LOC_PATH_ANT_CORR, ant_info_vector_table);
 
     for (uint32_t i = 0; i < antennaInfoVectorSize; i++) {
-        double carrierFrequencyMHz;
+        double carrierFrequencyMHz = 0.0;
         char pcOffsetStr[LOC_MAX_PARAM_STRING];
         uint32_t numberOfRows = 0;
         uint32_t numberOfColumns = 0;
@@ -9136,39 +9082,3 @@ void GnssAdapter::readPPENtripConfig() {
     }
 }
 
-bool GnssAdapter::reportZppBestAvailableFix(LocGpsLocation &zppLoc,
-            GpsLocationExtended &location_extended, LocPosTechMask tech_mask) {
-    if (sUseZppInDBH && mOdcpiRequest.isEmergencyMode && (mOdcpiStateMask & ODCPI_REQ_ACTIVE)
-            && zppLoc.timestamp != 0) {
-        LOC_LOGv("report valid ZPP fix to Flp client in DBH");
-
-        struct MsgReportZppPosition : public LocMsg {
-            GnssAdapter& mAdapter;
-            mutable UlpLocation mUlpLoc;
-            mutable GpsLocationExtended mLocationExtended;
-            enum loc_sess_status mStatus;
-
-            inline MsgReportZppPosition(GnssAdapter& adapter,
-                                        const LocGpsLocation& zppLoc,
-                                        const GpsLocationExtended& locationExtended,
-                                        enum loc_sess_status status,
-                                        LocPosTechMask techMask) :
-                    LocMsg(),
-                    mAdapter(adapter),
-                    mLocationExtended(locationExtended),
-                    mStatus(status) {
-                memset(&mUlpLoc, 0, sizeof(UlpLocation));
-                mUlpLoc.size = sizeof(mUlpLoc);
-                mUlpLoc.tech_mask = techMask;
-                memcpy(&(mUlpLoc.gpsLocation), &zppLoc, sizeof(LocGpsLocation));
-            }
-            inline virtual void proc() const {
-                mAdapter.reportPosition(mUlpLoc, mLocationExtended, mStatus, mUlpLoc.tech_mask);
-            }
-        };
-
-        sendMsg(new MsgReportZppPosition(*this,
-                    zppLoc, location_extended, LOC_SESS_INTERMEDIATE, tech_mask));
-    }
-    return true;
-}

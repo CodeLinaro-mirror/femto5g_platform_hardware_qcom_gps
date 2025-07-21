@@ -77,6 +77,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define BDS_SV_ID_OFFSET     (200)
 #define GALILEO_SV_ID_OFFSET (300)
 #define NAVIC_SV_ID_OFFSET   (400)
+#define GPS_SBAS_PRN_MAX     (158)
 #define MAX_SV_COUNT_SUPPORTED_IN_ONE_CONSTELLATION  64
 #define MAX_SATELLITES_IN_USE 12
 #define MSEC_IN_ONE_WEEK      604800000ULL
@@ -185,6 +186,7 @@ typedef struct loc_sv_cache_info_s
     uint32_t bds_b2_count;
     uint32_t bds_b2b_count;
     uint32_t navic_l5_count;
+    uint32_t navic_l1_count;
     float hdop;
     float pdop;
     float vdop;
@@ -388,6 +390,9 @@ static uint32_t convert_signalType_to_signalId(GnssSignalTypeMask signalType)
         case GNSS_SIGNAL_NAVIC_L5:
             signalId = SIGNAL_ID_NAVIC_L5SPS;
             break;
+        case GNSS_SIGNAL_NAVIC_L1:
+            signalId = SIGNAL_ID_NAVIC_L1SPS;
+            break;
         default:
             signalId = SIGNAL_ID_ALL_SIGNALS;
     }
@@ -560,6 +565,9 @@ static loc_nmea_sv_meta* loc_nmea_sv_meta_init(loc_nmea_sv_meta& sv_meta,
             switch (signalType) {
                 case GNSS_SIGNAL_NAVIC_L5:
                     sv_meta.svCount = sv_cache_info.navic_l5_count;
+                    break;
+                case GNSS_SIGNAL_NAVIC_L1:
+                    sv_meta.svCount = sv_cache_info.navic_l1_count;
                     break;
             }
             break;
@@ -922,7 +930,7 @@ static void loc_nmea_generate_GSV(const GnssSvNotification &svNotify,
                     svIdOffset = 0;
                 } else if (GNSS_SV_TYPE_SBAS == svType) {
                     // only process GPS SBAS
-                    if (svId >= 120 && svId <= 158) {
+                    if (svId >= SBAS_SV_PRN_MIN && svId <= GPS_SBAS_PRN_MAX) {
                         svIdOffset = SBAS_SV_ID_OFFSET;
                     } else {
                         continue;
@@ -2269,7 +2277,9 @@ void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
             } else {
                 // GNSS_SIGNAL_GPS_L1CA, GNSS_SIGNAL_SBAS_L1 or default
                 // If no signal type in report, it means default L1
-                sv_cache_info.gps_l1_count++;
+                if (svNotify.gnssSvs[svOffset].svId <= GPS_SBAS_PRN_MAX) {
+                    sv_cache_info.gps_l1_count++;
+                }
             }
         }
         else if (GNSS_SV_TYPE_GLONASS == svNotify.gnssSvs[svOffset].type)
@@ -2333,7 +2343,13 @@ void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
         else if (GNSS_SV_TYPE_NAVIC == svNotify.gnssSvs[svOffset].type)
         {
             // GNSS_SIGNAL_NAVIC_L5 is the only signal type for NAVIC
-            sv_cache_info.navic_l5_count++;
+            if (GNSS_SIGNAL_NAVIC_L5 == svNotify.gnssSvs[svOffset].gnssSignalTypeMask) {
+                sv_cache_info.navic_l5_count++;
+            } else if (GNSS_SIGNAL_NAVIC_L1 == svNotify.gnssSvs[svOffset].gnssSignalTypeMask) {
+                sv_cache_info.navic_l1_count++;
+            } else {
+                //No valid signal type
+            }
         }
     }
 
@@ -2449,14 +2465,20 @@ void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
                 GNSS_SIGNAL_BEIDOU_B2BI, false), nmeaArraystr);
     }
 
-
-    // -----------------------------
-    // ------$GIGSV (NAVIC:L5)------
-    // -----------------------------
     if (mEnabledNmeaTypes & NMEA_TYPE_GIGSV) {
+
+        // -----------------------------
+        // ------$GIGSV (NAVIC:L5)------
+        // -----------------------------
         loc_nmea_generate_GSV(svNotify, sentence, sizeof(sentence),
                 loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_NAVIC,
                 GNSS_SIGNAL_NAVIC_L5, false), nmeaArraystr);
+        // -----------------------------
+        // ------$GIGSV (NAVIC:L1)------
+        // -----------------------------
+        loc_nmea_generate_GSV(svNotify, sentence, sizeof(sentence),
+                loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_NAVIC,
+                GNSS_SIGNAL_NAVIC_L1, false), nmeaArraystr);
     }
 
     EXIT_LOG(%d, 0);
