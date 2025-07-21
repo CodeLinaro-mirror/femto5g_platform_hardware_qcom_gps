@@ -16,7 +16,6 @@ libloc_core_la_h_sources = \
            ContextBase.h \
            LocContext.h \
            LBSProxyBase.h \
-           loc_core_log.h \
            LocAdapterProxyBase.h \
            EngineHubProxyBase.h \
            LocGlinkBase.h \
@@ -36,7 +35,6 @@ libloc_core_la_c_sources = \
            LocAdapterBase.cpp \
            ContextBase.cpp \
            LocContext.cpp \
-           loc_core_log.cpp \
            data-items/DataItemsFactoryProxy.cpp \
            data-items/DataItemConcreteTypes.cpp \
            SystemStatusOsObserver.cpp \
