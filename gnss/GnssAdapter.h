@@ -703,7 +703,6 @@ public:
                          const bool bInformNiAccept);
     void reportGnssMeasurementData(const GnssMeasurementsNotification& measurements);
     void reportGnssSvIdConfig(const GnssSvIdConfig& config);
-    void reportGnssConfig(uint32_t sessionId, const GnssConfig& gnssConfig);
     void requestOdcpi(const OdcpiRequestInfo& request);
     void invokeGnssEnergyConsumedCallback(uint64_t energyConsumedSinceFirstBoot);
     void saveGnssEnergyConsumedCallback(GnssEnergyConsumedCallback energyConsumedCb);

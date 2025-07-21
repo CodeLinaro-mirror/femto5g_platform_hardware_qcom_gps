@@ -1918,10 +1918,6 @@ struct GnssSvIdSource{
                                 // For SV Range of supported constellation,
                                 // please refer to the comment section of svId in GnssSv.
 };
-inline bool operator ==(GnssSvIdSource const& left, GnssSvIdSource const& right) {
-    return left.size == right.size &&
-            left.constellation == right.constellation && left.svId == right.svId;
-}
 
 #define GNSS_SV_CONFIG_ALL_BITS_ENABLED_MASK ((uint64_t)0xFFFFFFFFFFFFFFFF)
 struct GnssSvIdConfig {

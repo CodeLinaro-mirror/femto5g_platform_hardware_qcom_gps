@@ -28,26 +28,14 @@ GeofenceAPIClient::GeofenceAPIClient(const shared_ptr<IGnssGeofenceCallback>& ca
     LocationCallbacks locationCallbacks;
     memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
     locationCallbacks.size = sizeof(LocationCallbacks);
-
-    locationCallbacks.trackingCb = nullptr;
-    locationCallbacks.batchingCb = nullptr;
-
-    locationCallbacks.geofenceBreachCb = nullptr;
     locationCallbacks.geofenceBreachCb =
             [this](const GeofenceBreachNotification& geofenceBreachNotification) {
         onGeofenceBreachCb(geofenceBreachNotification);
     };
-
     locationCallbacks.geofenceStatusCb =
             [this](const GeofenceStatusNotification& geofenceStatusNotification) {
         onGeofenceStatusCb(geofenceStatusNotification);
     };
-
-    locationCallbacks.gnssLocationInfoCb = nullptr;
-    locationCallbacks.gnssNiCb = nullptr;
-    locationCallbacks.gnssSvCb = nullptr;
-    locationCallbacks.gnssNmeaCb = nullptr;
-    locationCallbacks.gnssMeasurementsCb = nullptr;
 
     locAPISetCallbacks(locationCallbacks);
 }

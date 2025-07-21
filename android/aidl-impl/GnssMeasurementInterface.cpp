@@ -143,16 +143,6 @@ void GnssMeasurementInterface::startTracking(
     memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
     locationCallbacks.size = sizeof(LocationCallbacks);
 
-    locationCallbacks.trackingCb = nullptr;
-    locationCallbacks.batchingCb = nullptr;
-    locationCallbacks.geofenceBreachCb = nullptr;
-    locationCallbacks.geofenceStatusCb = nullptr;
-    locationCallbacks.gnssLocationInfoCb = nullptr;
-    locationCallbacks.gnssNiCb = nullptr;
-    locationCallbacks.gnssSvCb = nullptr;
-    locationCallbacks.gnssNmeaCb = nullptr;
-
-    locationCallbacks.gnssMeasurementsCb = nullptr;
     if (nullptr != mGnssMeasurementCbIface) {
         locationCallbacks.gnssMeasurementsCb =
             [this](const GnssMeasurementsNotification &gnssMeasurementsNotification) {

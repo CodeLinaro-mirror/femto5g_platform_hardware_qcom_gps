@@ -179,34 +179,20 @@ void GnssAPIClient::setCallbacks() {
     memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
     locationCallbacks.size = sizeof(LocationCallbacks);
     mTrackingOptions.qualityLevelAccepted = QUALITY_HIGH_ACCU_FIX_ONLY;
-
-    locationCallbacks.engineLocationsInfoCb = nullptr;
     locationCallbacks.engineLocationsInfoCb = [this](uint32_t count,
             GnssLocationInfoNotification* engineLocationInfoNotification) {
         onEngineLocationsInfoCb(count, engineLocationInfoNotification);
     };
-
-    locationCallbacks.batchingCb = nullptr;
-    locationCallbacks.geofenceBreachCb = nullptr;
-    locationCallbacks.geofenceStatusCb = nullptr;
-    locationCallbacks.gnssLocationInfoCb = nullptr;
-
-    locationCallbacks.gnssSvCb = nullptr;
     if (mSvStatusEnabled) {
         locationCallbacks.gnssSvCb = [this](const GnssSvNotification& gnssSvNotification) {
             onGnssSvCb(gnssSvNotification);
         };
     }
-
-    locationCallbacks.gnssNmeaCb = nullptr;
     if (mNmeaEnabled) {
         locationCallbacks.gnssNmeaCb = [this](const GnssNmeaNotification& gnssNmeaNotification) {
             onGnssNmeaCb(gnssNmeaNotification);
         };
     }
-
-    locationCallbacks.gnssMeasurementsCb = nullptr;
-
     locationCallbacks.gnssSignalTypesCb =
             [this](const GnssCapabNotification& gnssCapabNotification) {
         onGnssSignalTypesCb(gnssCapabNotification);
@@ -630,7 +616,6 @@ void GnssAPIClient::onEngineLocationsInfoCb(uint32_t count,
 }
 
 void GnssAPIClient::onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNotification) {
-    LOC_LOGd("Enter");
     mMutex.lock();
     auto gnssCbIface(mGnssCbIface);
     mMutex.unlock();
