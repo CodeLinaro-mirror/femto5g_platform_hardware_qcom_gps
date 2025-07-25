@@ -3333,6 +3333,18 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                     LOC_LOGd("Updated UNKNOWN SUPL mode to %d", mOptions.mode);
                 }
 
+                // On LE/OWRT, when PPE or DRE is enabled, set precise type to RTK
+#ifdef USE_GLIB
+                if (ContextBase::mIzat_process_conf.engineServiceInfo.dreIntEnabled ||
+                    ContextBase::mIzat_process_conf.engineServiceInfo.ppeEnabled) {
+                    mOptions.preciseType = PRECISE_TYPE_RTK;
+                }
+                LOC_LOGd("ppeEnabled: %d, dreIntEnabled: %d, preciseType: %d",
+                        ContextBase::mIzat_process_conf.engineServiceInfo.ppeEnabled,
+                        ContextBase::mIzat_process_conf.engineServiceInfo.dreIntEnabled,
+                        mOptions.preciseType);
+#endif
+
                 // Api doesn't support multiple clients for time based tracking, so mutiplex
                 bool reportToClientWithNoWait =
                     mAdapter.startTimeBasedTrackingMultiplex(mClient, mSessionId, mOptions);
