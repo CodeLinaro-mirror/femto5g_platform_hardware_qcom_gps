@@ -31,8 +31,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <inttypes.h>
 #include "loc_misc_utils.h"
 
-typedef const GnssInterface* (getLocationInterface)();
-
 namespace android {
 namespace hardware {
 namespace gnss {
@@ -42,7 +40,8 @@ namespace implementation {
 static GnssPowerIndication* spGnssPowerIndication = nullptr;
 
 GnssPowerIndication::GnssPowerIndication() :
-    mDeathRecipient(AIBinder_DeathRecipient_new(GnssPowerIndication::gnssPowerIndicationDied)) {
+    mDeathRecipient(AIBinder_DeathRecipient_new(GnssPowerIndication::gnssPowerIndicationDied)),
+    mGnssInterface(getGnssInterfaceFromLibGnss()) {
     spGnssPowerIndication = this;
 }
 
@@ -62,19 +61,6 @@ ScopedAStatus GnssPowerIndication::setCallback(
     std::unique_lock<std::mutex> lock(mMutex);
     mGnssPowerIndicationCb = callback;
     lock.unlock();
-    static bool getGnssInterfaceFailed = false;
-
-    if (nullptr == mGnssInterface && !getGnssInterfaceFailed) {
-        void * libHandle = nullptr;
-        getLocationInterface* getter = (getLocationInterface*)
-                dlGetSymFromLib(libHandle, "libgnss.so", "getGnssInterface");
-
-        if (nullptr == getter) {
-            getGnssInterfaceFailed = true;
-        } else {
-            mGnssInterface = (GnssInterface*)(*getter)();
-        }
-    }
 
     if (nullptr != mGnssInterface) {
         mGnssInterface->powerIndicationInit(piGnssPowerIndicationCb);

@@ -129,6 +129,43 @@ void* dlGetSymFromLib(void*& libHandle, const char* libName, const char* symName
     return sym;
 }
 
+// Template definition must be in the .cpp file when using explicit instantiation
+template <typename T>
+T* getInterfaceInstance(const char* libName, const char* funcName) {
+    static T* interfaceInstance = nullptr;
+    static bool loadAttempted = false;
+
+    if (interfaceInstance == nullptr && !loadAttempted) {
+        void* handle = nullptr;
+        // The type of getter must match the function signature of funcName.
+        // Assuming funcName returns a const pointer to the interface.
+        typedef const T* (*InterfaceGetter)();
+        InterfaceGetter getter = (InterfaceGetter)dlGetSymFromLib(handle, libName, funcName);
+
+        if (nullptr == getter) {
+            loadAttempted = true;
+            // No logging here, as this function is expected to be called often
+            // and the caller can decide to log if it deems it necessary.
+        } else {
+            interfaceInstance = const_cast<T*>((*getter)());
+            if (interfaceInstance == nullptr) {
+                loadAttempted = true;
+                // No logging here, same reason as above.
+            }
+        }
+    }
+    return interfaceInstance;
+}
+
+// Explicit instantiations for the types used
+template GnssInterface* getInterfaceInstance<GnssInterface>(const char*, const char*);
+template BatchingInterface* getInterfaceInstance<BatchingInterface>(const char*, const char*);
+template GeofenceInterface* getInterfaceInstance<GeofenceInterface>(const char*, const char*);
+
+GnssInterface* getGnssInterfaceFromLibGnss() {
+    return getInterfaceInstance<GnssInterface>("libgnss.so", "getGnssInterface");
+}
+
 uint64_t getQTimerTickCount()
 {
     uint64_t qTimerCount = 0;
