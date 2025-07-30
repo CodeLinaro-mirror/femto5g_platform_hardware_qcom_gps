@@ -450,7 +450,7 @@ void GnssAPIClient::updateCapabilities(LocationCapabilitiesMask capabilitiesMask
             }
         }
     }
-    LOC_LOGd("set_system_info_cb yearOfHw:%d", gnssInfo.yearOfHw);
+    LOC_LOGd("set_system_info_cb yearOfHw:%d, capabilitiesMask:0x%x ", gnssInfo.yearOfHw, data);
 
     if (gnssCbIface != nullptr) {
         auto r = gnssCbIface->gnssSetCapabilitiesCb(data);
