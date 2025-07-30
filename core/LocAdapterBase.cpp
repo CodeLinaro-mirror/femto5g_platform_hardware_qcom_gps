@@ -315,9 +315,7 @@ LocAdapterBase::getCapabilities()
 {
     LocationCapabilitiesMask mask = 0;
     // Below feature flag needs to be set irrespective of engine capabilities are known or not
-#if defined (FEATURE_AUTOMOTIVE) || defined (FEATURE_NHZ_ENABLED)
         mask |= LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
-#endif
 
     if (isEngineCapabilitiesKnown()) {
         // time based tracking always supported
