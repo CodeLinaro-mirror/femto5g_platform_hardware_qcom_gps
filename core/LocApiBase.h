@@ -71,7 +71,7 @@ int decodeAddress(char *addr_string, int string_size,
     }
 
 #define TO_1ST_HANDLING_ADAPTER(adapters, call)                              \
-    for (int i = 0; i <MAX_ADAPTERS && NULL != (adapters)[i] && !(call); i++);
+    for (int i = 0; i < MAX_ADAPTERS && NULL != (adapters)[i] && !(call); i++) {}
 
 class LocAdapterBase;
 struct LocSsrMsg;
