@@ -310,6 +310,9 @@ GnssAdapter::checkAndSetSPEToRunforNHz(TrackingOptions & out) {
     } else if (mSPEAlreadyRunningAtHighestInterval) {
         LOC_LOGd("SPE is already running at highest interval.");
         isSPERunningAtHighestInterval = true;
+    } else if (out.minInterval >= NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL) {
+        LOC_LOGd("starting SPE session at %d ms TBF.", out.minInterval);
+        mSPEAlreadyRunningAtHighestInterval = false;
     } else if (out.minInterval > MIN_TRACKING_INTERVAL) {
         out.minInterval = MIN_TRACKING_INTERVAL;
         LOC_LOGd("nHz session is needed, starting SPE only session at 100ms TBF.");

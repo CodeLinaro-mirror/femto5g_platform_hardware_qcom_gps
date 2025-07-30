@@ -324,7 +324,7 @@ bool GnssAPIClient::gnssSetPositionMode(IGnss::GnssPositionMode mode,
     }
 
     if (0 == minIntervalMs) {
-        minIntervalMs = 1000;
+        minIntervalMs = 100;
     }
 
     mTrackingOptions.size = sizeof(TrackingOptions);
