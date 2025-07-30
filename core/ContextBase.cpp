@@ -169,12 +169,12 @@ void ContextBase::readConfig()
         mGps_conf.GPS_LOCK = GNSS_CONFIG_GPS_LOCK_MO_AND_NI;
 #endif
         mGps_conf.SUPL_VER = 0x10000;
-        mGps_conf.SUPL_MODE = 0x1;
+        mGps_conf.SUPL_MODE = 0x0;
         mGps_conf.SUPL_ES = 0;
         mGps_conf.CP_MTLR_ES = 0;
         mGps_conf.SUPL_HOST[0] = 0;
         mGps_conf.SUPL_PORT = 0;
-        mGps_conf.CAPABILITIES = 0x7;
+        mGps_conf.CAPABILITIES = 0x01;
         /* LTE Positioning Profile configuration is disable by default*/
         mGps_conf.LPP_PROFILE = 0;
         /*By default no positioning protocol is selected on A-GLONASS system*/
