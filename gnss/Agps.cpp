@@ -572,9 +572,17 @@ void AgpsManager::createAgpsStateMachines(const AgpsCbInfo& cbInfo) {
             LOC_LOGd("AGNSS NIF: %p", mAgnssNif);
         }
         LOC_LOGd("cbInfo.cbPriority=%d mCbPriority=%d", cbInfo.cbPriority, mCbPriority);
-        if (cbInfo.cbPriority > mCbPriority) {
+        if (( nullptr != mAgnssNif) && (cbInfo.cbPriority > mCbPriority)) {
             mCbPriority = cbInfo.cbPriority;
             mAgnssNif->registerFrameworkStatusCallback((agnssStatusIpV4Callback)cbInfo.statusV4Cb);
+        } else {
+            if (nullptr == mAgnssNif) {
+                LOC_LOGe("AGNSS NIF is null");
+            } else {
+                LOC_LOGe("Callback priority (%d) not higher than current priority (%d)",
+                          cbInfo.cbPriority, mCbPriority);
+            }
+
         }
     }
 }
