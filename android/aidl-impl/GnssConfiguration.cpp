@@ -202,16 +202,19 @@ ndk::ScopedAStatus GnssConfiguration::setBlocklist(const vector<BlocklistedSourc
     GnssSvIdSource source = {};
     for (int idx = 0; idx < (int)sourceList.size(); idx++) {
         // Set blValid true if any one source is valid
-        blValid = setBlocklistedSource(source, sourceList[idx]) || blValid;
-        config.blacklistedSvIds.push_back(source);
+        if (setBlocklistedSource(source, sourceList[idx])) {
+            config.blacklistedSvIds.push_back(source);
+            blValid = true;
+        }
     }
 
     // Update configuration only if blValid is true
     // i.e. only if atleast one source is valid for sourceListing
     if (!blValid) {
-        return ndk::ScopedAStatus::fromExceptionCode(STATUS_INVALID_OPERATION);
+        return ndk::ScopedAStatus::ok();
+    } else {
+        return mGnss->updateConfiguration(config);
     }
-    return mGnss->updateConfiguration(config);
 }
 
 bool GnssConfiguration::setBlocklistedSource(GnssSvIdSource& copyToSource,
