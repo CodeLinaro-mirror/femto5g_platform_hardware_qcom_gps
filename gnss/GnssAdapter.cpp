@@ -1766,14 +1766,6 @@ GnssAdapter::gnssUpdateConfigCommand(const GnssConfig& config)
                 }
                 index++;
             }
-            if (gnssConfigRequested.flags & GNSS_CONFIG_FLAGS_SUPL_EM_SERVICES_BIT) {
-                uint32_t newSuplEs = mAdapter.convertSuplEs(
-                        gnssConfigRequested.suplEmergencyServices);
-                if (newSuplEs != ContextBase::mGps_conf.SUPL_ES) {
-                    ContextBase::mGps_conf.SUPL_ES = newSuplEs;
-                }
-                index++;
-            }
             if (gnssConfigRequested.flags & GNSS_CONFIG_FLAGS_SUPL_MODE_BIT) {
                 uint32_t newSuplMode = mAdapter.convertSuplMode(gnssConfigRequested.suplModeMask);
                 ContextBase::mGps_conf.SUPL_MODE = newSuplMode;
@@ -2057,11 +2049,6 @@ GnssAdapter::gnssGetConfigCommand(GnssConfigFlagsMask configMask) {
                 }
             }
             if (mConfigMask & GNSS_CONFIG_FLAGS_EM_PDN_FOR_EM_SUPL_VALID_BIT) {
-                if (index < mCount) {
-                    errs[index++] = LOCATION_ERROR_NOT_SUPPORTED;
-                }
-            }
-            if (mConfigMask & GNSS_CONFIG_FLAGS_SUPL_EM_SERVICES_BIT) {
                 if (index < mCount) {
                     errs[index++] = LOCATION_ERROR_NOT_SUPPORTED;
                 }
