@@ -155,7 +155,7 @@ void GnssMeasurementInterface::startTracking(
     TrackingOptions options;
     options.size = sizeof(TrackingOptions);
     options.minInterval = timeBetweenMeasurement;
-    options.mode = GNSS_SUPL_MODE_STANDALONE;
+    options.mode = GNSS_SUPL_MODE_UNKNOWN;
     options.powerMode = powerMode;
     options.tbm = timeBetweenMeasurement;
 

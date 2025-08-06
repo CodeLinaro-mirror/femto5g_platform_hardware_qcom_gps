@@ -54,6 +54,7 @@ public:
     // IDataItemObserver overrides
     virtual void notify(const unordered_set<const IDataItemCore*>& dlist) override;
     virtual void getName(string& name) override;
+    inline bool isAssistedGpsEnabled() { return mAssistedGpsEnabled; }
 private:
     static NativeAgpsHandler* sLocalHandle;
     static void agnssStatusIpV4Cb(AGnssExtStatusIpV4 statusInfo);
@@ -62,6 +63,7 @@ private:
     bool mConnected;
     string mApn;
     GnssAdapter& mAdapter;
+    bool mAssistedGpsEnabled;
 };
 
 #endif // NATIVEAGPSHANDLER_H

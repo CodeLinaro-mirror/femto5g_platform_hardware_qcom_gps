@@ -190,6 +190,11 @@ void WwanAppInfoDataItem::stringify(string& valueStr) {
     valueStr += " mAppCookie: " + appCookieStr;
 }
 
+void AssistedGpsDataItem::stringify(string& valueStr) {
+    valueStr = mName;
+    valueStr += mIsEnabled ? ": true" : ": false";
+}
+
 IDataItemCore* DataItemsFactory::createNewDataItem(const DataItemId& id) {
     IDataItemCore *mydi = nullptr;
     switch (id) {
@@ -246,6 +251,9 @@ IDataItemCore* DataItemsFactory::createNewDataItem(const DataItemId& id) {
             break;
         case WWAN_APP_INFO_DATA_ITEM_ID:
             mydi = new WwanAppInfoDataItem();
+            break;
+        case ASSISTED_GPS_DATA_ITEM_ID:
+            mydi = new AssistedGpsDataItem();
             break;
         default:
             LOC_LOGd("unsupported data item");

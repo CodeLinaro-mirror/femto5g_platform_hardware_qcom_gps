@@ -516,6 +516,20 @@ public:
     LocWwanAppInfo mWwanAppInfo;
 };
 
+class AssistedGpsDataItem: public IDataItemCore {
+public:
+    AssistedGpsDataItem(bool enabled = false) :
+            mIsEnabled(enabled) {
+        mId = ASSISTED_GPS_DATA_ITEM_ID;
+        mName = ASSISTED_GPS_CARD;
+        setBlobPtr((void*)(&mIsEnabled), sizeof(bool));
+    }
+    virtual void stringify(std::string& valueStr) override;
+
+//Data members
+    bool mIsEnabled;
+};
+
 class DataItemsFactory {
 public:
     static IDataItemCore* createNewDataItem(const DataItemId& id);

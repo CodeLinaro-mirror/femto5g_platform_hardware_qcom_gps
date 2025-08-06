@@ -67,6 +67,12 @@ void NativeAgpsHandler::notify(const unordered_set<const IDataItemCore*>& dlist)
                 LOC_LOGd("updated mConnected:%d, mApn: %s", mConnected, mApn.c_str());
                 break;
             }
+            case ASSISTED_GPS_DATA_ITEM_ID: {
+                const AssistedGpsDataItem* agpsInfo = static_cast<const AssistedGpsDataItem*>(each);
+                mAssistedGpsEnabled = agpsInfo->mIsEnabled;
+                LOC_LOGd("Assisted GPS Enabled: %d", mAssistedGpsEnabled);
+                break;
+            }
             default:
                 break;
         }
@@ -77,14 +83,15 @@ NativeAgpsHandler* NativeAgpsHandler::sLocalHandle = nullptr;
 NativeAgpsHandler::NativeAgpsHandler(SystemStatusOsObserver* sysStatObs, GnssAdapter& adapter) :
         mSystemStatusObsrvr(sysStatObs), mConnected(false), mAdapter(adapter) {
     sLocalHandle = this;
-    unordered_set<DataItemId> subItemIdList = {NETWORKINFO_DATA_ITEM_ID};
+    unordered_set<DataItemId> subItemIdList = {NETWORKINFO_DATA_ITEM_ID, ASSISTED_GPS_DATA_ITEM_ID};
     mSystemStatusObsrvr->subscribe(subItemIdList, this);
 }
 
 NativeAgpsHandler::~NativeAgpsHandler() {
     if (nullptr != mSystemStatusObsrvr) {
         LOC_LOGd("Unsubscribe for network info.");
-        unordered_set<DataItemId> subItemIdList = {NETWORKINFO_DATA_ITEM_ID};
+        unordered_set<DataItemId> subItemIdList = {NETWORKINFO_DATA_ITEM_ID,
+                ASSISTED_GPS_DATA_ITEM_ID};
         mSystemStatusObsrvr->unsubscribe(subItemIdList, this);
     }
     sLocalHandle = nullptr;

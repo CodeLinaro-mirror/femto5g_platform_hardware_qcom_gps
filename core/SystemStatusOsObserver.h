@@ -136,6 +136,7 @@ public:
             string appPackageName = "",
             string appCookie = "",
             string appQwesLicenseId = "");
+    void eventAssistedGpsEnabled(bool aGpsEnabled);
 
 /*****************  None Android specific start ***************************/
 #ifdef USE_GLIB

@@ -426,6 +426,11 @@ void SystemStatusOsObserver::eventWwanAppInfo(int32_t pid,
     notify(di);
 }
 
+void SystemStatusOsObserver::eventAssistedGpsEnabled(bool aGpsEnabled) {
+    IDataItemCore* di = new AssistedGpsDataItem(aGpsEnabled);
+    notify(di);
+}
+
 /*****************  None Android specific start ***************************/
 #ifdef USE_GLIB
 bool SystemStatusOsObserver::connectBackhaul(const BackhaulContext& ctx)

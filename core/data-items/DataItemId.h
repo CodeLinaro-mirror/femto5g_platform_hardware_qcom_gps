@@ -83,5 +83,6 @@ enum DataItemId {
 #define LOC_FEATURE_STATUS_CARD         "LOC_FEATURE_STATUS"
 #define NLP_SESSION_STARTED_CARD        "NLP_SESSION_STARTED"
 #define WWAN_APP_INFO_CARD              "WWAN_APP_INFO"
+#define ASSISTED_GPS_CARD               "ASSISTED_GPS"
 
 #endif // #ifndef __DATAITEMID_H__
