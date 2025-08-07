@@ -148,11 +148,21 @@ ssize_t Sock::recvfrom(const LocIpcRecver& recver, const shared_ptr<ILocIpcListe
             if (iter == sSockToPayloadMap.end()) {
                 size_t totalSize = 0;
                 sscanf(msg.data() + sizeof(LOC_IPC_HEAD) - 9, "%zx", &totalSize);
+                if (totalSize < payLoadSize) {
+                    LOC_LOGe("Corrupt message: payload size %zu exceeds total %zu",
+                            payLoadSize, totalSize);
+                    return -1;
+                }
                 sSockToPayloadMap[key] = std::make_pair(totalSize - payLoadSize,
                                                         string(totalSize, 0));
                 memcpy((char*) sSockToPayloadMap[key].second.data(), (char *)msg.data()+
                         sizeof(LOC_IPC_HEAD), payLoadSize);
             } else {
+                if (payLoadSize > iter->second.first) {
+                    LOC_LOGe("Fragment overflow for key %s", key.c_str());
+                    sSockToPayloadMap.erase(iter);
+                    return -1;
+                }
                 memcpy((char*) iter->second.second.data() +
                         (iter->second.second.size() - iter->second.first),
                         msg.data()+sizeof(LOC_IPC_HEAD), payLoadSize);
