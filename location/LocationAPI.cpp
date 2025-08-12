@@ -1135,19 +1135,6 @@ void LocationControlAPI::odcpiInject(const ::Location& location) {
     pthread_mutex_unlock(&gDataMutex);
 }
 
-void LocationControlAPI::resetNetworkInfo() {
-    pthread_mutex_lock(&gDataMutex);
-
-    if (gData.gnssInterface != NULL) {
-        gData.gnssInterface->resetNetworkInfo();
-    }
-    else {
-        LOC_LOGe("No gnss interface available for Location Control API");
-    }
-
-    pthread_mutex_unlock(&gDataMutex);
-}
-
 void LocationControlAPI::updateBatteryStatus(bool charging) {
     pthread_mutex_lock(&gDataMutex);
 

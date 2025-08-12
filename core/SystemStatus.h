@@ -463,11 +463,9 @@ public:
     static SystemStatus* getInstance(const MsgTask* msgTask);
     static void destroyInstance();
     SystemStatusOsObserver* getOsObserver();
-    void resetNetworkInfo();
 
     // Helpers
     bool eventPosition(const UlpLocation& location,const GpsLocationExtended& locationEx);
-    bool eventDataItemNotify(IDataItemCore* dataitem);
     void setEngineDebugDataInfo(const GnssEngineDebugDataInfo& gnssEngineDebugDataInfo);
     bool getReport(SystemStatusReports& reports, bool isLatestonly = false,
             bool inSessionOnly = true) const;

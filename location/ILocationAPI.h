@@ -591,11 +591,6 @@ public:
     virtual void odcpiInject(const ::Location& location) {}
 
     /** @brief
-        Resets all cached network info in HAL.
-    */
-    virtual void resetNetworkInfo() {};
-
-    /** @brief
         Updates battery status in HAL as indicated by framework
 
         @param
