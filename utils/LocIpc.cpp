@@ -26,7 +26,6 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
@@ -62,6 +61,9 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/** Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ *  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ *  SPDX-License-Identifier: BSD-3-Clause-Clear */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -149,19 +151,27 @@ ssize_t Sock::sendto(const void *buf, size_t len, int flags, const struct sockad
 }
 ssize_t Sock::recvfrom(const LocIpcRecver& recver, const shared_ptr<ILocIpcListener>& dataCb,
                        int sid, int flags, struct sockaddr *srcAddr, socklen_t *addrlen) const  {
+    constexpr int MAX_RECV_RETRIES = 5;
+    ssize_t nBytes = 0;
     std::string msg(mMaxTxSize + sizeof(LOC_IPC_HEAD), 0);
-    ssize_t nBytes = ::recvfrom(sid, (void*)msg.data(), msg.size(), flags, srcAddr, addrlen);
+
+    for (int retry = 0; retry < MAX_RECV_RETRIES; ++retry) {
+        nBytes = ::recvfrom(sid, (void*)msg.data(), msg.size(), flags, srcAddr, addrlen);
+        if (nBytes == -1 && errno == EINTR) {
+            continue; // Retry on EINTR
+        }
+        break; // Exit loop on success or other error
+    }
+
     if (nBytes > 0) {
         if (strncmp(msg.data(), MSG_ABORT, sizeof(MSG_ABORT)) == 0) {
             LOC_LOGi("recvd abort msg.data %s", msg.data());
             nBytes = -100;
         } else if (nBytes <= sizeof(LOC_IPC_HEAD) || strncmp(msg.data(), LOC_IPC_HEAD, 16) ||
-            msg.data()[32] != '$' || msg.data()[41] != '$') {
-            // short message
+                   msg.data()[32] != '$' || msg.data()[41] != '$') {
             msg.resize(nBytes);
             dataCb->onReceive(msg.data(), nBytes, &recver);
         } else {
-            // long message
             std::string key(msg.data(), sizeof(LOC_IPC_HEAD));
             auto iter = sSockToPayloadMap.find(key);
             size_t payLoadSize = nBytes - sizeof(LOC_IPC_HEAD);
@@ -170,22 +180,26 @@ ssize_t Sock::recvfrom(const LocIpcRecver& recver, const shared_ptr<ILocIpcListe
                 sscanf(msg.data() + sizeof(LOC_IPC_HEAD) - 9, "%zx", &totalSize);
                 sSockToPayloadMap[key] = std::make_pair(totalSize - payLoadSize,
                                                         string(totalSize, 0));
-                memcpy((char*) sSockToPayloadMap[key].second.data(), (char *)msg.data()+
-                        sizeof(LOC_IPC_HEAD), payLoadSize);
+                memcpy((char*)sSockToPayloadMap[key].second.data(),
+                       msg.data() + sizeof(LOC_IPC_HEAD), payLoadSize);
             } else {
-                memcpy((char*) iter->second.second.data() +
-                        (iter->second.second.size() - iter->second.first),
-                        msg.data()+sizeof(LOC_IPC_HEAD), payLoadSize);
+                memcpy((char*)iter->second.second.data() +
+                       (iter->second.second.size() - iter->second.first),
+                       msg.data() + sizeof(LOC_IPC_HEAD), payLoadSize);
                 iter->second.first -= payLoadSize;
 
-                if (0 == iter->second.first) {
+                if (iter->second.first == 0) {
                     dataCb->onReceive(iter->second.second.data(),
-                            iter->second.second.size(), &recver);
+                                      iter->second.second.size(), &recver);
                     sSockToPayloadMap.erase(iter);
                 }
             }
         }
+    } else if (nBytes == -1) {
+        LOC_LOGe("recvfrom failed after retries, errno %d - %s", errno, strerror(errno));
+        sSockToPayloadMap.clear();
     }
+
     return nBytes;
 }
 ssize_t Sock::sendAbort(int flags, const struct sockaddr *destAddr, socklen_t addrlen) {
