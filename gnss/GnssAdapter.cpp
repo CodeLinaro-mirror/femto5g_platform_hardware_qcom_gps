@@ -26,12 +26,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
 /*
-Changes from Qualcomm Technologies, Inc. are provided under the following license:
-Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
-SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_GnssAdapter"
@@ -8582,6 +8581,9 @@ void GnssAdapter::handleEnablePPENtrip(const GnssNtripConnectionParams& params,
             pNtripParams->nmeaUpdateInterval == nmeaUpdateInterval &&
             mDgnssState & DGNSS_STATE_ENABLE_NTRIP_COMMAND) {
         LOC_LOGd("received same Ntrip param");
+        if (nullptr != getSystemStatus()) {
+            getSystemStatus()->getOsObserver()->eventNtripStarted(true);
+        }
         return;
     }
 
@@ -8641,6 +8643,9 @@ void GnssAdapter::checkUpdateDgnssNtrip(bool isLocationValid) {
         uint64_t curBootTime = getBootTimeMilliSec();
         if (mDgnssState == (DGNSS_STATE_ENABLE_NTRIP_COMMAND | DGNSS_STATE_NO_NMEA_PENDING)) {
             mDgnssState |= DGNSS_STATE_NTRIP_SESSION_STARTED;
+            if (nullptr != getSystemStatus()) {
+                getSystemStatus()->getOsObserver()->eventNtripStarted(true);
+            }
             mXtraObserver.startDgnssSource(mStartDgnssNtripParams);
             if (isDgnssNmeaRequired()) {
                 mDgnssLastNmeaBootTimeMilli = curBootTime;
