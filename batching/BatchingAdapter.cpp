@@ -29,7 +29,7 @@
 
 /*
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -311,6 +311,13 @@ void
 BatchingAdapter::startBatching(LocationAPI* client, uint32_t sessionId,
         const BatchingOptions& batchingOptions)
 {
+    if (ENGINE_LOCK_STATE_DISABLED == mLocApi->getEngineLockState()) {
+        LOC_LOGe("engine lock disabled, return!");
+        //cache batching session to restore session when engine lock enabled
+        saveBatchingSession(client, sessionId, batchingOptions);
+        reportResponse(client, LOCATION_ERROR_NOT_SUPPORTED, sessionId);
+        return;
+    }
     if (batchingOptions.batchingMode != BATCHING_MODE_NO_AUTO_REPORT &&
         0 == autoReportBatchingSessionsCount()) {
         // if there is currenty no batching sessions interested in batch full event, then this
@@ -321,8 +328,8 @@ BatchingAdapter::startBatching(LocationAPI* client, uint32_t sessionId,
 
     // Assume start will be OK, remove session if not
     saveBatchingSession(client, sessionId, batchingOptions);
-    mLocApi->startBatching(sessionId, batchingOptions, getBatchingAccuracy(), getBatchingTimeout(),
-            new LocApiResponse(*getContext(),
+    mLocApi->startBatching(sessionId, batchingOptions, getBatchingAccuracy(),
+            getBatchingTimeout(), new LocApiResponse(*getContext(),
             [this, client, sessionId, batchingOptions] (LocationError err) {
         if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
             LOCATION_ERROR_SUCCESS != err) {
