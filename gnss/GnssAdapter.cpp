@@ -636,8 +636,6 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
                 if (gptpTimeValid) {
                     out.location.flags |= LOCATION_HAS_GPTP_TIME_BIT;
                     out.location.elapsedgPTPTime = elapsedgPTPTimeNsec;
-                    out.location.flags |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
-                    out.location.elapsedgPTPTimeUnc = 0;
                 }
             }
         }
@@ -5230,8 +5228,6 @@ GnssAdapter::reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurement
         }
 
         inline virtual void proc() const {
-            mAdapter.mPositionElapsedRealTimeCal.saveGpsTimeAndQtimerPairInMeasReport(
-                    mGnssMeasurements.gnssSvMeasurementSet);
             mAdapter.fillElapsedRealTimeForMeas(mGnssMeasurements);
             mAdapter.reportGnssMeasurementData(mGnssMeasurements.gnssMeasNotification);
             if ((false == mGnssMeasurements.gnssSvMeasurementSet.isNhz) &&
@@ -5795,6 +5791,14 @@ bool GnssAdapter::reportQwesCapabilities(
             if (ppeInFeatureMap != mFeatureMap.end() || qfeInFeatureMap != mFeatureMap.end()) {
                 if ((ppeInFeatureMap != mFeatureMap.end() && ppeInFeatureMap->second) ||
                         (qfeInFeatureMap != mFeatureMap.end() && qfeInFeatureMap->second)) {
+                    // when DLP feature is enabled and the session is precise session, stop the
+                    // current tracking session, and then restart the session to apply the updated
+                    // configurations
+                    if (!(mAdapter.mPpFeatureStatusMask & DLP_FEATURE_ENABLED_BY_DEFAULT) &&
+                            mAdapter.isPreciseSession()) {
+                        mAdapter.stopTracking();
+                        mAdapter.restartSessions();
+                    }
                     mAdapter.mPpFeatureStatusMask |= DLP_FEATURE_ENABLED_BY_DEFAULT;
                     mAdapter.notifyPreciseLocation();
                 } else {
@@ -7337,12 +7341,9 @@ void GnssAdapter::configRobustLocation() {
             enable = false;
             enableFor911 = mLocConfigInfo.robustLocationConfigInfo.enableFor911;
         }
-    } else {
-        enable = false;
-        enableFor911 = false;
-    }
 
-    mLocApi->configRobustLocation(enable, enableFor911, nullptr, true);
+        mLocApi->configRobustLocation(enable, enableFor911, nullptr, true);
+    }
 }
 
 uint32_t GnssAdapter::configRobustLocationCommand(
@@ -7368,8 +7369,12 @@ uint32_t GnssAdapter::configRobustLocationCommand(
             mEnable(enable),
             mEnableForE911(enableForE911) {}
         inline virtual void proc() const {
-            mAdapter.configRobustLocation(mEnable, mEnableForE911);
-            mAdapter.reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
+            LocationError err = LOCATION_ERROR_NOT_SUPPORTED;
+            if (mAdapter.mRlFeatureQwesEnabled) {
+                err = LOCATION_ERROR_SUCCESS;
+                mAdapter.configRobustLocation(mEnable, mEnableForE911);
+            }
+            mAdapter.reportResponse(err, mSessionId);
         }
     };
 
