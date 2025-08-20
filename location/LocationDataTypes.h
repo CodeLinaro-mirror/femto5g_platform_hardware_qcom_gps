@@ -351,10 +351,6 @@ typedef uint64_t LocationCapabilitiesMask;
 // This mask indicates wifi RTT positioning is
 // enabled by QWES license.
 #define   LOCATION_CAPABILITIES_QWES_WIFI_RTT_POSITIONING        (1ULL<<31)
-// This mask indicates wifi RSSI positioning is supported.
-#define   LOCATION_CAPABILITIES_WIFI_RSSI_POSITIONING                 (1ULL<<32)
-// This mask indicates wifi RTT positioning is supported.
-#define   LOCATION_CAPABILITIES_WIFI_RTT_POSITIONING                  (1ULL<<33)
 // support GNSS bands
 #define   LOCATION_CAPABILITIES_GNSS_BANDS_BIT                        (1ULL<<34)
 // This mask indicates modem 3GPP source is available.
@@ -449,14 +445,6 @@ enum LocationQwesFeatureTypes {
     LOCATION_QWES_FEATURE_TYPE_ROBUST_LOCATION               = 25,
     // Max value
     LOCATION_QWES_FEATURE_TYPE_MAX                           = 26
-};
-
-typedef uint64_t LocationHwCapabilitiesMask;
-enum LocationHwCapabilitiesBits {
-    // This indicates wifi HW has RSSI capability.
-    LOCATION_WIFI_CAPABILITY_RSSI = (1<<0),
-    // This indicates wifi HW has RTT capability.
-    LOCATION_WIFI_CAPABILITY_RTT  = (1<<1)
 };
 
 enum LocationTechnologyType {
