@@ -168,7 +168,6 @@ public:
     static bool sGnssMeasurementSupported;
     static GnssNMEARptRate sNmeaReportRate;
     static LocationCapabilitiesMask sQwesFeatureMask;
-    static LocationHwCapabilitiesMask sHwCapabilitiesMask;
 
     static void readConfig();
     static void readIZatConfForValueAddedProcess();
@@ -200,20 +199,6 @@ public:
     */
     static inline LocationCapabilitiesMask getQwesFeatureStatus() {
         return (ContextBase::sQwesFeatureMask);
-    }
-
-    /*
-        set HW feature status info
-    */
-    static inline void setHwCapabilities(const LocationHwCapabilitiesMask& mask) {
-        sHwCapabilitiesMask |= mask;
-    }
-
-    /*
-        get HW feature status info
-    */
-    static inline LocationHwCapabilitiesMask getHwCapabilitiesMask() {
-        return (ContextBase::sHwCapabilitiesMask);
     }
 
     static inline uint32_t getAntennaInfoVectorSize() {

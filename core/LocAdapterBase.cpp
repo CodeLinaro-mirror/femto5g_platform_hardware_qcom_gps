@@ -316,14 +316,6 @@ LocAdapterBase::getCapabilities()
         if (ContextBase::mIzat_process_conf.engineServiceEnabled) {
             mask |= LOCATION_CAPABILITIES_PRECISE_LIB_PRESENT;
         }
-        //Get HW feature status mask
-        LocationHwCapabilitiesMask hwMask = ContextBase::getHwCapabilitiesMask();
-        if ((hwMask & LOCATION_WIFI_CAPABILITY_RTT) != 0) {
-            mask |= LOCATION_CAPABILITIES_WIFI_RTT_POSITIONING;
-        }
-        if ((hwMask & LOCATION_WIFI_CAPABILITY_RSSI) != 0) {
-            mask |= LOCATION_CAPABILITIES_WIFI_RSSI_POSITIONING;
-        }
 
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_GNSS_BANDS_SUPPORTED)) {
             mask |= LOCATION_CAPABILITIES_GNSS_BANDS_BIT;
