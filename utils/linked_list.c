@@ -29,6 +29,7 @@
 #define LOG_TAG "LocSvc_utils_ll"
 
 #include "linked_list.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

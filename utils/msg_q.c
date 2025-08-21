@@ -64,6 +64,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Uncomment to log verbose logs
 #define LOG_NDEBUG 1
 #define LOG_TAG "LocSvc_utils_q"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
