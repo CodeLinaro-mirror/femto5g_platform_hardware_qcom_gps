@@ -159,6 +159,7 @@ struct GnssInterface {
     uint32_t (*gnssRegisterXtraStatusUpdate)(bool registerUpdate);
     void (*configPrecisePositioning)(uint32_t featureId, bool enable, std::string appHash);
     bool (*isSS5HWEnabled)();
+    bool (*isFIDLIfEnabled)();
 };
 
 struct BatchingInterface {

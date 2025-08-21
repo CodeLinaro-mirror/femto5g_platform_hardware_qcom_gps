@@ -97,7 +97,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #else
 #define MIN_TRACKING_INTERVAL (1000) // 1 sec
 #endif //FEATURE_AUTOMOTIVE
-#define MIN_TRACKING_INTERVAL_SIRF (100) // 100 msec
+#define MIN_TRACKING_INTERVAL_10HZ (100) // 100 msec
 #define BILLION_NSEC (1000000000ULL)
 #define NMEA_MIN_THRESHOLD_MSEC (99)
 #define NMEA_MAX_THRESHOLD_MSEC (975)
@@ -333,6 +333,8 @@ GnssAdapter::checkAndSetSPEToRunforNHz(TrackingOptions & out) {
     bool isSPERunningAtHighestInterval = false;
     if (true == isSS5HWEnabled()) {
         LOC_LOGd("GNSS SIRF is enabled.");
+    } else if (true == isFIDLIfEnabled()) {
+        LOC_LOGd("FIDL Interface is enabled.");
     } else if (!mNHzNeeded) {
         LOC_LOGd("No nHz session needed.");
     } else if (mSPEAlreadyRunningAtHighestInterval) {
@@ -984,17 +986,17 @@ GnssAdapter::convertSuplMode(const GnssConfigSuplModeMask suplModeMask)
 
 void GnssAdapter::readNfwLockConfig()
 {
-    char nfwCpPackageName[LOC_MAX_PARAM_STRING];
-    char nfwSuplPackageName[LOC_MAX_PARAM_STRING];
-    char nfwImsPackageName[LOC_MAX_PARAM_STRING];
-    char nfwSimPackageName[LOC_MAX_PARAM_STRING];
-    char nfwMdtPackageName[LOC_MAX_PARAM_STRING];
-    char nfwTlocPackageName[LOC_MAX_PARAM_STRING];
-    char nfwRlocPackageName[LOC_MAX_PARAM_STRING];
-    char nfwV2xPackageName[LOC_MAX_PARAM_STRING];
-    char nfwR1PackageName[LOC_MAX_PARAM_STRING];
-    char nfwR2PackageName[LOC_MAX_PARAM_STRING];
-    char nfwR3PackageName[LOC_MAX_PARAM_STRING];
+    char nfwCpPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwSuplPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwImsPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwSimPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwMdtPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwTlocPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwRlocPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwV2xPackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwR1PackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwR2PackageName[LOC_MAX_PARAM_STRING] = {};
+    char nfwR3PackageName[LOC_MAX_PARAM_STRING] = {};
 
     const loc_param_s_type nfw_packages_table[] =
     {
@@ -3429,8 +3431,12 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, TrackingOptions& options)
                 err = LOCATION_ERROR_INVALID_PARAMETER;
             } else {
                 if (true ==  mAdapter.isSS5HWEnabled()) {
-                    if (mOptions.minInterval < MIN_TRACKING_INTERVAL_SIRF) {
-                          mOptions.minInterval = MIN_TRACKING_INTERVAL_SIRF;
+                    if (mOptions.minInterval < MIN_TRACKING_INTERVAL_10HZ) {
+                          mOptions.minInterval = MIN_TRACKING_INTERVAL_10HZ;
+                    }
+                } else if (true ==  mAdapter.isFIDLIfEnabled()) {
+                    if (mOptions.minInterval < MIN_TRACKING_INTERVAL_10HZ) {
+                          mOptions.minInterval = MIN_TRACKING_INTERVAL_10HZ;
                     }
                 } else if (mOptions.minInterval < MIN_TRACKING_INTERVAL) {
                     mOptions.minInterval = MIN_TRACKING_INTERVAL;
@@ -3519,6 +3525,11 @@ GnssAdapter::startTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t sessi
             updateOptions = true;
         }
 
+        if (options.tbm < multiplexedOptions.tbm) {
+            multiplexedOptions.tbm = options.tbm;
+            updateOptions = true;
+        }
+
         // if session we are starting has smaller powerMode then next smallest
         if (options.powerMode < multiplexedPowerMode) {
             multiplexedOptions.powerMode = options.powerMode;
@@ -3561,6 +3572,7 @@ GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId,
     // use a local copy of TrackingOptions as the TBF may get modified in the
     // checkAndSetSPEToRunforNHz function
     TrackingOptions tempOptions(trackingOptions);
+    tempOptions.tbm = trackingOptions.tbm;
     if (!checkAndSetSPEToRunforNHz(tempOptions)) {
         mLocApi->startTimeBasedTracking(tempOptions, new LocApiResponse(*getContext(),
                           [this, client, sessionId] (LocationError err) {
