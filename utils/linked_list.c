@@ -29,6 +29,7 @@
 #define LOG_TAG "LocSvc_utils_ll"
 
 #include "linked_list.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -216,7 +217,7 @@ int linked_list_empty(void* list_data)
    else
    {
       list_state* p_list = (list_state*)list_data;
-      return p_list->p_head == NULL ? 1 : 0;
+      return (p_list->p_head == NULL ? 1 : 0);
    }
 }
 
