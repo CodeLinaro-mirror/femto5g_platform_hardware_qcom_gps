@@ -18,8 +18,32 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+soong_config_module_type {
+     name: "car_aidl_power_libs_cc_defaults",
+     module_type: "cc_defaults",
+     config_namespace: "ANDROID",
+     bool_variables: ["IS_ANDROID_VER_U"],
+     properties: ["shared_libs"],
+}
+
+car_aidl_power_libs_cc_defaults {
+  name: "car_aidl_power_libs_defaults",
+  soong_config_variables: {
+     IS_ANDROID_VER_U: {
+         shared_libs: ["android.frameworks.automotive.powerpolicy-V2-ndk",],
+         conditions_default: {
+             shared_libs: ["android.frameworks.automotive.powerpolicy-V3-ndk",],
+         },
+     },
+  }
+}
+
 cc_defaults {
     name: "gnss_car_aidl_powerpolicy",
+      defaults: [
+         "car_aidl_power_libs_defaults",
+      ],
+
     cflags: [
         "-Wall",
         "-Wno-missing-field-initializers",
@@ -27,13 +51,13 @@ cc_defaults {
         "-Wno-unused-variable",
         "-Wunused-parameter",
     ],
+
     shared_libs: [
         "libbase",
         "liblog",
         "libcutils",
         "libutils",
         "libbinder_ndk",
-        "android.frameworks.automotive.powerpolicy-V2-ndk",
         "libpowerpolicyclient",
     ],
 }
@@ -63,8 +87,6 @@ cc_library_shared {
         "android.hardware.gnss@1.0",
         "libbase",
     ],
-
-    cflags: GNSS_CFLAGS,
 
     defaults: [
         "gnss_car_aidl_powerpolicy",

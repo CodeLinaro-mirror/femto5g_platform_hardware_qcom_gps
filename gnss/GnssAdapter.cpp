@@ -3104,6 +3104,9 @@ GnssAdapter::handleEngineUpEvent()
                    mAdapter.mPowerConnectState == POWER_CONNECT_YES);
             }
             mAdapter.gnssSecondaryBandConfigUpdate();
+            //Reset data connection when modem SSR
+            mAdapter.mAgpsManager.handleModemSSR();
+
             // restart sessions only when Lock state is enabled and in power state resume
             mAdapter.initGnssPowerStatistics();
             if (ENGINE_LOCK_STATE_ENABLED == mApi.getEngineLockState()) {
@@ -4667,6 +4670,7 @@ GnssAdapter::reportEnginePositions(unsigned int count,
         }
 
         GnssLocationInfoNotification locationInfo[LOC_OUTPUT_ENGINE_COUNT] = {};
+        memset(locationInfo, 0, (sizeof(GnssLocationInfoNotification) * LOC_OUTPUT_ENGINE_COUNT));
         for (unsigned int i = 0; i < count; i++) {
             const EngineLocationInfo* engLocation = (locationArr+i);
             // if it is fused/default location, call reportPosition maintain legacy behavior
@@ -7194,6 +7198,7 @@ bool GnssAdapter::measCorrSetCorrectionsCommand(const GnssMeasurementCorrections
                 }
             }
             char mapDataTestMode[LOC_MAX_PARAM_STRING];
+            memset(mapDataTestMode, 0, (sizeof(char) * LOC_MAX_PARAM_STRING));
             loc_param_s_type izatMapDataTable[] =
             {
                 { "MAP_DATA_TEST_MODE", &mapDataTestMode, NULL, 's' },
@@ -7876,7 +7881,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
     std::vector<GnssAntennaInformation> gnssAntennaInformations;
     GnssAntennaInformation gnssAntennaInfo;
 
-    uint32_t antennaInfoVectorSize;
+    uint32_t antennaInfoVectorSize = 0;
     loc_param_s_type ant_info_vector_table[] =
     {
         { "ANTENNA_INFO_VECTOR_SIZE", &antennaInfoVectorSize, NULL, 'n' }
@@ -7884,7 +7889,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
     UTIL_READ_CONF(LOC_PATH_ANT_CORR, ant_info_vector_table);
 
     for (uint32_t i = 0; i < antennaInfoVectorSize; i++) {
-        double carrierFrequencyMHz;
+        double carrierFrequencyMHz = 0.0;
         char pcOffsetStr[LOC_MAX_PARAM_STRING];
         uint32_t numberOfRows = 0;
         uint32_t numberOfColumns = 0;
