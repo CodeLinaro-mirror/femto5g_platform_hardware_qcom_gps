@@ -3107,10 +3107,6 @@ GnssAdapter::updateClientsEventMask()
             LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO |
             LOC_API_ADAPTER_BIT_FEATURE_STATUS_UPDATE;
 
-#ifdef FEATURE_AUTOMOTIVE
-    // Subscribe to get GNSS BAND supported information on bootup
-    mask |= LOC_API_ADAPTER_BIT_GNSS_BANDS_SUPPORTED;
-#endif
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
         if (it->second.trackingCb != nullptr ||
             it->second.gnssLocationInfoCb != nullptr ||
@@ -4509,37 +4505,6 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
     }
 }
 
-void
-GnssAdapter::reportEnginePositionsEvent(unsigned int count,
-                                        EngineLocationInfo* locationArr)
-{
-    struct MsgReportEnginePositions : public LocMsg {
-        GnssAdapter& mAdapter;
-        unsigned int mCount;
-        EngineLocationInfo mEngLocInfo[LOC_OUTPUT_ENGINE_COUNT];
-        inline MsgReportEnginePositions(GnssAdapter& adapter,
-                                        unsigned int count,
-                                        EngineLocationInfo* locationArr) :
-            LocMsg(),
-            mAdapter(adapter),
-            mCount(count) {
-            if (mCount > LOC_OUTPUT_ENGINE_COUNT) {
-                mCount = LOC_OUTPUT_ENGINE_COUNT;
-            }
-            if (mCount > 0) {
-                memcpy(mEngLocInfo, locationArr, sizeof(EngineLocationInfo)*mCount);
-            }
-        }
-        inline virtual void proc() const {
-            mAdapter.reportEnginePositions(mCount, mEngLocInfo);
-        }
-    };
-
-    if (isPreciseEnabled()) {
-        sendMsg(new MsgReportEnginePositions(*this, count, locationArr));
-    }
-}
-
 bool
 GnssAdapter::needReportForAllClients(const UlpLocation& ulpLocation,
                                      enum loc_sess_status status,
@@ -4828,9 +4793,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                     engLocationsInfo[1] = locationInfo;
                     it->second.engineLocationsInfoCb(2, engLocationsInfo);
                 } else if (nullptr != it->second.trackingCb) {
-                    it->second.trackingCb(locationInfo.location);
-                } else if (reportToAnyClient) {
-                    if (nullptr != it->second.trackingCb) {
+                    if (reportToAnyClient) {
                         cbRunnables.emplace_back([ cb=it->second.trackingCb ] (Location location) {
                             cb(location);
                         });
@@ -6026,6 +5989,10 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
             // before requesting new ODCPI to avoid spamming ODCPI requests
             } else if (!(mOdcpiStateMask & ODCPI_REQ_ACTIVE) && true == mOdcpiTimer.isActive()) {
                 mOdcpiStateMask |= ODCPI_REQ_ACTIVE;
+                if (nullptr != mEsStatusCb) {
+                    mEsStatusCb(request.isEmergencyMode);
+                }
+                sendEmergencyCallStatusEvent = true;
             }
             mOdcpiRequest = request;
 
@@ -8576,8 +8543,9 @@ GnssAdapter::initEngHubProxy() {
         // callback function for engine hub to report back position event
         GnssAdapterReportEnginePositionsEventCb reportPositionEventCb =
             [this](int count, EngineLocationInfo* locationArr) {
-                    // report from engine hub on behalf of PPE will be treated as fromUlp
-                    reportEnginePositionsEvent(count, locationArr);
+                if (isPreciseEnabled()) {
+                    reportEnginePositions(count, locationArr);
+                }
             };
 
         // callback function for engine hub to request for complete aiding data
