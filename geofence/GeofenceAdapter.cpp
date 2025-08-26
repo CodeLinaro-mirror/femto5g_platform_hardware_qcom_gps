@@ -394,6 +394,7 @@ GeofenceAdapter::removeGeofencesCommand(LocationAPI* client, size_t count, uint3
                 return;
             }
             for (size_t i=0; i < mCount; ++i) {
+                errs[i] = LOCATION_ERROR_GENERAL_FAILURE;
                 mApi.addToCallQueue(new LocApiResponse(*mAdapter.getContext(),
                         [&mAdapter = mAdapter, mCount = mCount, mClient = mClient, mIds = mIds,
                         &mApi = mApi, errs, i] (LocationError err ) {
@@ -626,6 +627,7 @@ GeofenceAdapter::modifyGeofencesCommand(LocationAPI* client, size_t count, uint3
                 return;
             }
             for (size_t i=0; i < mCount; ++i) {
+                errs[i] = LOCATION_ERROR_GENERAL_FAILURE;
                 if (NULL == mIds || NULL == mOptions) {
                     errs[i] = LOCATION_ERROR_INVALID_PARAMETER;
                 } else {

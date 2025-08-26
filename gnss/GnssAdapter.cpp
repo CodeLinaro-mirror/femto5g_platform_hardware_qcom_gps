@@ -1066,9 +1066,12 @@ GnssAdapter::setSuplHostServer(const char* server, int port, LocServerType type)
         } else if (length >= 0) {
             if (LOC_AGPS_SUPL_SERVER == type) {
                 getServerUrl().assign(serverUrl);
-                strlcpy(ContextBase::mGps_conf.SUPL_HOST,
+                size_t copiedLen = strlcpy(ContextBase::mGps_conf.SUPL_HOST,
                         (nullptr == server) ? serverUrl : server,
                         LOC_MAX_PARAM_STRING);
+                if(copiedLen >= LOC_MAX_PARAM_STRING) {
+                    ContextBase::mGps_conf.SUPL_HOST[LOC_MAX_PARAM_STRING -1] = '\0';
+                }
                 ContextBase::mGps_conf.SUPL_PORT = port;
             } else {
                 if (strncasecmp(getMoServerUrl().c_str(), serverUrl, sizeof(serverUrl)) != 0) {
