@@ -26,10 +26,10 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
- */
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_LocationAPI"
@@ -43,9 +43,6 @@
 #include <loc_misc_utils.h>
 #include <loc_cfg.h>
 
-typedef const GnssInterface* (getGnssInterface)();
-typedef const GeofenceInterface* (getGeofenceInterface)();
-typedef const BatchingInterface* (getBatchingInterface)();
 
 // GTP services
 typedef void (enableProviderGetter)();
@@ -87,14 +84,17 @@ static bool gGeofenceLoadFailed = false;
 static uint32_t gEnableMDMGnssHal = 0;
 static bool gReadGnssDeploymentConfigOnce = false;
 
-template <typename T1, typename T2>
-static const T1* loadLocationInterface(const char* library, const char* name) {
-    void* libhandle = nullptr;
-    T2* getter = (T2*)dlGetSymFromLib(libhandle, library, name);
-    if (nullptr == getter) {
-        return (const T1*) getter;
-    }else {
-        return (*getter)();
+template <typename InterfaceType>
+static void loadLocationInterface(InterfaceType*& interfacePtr, bool& loadFailedFlag,
+                          const char* library, const char* name, const char* logTag) {
+    if (nullptr == interfacePtr && !loadFailedFlag) {
+        interfacePtr = getInterfaceInstance<InterfaceType>(library, name);
+        if (nullptr == interfacePtr) {
+            loadFailedFlag = true;
+            LOC_LOGe("No %s interface available from %s", logTag, library);
+        } else {
+            interfacePtr->initialize();
+        }
     }
 }
 
@@ -110,48 +110,20 @@ bool LocationAPI::isInfotainmentHalConfigured() {
 }
 
 static void loadLibGnss() {
-
-    if (NULL == gData.gnssInterface && !gGnssLoadFailed) {
-        gData.gnssInterface =
-            (GnssInterface*)loadLocationInterface<GnssInterface,
-                getGnssInterface>("libgnss.so", "getGnssInterface");
-        if (NULL == gData.gnssInterface) {
-            gGnssLoadFailed = true;
-            LOC_LOGW("%s:%d]: No gnss interface available", __func__, __LINE__);
-        } else {
-            gData.gnssInterface->initialize();
-        }
-    }
+    loadLocationInterface<GnssInterface>(
+        gData.gnssInterface, gGnssLoadFailed, "libgnss.so", "getGnssInterface", "gnss");
 }
 
 static void loadLibBatching() {
-
-    if (NULL == gData.batchingInterface && !gBatchingLoadFailed) {
-        gData.batchingInterface =
-            (BatchingInterface*)loadLocationInterface<BatchingInterface,
-             getBatchingInterface>("libbatching.so", "getBatchingInterface");
-        if (NULL == gData.batchingInterface) {
-            gBatchingLoadFailed = true;
-            LOC_LOGW("%s:%d]: No batching interface available", __func__, __LINE__);
-        } else {
-            gData.batchingInterface->initialize();
-        }
-    }
+    loadLocationInterface<BatchingInterface>(
+        gData.batchingInterface, gBatchingLoadFailed,
+        "libbatching.so", "getBatchingInterface", "batching");
 }
 
 static void loadLibGeofencing() {
-
-    if (NULL == gData.geofenceInterface && !gGeofenceLoadFailed) {
-        gData.geofenceInterface =
-           (GeofenceInterface*)loadLocationInterface<GeofenceInterface,
-           getGeofenceInterface>("libgeofencing.so", "getGeofenceInterface");
-        if (NULL == gData.geofenceInterface) {
-            gGeofenceLoadFailed = true;
-            LOC_LOGW("%s:%d]: No geofence interface available", __func__, __LINE__);
-        } else {
-            gData.geofenceInterface->initialize();
-        }
-    }
+    loadLocationInterface<GeofenceInterface>(
+        gData.geofenceInterface, gGeofenceLoadFailed,
+        "libgeofencing.so", "getGeofenceInterface", "geofence");
 }
 
 static bool isGnssClient(LocationCallbacks& locationCallbacks)

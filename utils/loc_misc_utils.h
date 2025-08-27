@@ -40,6 +40,11 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <string>
 #include <sstream>
 
+// Forward declaration for GnssInterface to avoid full header inclusion
+struct GnssInterface;
+struct GeofenceInterface;
+struct BatchingInterface;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -360,5 +365,61 @@ SIDE EFFECTS
    Not thread safe, expected to call acquire and release from same thread
 ===========================================================================*/
 int32_t locReleaseWakeLock();
+
+/*===========================================================================
+FUNCTION getInterfaceInstance
+
+DESCRIPTION
+   This function is a generic template to retrieve singleton interface instances
+   from dynamically loaded libraries. It attempts to load the specified library
+   and get a pointer to the interface getter function, then calls the getter
+   to obtain the interface instance. The instance is cached for subsequent calls.
+
+PARAMETERS:
+   libName: The name of the library to load (e.g., "libgnss.so").
+   funcName: The name of the getter function within the library (e.g., "getGnssInterface").
+
+DEPENDENCIES
+   dlGetSymFromLib function.
+
+RETURN VALUE
+   A pointer to the initialized interface instance (type T*).
+   Returns nullptr if loading or initialization fails.
+
+SIDE EFFECTS
+   May log warning or error messages if operations fail.
+===========================================================================*/
+template <typename T>
+T* getInterfaceInstance(const char* libName, const char* funcName);
+
+// Declare explicit instantiations that will be defined in loc_misc_utils.cpp
+extern template GnssInterface* getInterfaceInstance<GnssInterface>(const char*, const char*);
+extern template BatchingInterface*
+   getInterfaceInstance<BatchingInterface>(const char*, const char*);
+extern template GeofenceInterface*
+   getInterfaceInstance<GeofenceInterface>(const char*, const char*);
+
+/*===========================================================================
+FUNCTION getGnssInterfaceFromLibGnss
+
+DESCRIPTION
+   This function returns the singleton instance of the GNSS interface.
+   It loads and initializes the GNSS interface from "libgnss.so"
+   using the "getGnssInterface" function.
+
+PARAMETERS:
+   None.
+
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+   A pointer to the initialized GNSS interface (type GnssInterface*).
+   Returns nullptr if loading or initialization fails.
+
+SIDE EFFECTS
+   May log warning or error messages if operations fail.
+===========================================================================*/
+GnssInterface* getGnssInterfaceFromLibGnss();
 
 #endif //_LOC_MISC_UTILS_H_
