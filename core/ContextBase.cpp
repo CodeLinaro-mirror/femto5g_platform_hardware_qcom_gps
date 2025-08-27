@@ -57,7 +57,6 @@ bool ContextBase::sGnssMeasurementSupported = false;
 uint8_t ContextBase::sFeaturesSupported[MAX_FEATURE_LENGTH];
 GnssNMEARptRate ContextBase::sNmeaReportRate = GNSS_NMEA_REPORT_RATE_NHZ;
 LocationCapabilitiesMask ContextBase::sQwesFeatureMask = 0;
-LocationCapabilitiesMask ContextBase::sHwCapabilitiesMask = 0;
 
 uint32_t ContextBase::mAntennaInfoVectorSize = 0;
 
