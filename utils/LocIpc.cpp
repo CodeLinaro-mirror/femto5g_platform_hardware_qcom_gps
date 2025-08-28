@@ -80,6 +80,8 @@ namespace loc_util {
 #undef LOG_TAG
 #endif
 #define LOG_TAG "LocSvc_LocIpc"
+// Max allowed size 1MB
+#define MAX_ALLOWED_MSG_SIZE (1000000)
 
 #define SOCK_OP_AND_LOG(buf, length, opable, rtv, exe)  \
     if (nullptr == (buf) || 0 == (length)) { \
@@ -95,6 +97,17 @@ namespace loc_util {
 
 const char Sock::MSG_ABORT[] = "LocIpc::Sock::ABORT";
 const char Sock::LOC_IPC_HEAD[] = "$MSGLEN$";
+
+Sock::Sock(int sid, const uint32_t maxTxSize):
+           mMaxTxSize(maxTxSize), mSid(sid)
+{
+    try {
+        mMsgBuffer.resize(mMaxTxSize + sizeof(LOC_IPC_HEAD), 0);
+    } catch (const std::bad_alloc& e) {
+        LOC_LOGe("Failed to allocate memory for message: %s", e.what());
+    }
+}
+
 ssize_t Sock::send(const void *buf, size_t len, int flags, const struct sockaddr *destAddr,
                           socklen_t addrlen) const {
     ssize_t rtv = -1;
@@ -102,7 +115,7 @@ ssize_t Sock::send(const void *buf, size_t len, int flags, const struct sockaddr
     return rtv;
 }
 ssize_t Sock::recv(const LocIpcRecver& recver, const shared_ptr<ILocIpcListener>& dataCb, int flags,
-                   struct sockaddr *srcAddr, socklen_t *addrlen, int sid) const {
+                   struct sockaddr *srcAddr, socklen_t *addrlen, int sid) {
     ssize_t rtv = -1;
     if (-1 == sid) {
         sid = mSid;
@@ -130,30 +143,45 @@ ssize_t Sock::sendto(const void *buf, size_t len, int flags, const struct sockad
     return rtv;
 }
 ssize_t Sock::recvfrom(const LocIpcRecver& recver, const shared_ptr<ILocIpcListener>& dataCb,
-                       int sid, int flags, struct sockaddr *srcAddr, socklen_t *addrlen) const  {
-    std::string msg(mMaxTxSize, 0);
-    ssize_t nBytes = ::recvfrom(sid, (void*)msg.data(), msg.size(), flags, srcAddr, addrlen);
+                       int sid, int flags, struct sockaddr *srcAddr, socklen_t *addrlen) {
+
+    ssize_t nBytes = ::recvfrom(sid, (void*)mMsgBuffer.data(), mMsgBuffer.size(), flags,
+            srcAddr, addrlen);
     if (nBytes > 0) {
-        if (strncmp(msg.data(), MSG_ABORT, sizeof(MSG_ABORT)) == 0) {
-            LOC_LOGi("recvd abort msg.data %s", msg.data());
+        // Ensure null termination for string operations
+        if (nBytes < (ssize_t)mMsgBuffer.size()) {
+            mMsgBuffer[nBytes] = '\0';
+        }
+        if (strncmp(mMsgBuffer.data(), MSG_ABORT, sizeof(MSG_ABORT)) == 0) {
+            LOC_LOGi("Received abort message: %s", mMsgBuffer.data());
             nBytes = 0;
-        } else if (strncmp(msg.data(), LOC_IPC_HEAD, sizeof(LOC_IPC_HEAD) - 1)) {
-            // short message
-            msg.resize(nBytes);
-            dataCb->onReceive(msg.data(), nBytes, &recver);
+        } else if (strncmp(mMsgBuffer.data(), LOC_IPC_HEAD, sizeof(LOC_IPC_HEAD) - 1)) {
+
+            dataCb->onReceive(mMsgBuffer.data(), nBytes, &recver);
         } else {
             // long message
             size_t msgLen = 0;
-            sscanf(msg.data() + sizeof(LOC_IPC_HEAD) - 1, "%zu", &msgLen);
-            msg.resize(msgLen);
+            sscanf(mMsgBuffer.data() + sizeof(LOC_IPC_HEAD) - 1, "%zu", &msgLen);
+            if (msgLen > MAX_ALLOWED_MSG_SIZE) {
+                LOC_LOGe("Received message size too large: %zu bytes", msgLen);
+                return -1;
+            }
+            if (msgLen > mMsgBuffer.capacity()) {
+                try {
+                    mMsgBuffer.resize(msgLen);
+                } catch (const std::bad_alloc& e) {
+                    LOC_LOGe("Failed to allocate memory for message: %s", e.what());
+                    return -1;
+                }
+            }
             for (size_t msgLenReceived = 0; (msgLenReceived < msgLen) && (nBytes > 0);
                  msgLenReceived += nBytes) {
-                nBytes = ::recvfrom(sid, &(msg[msgLenReceived]), msg.size() - msgLenReceived,
-                                    flags, srcAddr, addrlen);
+                nBytes = ::recvfrom(sid, (void*)&(mMsgBuffer[msgLenReceived]),
+                        mMsgBuffer.size() - msgLenReceived, flags, srcAddr, addrlen);
             }
             if (nBytes > 0) {
                 nBytes = msgLen;
-                dataCb->onReceive(msg.data(), nBytes, &recver);
+                dataCb->onReceive(mMsgBuffer.data(), nBytes, &recver);
             }
         }
     }

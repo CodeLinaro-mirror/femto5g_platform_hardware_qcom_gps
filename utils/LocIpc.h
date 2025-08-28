@@ -232,19 +232,20 @@ class Sock {
     static const char MSG_ABORT[];
     static const char LOC_IPC_HEAD[];
     const uint32_t mMaxTxSize;
+    std::string mMsgBuffer;
     ssize_t sendto(const void *buf, size_t len, int flags, const struct sockaddr *destAddr,
                    socklen_t addrlen) const;
     ssize_t recvfrom(const LocIpcRecver& recver, const shared_ptr<ILocIpcListener>& dataCb,
-                     int sid, int flags, struct sockaddr *srcAddr, socklen_t *addrlen) const;
+                     int sid, int flags, struct sockaddr *srcAddr, socklen_t *addrlen);
 public:
     int mSid;
-    inline Sock(int sid, const uint32_t maxTxSize = 8192) : mMaxTxSize(maxTxSize), mSid(sid) {}
+    Sock(int sid, const uint32_t maxTxSize = 15360);
     inline ~Sock() { close(); }
     inline bool isValid() const { return -1 != mSid; }
     ssize_t send(const void *buf, size_t len, int flags, const struct sockaddr *destAddr,
                  socklen_t addrlen) const;
     ssize_t recv(const LocIpcRecver& recver, const shared_ptr<ILocIpcListener>& dataCb, int flags,
-                 struct sockaddr *srcAddr, socklen_t *addrlen, int sid = -1) const;
+                 struct sockaddr *srcAddr, socklen_t *addrlen, int sid = -1);
     ssize_t sendAbort(int flags, const struct sockaddr *destAddr, socklen_t addrlen);
     inline void close() {
         if (isValid()) {
