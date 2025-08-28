@@ -69,6 +69,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <log_util.h>
 #include <loc_pla.h>
 #include <loc_cfg.h>
+#include <loc_misc_utils.h>
 
 #define GLONASS_SV_ID_OFFSET 64
 #define SBAS_SV_ID_OFFSET    (87)
@@ -1136,6 +1137,25 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
             break;
         }
         // NOTE: Order of the check is important
+        if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_POS_TECH_MASK) {
+            if ((LOC_POS_TECH_MASK_SENSORS == locationExtended.tech_mask) ||
+                (LOC_POS_TECH_MASK_PROPAGATED & locationExtended.tech_mask)) {
+                ggaGpsQuality[0] = '6'; // 6 means estimated (dead reckoning)
+                rmcModeIndicator = 'E'; // E means estimated (dead reckoning)
+                vtgModeIndicator = 'E'; // E means estimated (dead reckoning)
+                memset(gnsModeIndicator, 'E', 6); // E means estimated (dead reckoning)
+                break;
+            }
+        }
+        // NOTE: Order of the check is important
+        if ((LOC_POS_TECH_MASK_SENSORS & locationExtended.tech_mask) ||
+                   (LOC_POS_TECH_MASK_PROPAGATED & locationExtended.tech_mask)){
+            ggaGpsQuality[0] = '6'; // 6 means estimated (dead reckoning)
+            rmcModeIndicator = 'E'; // E means estimated (dead reckoning)
+            vtgModeIndicator = 'E'; // E means estimated (dead reckoning)
+            memset(gnsModeIndicator, 'E', 6); // E means estimated (dead reckoning)
+            break;
+        }
         if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_NAV_SOLUTION_MASK) {
             if (LOC_NAV_MASK_PPP_CORRECTION & locationExtended.navSolutionMask) {
                 ggaGpsQuality[0] = '2';    // 2 means DGPS fix
@@ -1218,7 +1238,7 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
         }
         // NOTE: Order of the check is important
         if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_POS_TECH_MASK) {
-            if (LOC_POS_TECH_MASK_SATELLITE & locationExtended.tech_mask){
+            if (LOC_POS_TECH_MASK_SATELLITE & locationExtended.tech_mask) {
                 ggaGpsQuality[0] = '1'; // 1 means GPS
                 rmcModeIndicator = 'A'; // A means autonomous
                 vtgModeIndicator = 'A'; // A means autonomous
@@ -1232,17 +1252,6 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                     gnsModeIndicator[3] = 'A'; // A means autonomous
                 if(locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask ? 1 : 0)
                     gnsModeIndicator[4] = 'A'; // A means autonomous
-                break;
-            } else if ((LOC_POS_TECH_MASK_SENSORS & locationExtended.tech_mask) ||
-                       (LOC_POS_TECH_MASK_PROPAGATED & locationExtended.tech_mask)){
-                ggaGpsQuality[0] = '6'; // 6 means estimated (dead reckoning)
-                rmcModeIndicator = 'E'; // E means estimated (dead reckoning)
-                vtgModeIndicator = 'E'; // E means estimated (dead reckoning)
-                gnsModeIndicator[0] = 'E'; // E means estimated (dead reckoning)
-                gnsModeIndicator[1] = 'E'; // E means estimated (dead reckoning)
-                gnsModeIndicator[2] = 'E'; // E means estimated (dead reckoning)
-                gnsModeIndicator[3] = 'E'; // E means estimated (dead reckoning)
-                gnsModeIndicator[4] = 'E'; // E means estimated (dead reckoning)
                 break;
             }
         }
@@ -1339,11 +1348,11 @@ void loc_nmea_generate_pos(const UlpLocation &location,
     inLsTransition = get_utctime_with_leapsecond_transition
                     (location, locationExtended, systemInfo, utcPosTimestamp);
 
-    time_t utcTime(utcPosTimestamp/1000);
-    struct tm result;
-    tm * pTm = gmtime_r(&utcTime, &result);
+    int64_t utcTime = utcPosTimestamp/1000; // Pass UTC time in seconds
+    struct tm calendarTime = {};
+    tm * pTm = getCalendarTimeFields(&utcTime, &calendarTime);
     if (NULL == pTm) {
-        LOC_LOGE("gmtime failed");
+        LOC_LOGE("getCalendarTimeFields failed");
         return;
     }
 

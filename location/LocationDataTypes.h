@@ -351,6 +351,15 @@ typedef enum {
     LOCATION_CAPABILITIES_QWES_QDR3                         = (1<<26),
     // This mask indicates DGNSS license bundle is enabled.
     LOCATION_CAPABILITIES_QWES_DGNSS                        = (1<<27),
+    // This mask indicates Antenna info is enabled.
+    LOCATION_CAPABILITIES_ANTENNA_INFO                      = (1<<28),
+    // This mask indicates qppe or qfe library is presented.
+    LOCATION_CAPABILITIES_PRECISE_LIB_PRESENT               = (1<<29),
+    // This mask indicates modem 3GPP source is available.
+    LOCATION_CAPABILITIES_MODEM_3GPP_AVAIL                  = (1<<30),
+    // This mask indicates engine debug data enabled.
+    LOCATION_CAPABILITIES_ENGINE_DEBUG_DATA_BIT             = (1ULL<<31),
+    // support GNSS bands
     LOCATION_CAPABILITIES_GNSS_BANDS_BIT                    = (1ULL<<34)
 } LocationCapabilitiesBits;
 
@@ -1540,6 +1549,7 @@ typedef struct {
     uint32_t size;              // set to sizeof(GnssCapabilitiesNotification)
     uint32_t count;             // number of SVs in the gnssSignalType array
     GnssMeasurementsSignalType  gnssSignalType[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];
+    GnssSignalTypeMask gnssSupportedSignals; // GNSS Supported Signals
 } GnssCapabNotification;
 
 typedef uint32_t GnssSvId;
