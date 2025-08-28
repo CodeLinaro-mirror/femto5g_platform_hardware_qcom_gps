@@ -569,7 +569,9 @@ static loc_nmea_sv_meta* loc_nmea_sv_meta_init(loc_nmea_sv_meta& sv_meta,
             get_sv_count_from_mask(sv_cache_info.qzss_used_mask,
                     QZSS_SV_PRN_MAX - QZSS_SV_PRN_MIN + 1) +
             get_sv_count_from_mask(sv_cache_info.bds_used_mask,
-                    BDS_SV_PRN_MAX - BDS_SV_PRN_MIN + 1);
+                    BDS_SV_PRN_MAX - BDS_SV_PRN_MIN + 1) +
+            get_sv_count_from_mask(sv_cache_info.navic_used_mask,
+                    NAVIC_SV_PRN_MAX - NAVIC_SV_PRN_MIN + 1);
     if (needCombine &&
                 (sv_cache_info.gps_used_mask ? 1 : 0) +
                 (sv_cache_info.glo_used_mask ? 1 : 0) +
@@ -1129,7 +1131,7 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
     gnsModeIndicator[2] = 'N'; // galileo mode indicator
     gnsModeIndicator[3] = 'N'; // bds mode indicator
     gnsModeIndicator[4] = 'N'; // qzss mode indicator
-    gnsModeIndicator[5] = '\0'; // NavIC mode indicator, no need to output,
+    gnsModeIndicator[5] = 'N'; // NavIC mode indicator, no need to output,
                                 // as NavIC is not supported in location.lnx.4.0
     gnsModeIndicator[6] = '\0';
     do {
@@ -1147,15 +1149,7 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                 break;
             }
         }
-        // NOTE: Order of the check is important
-        if ((LOC_POS_TECH_MASK_SENSORS & locationExtended.tech_mask) ||
-                   (LOC_POS_TECH_MASK_PROPAGATED & locationExtended.tech_mask)){
-            ggaGpsQuality[0] = '6'; // 6 means estimated (dead reckoning)
-            rmcModeIndicator = 'E'; // E means estimated (dead reckoning)
-            vtgModeIndicator = 'E'; // E means estimated (dead reckoning)
-            memset(gnsModeIndicator, 'E', 6); // E means estimated (dead reckoning)
-            break;
-        }
+
         if (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_NAV_SOLUTION_MASK) {
             if (LOC_NAV_MASK_PPP_CORRECTION & locationExtended.navSolutionMask) {
                 ggaGpsQuality[0] = '2';    // 2 means DGPS fix
@@ -1171,6 +1165,8 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                     gnsModeIndicator[3] = 'P'; // P means precise
                 if(locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask ? 1 : 0)
                     gnsModeIndicator[4] = 'P'; // P means precise
+                if(locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask ? 1 : 0)
+                    gnsModeIndicator[5] = 'P'; // P means precise
                 break;
             } else if (LOC_NAV_MASK_RTK_FIXED_CORRECTION & locationExtended.navSolutionMask){
                 ggaGpsQuality[0] = '4';    // 4 means RTK Fixed fix
@@ -1187,6 +1183,8 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                     gnsModeIndicator[3] = 'R'; // R means RTK fixed
                 if(locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask ? 1 : 0)
                     gnsModeIndicator[4] = 'R'; // R means RTK fixed
+                if(locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask ? 1 : 0)
+                    gnsModeIndicator[5] = 'R'; // R means RTK fixed
                 break;
             } else if (LOC_NAV_MASK_RTK_CORRECTION & locationExtended.navSolutionMask){
                 ggaGpsQuality[0] = '5';    // 5 means RTK float fix
@@ -1203,6 +1201,8 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                     gnsModeIndicator[3] = 'F'; // F means RTK float fix
                 if(locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask ? 1 : 0)
                     gnsModeIndicator[4] = 'F'; // F means RTK float fix
+                if(locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask ? 1 : 0)
+                    gnsModeIndicator[5] = 'F'; // F means RTK float fix
                 break;
             } else if (LOC_NAV_MASK_DGNSS_CORRECTION & locationExtended.navSolutionMask){
                 ggaGpsQuality[0] = '2';    // 2 means DGPS fix
@@ -1218,7 +1218,9 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                     gnsModeIndicator[3] = 'D'; // D means differential
                 if(locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask ? 1 : 0)
                     gnsModeIndicator[4] = 'D'; // D means differential
-                break;
+                if(locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask ? 1 : 0)
+                    gnsModeIndicator[5] = 'D'; // D means differential
+               break;
             } else if (LOC_NAV_MASK_SBAS_CORRECTION_IONO & locationExtended.navSolutionMask){
                 ggaGpsQuality[0] = '2';    // 2 means DGPS fix
                 rmcModeIndicator = 'D'; // D means differential
@@ -1233,6 +1235,8 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                     gnsModeIndicator[3] = 'D'; // D means differential
                 if(locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask ? 1 : 0)
                     gnsModeIndicator[4] = 'D'; // D means differential
+                if(locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask ? 1 : 0)
+                    gnsModeIndicator[5] = 'D'; // D means differential
                 break;
             }
         }
@@ -1252,6 +1256,8 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                     gnsModeIndicator[3] = 'A'; // A means autonomous
                 if(locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask ? 1 : 0)
                     gnsModeIndicator[4] = 'A'; // A means autonomous
+                if(locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask ? 1 : 0)
+                    gnsModeIndicator[5] = 'A'; // A means autonomous
                 break;
             }
         }
@@ -1410,6 +1416,8 @@ void loc_nmea_generate_pos(const UlpLocation &location,
                 locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask;
         sv_cache_info.qzss_used_mask =
                 locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask;
+        sv_cache_info.navic_used_mask =
+                locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask;
     }
     // Generate valid NMEA strings only when utc Time stamp is set
     // Output empty nmea sentence if utctime is zero
@@ -1521,6 +1529,19 @@ void loc_nmea_generate_pos(const UlpLocation &location,
                 talker[1] = sv_meta.talker[1];
             }
 
+            // --------------------------
+            // ---$GIGSA/$GNGSA (NavIC)---
+            // --------------------------
+            count = loc_nmea_generate_GSA(location, locationExtended, sentence, sizeof(sentence),
+                            loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_NAVIC,
+                            GNSS_SIGNAL_NAVIC_L5, true), nmeaArraystr);
+            if (count > 0)
+            {
+                svUsedCount += count;
+                talker[0] = sv_meta.talker[0];
+                talker[1] = sv_meta.talker[1];
+            }
+
             // if svUsedCount is 0 and teckMask include GNSS, it means we do not generate any GSA
             // sentence yet. in this case, generate an empty GSA sentence
             if (svUsedCount == 0 && (locationExtended.tech_mask & techMaskGnss)) {
@@ -1538,7 +1559,7 @@ void loc_nmea_generate_pos(const UlpLocation &location,
         char ggaGpsQuality[3] = {'0', '\0', '\0'};
         char rmcModeIndicator = 'N';
         char vtgModeIndicator = 'N';
-        char gnsModeIndicator[7] = {'N', 'N', 'N', 'N', 'N', '\0', '\0'};
+        char gnsModeIndicator[7] = {'N', 'N', 'N', 'N', 'N', 'N', '\0'};
         loc_nmea_get_fix_quality(location, locationExtended, custom_gga_fix_quality,
                                  ggaGpsQuality, rmcModeIndicator, vtgModeIndicator, gnsModeIndicator);
 
