@@ -462,3 +462,38 @@ int loc_read_conf_r_long(FILE *conf_fp, const loc_param_s_type config_table[],
 
    return result;
 }
+
+// if process was launched by prop vendor.qti.izat.<proc-name>, always allow restart;
+// if process was launched due to crash/kill, check numofrestart prop to allow at most 5 times of
+// recover.
+bool isProcessRestartAllowed(const char* procName) {
+    std::string propertyName = std::string(IZAT_PROPERTY_PREFIX) + procName;
+    std::string counterProp = propertyName + "_numofrestart";
+    std::string triggerProp = propertyName + "_trigger";
+    char prop_value[PROPERTY_VALUE_MAX] = {'\0'};
+
+    // get the numofrestart property of process
+    property_get(counterProp.c_str(), prop_value, "0");
+    int restartCount = std::stoi(prop_value);
+    // get the trigger property of process.
+    property_get(triggerProp.c_str(), prop_value, "");
+    LOC_LOGd("property %s is %d, property %s is %s",
+            counterProp.c_str(), restartCount, triggerProp.c_str(), prop_value);
+    // launch by prop vendor.qti.izat.<proc-name>, N/A for restart counter
+    if (std::string(prop_value) == "property") {
+        property_set(triggerProp.c_str(), "");
+    } else {
+    // launch by process crash. enforce to restart 5 times at most
+        ++restartCount;
+        if (restartCount > 5) {
+            LOC_LOGd("Restart limit reached");
+            // set property disabled to prevent restart
+            property_set(propertyName.c_str(), "disabled");
+            return false;
+        }
+        std::string newPropValue = std::to_string(restartCount);
+        property_set(counterProp.c_str(), newPropValue.c_str());
+        LOC_LOGd("property %s update as %d", counterProp.c_str(), restartCount);
+    }
+    return true;
+}
