@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -2331,6 +2331,7 @@ struct GnssDcReportInfo {
 // Specify the set of terrestrial technologies
 enum TerrestrialTechMask {
     TERRESTRIAL_TECH_GTP_WWAN = 1 << 0,
+    TERRESTRIAL_TECH_GTP_WIFI = 1 << 1,
 };
 
 // Specify parameters related to lever arm
