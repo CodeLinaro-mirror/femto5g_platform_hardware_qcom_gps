@@ -28,7 +28,7 @@
  */
 
 /*
- * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Changes from Qualcomm Innovation Center are provided under the following license:
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
@@ -73,6 +73,10 @@
 #define NMEA_MAX_THRESHOLD_MSEC (975)
 
 #define DGNSS_RANGE_UPDATE_TIME_10MIN_IN_SEC  600
+
+// Modem E-911 callflow will not accept CPI injection with horizontal unc
+// more than 200 meters of 90% confidence, which is 136.0 meters of 68% confidence
+#define E_911_LOC_ACCURACY_THRESHOLD_IN_METERS   136.0f
 
 using namespace loc_core;
 
@@ -182,6 +186,7 @@ GnssAdapter::GnssAdapter() :
     mCdfwInterface(nullptr),
     mDGnssNeedReport(false),
     mDGnssDataUsage(false),
+    mInEmergency(false),
     mOdcpiStateMask(0),
     mCallbackPriority(OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_LOW),
     mOdcpiTimer(this),
@@ -3098,6 +3103,7 @@ GnssAdapter::updateClientsEventMask()
         }
         if (it->second.gnssMeasurementsCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT;
+            mask |= LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT;
             if (nullptr != mPowerIndicationCb) {
                 /* If power reporting is requested this implies Android 'S' or higher,
                    meaning we need to enable poly message (necessary for satellite
@@ -3109,6 +3115,7 @@ GnssAdapter::updateClientsEventMask()
         }
         if (it->second.gnssNHzMeasurementsCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT;
+            mask |= LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT;
         }
         if (it->second.gnssDataCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_PARSED_POSITION_REPORT;
@@ -4365,8 +4372,8 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
         GnssAdapter& mAdapter;
         mutable UlpLocation mUlpLocation;
         mutable GpsLocationExtended mLocationExtended;
-        enum loc_sess_status mStatus;
-        LocPosTechMask mTechMask;
+        mutable enum loc_sess_status mStatus;
+        mutable LocPosTechMask mTechMask;
         mutable GnssDataNotification mDataNotify;
         int mMsInWeek;
 
@@ -4391,6 +4398,54 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
                 LOC_LOGD("MsgReportSPEPosition, no session on-going, "
                          "throw away the SPE reports");
                 return;
+            }
+
+            // In E911-MSA case when Modem doesn't support concurrency, we will observe
+            // fix failures. So, in this we need to use the best available zpp fix from Modem.
+            if (mAdapter.mInEmergency && (LOC_SESS_FAILURE == mStatus)) {
+                float vertUnc = -1;
+                memset(&mLocationExtended, 0, sizeof(mLocationExtended));
+                mLocationExtended.size = sizeof(mLocationExtended);
+                LOC_LOGd("E911-MSA case");
+
+                if (mAdapter.mLocApi->getBestAvailableZppFixSync(mUlpLocation.gpsLocation,
+                                                        mTechMask, &vertUnc)) {
+                    if ((mUlpLocation.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG) &&
+                        (mUlpLocation.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ACCURACY)) {
+
+                        if ((mUlpLocation.gpsLocation.accuracy <=
+                                E_911_LOC_ACCURACY_THRESHOLD_IN_METERS) &&
+                            (mTechMask &
+                                (LOC_POS_TECH_MASK_SATELLITE | LOC_POS_TECH_MASK_SENSORS))) {
+                            mStatus = LOC_SESS_SUCCESS;
+                        }
+                        else {
+                            mStatus = LOC_SESS_INTERMEDIATE;
+                        }
+                        if (-1 != vertUnc) {
+                            mLocationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_VERT_UNC;
+                            mLocationExtended.vert_unc = vertUnc;
+                        }
+
+                        LOC_LOGd("zpp loc flags: %u, latitude: %f, longitude: %f, hor acc: %f,"
+                                 "altitude: %f, extended loc flags: %" PRIu64 ", vertUnc: %f,"
+                                 "techMask: %u, timestamp: %" PRId64,
+                                 mUlpLocation.gpsLocation.flags,
+                                 mUlpLocation.gpsLocation.latitude,
+                                 mUlpLocation.gpsLocation.longitude,
+                                 mUlpLocation.gpsLocation.accuracy,
+                                 mUlpLocation.gpsLocation.altitude,
+                                 mLocationExtended.flags, mLocationExtended.vert_unc,
+                                 mTechMask, mUlpLocation.gpsLocation.timestamp);
+                    }
+                    else {
+                        mStatus = LOC_SESS_FAILURE;
+                        LOC_LOGe("zpp fix doesn't have lat, long and accuracy fields");
+                    }
+                }
+                else {
+                    LOC_LOGe("Error getting best available zpp fix");
+                }
             }
 
             if (mDataNotify.size != 0) {
@@ -5933,6 +5988,7 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
         // so the mOdcpiTimer helps avoid spamming the framework as well as
         // extending the odcpi session past 30 seconds if needed
         if (ODCPI_REQUEST_TYPE_START == request.type) {
+            mInEmergency = request.isEmergencyMode;
             if (!(mOdcpiStateMask & ODCPI_REQ_ACTIVE)  && false == mOdcpiTimer.isActive()) {
                 fireOdcpiRequest(request);
                 mOdcpiStateMask |= ODCPI_REQ_ACTIVE;
@@ -6353,6 +6409,7 @@ void GnssAdapter::odcpiTimerExpire()
         fireOdcpiRequest(mOdcpiRequest);
         mOdcpiTimer.restart();
     } else {
+        mInEmergency = false;
         mOdcpiTimer.stop();
     }
 }

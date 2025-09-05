@@ -28,7 +28,7 @@
  */
 
 /*
- * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Changes from Qualcomm Innovation Center are provided under the following license:
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
@@ -790,6 +790,10 @@ DEFAULT_IMPL()
 void LocApiBase::
    getBestAvailableZppFix()
 DEFAULT_IMPL()
+
+bool LocApiBase::
+   getBestAvailableZppFixSync(LocGpsLocation &zppLoc, LocPosTechMask &tech_mask, float* vertUnc)
+DEFAULT_IMPL(false)
 
 LocationError LocApiBase::
     setGpsLockSync(GnssConfigGpsLock /*lock*/)
