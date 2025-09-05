@@ -588,11 +588,6 @@ void SystemStatus::destroyInstance()
     mInstance = NULL;
 }
 
-void SystemStatus::resetNetworkInfo() {
-    // Reset all the cached NetworkInfo Items as disconnected
-    mSysStatusObsvr->eventConnectionStatus(false, 0, false, 0, "");
-}
-
 SystemStatusOsObserver* SystemStatus::getOsObserver()
 {
     return mSysStatusObsvr;

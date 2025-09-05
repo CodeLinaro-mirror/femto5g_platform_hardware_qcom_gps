@@ -108,19 +108,9 @@ struct LocTimezoneInfo {
 
 // WiFi supplicant info data structure
 enum WifiSupplicantState {
+    OTHER_STATE,                /* state that is neither DISCONNECTED nor COMPLETED */
     DISCONNECTED,
-    INTERFACE_DISABLED,
-    INACTIVE,
-    SCANNING,
-    AUTHENTICATING,
-    ASSOCIATING,
-    ASSOCIATED,
-    FOUR_WAY_HANDSHAKE,
-    GROUP_HANDSHAKE,
-    COMPLETED,
-    DORMANT,
-    UNINITIALIZED,
-    INVALID
+    COMPLETED
 };
 
 #define MAC_ADDRESS_LENGTH    6
@@ -372,7 +362,7 @@ public:
 class WifiSupplicantStatusDataItem: public IDataItemCore {
 public:
     WifiSupplicantStatusDataItem(
-        const LocWifiSupplicantInfo& info = {INVALID, false, "", false, ""}) :
+        const LocWifiSupplicantInfo& info = {OTHER_STATE, false, "", false, ""}) :
             mWifiSupplicantInfo(info) {
         mId = WIFI_SUPPLICANT_STATUS_DATA_ITEM_ID;
         mName = WIFI_SUPPLICANT_STATUS_CARD;
