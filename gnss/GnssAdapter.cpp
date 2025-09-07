@@ -72,6 +72,10 @@
 #define DGNSS_RANGE_UPDATE_TIME_10MIN_IN_SEC  600
 #define GPS_LOCATION_DESIRED_FLAGS (LOC_GPS_LOCATION_HAS_LAT_LONG | LOC_GPS_LOCATION_HAS_ACCURACY)
 
+// Modem E-911 callflow will not accept CPI injection with horizontal unc
+// more than 200 meters of 90% confidence, which is 136.0 meters of 68% confidence
+#define E_911_LOC_ACCURACY_THRESHOLD_IN_METERS   136.0f
+
 using namespace loc_core;
 static int loadEngHubForExternalEngine = 0;
 static int loadLocSlatePUNCModel = 0;
@@ -636,8 +640,6 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
                 if (gptpTimeValid) {
                     out.location.flags |= LOCATION_HAS_GPTP_TIME_BIT;
                     out.location.elapsedgPTPTime = elapsedgPTPTimeNsec;
-                    out.location.flags |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
-                    out.location.elapsedgPTPTimeUnc = 0;
                 }
             }
         }
@@ -3398,11 +3400,22 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                     }
                     LOC_LOGd("Updated UNKNOWN SUPL mode to %d", mOptions.mode);
                 }
+                // On LE/OWRT, when PPE or DRE is enabled, set precise type to RTK
+#ifdef USE_GLIB
+                if (ContextBase::mIzat_process_conf.engineServiceInfo.dreIntEnabled ||
+                    ContextBase::mIzat_process_conf.engineServiceInfo.ppeEnabled) {
+                    mOptions.preciseType = PRECISE_TYPE_RTK;
+                }
+#endif
                 LOC_LOGd("Updated min Interval: %u, nHzEnabled: %s, emergency: %d mode: %u, "
-                        "agps : %d, SUPL_MODE: %d",
+                        "agps : %d, SUPL_MODE: %d, ppeEnabled: %d, dreIntEnabled: %d,"
+                        "preciseType: %d",
                         mOptions.minInterval, nHzStatus ? "true" : "false", mAdapter.mInEmergency,
                         mOptions.mode, mAdapter.isAssistedGpsEnabled(),
-                        ContextBase::mGps_conf.SUPL_MODE);
+                        ContextBase::mGps_conf.SUPL_MODE,
+                        ContextBase::mIzat_process_conf.engineServiceInfo.ppeEnabled,
+                        ContextBase::mIzat_process_conf.engineServiceInfo.dreIntEnabled,
+                        mOptions.preciseType);
 
                 // Api doesn't support multiple clients for time based tracking, so mutiplex
                 bool reportToClientWithNoWait =
@@ -4112,8 +4125,8 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
         GnssAdapter& mAdapter;
         mutable UlpLocation mUlpLocation;
         mutable GpsLocationExtended mLocationExtended;
-        enum loc_sess_status mStatus;
-        LocPosTechMask mTechMask;
+        mutable enum loc_sess_status mStatus;
+        mutable LocPosTechMask mTechMask;
         mutable GnssDataNotification mDataNotify;
 
         inline MsgReportSPEPosition(GnssAdapter& adapter,
@@ -4134,6 +4147,54 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
                 LOC_LOGD("MsgReportSPEPosition, no session on-going, "
                          "throw away the SPE reports");
                 return;
+            }
+
+            // In E911-MSA case when Modem doesn't support concurrency, we will observe
+            // fix failures. So, in this we need to use the best available zpp fix from Modem.
+            if (mAdapter.mInEmergency && (LOC_SESS_FAILURE == mStatus)) {
+                float vertUnc = -1;
+                memset(&mLocationExtended, 0, sizeof(mLocationExtended));
+                mLocationExtended.size = sizeof(mLocationExtended);
+                LOC_LOGd("E911-MSA case");
+
+                if (mAdapter.mLocApi->getBestAvailableZppFixSync(mUlpLocation.gpsLocation,
+                                                        mTechMask, &vertUnc)) {
+                    if ((mUlpLocation.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG) &&
+                        (mUlpLocation.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ACCURACY)) {
+
+                        if ((mUlpLocation.gpsLocation.accuracy <=
+                                E_911_LOC_ACCURACY_THRESHOLD_IN_METERS) &&
+                            (mTechMask &
+                                (LOC_POS_TECH_MASK_SATELLITE | LOC_POS_TECH_MASK_SENSORS))) {
+                            mStatus = LOC_SESS_SUCCESS;
+                        }
+                        else {
+                            mStatus = LOC_SESS_INTERMEDIATE;
+                        }
+                        if (-1 != vertUnc) {
+                            mLocationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_VERT_UNC;
+                            mLocationExtended.vert_unc = vertUnc;
+                        }
+
+                        LOC_LOGd("zpp loc flags: %u, latitude: %f, longitude: %f, hor acc: %f,"
+                                 "altitude: %f, extended loc flags: %" PRIu64 ", vertUnc: %f,"
+                                 "techMask: %u, timestamp: %" PRId64,
+                                 mUlpLocation.gpsLocation.flags,
+                                 mUlpLocation.gpsLocation.latitude,
+                                 mUlpLocation.gpsLocation.longitude,
+                                 mUlpLocation.gpsLocation.accuracy,
+                                 mUlpLocation.gpsLocation.altitude,
+                                 mLocationExtended.flags, mLocationExtended.vert_unc,
+                                 mTechMask, mUlpLocation.gpsLocation.timestamp);
+                    }
+                    else {
+                        mStatus = LOC_SESS_FAILURE;
+                        LOC_LOGe("zpp fix doesn't have lat, long and accuracy fields");
+                    }
+                }
+                else {
+                    LOC_LOGe("Error getting best available zpp fix");
+                }
             }
 
             if (mDataNotify.size != 0) {
@@ -5230,8 +5291,6 @@ GnssAdapter::reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurement
         }
 
         inline virtual void proc() const {
-            mAdapter.mPositionElapsedRealTimeCal.saveGpsTimeAndQtimerPairInMeasReport(
-                    mGnssMeasurements.gnssSvMeasurementSet);
             mAdapter.fillElapsedRealTimeForMeas(mGnssMeasurements);
             mAdapter.reportGnssMeasurementData(mGnssMeasurements.gnssMeasNotification);
             if ((false == mGnssMeasurements.gnssSvMeasurementSet.isNhz) &&
@@ -5795,6 +5854,14 @@ bool GnssAdapter::reportQwesCapabilities(
             if (ppeInFeatureMap != mFeatureMap.end() || qfeInFeatureMap != mFeatureMap.end()) {
                 if ((ppeInFeatureMap != mFeatureMap.end() && ppeInFeatureMap->second) ||
                         (qfeInFeatureMap != mFeatureMap.end() && qfeInFeatureMap->second)) {
+                    // when DLP feature is enabled and the session is precise session, stop the
+                    // current tracking session, and then restart the session to apply the updated
+                    // configurations
+                    if (!(mAdapter.mPpFeatureStatusMask & DLP_FEATURE_ENABLED_BY_DEFAULT) &&
+                            mAdapter.isPreciseSession()) {
+                        mAdapter.stopTracking();
+                        mAdapter.restartSessions();
+                    }
                     mAdapter.mPpFeatureStatusMask |= DLP_FEATURE_ENABLED_BY_DEFAULT;
                     mAdapter.notifyPreciseLocation();
                 } else {
@@ -7337,12 +7404,9 @@ void GnssAdapter::configRobustLocation() {
             enable = false;
             enableFor911 = mLocConfigInfo.robustLocationConfigInfo.enableFor911;
         }
-    } else {
-        enable = false;
-        enableFor911 = false;
-    }
 
-    mLocApi->configRobustLocation(enable, enableFor911, nullptr, true);
+        mLocApi->configRobustLocation(enable, enableFor911, nullptr, true);
+    }
 }
 
 uint32_t GnssAdapter::configRobustLocationCommand(
@@ -7368,8 +7432,12 @@ uint32_t GnssAdapter::configRobustLocationCommand(
             mEnable(enable),
             mEnableForE911(enableForE911) {}
         inline virtual void proc() const {
-            mAdapter.configRobustLocation(mEnable, mEnableForE911);
-            mAdapter.reportResponse(LOCATION_ERROR_SUCCESS, mSessionId);
+            LocationError err = LOCATION_ERROR_NOT_SUPPORTED;
+            if (mAdapter.mRlFeatureQwesEnabled) {
+                err = LOCATION_ERROR_SUCCESS;
+                mAdapter.configRobustLocation(mEnable, mEnableForE911);
+            }
+            mAdapter.reportResponse(err, mSessionId);
         }
     };
 
