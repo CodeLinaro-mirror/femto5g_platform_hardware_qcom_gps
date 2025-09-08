@@ -111,14 +111,11 @@ void LocAdapterBase::
     reportPositionEvent(const UlpLocation& location,
                         const GpsLocationExtended& locationExtended,
                         enum loc_sess_status status,
-                        LocPosTechMask loc_technology_mask,
-                        GnssDataNotification* pDataNotify)
+                        LocPosTechMask loc_technology_mask)
 {
     if (mLocAdapterProxyBase != NULL) {
-        mLocAdapterProxyBase->reportPositionEvent((UlpLocation&)location,
-                                                   (GpsLocationExtended&)locationExtended,
-                                                   status,
-                                                   loc_technology_mask);
+        mLocAdapterProxyBase->reportPositionEvent(location, locationExtended, status,
+                                                  loc_technology_mask);
     } else {
         DEFAULT_IMPL()
     }
@@ -223,13 +220,6 @@ DEFAULT_IMPL()
 
 void
 LocAdapterBase::reportBatchStatusChangeEvent(BatchingStatus /*batchStatus*/)
-DEFAULT_IMPL()
-
-void
-LocAdapterBase::reportPositionEvent(UlpLocation& /*location*/,
-                                    GpsLocationExtended& /*locationExtended*/,
-                                    enum loc_sess_status /*status*/,
-                                    LocPosTechMask /*loc_technology_mask*/)
 DEFAULT_IMPL()
 
 void

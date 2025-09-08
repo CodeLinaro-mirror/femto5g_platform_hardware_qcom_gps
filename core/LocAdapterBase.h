@@ -176,8 +176,7 @@ public:
     virtual void reportPositionEvent(const UlpLocation& location,
                                      const GpsLocationExtended& locationExtended,
                                      enum loc_sess_status status,
-                                     LocPosTechMask loc_technology_mask,
-                                     GnssDataNotification* pDataNotify = nullptr);
+                                     LocPosTechMask loc_technology_mask);
     virtual void reportSvEvent(const GnssSvNotification& svNotify);
     virtual void reportDataEvent(const GnssDataNotification& dataNotify);
     virtual void reportNmeaEvent(const char* nmea, size_t length);
@@ -207,11 +206,6 @@ public:
     virtual void geofenceBreachEvent(size_t count, uint32_t* hwIds, Location& location,
                                      GeofenceBreachType breachType, uint64_t timestamp);
     virtual void geofenceStatusEvent(GeofenceStatusAvailable available);
-
-    virtual void reportPositionEvent(UlpLocation &location,
-                                     GpsLocationExtended &locationExtended,
-                                     enum loc_sess_status status,
-                                     LocPosTechMask loc_technology_mask);
 
     virtual void reportLocationsEvent(const Location* locations, size_t count);
     virtual void reportBatchStatusChangeEvent(BatchingStatus batchStatus);
