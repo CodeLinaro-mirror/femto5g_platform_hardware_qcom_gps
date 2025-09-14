@@ -297,7 +297,6 @@ typedef void (* loc_gps_request_utc_time)();
  */
 typedef pthread_t (* loc_gps_create_thread)(const char* name, void (*start)(void *), void* arg);
 
-typedef void (* loc_gps_xtra_download_request)();
 
 /*
  * Represents the status of AGPS augmented to support IPv4 and IPv6.
