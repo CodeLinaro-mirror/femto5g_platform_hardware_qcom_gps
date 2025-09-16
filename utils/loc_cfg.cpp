@@ -27,10 +27,10 @@
  *
  */
 /*
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_utils_cfg"
@@ -177,8 +177,9 @@ void free_conf_pair(ConfPair& pair) {
 // including name and value pair for all config items and file name
 // for the conf file
 void free_conf_file(ConfFile* confFile) {
-   LOC_LOGd("%s, cached %d", confFile->filename, confFile->cached);
-   if (confFile && !confFile->cached) {
+   if (confFile) {
+      LOC_LOGd("%s, cached %d", confFile->filename, confFile->cached);
+      if (!confFile->cached) {
       for (ConfPair pair : confFile->confPairs) {
          free_conf_pair(pair);
       }
@@ -187,6 +188,7 @@ void free_conf_file(ConfFile* confFile) {
          confFile->filename = NULL;
       }
       delete confFile;
+      }
    }
 }
 
@@ -373,7 +375,8 @@ void loc_read_gps_conf_default() {
    }
 
    uint32_t table_size = sizeof(gps_default_param_table) / sizeof(loc_param_s_type);
-   loc_read_conf(LOC_PATH_GPS_CONF, gps_default_param_table, table_size, LOC_MAX_PARAM_LINE);
+   loc_read_conf_long(LOC_PATH_GPS_CONF, gps_default_param_table,
+                      table_size, LOC_MAX_PARAM_LINE);
 
    QxdmF3 qxdmF3 = nullptr;
    if (sQxdmLogEnabled) {
@@ -397,10 +400,10 @@ void loc_read_gps_conf_default() {
    log_tag_level_map_init();
 }
 
-void loc_read_conf(const char* conf_file_name,
-                   const loc_param_s_type config_table[],
-                   uint32_t table_length,
-                   uint16_t string_len)
+void loc_read_conf_long(const char* conf_file_name,
+                        const loc_param_s_type config_table[],
+                        uint32_t table_length,
+                        uint16_t string_len)
 {
    ConfFile* confFile = NULL;
 

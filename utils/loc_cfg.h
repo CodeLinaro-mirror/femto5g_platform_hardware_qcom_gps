@@ -27,10 +27,10 @@
  *
  */
 /*
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022, 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
 #ifndef LOC_CFG_H
 #define LOC_CFG_H
@@ -52,13 +52,13 @@
     loc_read_gps_conf_default();
 
 #define UTIL_READ_CONF(filename, config_table) \
-    loc_read_conf((filename), config_table, \
-                   sizeof(config_table) / sizeof(config_table[0]),\
-                   LOC_MAX_PARAM_LINE)
+    loc_read_conf_long((filename), config_table, \
+                        sizeof(config_table) / sizeof(config_table[0]),\
+                        LOC_MAX_PARAM_LINE)
 
 #define UTIL_READ_CONF_LONG(filename, config_table, rec_len) \
-    loc_read_conf((filename), config_table, \
-                   sizeof(config_table) / sizeof(config_table[0]), rec_len)
+    loc_read_conf_long((filename), config_table, \
+                        sizeof(config_table) / sizeof(config_table[0]), rec_len)
 
 /*=============================================================================
  *
@@ -110,8 +110,8 @@ void loc_cache_conf_file(const char* file_name, uint16_t max_line_len);
 // fill in the default conf entries from gps.conf regarding DEBUG level
 void loc_read_gps_conf_default();
 // fill up the conf entries from the conf file
-void loc_read_conf(const char* file_name, const loc_param_s_type config_table[],
-                   uint32_t table_length, uint16_t max_line_len);
+void loc_read_conf_long(const char* file_name, const loc_param_s_type config_table[],
+                        uint32_t table_length, uint16_t max_line_len);
 // used to fill up entries recursively
 int loc_read_conf_r_long(FILE *conf_fp, const loc_param_s_type config_table[],
                          uint32_t table_length, uint16_t string_len);
