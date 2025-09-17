@@ -3672,8 +3672,8 @@ GnssAdapter::updateTrackingOptionsCommand(LocationAPI* client, uint32_t id,
                             mOptions.tbm, TRACKING_TBM_THRESHOLD_MILLIS);
                     mOptions.powerMode = GNSS_POWER_MODE_M2;
                 }
-                if (mOptions.minInterval < MIN_TRACKING_INTERVAL) {
-                    mOptions.minInterval = MIN_TRACKING_INTERVAL;
+                if (mOptions.minInterval < MIN_TRACKING_INTERVAL_10HZ) {
+                    mOptions.minInterval = MIN_TRACKING_INTERVAL_10HZ;
                 }
                 // Now update session as required
                 if (isTimeBased && mOptions.minDistance > 0) {
