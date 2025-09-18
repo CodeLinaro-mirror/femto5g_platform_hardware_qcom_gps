@@ -1540,6 +1540,7 @@ typedef struct {
     uint32_t size;              // set to sizeof(GnssCapabilitiesNotification)
     uint32_t count;             // number of SVs in the gnssSignalType array
     GnssMeasurementsSignalType  gnssSignalType[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];
+    GnssSignalTypeMask gnssSupportedSignals; // GNSS Supported Signals
 } GnssCapabNotification;
 
 typedef uint32_t GnssSvId;
@@ -1559,6 +1560,10 @@ inline bool operator ==(GnssSvIdSource const& left, GnssSvIdSource const& right)
 #define GNSS_SV_CONFIG_ALL_BITS_ENABLED_MASK ((uint64_t)0xFFFFFFFFFFFFFFFF)
 struct GnssSvIdConfig {
     uint32_t size; // set to sizeof(GnssSvIdConfig)
+
+    // GPS - SV 1 maps to bit 0
+#define GNSS_SV_CONFIG_GPS_INITIAL_SV_ID 1
+    uint64_t gpsBlacklistSvMask;
 
     // GLONASS - SV 65 maps to bit 0
 #define GNSS_SV_CONFIG_GLO_INITIAL_SV_ID 65
@@ -1589,6 +1594,7 @@ struct GnssSvIdConfig {
 
     inline bool equals(const GnssSvIdConfig& inConfig) {
         if ((inConfig.size == size) &&
+                (inConfig.gpsBlacklistSvMask == gpsBlacklistSvMask) &&
                 (inConfig.gloBlacklistSvMask == gloBlacklistSvMask) &&
                 (inConfig.bdsBlacklistSvMask == bdsBlacklistSvMask) &&
                 (inConfig.qzssBlacklistSvMask == qzssBlacklistSvMask) &&
