@@ -471,6 +471,9 @@ public:
     void configMinGpsWeek(uint32_t sessionId, uint16_t minGpsWeek);
     inline bool isSS5HWEnabled()
     { return ((mContext != NULL) && (IS_SS5_HW_ENABLED == mContext->mGps_conf.GNSS_DEPLOYMENT)); }
+    inline bool isFIDLIfEnabled()
+    { return ((mContext != NULL) && (IS_FIDL_ENABLED == mContext->mGps_conf.GNSS_DEPLOYMENT)); }
+
 
     /* ==== NI ============================================================================= */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
