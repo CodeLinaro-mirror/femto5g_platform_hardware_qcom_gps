@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -622,6 +622,10 @@ void LocApiBase::reportLatencyInfo(GnssLatencyInfo& gnssLatencyInfo)
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportLatencyInfoEvent(gnssLatencyInfo));
 }
 
+void LocApiBase::reportEngDebugDataInfo(GnssEngineDebugDataInfo& gnssEngineDebugDataInfo) {
+    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportEngDebugDataInfoEvent(gnssEngineDebugDataInfo));
+}
+
 enum loc_api_adapter_err LocApiBase::
    open(LOC_API_ADAPTER_EVENT_MASK_T /*mask*/)
 DEFAULT_IMPL(LOC_API_ADAPTER_ERR_SUCCESS)
@@ -931,29 +935,6 @@ void ElapsedRealtimeEstimator::saveGpsTimeAndQtimerPairInPvtReport(
     }
 }
 
-void ElapsedRealtimeEstimator::saveGpsTimeAndQtimerPairInMeasReport(
-        const GnssSvMeasurementSet& svMeasurementSet) {
-
-    const GnssSvMeasurementHeader& svMeasSetHeader = svMeasurementSet.svMeasSetHeader;
-
-    // Use 1Hz measurement report timestamp and qtimer tick for association
-    if ((svMeasurementSet.isNhz == false) &&
-            (svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_GPS_SYSTEM_TIME) &&
-            (svMeasSetHeader.gpsSystemTime.hasAccurateTime() == true) &&
-            (svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS) &&
-            (svMeasurementSet.svMeasSetHeader.refCountTicks != 0) &&
-            (svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS_UNC) &&
-            (svMeasurementSet.svMeasSetHeader.refCountTicksUnc != 0.0f)) {
-        LOC_LOGv("save time association from meas report with gps time %u %u",
-                 svMeasSetHeader.gpsSystemTime.systemWeek,
-                 svMeasSetHeader.gpsSystemTime.systemMsec);
-            mTimePairMeasReport.gpsTime.gpsWeek = svMeasSetHeader.gpsSystemTime.systemWeek;
-            mTimePairMeasReport.gpsTime.gpsTimeOfWeekMs = svMeasSetHeader.gpsSystemTime.systemMsec;
-            mTimePairMeasReport.qtimerTick = svMeasurementSet.svMeasSetHeader.refCountTicks;
-            mTimePairMeasReport.timeUncMsec = svMeasurementSet.svMeasSetHeader.refCountTicksUnc;
-        }
-    }
-
 bool ElapsedRealtimeEstimator::getElapsedRealtimeForGpsTime(
         const GpsLocationExtended& locationExtended,
         int64_t &bootTimeNsAtOrigin, float & bootTimeUnc) {
@@ -965,11 +946,8 @@ bool ElapsedRealtimeEstimator::getElapsedRealtimeForGpsTime(
     GpsTimeQtimerTickPair timePair;
 
     // We have valid association
-    if (mTimePairMeasReport.gpsTime.gpsWeek != 0) {
-        timePair = mTimePairMeasReport;
-        LOC_LOGv("user meas time association");
-    } else if (mTimePairPVTReport.gpsTime.gpsWeek != 0) {
-        LOC_LOGv("user PVT time association");
+   if (mTimePairPVTReport.gpsTime.gpsWeek != 0) {
+        LOC_LOGv("use PVT time association");
         timePair = mTimePairPVTReport;
     } else {
         return false;
