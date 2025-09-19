@@ -83,8 +83,8 @@ LocAdapterBase::LocAdapterBase(const LOC_API_ADAPTER_EVENT_MASK_T mask,
                                bool waitForDoneInit) :
     mIsMaster(isMaster), mEvtMask(mask), mContext(context),
     mLocApi(context->getLocApi()), mLocAdapterProxyBase(adapterProxyBase),
-    mMsgTask(context->getMsgTask()),
     mIsEngineCapabilitiesKnown(ContextBase::sIsEngineCapabilitiesKnown),
+    mMsgTask(context->getMsgTask()),
     mDlpFeatureStatusMask(0)
 {
     LOC_LOGd("waitForDoneInit: %d", waitForDoneInit);

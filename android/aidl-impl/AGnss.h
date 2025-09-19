@@ -63,10 +63,9 @@ public:
 private:
     Gnss* mGnss = nullptr;
     std::mutex mMutex;
+    AGpsExtType mType;
     shared_ptr<IAGnssCallback> mAGnssCbIface = nullptr;
     AIBinder_DeathRecipient *mDeathRecipient = nullptr;
-
-    AGpsExtType mType;
 };
 }  // namespace implementation
 }  // namespace aidl
