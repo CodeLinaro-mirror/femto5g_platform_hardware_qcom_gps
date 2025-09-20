@@ -447,29 +447,22 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
             out.elapsedRealTime = elapsedTimeNs;
             out.elapsedRealTimeUnc = (int64_t) (elapsedTimeUncMsec * 1000000);
         }
-#ifndef FEATURE_AUTOMOTIVE
-        else if ((out.timestamp > 0) &&
-                 (locationExtended.gpsTime.gpsWeek != UNKNOWN_GPS_WEEK_NUM)) {
-            int64_t locationTimeNanos = (int64_t)out.timestamp * 1000000;
-            bool isCurDataTimeTrustable = (out.timestamp % mLocPositionMode.min_interval == 0);
-            int64_t elapsedRealTime = mPositionElapsedRealTimeCal.getElapsedRealtimeEstimateNanos(
-                    locationTimeNanos, isCurDataTimeTrustable,
-                    (int64_t)mLocPositionMode.min_interval * 1000000);
-
-            if (elapsedRealTime != -1) {
-                out.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
-                out.elapsedRealTime = elapsedRealTime;
-                out.elapsedRealTimeUnc = mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
-            }
-        }
-#endif //FEATURE_AUTOMOTIVE
     }
-
 #ifndef FEATURE_AUTOMOTIVE
+    bool needToUseCurrentBootTime = false;
+    uint64_t currentBootTimeNs = getBootTimeMilliSec() * 1000000;
     if (!(out.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT)) {
-        out.elapsedRealTime = getBootTimeMilliSec() * 1000000;
-        out.elapsedRealTimeUnc = mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
-        out.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
+       needToUseCurrentBootTime = true;
+       LOC_LOGw("can not calculate elapsed real time, set to current time");
+    } else if (out.elapsedRealTime > currentBootTimeNs) {
+       needToUseCurrentBootTime = true;
+       LOC_LOGw("elapsed real time is %" PRIu64 " nsec in future, set to current time",
+                out.elapsedRealTime - currentBootTimeNs);
+    }
+    if (needToUseCurrentBootTime) {
+       out.elapsedRealTime = currentBootTimeNs;
+       out.elapsedRealTimeUnc = mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+       out.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
     }
 #endif //FEATURE_AUTOMOTIVE
 }
