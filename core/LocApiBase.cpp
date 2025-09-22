@@ -926,49 +926,8 @@ void ElapsedRealtimeEstimator::saveGpsTimeAndQtimerPairInPvtReport(
     }
 }
 
-void ElapsedRealtimeEstimator::saveGpsTimeAndQtimerPairInMeasReport(
-        const GnssSvMeasurementSet& svMeasurementSet) {
-
-    const GnssSvMeasurementHeader& svMeasSetHeader = svMeasurementSet.svMeasSetHeader;
-    // Use 1Hz measurement report timestamp and qtimer tick for association
-    if ((svMeasurementSet.isNhz == false) &&
-            (svMeasSetHeader.gpsSystemTime.validityMask & GNSS_SYSTEM_TIME_WEEK_VALID) &&
-            (svMeasSetHeader.gpsSystemTime.validityMask & GNSS_SYSTEM_TIME_WEEK_MS_VALID)) {
-
-        LOC_LOGv("gps time %d %d, meas unc %f, ref cnt tick %" PRIi64 ","
-                 "system rtc ms %" PRIi64 ", systemClkTimeUncMs %f",
-                 svMeasurementSet.svMeasSetHeader.gpsSystemTime.systemWeek,
-                 svMeasurementSet.svMeasSetHeader.gpsSystemTime.systemMsec,
-                 svMeasurementSet.svMeasSetHeader.gpsSystemTime.systemClkTimeUncMs,
-                 svMeasurementSet.svMeasSetHeader.refCountTicks,
-                 svMeasurementSet.svMeasSetHeader.gpsSystemTimeExt.systemRtcMs,
-                 svMeasurementSet.svMeasSetHeader.gpsSystemTime.systemClkTimeUncMs);
-        if ((svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS) &&
-                (svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS_UNC)) {
-            mTimePairMeasReport.gpsTime.gpsWeek = svMeasSetHeader.gpsSystemTime.systemWeek;
-            mTimePairMeasReport.gpsTime.gpsTimeOfWeekMs = svMeasSetHeader.gpsSystemTime.systemMsec;
-            mTimePairMeasReport.qtimerTick = svMeasurementSet.svMeasSetHeader.refCountTicks;
-            mTimePairMeasReport.timeUncMsec = svMeasurementSet.svMeasSetHeader.refCountTicksUnc;
-        } else if ((svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_GPS_SYSTEM_TIME_EXT) &&
-                   (svMeasSetHeader.gpsSystemTimeExt.systemRtc_valid) &&
-                   (svMeasSetHeader.gpsSystemTime.validityMask &
-                    GNSS_SYSTEM_CLK_TIME_BIAS_UNC_VALID)) {
-            mTimePairMeasReport.gpsTime.gpsWeek = svMeasSetHeader.gpsSystemTime.systemWeek;
-            mTimePairMeasReport.gpsTime.gpsTimeOfWeekMs = svMeasSetHeader.gpsSystemTime.systemMsec;
-            // convert ms to tick
-            mTimePairMeasReport.qtimerTick =
-                    svMeasurementSet.svMeasSetHeader.gpsSystemTimeExt.systemRtcMs * 10 / 192;
-            mTimePairMeasReport.timeUncMsec =
-                    svMeasurementSet.svMeasSetHeader.gpsSystemTime.systemClkTimeUncMs;
-        }
-
-       LOC_LOGv("gps time (%d, %d), qtimer tick %" PRIi64 ", unc %f",
-                mTimePairMeasReport.gpsTime.gpsWeek,  mTimePairMeasReport.gpsTime.gpsTimeOfWeekMs,
-                mTimePairMeasReport.qtimerTick, mTimePairMeasReport.timeUncMsec);
-    }
-}
-
 #define MSEC_IN_ONE_WEEK 604800000LL
+
 bool ElapsedRealtimeEstimator::getElapsedRealtimeForGpsTime(
         const GPSTimeStruct& gpsTimeAtOrigin, int64_t &bootTimeNsAtOrigin, float & bootTimeUnc) {
     struct timespec curBootTime = {};
@@ -979,11 +938,8 @@ bool ElapsedRealtimeEstimator::getElapsedRealtimeForGpsTime(
     GpsTimeQtimerTickPair timePair;
 
     // We have valid association
-    if (mTimePairMeasReport.gpsTime.gpsWeek != 0) {
-        timePair = mTimePairMeasReport;
-        LOC_LOGv("user meas time association");
-    } else if (mTimePairPVTReport.gpsTime.gpsWeek != 0) {
-        LOC_LOGv("user PVT time association");
+   if (mTimePairPVTReport.gpsTime.gpsWeek != 0) {
+        LOC_LOGv("use PVT time association");
         timePair = mTimePairPVTReport;
     } else {
         return false;
