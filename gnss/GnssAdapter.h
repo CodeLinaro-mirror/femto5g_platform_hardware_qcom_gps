@@ -287,7 +287,8 @@ class GnssAdapter : public LocAdapterBase {
     bool mPpeEnabled;
     GnssLatencyInfo mGnssLatencyInfo;
     GnssReportLoggerUtil mLogger;
-    ElapsedRealtimeEstimator mElapsedRealTimeCal;
+    ElapsedRealtimeEstimator mPositionElapsedRealTimeCal;
+
     /* === Misc callback from QMI LOC API ============================================== */
     GnssEnergyConsumedCallback mGnssEnergyConsumedCb;
 
@@ -515,9 +516,8 @@ public:
     virtual void reportSvEvent(const GnssSvNotification& svNotify);
     virtual void reportNmeaEvent(const char* nmea, size_t length);
     virtual bool requestNiNotifyEvent(const GnssNiNotification& notify, const void* data);
-    virtual void reportGnssMeasurementDataEvent(const GnssMeasurementsNotification& measurements,
+    virtual void reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurements,
                                                 int msInWeek);
-    virtual void reportSvMeasurementEvent(GnssSvMeasurementSet &svMeasurementSet);
     virtual void reportSvPolynomialEvent(GnssSvPolynomial &svPolynomial);
     virtual void reportSvEphemerisEvent(GnssSvEphemerisReport & svEphemeris);
     virtual void reportGnssSvIdConfigEvent(const GnssSvIdConfig& config);
@@ -527,6 +527,7 @@ public:
     virtual void reportLocationSystemInfoEvent(const LocationSystemInfo& locationSystemInfo);
 
     virtual bool requestATL(int connHandle, LocAGpsType agps_type, LocApnTypeMask apn_type_mask);
+    virtual void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
     virtual bool releaseATL(int connHandle);
     virtual bool requestOdcpiEvent(OdcpiRequestInfo& request);
     virtual bool reportDeleteAidingDataEvent(GnssAidingData& aidingData);

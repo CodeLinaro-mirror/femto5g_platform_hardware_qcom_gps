@@ -203,7 +203,6 @@ public:
     virtual void reportSvEvent(const GnssSvNotification& svNotify);
     virtual void reportDataEvent(const GnssDataNotification& dataNotify, int msInWeek);
     virtual void reportNmeaEvent(const char* nmea, size_t length);
-    virtual void reportSvMeasurementEvent(GnssSvMeasurementSet &svMeasurementSet);
     virtual void reportSvPolynomialEvent(GnssSvPolynomial &svPolynomial);
     virtual void reportSvEphemerisEvent(GnssSvEphemerisReport &svEphemeris);
     virtual void reportStatus(LocGpsStatusValue status);
@@ -220,7 +219,7 @@ public:
     virtual bool requestNiNotifyEvent(const GnssNiNotification &notify, const void* data);
     inline virtual bool isInSession() { return false; }
     ContextBase* getContext() const { return mContext; }
-    virtual void reportGnssMeasurementDataEvent(const GnssMeasurementsNotification& measurements,
+    virtual void reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurements,
                                                 int msInWeek);
     virtual bool reportWwanZppFix(LocGpsLocation &zppLoc);
     virtual bool reportZppBestAvailableFix(LocGpsLocation &zppLoc,
@@ -237,6 +236,7 @@ public:
     virtual void reportLatencyInfoEvent(const GnssLatencyInfo& gnssLatencyInfo);
     virtual bool reportQwesCapabilities(
             const std::unordered_map<LocationQwesFeatureType, bool> &featureMap);
+    virtual void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
 };
 
 } // namespace loc_core

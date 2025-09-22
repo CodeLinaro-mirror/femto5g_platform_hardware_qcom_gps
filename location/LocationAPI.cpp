@@ -139,7 +139,8 @@ static bool isGnssClient(LocationCallbacks& locationCallbacks)
             locationCallbacks.gnssMeasurementsCb != nullptr ||
             locationCallbacks.gnssNHzMeasurementsCb != nullptr ||
             locationCallbacks.locationSystemInfoCb != nullptr ||
-            locationCallbacks.svEphemerisCb != nullptr);
+            locationCallbacks.svEphemerisCb != nullptr ||
+            locationCallbacks.gnssSignalTypesCb != nullptr);
 }
 
 static bool isFlpClient(LocationCallbacks& locationCallbacks)

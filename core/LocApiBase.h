@@ -209,7 +209,6 @@ public:
                         GnssDataNotification* pDataNotify = nullptr,
                         int msInWeek = -1);
     void reportSv(GnssSvNotification& svNotify);
-    void reportSvMeasurement(GnssSvMeasurementSet &svMeasurementSet);
     void reportSvPolynomial(GnssSvPolynomial &svPolynomial);
     void reportSvEphemeris(GnssSvEphemerisReport &svEphemeris);
     void reportStatus(LocGpsStatusValue status);
@@ -218,13 +217,15 @@ public:
     void reportXtraServer(const char* url1, const char* url2,
                           const char* url3, const int maxlength);
     void reportLocationSystemInfo(const LocationSystemInfo& locationSystemInfo);
+    void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
     void requestXtraData();
     void requestTime();
     void requestLocation();
     void requestATL(int connHandle, LocAGpsType agps_type, LocApnTypeMask apn_type_mask);
     void releaseATL(int connHandle);
     void requestNiNotify(GnssNiNotification &notify, const void* data);
-    void reportGnssMeasurementData(GnssMeasurementsNotification& measurements, int msInWeek);
+    void reportGnssMeasurements(GnssMeasurements& gnssMeasurements, int msInWeek);
+
     void reportWwanZppFix(LocGpsLocation &zppLoc);
     void reportZppBestAvailableFix(LocGpsLocation &zppLoc, GpsLocationExtended &location_extended,
             LocPosTechMask tech_mask);

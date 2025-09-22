@@ -386,3 +386,58 @@ void locUtilWaitForDir(const char* dirName) {
     }
     LOC_LOGv("done");
 }
+
+int isLeapYear(int year) {
+    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+}
+
+struct tm *getCalendarTimeFields(const int64_t *utcTimeSec, struct tm *calendarTime) {
+    // Constants for calculations
+    const int SECONDS_IN_MINUTE = 60;
+    const int SECONDS_IN_HOUR = 3600;
+    const int SECONDS_IN_DAY = 86400;
+    const int DAYS_IN_YEAR = 365;
+    const int DAYS_IN_LEAP_YEAR = 366;
+    const int BASE_YEAR = 1970;
+
+    // Days in each month for non-leap and leap years
+    const int days_in_months[2][12] = {
+        {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
+        {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
+    };
+
+    int64_t seconds = *utcTimeSec;
+    calendarTime->tm_sec = seconds % SECONDS_IN_MINUTE;
+    seconds /= SECONDS_IN_MINUTE;
+    calendarTime->tm_min = seconds % SECONDS_IN_MINUTE;
+    seconds /= SECONDS_IN_MINUTE;
+    calendarTime->tm_hour = seconds % 24;
+    seconds /= 24;
+
+    // Calculate the year
+    int year = BASE_YEAR;
+    while (seconds >= (isLeapYear(year) ? DAYS_IN_LEAP_YEAR : DAYS_IN_YEAR)) {
+        seconds -= isLeapYear(year) ? DAYS_IN_LEAP_YEAR : DAYS_IN_YEAR;
+       year++;
+    }
+    calendarTime->tm_year = year - 1900;
+
+    // Calculate the month and day
+    int leap = isLeapYear(year);
+    int month = 0;
+    while (seconds >= days_in_months[leap][month]) {
+        seconds -= days_in_months[leap][month];
+        month++;
+    }
+    calendarTime->tm_mon = month;
+    calendarTime->tm_mday = seconds + 1;
+
+    // Set other fields
+    calendarTime->tm_wday = (4 + *utcTimeSec / SECONDS_IN_DAY) % 7; // 1970-01-01 was a Thursday
+    calendarTime->tm_yday = *utcTimeSec / SECONDS_IN_DAY % (
+            isLeapYear(year) ? DAYS_IN_LEAP_YEAR : DAYS_IN_YEAR);
+    calendarTime->tm_isdst = 0;
+
+    return calendarTime;
+}
+
