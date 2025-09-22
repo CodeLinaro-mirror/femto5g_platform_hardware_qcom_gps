@@ -189,10 +189,7 @@ struct LocCloseMsg : public LocMsg {
 };
 
 MsgTask* LocApiBase::mMsgTask = nullptr;
-<<<<<<< HEAD   (1f4bbf Avoid access of deprecated LocUnorderedSetMap entry)
 volatile int32_t LocApiBase::mMsgTaskRefCount = 0;
-=======
->>>>>>> CHANGE (274e47 GPS_HAL: Address possible static analysis issues)
 
 LocApiBase::LocApiBase(LOC_API_ADAPTER_EVENT_MASK_T excludedMask,
                        ContextBase* context) :
