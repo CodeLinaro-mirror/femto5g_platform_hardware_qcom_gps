@@ -318,6 +318,8 @@ class GnssAdapter : public LocAdapterBase {
 
     /* ==== ODCPI ========================================================================== */
     bool mInEmergency;
+    LocGpsLocation mInjectedWifiFix;
+    bool mInjectedWifiFixUsed;
     typedef uint8_t OdcpiStateMask;
     OdcpiStateMask mOdcpiStateMask;
     typedef enum {
