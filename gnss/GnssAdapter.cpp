@@ -643,20 +643,23 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
                 }
             }
         }
-#ifndef FEATURE_AUTOMOTIVE
-        if (!(out.location.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT)) {
-            out.location.elapsedRealTime = getBootTimeMilliSec() * 1000000;
-            out.location.elapsedRealTimeUnc =
-                mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
-            out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
-        }
-#endif //FEATURE_AUTOMOTIVE
     }
+
 #ifndef FEATURE_AUTOMOTIVE
+    bool needToUseCurrentBootTime = false;
+    uint64_t currentBootTimeNs = getBootTimeMilliSec() * 1000000;
     if (!(out.location.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT)) {
-        out.location.elapsedRealTime = getBootTimeMilliSec() * 1000000;
-        out.location.elapsedRealTimeUnc = mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
-        out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
+       needToUseCurrentBootTime = true;
+       LOC_LOGw("can not calculate elapsed real time, set to current time");
+    } else if (out.location.elapsedRealTime > currentBootTimeNs) {
+       needToUseCurrentBootTime = true;
+       LOC_LOGw("elapsed real time is %" PRIu64 " nsec in future, set to current time",
+                out.location.elapsedRealTime - currentBootTimeNs);
+    }
+    if (needToUseCurrentBootTime) {
+       out.location.elapsedRealTime = currentBootTimeNs;
+       out.location.elapsedRealTimeUnc = mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+       out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
     }
 #endif //FEATURE_AUTOMOTIVE
 }
