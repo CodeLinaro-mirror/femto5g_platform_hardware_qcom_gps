@@ -3373,6 +3373,12 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
 
                 uint32_t minIntervalToSet = NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL;
                 bool nHzStatus = mAdapter.getCapabilities() & LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
+                // For older modems which do not support publishing above capability for NHz,
+                // we can enable the feature based on below macro, which can be enabled as per
+                // target.
+                #ifdef FEATURE_NHZ_ENABLED
+                nHzStatus = true;
+                #endif
                 if (nHzStatus) {
                     minIntervalToSet = NHZ_ENABLED_MIN_TRACKING_INTERVAL;
                 }
@@ -3651,6 +3657,12 @@ GnssAdapter::updateTrackingOptionsCommand(LocationAPI* client, uint32_t id,
                 }
                 uint32_t minIntervalToSet = NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL;
                 bool nHzStatus = mAdapter.getCapabilities() & LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
+                // For older modems which do not support publishing above capability for NHz,
+                // we can enable the feature based on below macro, which can be enabled as per
+                // target.
+                #ifdef FEATURE_NHZ_ENABLED
+                nHzStatus = true;
+                #endif
                 if (nHzStatus) {
                     minIntervalToSet = NHZ_ENABLED_MIN_TRACKING_INTERVAL;
                 }
