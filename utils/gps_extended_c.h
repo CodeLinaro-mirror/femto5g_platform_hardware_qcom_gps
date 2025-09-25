@@ -528,15 +528,6 @@ typedef struct {
 }Gnss_ApTimeStampStructType;
 
 typedef struct {
-    uint64_t gps_sv_used_ids_mask;
-    uint64_t glo_sv_used_ids_mask;
-    uint64_t gal_sv_used_ids_mask;
-    uint64_t bds_sv_used_ids_mask;
-    uint64_t qzss_sv_used_ids_mask;
-    uint64_t navic_sv_used_ids_mask;
-} GnssSvUsedInPosition;
-
-typedef struct {
     uint64_t gps_l1ca_sv_used_ids_mask;     // GPS L1CA
     uint64_t gps_l1c_sv_used_ids_mask;      // GPS L1C
     uint64_t gps_l2_sv_used_ids_mask;       // GPS L2

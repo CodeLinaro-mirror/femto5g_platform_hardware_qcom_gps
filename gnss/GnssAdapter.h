@@ -221,7 +221,7 @@ class GnssAdapter : public LocAdapterBase {
     LocPosMode mLocPositionMode;
     PreciseType mPreciseType;
     CorrectionType mCorrectionType;
-    GnssSvUsedInPosition mGnssSvIdUsedInPosition;
+    GnssLocationSvUsedInPosition mGnssSvIdUsedInPosition;
     bool mGnssSvIdUsedInPosAvail;
     GnssSvMbUsedInPosition mGnssMbSvIdUsedInPosition;
     bool mGnssMbSvIdUsedInPosAvail;

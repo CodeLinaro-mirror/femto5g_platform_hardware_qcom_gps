@@ -314,12 +314,12 @@ void LocApiBase::reportPosition(UlpLocation& location,
              location.gpsLocation.bearing, location.gpsLocation.accuracy,
              location.gpsLocation.timestamp, status, loc_technology_mask,
              locationExtended.gnssSystemTime.u.gpsSystemTime.systemClkTimeUncMs,
-             locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask,
-             locationExtended.gnss_sv_used_ids.glo_sv_used_ids_mask,
-             locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask,
-             locationExtended.gnss_sv_used_ids.gal_sv_used_ids_mask,
-             locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask,
-             locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask);
+             locationExtended.gnss_sv_used_ids.gpsSvUsedIdsMask,
+             locationExtended.gnss_sv_used_ids.gloSvUsedIdsMask,
+             locationExtended.gnss_sv_used_ids.bdsSvUsedIdsMask,
+             locationExtended.gnss_sv_used_ids.galSvUsedIdsMask,
+             locationExtended.gnss_sv_used_ids.qzssSvUsedIdsMask,
+             locationExtended.gnss_sv_used_ids.navicSvUsedIdsMask);
     // loop through adapters, and deliver to all adapters.
     TO_ALL_LOCADAPTERS(
         mLocAdapters[i]->reportPositionEvent(location, locationExtended,

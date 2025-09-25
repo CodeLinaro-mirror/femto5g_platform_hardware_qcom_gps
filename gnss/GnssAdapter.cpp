@@ -801,17 +801,17 @@ GnssAdapter::convertLocationInfo(GnssLocationInfoNotification& out,
     if (GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA & locationExtended.flags) {
         out.flags |= LDT_GNSS_LOCATION_INFO_GNSS_SV_USED_DATA_BIT;
         out.svUsedInPosition.gpsSvUsedIdsMask =
-                locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask;
+                locationExtended.gnss_sv_used_ids.gpsSvUsedIdsMask;
         out.svUsedInPosition.gloSvUsedIdsMask =
-                locationExtended.gnss_sv_used_ids.glo_sv_used_ids_mask;
+                locationExtended.gnss_sv_used_ids.gloSvUsedIdsMask;
         out.svUsedInPosition.galSvUsedIdsMask =
-                locationExtended.gnss_sv_used_ids.gal_sv_used_ids_mask;
+                locationExtended.gnss_sv_used_ids.galSvUsedIdsMask;
         out.svUsedInPosition.bdsSvUsedIdsMask =
-                locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask;
+                locationExtended.gnss_sv_used_ids.bdsSvUsedIdsMask;
         out.svUsedInPosition.qzssSvUsedIdsMask =
-                locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask;
+                locationExtended.gnss_sv_used_ids.qzssSvUsedIdsMask;
         out.svUsedInPosition.navicSvUsedIdsMask =
-                locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask;
+                locationExtended.gnss_sv_used_ids.navicSvUsedIdsMask;
 
         out.flags |= LDT_GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT;
         out.numSvUsedInPosition = getNumSvUsed(out.svUsedInPosition.gpsSvUsedIdsMask,
@@ -4612,7 +4612,7 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify)
                             break;
                         }
                     } else {
-                        svUsedIdMask = mGnssSvIdUsedInPosition.gps_sv_used_ids_mask;
+                        svUsedIdMask = mGnssSvIdUsedInPosition.gpsSvUsedIdsMask;
                     }
                 }
                 break;
@@ -4628,7 +4628,7 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify)
                             break;
                         }
                     } else {
-                        svUsedIdMask = mGnssSvIdUsedInPosition.glo_sv_used_ids_mask;
+                        svUsedIdMask = mGnssSvIdUsedInPosition.gloSvUsedIdsMask;
                     }
                 }
                 // map the svid to respective constellation range 1..xx
@@ -4662,7 +4662,7 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify)
                             break;
                         }
                     } else {
-                        svUsedIdMask = mGnssSvIdUsedInPosition.bds_sv_used_ids_mask;
+                        svUsedIdMask = mGnssSvIdUsedInPosition.bdsSvUsedIdsMask;
                     }
                 }
                 gnssSvId = gnssSvId - BDS_SV_PRN_MIN + 1;
@@ -4682,7 +4682,7 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify)
                             break;
                         }
                     } else {
-                        svUsedIdMask = mGnssSvIdUsedInPosition.gal_sv_used_ids_mask;
+                        svUsedIdMask = mGnssSvIdUsedInPosition.galSvUsedIdsMask;
                     }
                 }
                 gnssSvId = gnssSvId - GAL_SV_PRN_MIN + 1;
@@ -4705,14 +4705,14 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify)
                             break;
                         }
                     } else {
-                        svUsedIdMask = mGnssSvIdUsedInPosition.qzss_sv_used_ids_mask;
+                        svUsedIdMask = mGnssSvIdUsedInPosition.qzssSvUsedIdsMask;
                     }
                 }
                 gnssSvId = gnssSvId - QZSS_SV_PRN_MIN + 1;
                 break;
             case GNSS_SV_TYPE_NAVIC:
                 if (mGnssSvIdUsedInPosAvail) {
-                    svUsedIdMask = mGnssSvIdUsedInPosition.navic_sv_used_ids_mask;
+                    svUsedIdMask = mGnssSvIdUsedInPosition.navicSvUsedIdsMask;
                 }
                 gnssSvId = gnssSvId - NAVIC_SV_PRN_MIN + 1;
                 break;
