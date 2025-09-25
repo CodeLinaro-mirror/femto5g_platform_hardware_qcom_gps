@@ -78,7 +78,6 @@ static void odcpiInit(const odcpiRequestCallback& callback, OdcpiPrioritytype pr
 static void deRegisterOdcpi(OdcpiPrioritytype priority, OdcpiCallbackTypeMask typeMask);
 static void odcpiInject(const Location& location);
 
-static void setEsStatusCallback(std::function<void(bool)> esStatusCb);
 static void updateBatteryStatus(bool charging);
 static void updateSystemPowerState(PowerStateType systemPowerState);
 static uint32_t setConstrainedTunc (bool enable, float tuncConstraint,
@@ -154,7 +153,6 @@ static const GnssInterface gGnssInterface = {
     odcpiInit,
     deRegisterOdcpi,
     odcpiInject,
-    setEsStatusCallback,
     getGnssEnergyConsumed,
     enableNfwLocationAccess,
     nfwInit,
@@ -417,13 +415,6 @@ static void odcpiInject(const Location& location)
 {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->injectOdcpiCommand(location);
-    }
-}
-
-static void setEsStatusCallback(std::function<void(bool)> esStatusCb)
-{
-    if (NULL != gGnssAdapter) {
-        gGnssAdapter->setEsStatusCallbackCommand(esStatusCb);
     }
 }
 
