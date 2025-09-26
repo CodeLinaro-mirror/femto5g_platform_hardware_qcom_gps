@@ -49,8 +49,6 @@ public:
        of instances have been reached */
     static ILocationAPI* createInstance(LocationCallbacks&);
 
-    static bool isInfotainmentHalConfigured();
-
     /* destroy/cleans up the instance, which should be called when LocationControlAPI object is
        no longer needed. LocationControlAPI* returned from createInstance will no longer valid
        after destroy is called.
@@ -202,15 +200,6 @@ public:
                 LOCATION_ERROR_ID_UNKNOWN if id does not match a gnssNiCallback */
     virtual void gnssNiResponse(uint32_t id, GnssNiResponse response) override;
 
-    /* ================================== NETWORK PROVIDER =========================== */
-    /* startNetworkLocation starts tracking session for
-       network location request */
-    virtual void startNetworkLocation(trackingCallback* callback);
-
-    /* stopNetworkLocation stops the ongoing tracking session for
-       network location request */
-    virtual void stopNetworkLocation(trackingCallback* callback);
-
     /* @brief
         Get Debug Report
         @param
@@ -222,6 +211,16 @@ public:
         Set callback and receive antenna info
     */
     virtual uint32_t getAntennaInfo(AntennaInfoCallback* cb) override;
+#ifdef USE_GLIB
+    /* ================================== NETWORK PROVIDER =========================== */
+    /* startNetworkLocation starts tracking session for
+       network location request */
+    virtual void startNetworkLocation(trackingCallback* callback);
+
+    /* stopNetworkLocation stops the ongoing tracking session for
+       network location request */
+    virtual void stopNetworkLocation(trackingCallback* callback);
+#endif
 };
 
 class LocationControlAPI : public ILocationControlAPI
@@ -518,19 +517,6 @@ public:
                                           LocEngineRunState engState) override;
 
     /** @brief
-        Set the EULA opt-in status from system user. This is used as consent to
-        use network-based positioning.
-
-        @param
-        userConsnt: user agrees to use GTP service or not.
-
-        @return
-        A session id that will be returned in responseCallback to
-        match command with response.
-    */
-    virtual uint32_t setOptInStatus(bool userConsent);
-
-    /** @brief
         This API is used to config the NMEA sentence types.
 
         Without prior calling this API, all NMEA sentences supported
@@ -813,6 +799,20 @@ public:
         match command with response.
     */
     virtual uint32_t configureUserConsentForXtra(const bool xtraUserConsent) override;
+#ifdef USE_GLIB
+    /** @brief
+        Set the EULA opt-in status from system user. This is used as consent to
+        use network-based positioning.
+
+        @param
+        userConsnt: user agrees to use GTP service or not.
+
+        @return
+        A session id that will be returned in responseCallback to
+        match command with response.
+    */
+    virtual uint32_t setOptInStatus(bool userConsent);
+#endif
 };
 
 #endif /* LOCATIONAPI_H */

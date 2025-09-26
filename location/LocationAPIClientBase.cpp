@@ -165,28 +165,6 @@ uint32_t LocationAPIControlClient::locAPIGnssUpdateConfig(const GnssConfig& conf
     return retVal;
 }
 
-uint32_t LocationAPIControlClient::locAPIGnssGetConfig(GnssConfigFlagsMask mask)
-{
-    uint32_t retVal = LOCATION_ERROR_GENERAL_FAILURE;
-
-    pthread_mutex_lock(&mMutex);
-    if (mLocationControlAPI) {
-
-        uint32_t* idArray = mLocationControlAPI->gnssGetConfig(mask);
-        LOC_LOGv("gnssGetConfig return array: %p", idArray);
-        if (nullptr != idArray) {
-            if (nullptr != mRequestQueues[CTRL_REQUEST_CONFIG_GET].getSessionArrayPtr()) {
-                mRequestQueues[CTRL_REQUEST_CONFIG_GET].reset(idArray);
-            }
-            mRequestQueues[CTRL_REQUEST_CONFIG_GET].push(new GnssGetConfigRequest(*this));
-            retVal = LOCATION_ERROR_SUCCESS;
-            delete [] idArray;
-        }
-    }
-    pthread_mutex_unlock(&mMutex);
-    return retVal;
-}
-
 void LocationAPIControlClient::onCtrlResponseCb(LocationError error, uint32_t id)
 {
     if (error != LOCATION_ERROR_SUCCESS) {
@@ -282,16 +260,6 @@ void LocationAPIClientBase::locAPISetCallbacks(LocationCallbacks& locationCallba
 
     locationCallbacks.capabilitiesCb =
         [this](LocationCapabilitiesMask capabilitiesMask) {
-            if (LocationAPI::isInfotainmentHalConfigured()) {
-                LocationCapabilitiesMask locIviSupportedMask =
-                    LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT |
-                    LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT |
-                    LOCATION_CAPABILITIES_DEBUG_DATA_BIT |
-                    LOCATION_CAPABILITIES_ANTENNA_INFO;
-
-                capabilitiesMask &= locIviSupportedMask;
-            }
-
             onCapabilitiesCb(capabilitiesMask);
     };
 

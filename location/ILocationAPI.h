@@ -186,14 +186,6 @@ public:
                 LOCATION_ERROR_ID_UNKNOWN if id does not match a gnssNiCallback */
     virtual void gnssNiResponse(uint32_t id, GnssNiResponse response) = 0;
 
-    /** @brief startNetworkLocation starts tracking session for
-       network location request */
-    virtual void startNetworkLocation(trackingCallback* callback) {}
-
-    /** @brief stopNetworkLocation stops the ongoing tracking session for
-       network location request */
-    virtual void stopNetworkLocation(trackingCallback* callback) {}
-
     /** @brief Get energy consumed info of modem GNSS engine */
     virtual void getGnssEnergyConsumed(gnssEnergyConsumedCallback gnssEnergyConsumedCb,
             responseCallback responseCb) {}
@@ -226,6 +218,16 @@ public:
     virtual uint32_t getAntennaInfo(AntennaInfoCallback* cb) {
         return 0;
     }
+
+#ifdef USE_GLIB
+    /** @brief startNetworkLocation starts tracking session for
+       network location request */
+    virtual void startNetworkLocation(trackingCallback* callback) {}
+
+    /** @brief stopNetworkLocation stops the ongoing tracking session for
+       network location request */
+    virtual void stopNetworkLocation(trackingCallback* callback) {}
+#endif
 };
 
 class ILocationControlAPI
@@ -674,21 +676,6 @@ public:
     virtual void enableNfwLocationAccess(const std::vector<std::string>& enabledNfws) {}
 
     /** @brief
-        Set the EULA opt-in status from system user. This is used as consent to
-        use network-based positioning.
-
-        @param
-        userConsnt: user agrees to use GTP service or not.
-
-        @return
-        A session id that will be returned in responseCallback to
-        match command with response.
-    */
-    virtual uint32_t setOptInStatus(bool userConsent) {
-        return 0;
-    }
-
-    /** @brief
         This API is used to instruct the specified engine to use
         the provided integrity risk level for protection level
         calculation in position report. This API can be called via
@@ -830,6 +817,23 @@ public:
         match command with response.
     */
     virtual uint32_t configureUserConsentForXtra(const bool xtraUserConsent) = 0;
+
+#ifdef USE_GLIB
+    /** @brief
+        Set the EULA opt-in status from system user. This is used as consent to
+        use network-based positioning.
+
+        @param
+        userConsnt: user agrees to use GTP service or not.
+
+        @return
+        A session id that will be returned in responseCallback to
+        match command with response.
+    */
+    virtual uint32_t setOptInStatus(bool userConsent) {
+        return 0;
+    }
+#endif
 };
 
 #endif /* ILOCATIONAPI_H */

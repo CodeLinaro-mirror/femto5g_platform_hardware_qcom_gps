@@ -116,7 +116,9 @@ struct GnssInterface {
     void (*powerIndicationRequest)();
     void (*setAddressRequestCb)(std::function<void(const Location&)> addressRequestCb);
     void (*injectLocationAndAddr)(const Location& location, const GnssCivicAddress& addr);
+#ifdef USE_GLIB
     uint32_t (*setOptInStatus)(bool userConsent);
+#endif
     uint32_t (*configEngineIntegrityRisk)(PositioningEngineMask engineType, uint32_t integrityRisk);
     uint32_t (*configXtraParams) (bool enable, const XtraConfigParams& configParams);
     uint32_t (*gnssGetXtraStatus)();

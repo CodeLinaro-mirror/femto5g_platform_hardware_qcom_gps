@@ -132,7 +132,6 @@ public:
     uint32_t locAPIEnable(LocationTechnologyType techType);
     void locAPIDisable();
     uint32_t locAPIGnssUpdateConfig(const GnssConfig& config);
-    uint32_t locAPIGnssGetConfig(GnssConfigFlagsMask config);
     inline ILocationControlAPI* getControlAPI() { return mLocationControlAPI; }
 
     // callbacks
@@ -143,8 +142,6 @@ public:
     inline virtual void onEnableCb(LocationError /*error*/) {}
     inline virtual void onDisableCb(LocationError /*error*/) {}
     inline virtual void onGnssUpdateConfigCb(
-            size_t /*count*/, LocationError* /*errors*/, uint32_t* /*ids*/) {}
-    inline virtual void onGnssGetConfigCb(
             size_t /*count*/, LocationError* /*errors*/, uint32_t* /*ids*/) {}
 
     class GnssDeleteAidingDataRequest : public LocationAPIRequest {
@@ -179,15 +176,6 @@ public:
         GnssUpdateConfigRequest(LocationAPIControlClient& API) : mAPI(API) {}
         inline void onCollectiveResponse(size_t count, LocationError* errors, uint32_t* ids) {
             mAPI.onGnssUpdateConfigCb(count, errors, ids);
-        }
-        LocationAPIControlClient& mAPI;
-    };
-
-    class GnssGetConfigRequest : public LocationAPIRequest {
-    public:
-        GnssGetConfigRequest(LocationAPIControlClient& API) : mAPI(API) {}
-        inline void onCollectiveResponse(size_t count, LocationError* errors, uint32_t* ids) {
-            mAPI.onGnssGetConfigCb(count, errors, ids);
         }
         LocationAPIControlClient& mAPI;
     };

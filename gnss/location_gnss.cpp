@@ -109,7 +109,9 @@ static void powerIndicationInit(const powerIndicationCb powerIndicationCallback)
 static void powerIndicationRequest();
 static void setAddressRequestCb(const std::function<void(const Location&)> addressRequestCb);
 static void injectLocationAndAddr(const Location& location, const GnssCivicAddress& addr);
+#ifdef USE_GLIB
 static uint32_t setOptInStatus(bool userConsent);
+#endif
 static uint32_t configEngineIntegrityRisk(PositioningEngineMask engType, uint32_t integrityRisk);
 static uint32_t configXtraParams(bool enable, const XtraConfigParams& configParams);
 static uint32_t configMerkleTree(const char * merkleTreeConfigBuffer, int bufferLength);
@@ -180,7 +182,9 @@ static const GnssInterface gGnssInterface = {
     powerIndicationRequest,
     setAddressRequestCb,
     injectLocationAndAddr,
+#ifdef USE_GLIB
     setOptInStatus,
+#endif
     configEngineIntegrityRisk,
     configXtraParams,
     getXtraStatus,
@@ -624,6 +628,7 @@ static void injectLocationAndAddr(const Location& location, const GnssCivicAddre
     }
 }
 
+#ifdef USE_GLIB
 static uint32_t setOptInStatus(bool userConsent) {
     if (NULL != gGnssAdapter) {
         struct RespMsg : public LocMsg {
@@ -636,9 +641,7 @@ static uint32_t setOptInStatus(bool userConsent) {
 
         uint32_t sessionId = gGnssAdapter->generateSessionId();
         gGnssAdapter->getSystemStatus()->getOsObserver()->eventOptInStatus(userConsent);
-#ifdef USE_GLIB
         gGnssAdapter->getSystemStatus()->getOsObserver()->eventRegionAllowedStatus(true);
-#endif
         gGnssAdapter->sendMsg(new RespMsg(sessionId));
 
         return sessionId;
@@ -646,6 +649,7 @@ static uint32_t setOptInStatus(bool userConsent) {
         return 0;
     }
 }
+#endif
 
 static uint32_t configEngineIntegrityRisk(PositioningEngineMask engType,
                                           uint32_t integrityRisk) {

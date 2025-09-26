@@ -45,13 +45,10 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 
 // GTP services
-typedef void (enableProviderGetter)();
-typedef void (disableProviderGetter)();
+#ifdef USE_GLIB
 typedef void (getSingleNetworkLocationGetter)(trackingCallback* callback);
 typedef void (stopNetworkLocationGetter)(trackingCallback* callback);
-
-typedef ILocationAPI* (*getLocationClientApiImpl)(capabilitiesCallback capabitiescb);
-typedef ILocationControlAPI* (*getLocationIntegrationApiImpl) ();
+#endif
 
 typedef struct {
     // bit mask of the adpaters that we need to wait for the removeClientCompleteCallback
@@ -81,8 +78,6 @@ static pthread_mutex_t gDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static bool gGnssLoadFailed = false;
 static bool gBatchingLoadFailed = false;
 static bool gGeofenceLoadFailed = false;
-static uint32_t gEnableMDMGnssHal = 0;
-static bool gReadGnssDeploymentConfigOnce = false;
 
 template <typename InterfaceType>
 static void loadLocationInterface(InterfaceType*& interfacePtr, bool& loadFailedFlag,
@@ -96,17 +91,6 @@ static void loadLocationInterface(InterfaceType*& interfacePtr, bool& loadFailed
             interfacePtr->initialize();
         }
     }
-}
-
-bool LocationAPI::isInfotainmentHalConfigured() {
-    if (!gReadGnssDeploymentConfigOnce) {
-        const loc_param_s_type gps_conf_params[] = {
-            {"GNSS_DEPLOYMENT", &gEnableMDMGnssHal, nullptr, 'n'}
-        };
-        UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_params);
-        gReadGnssDeploymentConfigOnce = true;
-    }
-    return (gEnableMDMGnssHal == QTI_MDM_GNSS_ENABLED);
 }
 
 static void loadLibGnss() {
@@ -201,7 +185,6 @@ void onGeofenceRemoveClientCompleteCb (LocationAPI* client)
 ILocationAPI*
 LocationAPI::createInstance (LocationCallbacks& locationCallbacks)
 {
-    ILocationAPI* locationClientApiImpl = nullptr;
     LocationAPI* locationApiObj = nullptr;
 
     if (nullptr == locationCallbacks.capabilitiesCb ||
@@ -209,20 +192,6 @@ LocationAPI::createInstance (LocationCallbacks& locationCallbacks)
         nullptr == locationCallbacks.collectiveResponseCb) {
         LOC_LOGe("missing mandatory callback, return null");
         return NULL;
-    }
-
-    if (isInfotainmentHalConfigured()) {
-        void *handle = nullptr;
-        getLocationClientApiImpl getter = (getLocationClientApiImpl)dlGetSymFromLib(handle,
-                "liblocation_client_api.so", "getLocationClientApiImpl");
-        if (nullptr == getter) {
-            LOC_LOGe("Failed to load LocationClientApi implementation.");
-        } else {
-            locationClientApiImpl = getter(locationCallbacks.capabilitiesCb);
-            locationClientApiImpl->updateCallbacks(locationCallbacks);
-            LOC_LOGi("Succesfully loaded LocationClientApi implementation.");
-        }
-        return locationClientApiImpl;
     }
 
     locationApiObj = new LocationAPI();
@@ -670,6 +639,7 @@ LocationAPI::gnssNiResponse(uint32_t id, GnssNiResponse response)
     pthread_mutex_unlock(&gDataMutex);
 }
 
+#ifdef USE_GLIB
 void LocationAPI::startNetworkLocation(trackingCallback* callback) {
     void* libHandle = nullptr;
     getSingleNetworkLocationGetter* setter =
@@ -693,6 +663,7 @@ void LocationAPI::stopNetworkLocation(trackingCallback* callback) {
         LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
     }
 }
+#endif
 
 void LocationAPI::getDebugReport(GnssDebugReport& report) {
     if (gData.gnssInterface != NULL) {
@@ -720,21 +691,9 @@ LocationControlAPI::getInstance(LocationControlCallbacks& locationControlCallbac
     void *handle = nullptr;
 
     if (NULL == gData.controlAPI) {
-        if (LocationAPI::isInfotainmentHalConfigured()) {
-            getLocationIntegrationApiImpl getter =
-                (getLocationIntegrationApiImpl)dlGetSymFromLib(handle,
-                "liblocation_integration_api.so", "getLocationIntegrationApiImpl");
-            if (nullptr == getter) {
-                LOC_LOGe("Failed to load LocationIntegrationApi implementation.");
-            } else {
-                gData.controlAPI = getter();
-                LOC_LOGi("Succesfully loaded LocationIntegrationApi implementation.");
-            }
-        } else {
-            loadLibGnss();
-            if (!gGnssLoadFailed) {
-                gData.controlAPI = new LocationControlAPI();
-            }
+        loadLibGnss();
+        if (!gGnssLoadFailed) {
+            gData.controlAPI = new LocationControlAPI();
         }
     }
 
@@ -1004,6 +963,7 @@ uint32_t LocationControlAPI::configEngineRunState(
     return id;
 }
 
+#ifdef USE_GLIB
 uint32_t LocationControlAPI::setOptInStatus(bool userConsent) {
     uint32_t id = 0;
     pthread_mutex_lock(&gDataMutex);
@@ -1017,6 +977,7 @@ uint32_t LocationControlAPI::setOptInStatus(bool userConsent) {
     pthread_mutex_unlock(&gDataMutex);
     return id;
 }
+#endif
 
 uint32_t LocationControlAPI::configOutputNmeaTypes(
             GnssNmeaTypesMask enabledNmeaTypes,

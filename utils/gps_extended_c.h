@@ -1715,7 +1715,6 @@ can runtime disable itself with this exit code*/
 #define QTI_GNSS_ENABLED                0
 #define QCSR_SS5_ENABLED                1
 #define PDS_API_ENABLED                 2
-#define QTI_MDM_GNSS_ENABLED            3
 
 #ifdef __cplusplus
 }
