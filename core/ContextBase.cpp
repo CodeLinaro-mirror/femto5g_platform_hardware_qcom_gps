@@ -332,16 +332,19 @@ void ContextBase::readIZatConfForValueAddedProcess() {
    conf_fp = nullptr;
 
 #ifdef _ANDROID_
+#define LOCLAUNCHER_LIB "libloc_launcher.so"
+typedef void locLauncherMain();
     // set the property to launch loc_launcher
     // loc_launcher rc file will only launch loc_launcher if
     // property "vendor.qti.izat.value_added_process" is set to "enabled".
-    const char* value = "disabled";
-    if (mIzat_process_conf.valueAddedProcessEnabled == true) {
-        value = "enabled";
-    }
-
-    if (0 != property_set("vendor.qti.izat.value_added_process", value)) {
-        LOC_LOGe ("failed to set property vendor.qti.izat.value_added_process");
+    void* locLauncherHandle = nullptr;
+     if (mIzat_process_conf.valueAddedProcessEnabled == true) {
+        locLauncherMain* launcherMainMethod = (locLauncherMain*)dlGetSymFromLib(
+                locLauncherHandle, LOCLAUNCHER_LIB, "launch");
+        if (NULL != launcherMainMethod) {
+            LOC_LOGi("start loc launcher");
+            (*launcherMainMethod)();
+        }
     }
 #endif
 

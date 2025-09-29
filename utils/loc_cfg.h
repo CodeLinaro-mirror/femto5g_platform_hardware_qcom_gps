@@ -77,7 +77,7 @@ typedef struct
 
 #define LOC_PROCESS_MAX_NUM_GROUPS        20
 #define LOC_FEATURE_LAUNCH_TRIGGER_MASK   "launch-trigger-mask"
-
+#define IZAT_PROPERTY_PREFIX "vendor.qti.izat."
 /*=============================================================================
  *
  *                          MODULE EXTERNAL DATA
@@ -115,7 +115,8 @@ void loc_read_conf_long(const char* file_name, const loc_param_s_type config_tab
 // used to fill up entries recursively
 int loc_read_conf_r_long(FILE *conf_fp, const loc_param_s_type config_table[],
                          uint32_t table_length, uint16_t string_len);
-
+//check vendor.qti.izat.<proc_trigger> property if allowed to restart process
+bool isProcessRestartAllowed(const char* procName);
 #ifdef __cplusplus
 }
 #endif
