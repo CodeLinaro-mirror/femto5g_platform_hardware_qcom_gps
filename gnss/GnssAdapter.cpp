@@ -1065,7 +1065,7 @@ void
 GnssAdapter::setSuplHostServer(const char* server, int port, LocServerType type)
 {
     if (ContextBase::mGps_conf.AGPS_CONFIG_INJECT) {
-        char serverUrl[MAX_URL_LEN] = {};
+        char serverUrl[LOC_MAX_PARAM_STRING] = {};
         int32_t length = -1;
         const char noHost[] = "NONE";
 
