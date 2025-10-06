@@ -1180,17 +1180,17 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                 ggaGpsQuality = '2';    // 2 means DGPS fix
                 rmcModeIndicator = 'P'; // P means precise
                 vtgModeIndicator = 'P'; // P means precise
-                if (locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.gpsSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[0] = 'P'; // P means precise
-                if (locationExtended.gnss_sv_used_ids.glo_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.gloSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[1] = 'P'; // P means precise
-                if (locationExtended.gnss_sv_used_ids.gal_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.galSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[2] = 'P'; // P means precise
-                if (locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.bdsSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[3] = 'P'; // P means precise
-                if (locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.qzssSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[4] = 'P'; // P means precise
-                if (locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.navicSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[5] = 'P'; // P means precise
                 break;
             } else if (LOC_NAV_MASK_RTK_FIXED_CORRECTION & locationExtended.navSolutionMask){
@@ -1198,17 +1198,17 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                 rmcModeIndicator = 'R'; // use R (RTK fixed)
                 vtgModeIndicator = 'D'; // use D (differential) as
                                         // no RTK fixed defined for VTG in NMEA 183 spec
-                if (locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.gpsSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[0] = 'R'; // R means RTK fixed
-                if (locationExtended.gnss_sv_used_ids.glo_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.gloSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[1] = 'R'; // R means RTK fixed
-                if (locationExtended.gnss_sv_used_ids.gal_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.galSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[2] = 'R'; // R means RTK fixed
-                if (locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.bdsSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[3] = 'R'; // R means RTK fixed
-                if (locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.qzssSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[4] = 'R'; // R means RTK fixed
-                if (locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.navicSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[5] = 'R'; // R means RTK fixed
                 break;
             } else if (LOC_NAV_MASK_RTK_CORRECTION & locationExtended.navSolutionMask){
@@ -1216,51 +1216,51 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                 rmcModeIndicator = 'F'; // F means RTK float fix
                 vtgModeIndicator = 'D'; // use D (differential) as
                                         // no RTK float defined for VTG in NMEA 183 spec
-                if (locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.gpsSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[0] = 'F'; // F means RTK float fix
-                if (locationExtended.gnss_sv_used_ids.glo_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.gloSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[1] = 'F'; // F means RTK float fix
-                if (locationExtended.gnss_sv_used_ids.gal_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.galSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[2] = 'F'; // F means RTK float fix
-                if (locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.bdsSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[3] = 'F'; // F means RTK float fix
-                if (locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.qzssSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[4] = 'F'; // F means RTK float fix
-                if (locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.navicSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[5] = 'F'; // F means RTK float fix
                 break;
             } else if (LOC_NAV_MASK_DGNSS_CORRECTION & locationExtended.navSolutionMask){
                 ggaGpsQuality = '2';    // 2 means DGPS fix
                 rmcModeIndicator = 'D'; // D means differential
                 vtgModeIndicator = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.gpsSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[0] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.glo_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.gloSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[1] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.gal_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.galSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[2] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.bdsSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[3] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.qzssSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[4] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.navicSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[5] = 'D'; // D means differential
                 break;
             } else if (LOC_NAV_MASK_SBAS_CORRECTION_IONO & locationExtended.navSolutionMask){
                 ggaGpsQuality = '2';    // 2 means DGPS fix
                 rmcModeIndicator = 'D'; // D means differential
                 vtgModeIndicator = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.gpsSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[0] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.glo_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.gloSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[1] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.gal_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.galSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[2] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.bdsSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[3] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.qzssSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[4] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.navicSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[5] = 'D'; // D means differential
                 break;
             }
@@ -1271,17 +1271,17 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                 ggaGpsQuality = '1'; // 1 means GPS
                 rmcModeIndicator = 'A'; // A means autonomous
                 vtgModeIndicator = 'A'; // A means autonomous
-                if (locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.gpsSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[0] = 'A'; // A means autonomous
-                if (locationExtended.gnss_sv_used_ids.glo_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.gloSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[1] = 'A'; // A means autonomous
-                if (locationExtended.gnss_sv_used_ids.gal_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.galSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[2] = 'A'; // A means autonomous
-                if (locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.bdsSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[3] = 'A'; // A means autonomous
-                if (locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.qzssSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[4] = 'A'; // A means autonomous
-                if (locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask ? 1 : 0)
+                if (locationExtended.gnss_sv_used_ids.navicSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[5] = 'A'; // A means autonomous
                 break;
             }
@@ -1386,17 +1386,17 @@ void loc_nmea_generate_pos(const UlpLocation &location,
 
     if (GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA & locationExtended.flags) {
         sv_cache_info.gps_used_mask =
-                locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask;
+                locationExtended.gnss_sv_used_ids.gpsSvUsedIdsMask;
         sv_cache_info.glo_used_mask =
-                locationExtended.gnss_sv_used_ids.glo_sv_used_ids_mask;
+                locationExtended.gnss_sv_used_ids.gloSvUsedIdsMask;
         sv_cache_info.gal_used_mask =
-                locationExtended.gnss_sv_used_ids.gal_sv_used_ids_mask;
+                locationExtended.gnss_sv_used_ids.galSvUsedIdsMask;
         sv_cache_info.bds_used_mask =
-                locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask;
+                locationExtended.gnss_sv_used_ids.bdsSvUsedIdsMask;
         sv_cache_info.qzss_used_mask =
-                locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask;
+                locationExtended.gnss_sv_used_ids.qzssSvUsedIdsMask;
         sv_cache_info.navic_used_mask =
-                locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask;
+                locationExtended.gnss_sv_used_ids.navicSvUsedIdsMask;
     }
     // Generate valid NMEA strings only when utc Time stamp is set
     // Output empty nmea sentence if utctime is zero

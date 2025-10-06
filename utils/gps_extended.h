@@ -447,7 +447,7 @@ typedef struct {
 
     Gnss_ApTimeStampStructType               timeStamp;
     /** Gnss sv used in position data */
-    GnssSvUsedInPosition gnss_sv_used_ids;
+    GnssLocationSvUsedInPosition gnss_sv_used_ids;
     /** Gnss sv used in position data for multiband */
     GnssSvMbUsedInPosition gnss_mb_sv_used_ids;
     /** Nav solution mask to indicate sbas corrections */
