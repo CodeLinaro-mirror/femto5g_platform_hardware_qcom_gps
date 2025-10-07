@@ -630,8 +630,7 @@ public:
     virtual void reportPositionEvent(const UlpLocation& ulpLocation,
                                      const GpsLocationExtended& locationExtended,
                                      enum loc_sess_status status,
-                                     LocPosTechMask techMask,
-                                     GnssDataNotification* pDataNotify = nullptr);
+                                     LocPosTechMask techMask);
     void reportEnginePositionsEvent(unsigned int count,
                                     EngineLocationInfo* locationArr);
     virtual void reportPropogatedPuncEvent(LocGpsLocation gpsLocation);

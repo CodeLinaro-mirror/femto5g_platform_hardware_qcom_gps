@@ -4036,8 +4036,7 @@ void
 GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
                                  const GpsLocationExtended& locationExtended,
                                  enum loc_sess_status status,
-                                 LocPosTechMask techMask,
-                                 GnssDataNotification* pDataNotify)
+                                 LocPosTechMask techMask)
 {
     // this position is from QMI LOC API, then send report to engine hub
     // also, send out SPE fix promptly to the clients that have registered
@@ -4051,21 +4050,18 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
         mutable GpsLocationExtended mLocationExtended;
         mutable enum loc_sess_status mStatus;
         mutable LocPosTechMask mTechMask;
-        mutable GnssDataNotification mDataNotify;
 
         inline MsgReportSPEPosition(GnssAdapter& adapter,
                                     const UlpLocation& ulpLocation,
                                     const GpsLocationExtended& locationExtended,
                                     enum loc_sess_status status,
-                                    LocPosTechMask techMask,
-                                    GnssDataNotification dataNotify) :
+                                    LocPosTechMask techMask) :
             LocMsg(),
             mAdapter(adapter),
             mUlpLocation(ulpLocation),
             mLocationExtended(locationExtended),
             mStatus(status),
-            mTechMask(techMask),
-            mDataNotify(dataNotify) {}
+            mTechMask(techMask) {}
         inline virtual void proc() const {
             if (mAdapter.mTimeBasedTrackingSessions.empty()) {
                 LOC_LOGD("MsgReportSPEPosition, no session on-going, "
@@ -4175,10 +4171,6 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
                         mUlpLocation.gpsLocation.accuracy, mUlpLocation.gpsLocation.timestamp);
             }
 
-            if (mDataNotify.size != 0) {
-                mAdapter.reportData(mDataNotify);
-            }
-
             // save the association of GPS timestamp and qtimer tick cnt in PVT report
             mAdapter.mPositionElapsedRealTimeCal
                     .saveGpsTimeAndQtimerPairInPvtReport(mLocationExtended, mStatus);
@@ -4230,13 +4222,7 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
     // unpropagated report: is only for engine hub to consume and no need
     // to send out to the clients
     if (!ulpLocation.unpropagatedPosition) {
-        GnssDataNotification dataNotifyCopy = {};
         uint64_t pvtReportTimeDelta = 0ULL;
-
-        if (pDataNotify) {
-            dataNotifyCopy = *pDataNotify;
-            dataNotifyCopy.size = sizeof(dataNotifyCopy);
-        }
 
         if (locationExtended.isReportTimeAccurate()) {
 #define NSEC_IN_ONE_MSEC 1000000ULL
@@ -4255,7 +4241,7 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
         }
 
         MsgReportSPEPosition* pLocMsg = new MsgReportSPEPosition(*this, ulpLocation,
-                locationExtended, status, techMask, dataNotifyCopy);
+                locationExtended, status, techMask);
         sendMsg((const LocMsg*)pLocMsg, (uint32_t)pvtReportTimeDelta);
     }
 }
