@@ -252,9 +252,6 @@ GnssAdapter::GnssAdapter() :
 
     readConfigCommand();
     initDefaultAgpsCommand();
-    if (ContextBase::mIzat_process_conf.eDgnssDaemonEnabled) {
-        initCDFWServiceCommand();
-    }
     initEngineHubCommand();
     initLocGlinkCommand();
     mXtraObserver.init();
@@ -5797,9 +5794,10 @@ bool GnssAdapter::reportQwesCapabilities(
             //Set Mlp feature bit
             auto iter = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_DGNSS);
             if (iter != mFeatureMap.end() && iter->second) {
-                mAdapter.mPpFeatureStatusMask |= MLP_FEATURE_ENABLED_BY_DEFAULT;
-                mAdapter.initCDFWService();
+               mAdapter.mPpFeatureStatusMask |= MLP_FEATURE_ENABLED_BY_DEFAULT;
+               mAdapter.initCDFWService();
             }
+
             // Set RL feature bit
             auto qwesIter = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_ROBUST_LOCATION);
             if (qwesIter != mFeatureMap.end()) {
@@ -8599,25 +8597,12 @@ bool GnssAdapter::isEngineServiceEnable() {
     }
 }
 
-/* ==== DGnss Usable Reporter ========================================================= */
-void GnssAdapter::initCDFWServiceCommand() {
-    struct MsgInitCDFWService : public LocMsg {
-        GnssAdapter* mAdapter;
-        inline MsgInitCDFWService(GnssAdapter* adapter) :
-            LocMsg(),
-            mAdapter(adapter) {}
-        inline virtual void proc() const {
-            mAdapter->initCDFWService();
-        }
-    };
-
-    sendMsg(new MsgInitCDFWService(this));
-}
 /* ======== UTILITIES ================================================================= */
 void GnssAdapter::initCDFWService()
 {
-    LOC_LOGd("mCdfwInterface %p", mCdfwInterface);
-    if (nullptr == mCdfwInterface) {
+    LOC_LOGd("edgnss daemon enabled %d, mCdfwInterface %p",
+             ContextBase::mIzat_process_conf.eDgnssDaemonEnabled, mCdfwInterface);
+    if (ContextBase::mIzat_process_conf.eDgnssDaemonEnabled && !mCdfwInterface) {
         void* libHandle = nullptr;
         const char* libName = "libcdfw.so";
 
