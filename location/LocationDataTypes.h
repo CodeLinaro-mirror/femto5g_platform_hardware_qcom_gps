@@ -986,15 +986,29 @@ enum LocEngineRunState {
 typedef uint64_t GnssDataMask;
 enum GnssDataBits {
     // Jammer Indicator is available
-    GNSS_LOC_DATA_JAMMER_IND_BIT    = (1ULL << 0),
+    GNSS_LOC_DATA_JAMMER_IND_BIT = (1ULL << 0),
     // AGC is available
-    GNSS_LOC_DATA_AGC_BIT           = (1ULL << 1),
+    GNSS_LOC_DATA_AGC_BIT        = (1ULL << 1),
+};
+
+typedef uint64_t GnssDataValidityMask;
+enum GnssDataValidity {
+    // Jammer Indicator Array is available
+    GNSS_LOC_DATA_JAMMER_IND_ARRAY_BIT        = (1ULL << 0),
+    // AGC array is available
+    GNSS_LOC_DATA_AGC_ARRAY_BIT               = (1ULL << 1),
     // AGC status for L1 band is available.
-    GNSS_LOC_DATA_AGC_STATUS_L1_BIT = (1ULL << 2),
+    GNSS_LOC_DATA_AGC_STATUS_L1_BIT           = (1ULL << 2),
     // AGC status for L2 band is available.
-    GNSS_LOC_DATA_AGC_STATUS_L2_BIT = (1ULL << 3),
+    GNSS_LOC_DATA_AGC_STATUS_L2_BIT           = (1ULL << 3),
     // AGC status for L5 band is available.
-    GNSS_LOC_DATA_AGC_STATUS_L5_BIT = (1ULL << 4),
+    GNSS_LOC_DATA_AGC_STATUS_L5_BIT           = (1ULL << 4),
+    // GPS system time is available.
+    GNSS_LOC_DATA_GPS_SYSTEM_TIME_BIT         = (1ULL << 5),
+    // System Tick at GPS Time is available.
+    GNSS_LOC_DATA_SYSTEM_TICK_AT_GPS_TIME_BIT = (1ULL << 6),
+    // Hardware clock frequency correction is available.
+    GNSS_LOC_DATA_HW_CLK_FREQ_CORRECTION_BIT  = (1ULL << 7),
 };
 
 /** Indicate RF Automatic Gain Control Status <br/>   */
@@ -1861,13 +1875,18 @@ struct GnssNmeaNotification {
 };
 
 struct GnssDataNotification {
-    uint32_t size;                 // set to sizeof(GnssDataNotification)
-    GnssDataMask  gnssDataMask[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];  // bitwise OR of GnssDataBits
-    double        jammerInd[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];     // Jammer Indication
-    double        agc[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];           // Automatic gain control
-    AgcStatus     agcStatusL1; // RF Automatic gain control status for L1 band.
-    AgcStatus     agcStatusL2; // RF Automatic gain control status for L2 band.
-    AgcStatus     agcStatusL5; // RF Automatic gain control status for L5 band.
+    uint32_t     size;                  // set to sizeof(GnssDataNotification)
+    GnssDataValidityMask gnssDataValidityMask;  // bitwise OR of GnssDataValidity
+    GnssDataMask gnssDataMask[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];  // bitwise OR of GnssDataBits
+                                                                     // for each signal type
+    double       jammerInd[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];     // Jammer Indication
+    double       agc[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];           // Automatic gain control
+    AgcStatus    agcStatusL1;                      // RF Automatic gain control status for L1 band.
+    AgcStatus    agcStatusL2;                      // RF Automatic gain control status for L2 band.
+    AgcStatus    agcStatusL5;                      // RF Automatic gain control status for L5 band.
+    GnssSystemTimeStructType gpsSystemTime;        // GPS System time.
+    uint64_t                 systemTickAtGpsTime;  // System Tick at GPS Time
+    uint32_t                 hwClkFreqCorrection;  // Hardware clock frequency correction
 };
 
 struct GnssMeasurementsAgc {
