@@ -46,8 +46,9 @@
 
 // GTP services
 #ifdef USE_GLIB
-typedef void (getSingleNetworkLocationGetter)(trackingCallback* callback);
-typedef void (stopNetworkLocationGetter)(trackingCallback* callback);
+typedef void(getSingleNetworkLocationGetter)(trackingCallback*   callback,
+                                             TerrestrialTechMask techMask);
+typedef void (stopNetworkLocationGetter)(trackingCallback* callback, TerrestrialTechMask techMask);
 #endif
 
 typedef struct {
@@ -637,25 +638,26 @@ LocationAPI::gnssNiResponse(uint32_t id, GnssNiResponse response)
 }
 
 #ifdef USE_GLIB
-void LocationAPI::startNetworkLocation(trackingCallback* callback) {
+void LocationAPI::startNetworkLocation(trackingCallback* callback, TerrestrialTechMask techMask) {
     void* libHandle = nullptr;
     getSingleNetworkLocationGetter* setter =
             (getSingleNetworkLocationGetter*)dlGetSymFromLib(libHandle,
             "liblocationservice_glue.so", "startNetworkLocation");
     if (setter != nullptr) {
-        (*setter)(callback);
+        LOC_LOGd("startNetworkLocation called");
+        (*setter)(callback, techMask);
     } else {
         LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
     }
 }
 
-void LocationAPI::stopNetworkLocation(trackingCallback* callback) {
+void LocationAPI::stopNetworkLocation(trackingCallback* callback, TerrestrialTechMask techMask) {
     void* libHandle = nullptr;
     stopNetworkLocationGetter* setter = (stopNetworkLocationGetter*)dlGetSymFromLib(libHandle,
             "liblocationservice_glue.so", "stopNetworkLocation");
     if (setter != nullptr) {
-        LOC_LOGe("called");
-        (*setter)(callback);
+        LOC_LOGd("stopNetworkLocation called");
+        (*setter)(callback, techMask);
     } else {
         LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
     }
