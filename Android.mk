@@ -41,6 +41,13 @@ endif
 # Set this flag to true to enable the NHz location feature.
 FEATURE_NHZ_ENABLED := false
 
+# Targets where Modem does not report NHz capability bit, but still supports NHz
+ifeq ($(TARGET_BOARD_PLATFORM),lahaina)
+  ifeq ($(TARGET_BOARD_SUFFIX),612)
+    FEATURE_NHZ_ENABLED := true
+  endif
+endif
+
 LOCAL_PATH := $(call my-dir)
 include $(call all-makefiles-under,$(LOCAL_PATH))
 
