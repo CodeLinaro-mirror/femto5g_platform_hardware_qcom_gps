@@ -287,6 +287,7 @@ GeofenceAdapter::addGeofencesCommand(LocationAPI* client, size_t count, Geofence
                 LOC_LOGE("%s]: new failed to allocate errs", __func__);
                 return;
             }
+            memset(errs, 0, (sizeof(LocationError) * mCount));
             for (size_t i=0; i < mCount; ++i) {
                 if (NULL == mIds || NULL == mOptions || NULL == mInfos) {
                     errs[i] = LOCATION_ERROR_INVALID_PARAMETER;
@@ -393,6 +394,7 @@ GeofenceAdapter::removeGeofencesCommand(LocationAPI* client, size_t count, uint3
                 LOC_LOGE("%s]: new failed to allocate errs", __func__);
                 return;
             }
+            memset(errs, 0, (sizeof(LocationError) * mCount));
             for (size_t i=0; i < mCount; ++i) {
                 mApi.addToCallQueue(new LocApiResponse(*mAdapter.getContext(),
                         [&mAdapter = mAdapter, mCount = mCount, mClient = mClient, mIds = mIds,
@@ -470,6 +472,7 @@ GeofenceAdapter::pauseGeofencesCommand(LocationAPI* client, size_t count, uint32
                 LOC_LOGE("%s]: new failed to allocate errs", __func__);
                 return;
             }
+            memset(errs, 0, (sizeof(LocationError) * mCount));
             for (size_t i=0; i < mCount; ++i) {
                 mApi.addToCallQueue(new LocApiResponse(*mAdapter.getContext(),
                         [&mAdapter = mAdapter, mCount = mCount, mClient = mClient, mIds = mIds,
@@ -545,6 +548,7 @@ GeofenceAdapter::resumeGeofencesCommand(LocationAPI* client, size_t count, uint3
                 LOC_LOGE("%s]: new failed to allocate errs", __func__);
                 return;
             }
+            memset(errs, 0, (sizeof(LocationError) * mCount));
             for (size_t i=0; i < mCount; ++i) {
                 mApi.addToCallQueue(new LocApiResponse(*mAdapter.getContext(),
                         [&mAdapter = mAdapter, mCount = mCount, mClient = mClient, mIds = mIds,
@@ -625,6 +629,7 @@ GeofenceAdapter::modifyGeofencesCommand(LocationAPI* client, size_t count, uint3
                 LOC_LOGE("%s]: new failed to allocate errs", __func__);
                 return;
             }
+            memset(errs, 0, (sizeof(LocationError) * mCount));
             for (size_t i=0; i < mCount; ++i) {
                 if (NULL == mIds || NULL == mOptions) {
                     errs[i] = LOCATION_ERROR_INVALID_PARAMETER;
