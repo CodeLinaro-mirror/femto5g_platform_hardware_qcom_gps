@@ -122,6 +122,10 @@ linked_list_err_type linked_list_add(void* list_data, void *data_obj, void (*dea
    }
 
    list_state* p_list = (list_state*)list_data;
+   if (((uintptr_t)p_list) % sizeof(void*) != 0) {
+      LOC_LOGE("%s: p_list pointer is misaligned: %p", __FUNCTION__, p_list);
+      return eLINKED_LIST_INVALID_HANDLE;
+   }
    list_element* elem = (list_element*)malloc(sizeof(list_element));
    if( elem == NULL )
    {
