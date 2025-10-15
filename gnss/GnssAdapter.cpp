@@ -3192,7 +3192,7 @@ GnssAdapter::saveTrackingSession(LocationAPI* client, uint32_t sessionId,
             configRobustLocation();
         }
         // notify SystemStatus the engine tracking status
-        getSystemStatus()->getOsObserver()->eventSetTracking(isInSession());
+        getSystemStatus()->setTrackingStatus(isInSession());
     }
 }
 
@@ -3208,7 +3208,7 @@ GnssAdapter::eraseTrackingSession(LocationAPI* client, uint32_t sessionId)
                 configRobustLocation();
             }
         }
-        getSystemStatus()->getOsObserver()->eventSetTracking(isInSession());
+        getSystemStatus()->setTrackingStatus(isInSession());
     }
 }
 
