@@ -103,7 +103,13 @@ void SystemStatusTimeAndClock::dump()
  SystemStatusXoState
 ******************************************************************************/
 SystemStatusXoState::SystemStatusXoState(const GnssEngineDebugDataInfo& info) :
-    mXoState(info.xoState)
+    mXoState(info.xoState),
+    mXoTemp(info.xoTemp),
+    mXoTempSlope(info.xoTempSlope),
+    mXoTempAccel(info.xoTempAccel),
+    mXoCalResetCount(info.xoCalResetCount),
+    mXoRotatorQuality(info.xoRotatorQuality),
+    mTimeInconsistencyStatus(info.timeInconsistencyStatus)
 {
 }
 
