@@ -298,8 +298,7 @@ void LocApiBase::handleEngineDownEvent()
 void LocApiBase::reportPosition(UlpLocation& location,
                                 GpsLocationExtended& locationExtended,
                                 enum loc_sess_status status,
-                                LocPosTechMask loc_technology_mask,
-                                GnssDataNotification* pDataNotify)
+                                LocPosTechMask loc_technology_mask)
 {
     // print the location info before delivering
     LOC_LOGd("\n  flags: 0x%x\n  source: %d\n  latitude: %f\n  longitude: %f\n  "
@@ -323,8 +322,7 @@ void LocApiBase::reportPosition(UlpLocation& location,
     // loop through adapters, and deliver to all adapters.
     TO_ALL_LOCADAPTERS(
         mLocAdapters[i]->reportPositionEvent(location, locationExtended,
-                                             status, loc_technology_mask,
-                                             pDataNotify)
+                                             status, loc_technology_mask)
     );
 }
 
