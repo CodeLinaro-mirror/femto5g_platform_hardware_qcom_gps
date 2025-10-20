@@ -88,7 +88,7 @@ namespace loc_core
 class SystemStatusNmeaBase
 {
 protected:
-    std::vector<std::string> mField;
+    std::vector<std::string> mField = {};
 
     SystemStatusNmeaBase(const char *str_in, uint32_t len_in)
     {

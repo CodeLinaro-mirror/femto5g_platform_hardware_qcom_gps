@@ -69,10 +69,11 @@
 #include <algorithm>
 #include <memory>
 
+#define LOG_TAG "LocSvc_GnssCARPowerPolicy"
+
 #include <log_util.h>
 #include "GnssCarPowerHandler.h"
 
-#define LOG_TAG "LocSvc_GnssCARPowerPolicy"
 
 namespace aafap = ::aidl::android::frameworks::automotive::powerpolicy;
 

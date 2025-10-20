@@ -120,13 +120,13 @@ struct AidlBatteryListenerImpl : public aidl::android::hardware::health::BnHealt
 
   private:
     std::shared_ptr<IHealth> mHealth;
-    ndk::ScopedAIBinder_DeathRecipient mDeathRecipient;
     BatteryStatus mStatus;
     cb_fn_t mCb;
     std::mutex mLock;
     std::condition_variable mCond;
     std::unique_ptr<std::thread> mThread;
     bool mDone;
+    ndk::ScopedAIBinder_DeathRecipient mDeathRecipient;
     bool statusToBool(const BatteryStatus &s) const {
         return (s == BatteryStatus::CHARGING) ||
                (s ==  BatteryStatus::FULL);

@@ -92,7 +92,6 @@ class BatchingAdapter : public LocAdapterBase {
     uint32_t mOngoingTripTBFInterval;
     bool mTripWithOngoingTBFDropped;
     bool mTripWithOngoingTripDistanceDropped;
-    PowerStateType mSystemPowerState;
 
     void startTripBatchingMultiplex(LocationAPI* client, uint32_t sessionId,
                                     const BatchingOptions& batchingOptions);
@@ -120,6 +119,7 @@ class BatchingAdapter : public LocAdapterBase {
     uint32_t mBatchingAccuracy;
     size_t mBatchSize;
     size_t mTripBatchSize;
+    PowerStateType mSystemPowerState;
 
 protected:
 
