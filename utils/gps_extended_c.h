@@ -748,7 +748,6 @@ enum loc_api_adapter_err {
 enum loc_api_adapter_event_index {
     LOC_API_ADAPTER_REPORT_POSITION = 0,               // Position report comes in loc_parsed_position_s_type
     LOC_API_ADAPTER_REPORT_SATELLITE,                  // Satellite in view report
-    LOC_API_ADAPTER_REPORT_NMEA_1HZ,                   // NMEA report at 1HZ rate
     LOC_API_ADAPTER_REQUEST_NI_NOTIFY_VERIFY,          // NI notification/verification request
     LOC_API_ADAPTER_REQUEST_ASSISTANCE_DATA,           // Assistance data, eg: time, predicted orbits request
     LOC_API_ADAPTER_REQUEST_LOCATION_SERVER,           // Request for location server
@@ -784,7 +783,6 @@ enum loc_api_adapter_event_index {
 
 #define LOC_API_ADAPTER_BIT_PARSED_POSITION_REPORT           (1ULL<<LOC_API_ADAPTER_REPORT_POSITION)
 #define LOC_API_ADAPTER_BIT_SATELLITE_REPORT                 (1ULL<<LOC_API_ADAPTER_REPORT_SATELLITE)
-#define LOC_API_ADAPTER_BIT_NMEA_1HZ_REPORT                  (1ULL<<LOC_API_ADAPTER_REPORT_NMEA_1HZ)
 #define LOC_API_ADAPTER_BIT_NI_NOTIFY_VERIFY_REQUEST         (1ULL<<LOC_API_ADAPTER_REQUEST_NI_NOTIFY_VERIFY)
 #define LOC_API_ADAPTER_BIT_ASSISTANCE_DATA_REQUEST          (1ULL<<LOC_API_ADAPTER_REQUEST_ASSISTANCE_DATA)
 #define LOC_API_ADAPTER_BIT_LOCATION_SERVER_REQUEST          (1ULL<<LOC_API_ADAPTER_REQUEST_LOCATION_SERVER)
