@@ -73,16 +73,6 @@ extern "C" {
 #define ULP_LOCATION_IS_FROM_HYBRID   0x0001
 /** Position source is GNSS only */
 #define ULP_LOCATION_IS_FROM_GNSS     0x0002
-/** Position is from a Geofence Breach Event */
-#define ULP_LOCATION_IS_FROM_GEOFENCE 0X0004
-/** Position is from Hardware FLP */
-#define ULP_LOCATION_IS_FROM_HW_FLP   0x0008
-/** Position is from NLP */
-#define ULP_LOCATION_IS_FROM_NLP      0x0010
-/** Position is from external DR solution*/
-#define ULP_LOCATION_IS_FROM_EXT_DR   0X0020
-/** Raw GNSS position fixes */
-#define ULP_LOCATION_IS_FROM_GNSS_RAW   0X0040
 
 typedef uint32_t LocSvInfoSource;
 /** SVinfo source is GNSS/DR */
