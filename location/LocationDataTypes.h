@@ -477,6 +477,7 @@ typedef enum {
     GNSS_AIDING_DATA_SV_NO_EXIST_BIT     = (1<<8), // SV does not exist
     GNSS_AIDING_DATA_SV_IONOSPHERE_BIT   = (1<<9), // ionosphere correction
     GNSS_AIDING_DATA_SV_TIME_BIT         = (1<<10),// reset satellite time
+    GNSS_AIDING_DATA_SV_MB_DATA          = (1 << 11),// delete multiband data
 } GnssAidingDataSvBits;
 
 typedef uint32_t GnssAidingDataSvTypeMask;
