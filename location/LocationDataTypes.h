@@ -105,6 +105,7 @@ enum LocationFlagsBits {
     LOCATION_HAS_GPTP_TIME_BIT         = (1<<15), // location has valid GPTP time
     LOCATION_HAS_GPTP_TIME_UNC_BIT     = (1<<16), // location has valid GPTP time Uncertainity
     LOCATION_HAS_SESSION_STATUS_BIT    = (1<<17), // location has session status
+    LOCATION_HAS_ALTITUDE_REF_TYPE_BIT = (1<<18), // location has altitude ref type
 };
 
 typedef uint16_t LocationTechnologyMask;
@@ -126,6 +127,16 @@ enum LocationTechnologyBits{
     LOCATION_TECHNOLOGY_PDR_BIT                      = (1<<13), // PED mode
     LOCATION_TECHNOLOGY_PROPAGATED_BIT               = (1<<14), //using cached measures
     LOCATION_TECHNOLOGY_SBAS_BIT                     = (1<<15), //using SBAS
+    LOCATION_TECHNOLOGY_WIFI_RTT_BIT                 = (1<<16), //using WiFi RTT
+    LOCATION_TECHNOLOGY_WIFI_RTT_FTM_BIT             = (1<<17), //using WiFi RTT FTM
+};
+
+enum AltitudeRefType {
+    ALT_UNKNOWN = 0,
+    ALT_REF_WGS84,
+    ALT_REF_MSL,
+    ALT_REF_AGL,
+    ALT_REF_FLOOR_LEVEL
 };
 
 enum LocationReliability {
@@ -1146,6 +1157,7 @@ struct Location {
     uint64_t systemTick;        // System Tick at GPS Time
     uint64_t elapsedgPTPTime;    // GPTP time field in ns
     uint64_t elapsedgPTPTimeUnc; // GPTP time Unc
+    AltitudeRefType altitudeRefType; //Altitude reference type, only apply to WiFi location
 };
 
 enum LocReqEngineTypeMask {
