@@ -138,6 +138,7 @@ private:
         constexpr int MAX_EVENTS = 1;
         epoll_event events[MAX_EVENTS];
 
+        pthread_setname_np(pthread_self(), "LocTimerThread");
         while (true) {
             int nfds = epoll_wait(mEpollFd, events, MAX_EVENTS, -1);
             if (nfds == -1) {

@@ -331,23 +331,6 @@ void ContextBase::readIZatConfForValueAddedProcess() {
    fclose(conf_fp);
    conf_fp = nullptr;
 
-#ifdef _ANDROID_
-#define LOCLAUNCHER_LIB "libloc_launcher.so"
-typedef void locLauncherMain();
-    // set the property to launch loc_launcher
-    // loc_launcher rc file will only launch loc_launcher if
-    // property "vendor.qti.izat.value_added_process" is set to "enabled".
-    void* locLauncherHandle = nullptr;
-     if (mIzat_process_conf.valueAddedProcessEnabled == true) {
-        locLauncherMain* launcherMainMethod = (locLauncherMain*)dlGetSymFromLib(
-                locLauncherHandle, LOCLAUNCHER_LIB, "launch");
-        if (NULL != launcherMainMethod) {
-            LOC_LOGi("start loc launcher");
-            (*launcherMainMethod)();
-        }
-    }
-#endif
-
     LOC_LOGd ("value added process enabled %d, gtp enabled %d, slim daemon enabled %d, "
               "edgnss enabled %d, engine service enabled %d (ppe: %d, ppe-int:%d, dre: %d)",
               mIzat_process_conf.valueAddedProcessEnabled, mIzat_process_conf.gtpDaemonEnabled,

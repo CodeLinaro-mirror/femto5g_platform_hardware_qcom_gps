@@ -259,7 +259,21 @@ GnssAdapter::GnssAdapter() :
     // at last step, let us inform adapater base that we are done
     // with initialization, e.g.: ready to process handleEngineUpEvent
     doneInit();
-
+    // In Android SP, start value added process
+#ifdef _ANDROID_
+#define LOCLAUNCHER_LIB "libloc_launcher.so"
+    typedef void locLauncherMain(const MsgTask* msgTask);
+    // load libloc_launcher.so to launch value added process
+    void* locLauncherHandle = nullptr;
+    if (ContextBase::mIzat_process_conf.valueAddedProcessEnabled) {
+        locLauncherMain* launcherMainMethod = (locLauncherMain*)dlGetSymFromLib(
+                locLauncherHandle, LOCLAUNCHER_LIB, "launch");
+        if (NULL != launcherMainMethod) {
+            LOC_LOGi("start loc launcher");
+            (*launcherMainMethod)(mMsgTask);
+        }
+    }
+#endif
 }
 
 void GnssAdapter::restoreConfigFromNvm()
