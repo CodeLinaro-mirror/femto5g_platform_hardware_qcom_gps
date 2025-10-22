@@ -121,6 +121,9 @@ class GnssAdapter : public LocAdapterBase {
     LocPosMode mUlpPositionMode;
     GnssSvUsedInPosition mGnssSvIdUsedInPosition;
     bool mGnssSvIdUsedInPosAvail;
+    GnssSvMbUsedInPosition mGnssMbSvIdUsedInPosition;
+    bool mGnssMbSvIdUsedInPosAvail;
+    GnssSignalTypeMask mGnssSignalType[GNSS_SV_MAX];
 
     /* ==== CONTROL ======================================================================== */
     LocationControlCallbacks mControlCallbacks;
