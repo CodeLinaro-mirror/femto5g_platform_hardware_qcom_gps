@@ -26,6 +26,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/*
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_Ctx"
 
@@ -70,13 +75,6 @@ ContextBase* LocContext::getLocContext(const char* name)
     pthread_mutex_unlock(&LocContext::mGetLocContextMutex);
 
     return mContext;
-}
-
-void LocContext :: injectFeatureConfig(ContextBase *curContext)
-{
-    LOC_LOGD("%s:%d]: Calling LBSProxy (%p) to inject feature config",
-             __func__, __LINE__, ((LocContext *)curContext)->mLBSProxy);
-    ((LocContext *)curContext)->mLBSProxy->injectFeatureConfig(curContext);
 }
 
 LocContext::LocContext(const MsgTask* msgTask) :

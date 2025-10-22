@@ -57,10 +57,6 @@ public:
 
         (void)power;
     }
-    virtual void injectFeatureConfig(ContextBase* context) const {
-
-        (void)context;
-    }
     inline virtual IzatDevId_t getIzatDevId() const { return 0; }
     virtual void setIzatFusedProviderOverride(bool izatFused) {}
     virtual bool getIzatFusedProviderOverride() const { return false; }

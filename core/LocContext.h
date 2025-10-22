@@ -26,6 +26,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/*
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef __LOC_CONTEXT__
 #define __LOC_CONTEXT__
 
@@ -51,8 +56,6 @@ public:
     static const char* mLocationHalName;
 
     static ContextBase* getLocContext(const char* name);
-
-    static void injectFeatureConfig(ContextBase *context);
 };
 
 }
