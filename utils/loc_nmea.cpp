@@ -694,8 +694,35 @@ static void loc_nmea_generate_GSV(const GnssSvNotification &svNotify,
 
         for (int i=0; (svNumber <= svNotify.count) && (i < 4);  svNumber++)
         {
-            if (sv_meta_p->svType == svNotify.gnssSvs[svNumber - 1].type && sv_meta_p->signalId ==
-                convert_signalType_to_signalId(svNotify.gnssSvs[svNumber-1].gnssSignalTypeMask))
+            GnssSignalTypeMask signalType = svNotify.gnssSvs[svNumber-1].gnssSignalTypeMask;
+            if (0 == signalType) {
+                // If no signal type in report, it means default L1,G1,E1,B1I
+                switch (svNotify.gnssSvs[svNumber - 1].type)
+                {
+                    case GNSS_SV_TYPE_GPS:
+                        signalType = GNSS_SIGNAL_GPS_L1CA;
+                        break;
+                    case GNSS_SV_TYPE_GLONASS:
+                        signalType = GNSS_SIGNAL_GLONASS_G1;
+                        break;
+                    case GNSS_SV_TYPE_GALILEO:
+                        signalType = GNSS_SIGNAL_GALILEO_E1;
+                        break;
+                    case GNSS_SV_TYPE_QZSS:
+                        signalType = GNSS_SIGNAL_QZSS_L1CA;
+                        break;
+                    case GNSS_SV_TYPE_BEIDOU:
+                        signalType = GNSS_SIGNAL_BEIDOU_B1I;
+                        break;
+                    default:
+                        LOC_LOGE("NMEA Error unknow constellation type: %d",
+                                svNotify.gnssSvs[svNumber - 1].type);
+                        continue;
+                }
+            }
+
+            if (sv_meta_p->svType == svNotify.gnssSvs[svNumber - 1].type &&
+                    sv_meta_p->signalId == convert_signalType_to_signalId(signalType))
             {
                 length = snprintf(pMarker, lengthRemaining,",%02d,%02d,%03d,",
                         svNotify.gnssSvs[svNumber - 1].svId - svIdOffset,
@@ -1780,10 +1807,12 @@ void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
             {
                 sv_cache_info.gps_used_mask |= (1ULL << (svNotify.gnssSvs[svNumber - 1].svId - 1));
             }
-            if (GNSS_SIGNAL_GPS_L1CA == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask) {
-                sv_cache_info.gps_l1_count++;
-            } else if (GNSS_SIGNAL_GPS_L5 == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask) {
+            if (GNSS_SIGNAL_GPS_L5 == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask) {
                 sv_cache_info.gps_l5_count++;
+            } else {
+                // GNSS_SIGNAL_GPS_L1CA or default
+                // If no signal type in report, it means default L1
+                sv_cache_info.gps_l1_count++;
             }
         }
         else if (GNSS_SV_TYPE_GLONASS == svNotify.gnssSvs[svNumber - 1].type)
@@ -1796,10 +1825,12 @@ void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
             {
                 sv_cache_info.glo_used_mask |= (1ULL << (svNotify.gnssSvs[svNumber - 1].svId - 1));
             }
-            if (GNSS_SIGNAL_GLONASS_G1 == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask) {
-                sv_cache_info.glo_g1_count++;
-            } else if (GNSS_SIGNAL_GLONASS_G2 == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask){
+            if (GNSS_SIGNAL_GLONASS_G2 == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask){
                 sv_cache_info.glo_g2_count++;
+            } else {
+                // GNSS_SIGNAL_GLONASS_G1 or default
+                // If no signal type in report, it means default G1
+                sv_cache_info.glo_g1_count++;
             }
         }
         else if (GNSS_SV_TYPE_GALILEO == svNotify.gnssSvs[svNumber - 1].type)
@@ -1812,10 +1843,12 @@ void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
             {
                 sv_cache_info.gal_used_mask |= (1ULL << (svNotify.gnssSvs[svNumber - 1].svId - 1));
             }
-            if (GNSS_SIGNAL_GALILEO_E1 == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask) {
-                sv_cache_info.gal_e1_count++;
-            } else if(GNSS_SIGNAL_GALILEO_E5A == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask){
+            if(GNSS_SIGNAL_GALILEO_E5A == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask){
                 sv_cache_info.gal_e5_count++;
+            } else {
+                // GNSS_SIGNAL_GALILEO_E1 or default
+                // If no signal type in report, it means default E1
+                sv_cache_info.gal_e1_count++;
             }
         }
         else if (GNSS_SV_TYPE_QZSS == svNotify.gnssSvs[svNumber - 1].type)
@@ -1828,10 +1861,12 @@ void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
             {
                 sv_cache_info.qzss_used_mask |= (1ULL << (svNotify.gnssSvs[svNumber - 1].svId - 1));
             }
-            if (GNSS_SIGNAL_QZSS_L1CA == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask) {
-                sv_cache_info.qzss_l1_count++;
-            } else if (GNSS_SIGNAL_QZSS_L5 == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask) {
+            if (GNSS_SIGNAL_QZSS_L5 == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask) {
                 sv_cache_info.qzss_l5_count++;
+            } else {
+                // GNSS_SIGNAL_QZSS_L1CA or default
+                // If no signal type in report, it means default L1
+                sv_cache_info.qzss_l1_count++;
             }
         }
         else if (GNSS_SV_TYPE_BEIDOU == svNotify.gnssSvs[svNumber - 1].type)
@@ -1844,10 +1879,12 @@ void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
             {
                 sv_cache_info.bds_used_mask |= (1ULL << (svNotify.gnssSvs[svNumber - 1].svId - 1));
             }
-            if (GNSS_SIGNAL_BEIDOU_B1I == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask) {
-                sv_cache_info.bds_b1_count++;
-            } else if(GNSS_SIGNAL_BEIDOU_B2AI == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask){
+            if(GNSS_SIGNAL_BEIDOU_B2AI == svNotify.gnssSvs[svNumber - 1].gnssSignalTypeMask){
                 sv_cache_info.bds_b2_count++;
+            } else {
+                // GNSS_SIGNAL_BEIDOU_B1I or default
+                // If no signal type in report, it means default B1I
+                sv_cache_info.bds_b1_count++;
             }
         }
     }
