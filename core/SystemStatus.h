@@ -444,9 +444,9 @@ private:
     inline ~SystemStatus() {}
 
     // Data members
-    static pthread_mutex_t                    mMutexSystemStatus;
-    SystemStatusReports mCache;
-    bool mTracking;
+    static pthread_mutex_t mMutexSystemStatus;
+    SystemStatusReports    mCache;
+    bool                   mTracking;
 
     template <typename TYPE_REPORT, typename TYPE_ITEM>
     bool setIteminReport(TYPE_REPORT& report, TYPE_ITEM&& s);
@@ -465,6 +465,10 @@ public:
     SystemStatusOsObserver* getOsObserver();
 
     // Helpers
+    inline void setTrackingStatus(bool isInSession) {
+        mTracking = isInSession;
+        getOsObserver()->eventSetTracking(isInSession);
+    }
     bool eventPosition(const UlpLocation& location,const GpsLocationExtended& locationEx);
     void setEngineDebugDataInfo(const GnssEngineDebugDataInfo& gnssEngineDebugDataInfo);
     bool getReport(SystemStatusReports& reports, bool isLatestonly = false,
