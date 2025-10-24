@@ -74,7 +74,7 @@ class XtraIpcListener;
 class XtraSystemStatusObserver : public IDataItemObserver {
     friend XtraIpcListener;
 
-public :
+public:
     // constructor & destructor
     XtraSystemStatusObserver(GnssAdapter* adapter, SystemStatusOsObserver* sysStatObs,
             const MsgTask* msgTask);
@@ -136,6 +136,7 @@ private:
         LocIpcSender& mDgnssSender;
     public:
         DelayLocTimer(LocIpcSender& xtraSender, LocIpcSender& dgnssSender) :
+                LocTimer("Xtra-DelayLocTimer"),
                 mXtraSender(xtraSender), mDgnssSender(dgnssSender) {}
         void timeOutCallback() override {
             LocIpc::send(mXtraSender, (const uint8_t*)"halinit", sizeof("halinit"));

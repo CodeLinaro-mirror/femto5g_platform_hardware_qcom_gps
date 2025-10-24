@@ -73,11 +73,11 @@ typedef std::map<LocationSessionKey, TrackingOptions> TrackingOptionsMap;
 class OdcpiTimer : public LocTimer {
 public:
     OdcpiTimer(GnssAdapter* adapter) :
-            LocTimer(), mAdapter(adapter), mActive(false) {}
+            LocTimer("OdcpiTimer"), mAdapter(adapter), mActive(false) {}
 
     inline void start() {
         mActive = true;
-        LocTimer::start(ODCPI_EXPECTED_INJECTION_TIME_MS, false);
+        LocTimer::start(ODCPI_EXPECTED_INJECTION_TIME_MS);
     }
     inline void stop() {
         mActive = false;
@@ -104,7 +104,7 @@ class halResponseTimer : public LocTimer {
 public:
     halResponseTimer(GnssAdapter* hal, LocationError err,
             uint32_t sessionID) :
-            LocTimer(),
+            LocTimer("halResponseTimer"),
             mHal(hal),
             mErr(err),
             mSessionID(sessionID){}
@@ -112,7 +112,7 @@ public:
     inline void startHalResponseTimer(LocationError errorStatus, uint32_t id, uint32_t timeout) {
         mErr = errorStatus;
         mSessionID = id;
-        start(timeout, false);
+        start(timeout);
     }
     void timeOutCallback() override;
 

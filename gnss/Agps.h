@@ -99,11 +99,11 @@ class AtlTimer : public LocTimer {
 
 public:
     AtlTimer(AgpsManager* agpsManager) :
-            LocTimer(), mAgpsManager(agpsManager), mActive(false) {}
+            LocTimer("AtlTimer"), mAgpsManager(agpsManager), mActive(false) {}
 
     inline void start(uint32_t timeout) {
         mActive = true;
-        LocTimer::start(timeout, false);
+        LocTimer::start(timeout);
     }
     inline void stop() {
         mActive = false;
@@ -209,7 +209,7 @@ public:
         mBearer(AGPS_APN_BEARER_INVALID),
         mAtlTimeoutMsec(5000){};
 
-    virtual ~AgpsStateMachine() { if(NULL != mAPN) delete[] mAPN; };
+    virtual ~AgpsStateMachine() { if (NULL != mAPN) delete[] mAPN; };
 
     /* Getter/Setter methods */
     void setAPN(char* apn, unsigned int len);

@@ -18,7 +18,6 @@ libgps_utils_la_h_sources = \
         loc_log.h \
         loc_target.h \
         MsgTask.h \
-        LocHeap.h \
         LocThread.h \
         LocTimer.h \
         LocIpc.h \
@@ -28,9 +27,7 @@ libgps_utils_la_h_sources = \
         gps_extended_c.h \
         gps_extended.h \
         loc_gps.h \
-        log_util.h \
-        LocSharedLock.h \
-        LocUnorderedSetMap.h
+        log_util.h
 
 libgps_utils_la_c_sources = \
         linked_list.c \
@@ -38,7 +35,6 @@ libgps_utils_la_c_sources = \
         loc_cfg.cpp \
         loc_log.cpp \
         loc_target.cpp \
-        LocHeap.cpp \
         LocTimer.cpp \
         LocThread.cpp \
         LocIpc.cpp \

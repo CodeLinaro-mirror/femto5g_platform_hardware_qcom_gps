@@ -21,7 +21,6 @@ cc_library_shared {
         "msg_q.c",
         "linked_list.c",
         "loc_target.cpp",
-        "LocHeap.cpp",
         "LocTimer.cpp",
         "LocThread.cpp",
         "MsgTask.cpp",

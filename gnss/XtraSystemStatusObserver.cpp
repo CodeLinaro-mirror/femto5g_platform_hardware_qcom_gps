@@ -168,7 +168,7 @@ void XtraSystemStatusObserver::init() {
             make_shared<XtraIpcListener>(mSystemStatusObsrvr, mMsgTask, *this),
             LOC_IPC_HAL);
     mIpc.startNonBlockingListening(recver);
-    mDelayLocTimer.start(100 /*.1 sec*/,  false);
+    mDelayLocTimer.start(100 /*.1 sec*/);
 }
 
 bool XtraSystemStatusObserver::updateLockStatus(GnssConfigGpsLock lock) {

@@ -27,56 +27,41 @@
  *
  */
 /*
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
- */
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
-#ifndef __LOC_TIMER_CPP_H__
-#define __LOC_TIMER_CPP_H__
+#ifndef LOC_TIMER_CPP_H
+#define LOC_TIMER_CPP_H
 
 #include <stddef.h>
+#include <atomic>
+#include <mutex>
 #include <loc_pla.h>
 
 namespace loc_util {
 
-// opaque class to provide service implementation.
-class LocTimerDelegate;
-class LocSharedLock;
-
-// LocTimer client must extend this class and implementthe callback.
-// start() / stop() methods are to arm / disarm timer.
-class LocTimer
-{
-    LocTimerDelegate* mTimer;
-    LocSharedLock* mLock;
-    // don't really want mLock to be manipulated by clients, yet LocTimer
-    // has to have a reference to the lock so that the delete of LocTimer
-    // and LocTimerDelegate can work together on their share resources.
-    friend class LocTimerDelegate;
-
+class LocTimer {
 public:
     LocTimer();
+    LocTimer(const char* name);
     virtual ~LocTimer();
-
-    // timeOutInMs:  timeout delay in ms
-    // wakeOnExpire: true if to wake up CPU (if sleeping) upon timer
-    //                        expiration and notify the client. DEPRECATED!!
-    //               false if to wait until next time CPU wakes up (if
-    //                        sleeping) and then notify the client.
-    //               PLEASE NOTE THAT only false is supported now
-    // return:       true on success;
-    //               false on failure, e.g. timer is already running.
-    bool start(uint32_t timeOutInMs, bool wakeOnExpire = false);
-
-    // return:       true on success;
-    //               false on failure, e.g. timer is not running.
+    // Start a timer to be waken up after timeout msec
+    // Please note that if alarm based timer is not supported.
+    // WakeonExpire parameter is only for backward compatible and
+    // will not take effect.
+    bool start(uint32_t timeoutMs, bool wakeOnExpire = false);
     bool stop();
+    bool isRunning();
 
-    //  LocTimer client Should implement this method.
-    //  This method is used for timeout calling back to client. This method
-    //  should be short enough (eg: send a message to your own thread).
     virtual void timeOutCallback() = 0;
+
+private:
+    friend class TimerEngine;
+    const char*       mName;
+    int               mFd;
+    std::atomic<bool> mIsRunning;
 };
 
 } // namespace loc_util

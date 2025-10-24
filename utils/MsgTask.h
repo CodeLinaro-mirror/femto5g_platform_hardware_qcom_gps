@@ -27,12 +27,13 @@
  *
  */
 /*
- * ​​​​​Changes from Qualcomm Innovation Center are provided under the following license:
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
- */
-#ifndef __MSG_TASK__
-#define __MSG_TASK__
+  Changes from Qualcomm Technologies, Inc. are provided under the following license:
+  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+  SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
+#ifndef LOC_MSG_TASK
+#define LOC_MSG_TASK
 
 #include <mutex>
 #include <list>
@@ -60,11 +61,11 @@ class MsgTask {
         LocMsg* mMsg;
     public:
         inline MsgTimer(MsgTask& msgTask, const LocMsg* msg, uint32_t delayInMs) :
-                LocTimer(), mMsgTask(msgTask), mMsg((LocMsg*)msg) {
-            start(delayInMs, false/* wakeOnExpire */);
+                LocTimer("MsgTaskTimer"), mMsgTask(msgTask), mMsg((LocMsg*)msg) {
+            start(delayInMs);
         }
         virtual ~MsgTimer();
-       inline void detachMsg() { mMsg = nullptr; }
+        inline void detachMsg() { mMsg = nullptr; }
         virtual void timeOutCallback() override;
     };
     friend class MsgTimer;
@@ -79,6 +80,6 @@ public:
     void sendMsg(const std::function<void()> runnable, uint32_t delayInMs = 0) const;
 };
 
-} //
+}
 
-#endif //__MSG_TASK__
+#endif //LOC_MSG_TASK
