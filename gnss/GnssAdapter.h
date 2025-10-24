@@ -584,7 +584,6 @@ public:
     void reportResponse(size_t count, LocationError* errs, uint32_t* ids);
     /* ======== UTILITIES ================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
-    void initCDFWServiceCommand();
     void setAfwControlId(uint32_t id) { mAfwControlId = id; }
     uint32_t getAfwControlId() { return mAfwControlId; }
     virtual bool isInSession() { return !mTimeBasedTrackingSessions.empty(); }
