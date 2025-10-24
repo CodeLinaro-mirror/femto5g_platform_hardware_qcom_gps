@@ -174,8 +174,7 @@ public:
                         GpsLocationExtended& locationExtended,
                         enum loc_sess_status status,
                         LocPosTechMask loc_technology_mask =
-                                  LOC_POS_TECH_MASK_DEFAULT,
-                        GnssDataNotification* pDataNotify = nullptr);
+                                  LOC_POS_TECH_MASK_DEFAULT);
     void reportSv(GnssSvNotification& svNotify);
     void reportSvPolynomial(GnssSvPolynomial &svPolynomial);
     void reportSvEphemeris(GnssSvEphemerisReport &svEphemeris);

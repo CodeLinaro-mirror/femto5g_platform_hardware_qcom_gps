@@ -643,20 +643,23 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
                 }
             }
         }
-#ifndef FEATURE_AUTOMOTIVE
-        if (!(out.location.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT)) {
-            out.location.elapsedRealTime = getBootTimeMilliSec() * 1000000;
-            out.location.elapsedRealTimeUnc =
-                mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
-            out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
-        }
-#endif //FEATURE_AUTOMOTIVE
     }
+
 #ifndef FEATURE_AUTOMOTIVE
+    bool needToUseCurrentBootTime = false;
+    uint64_t currentBootTimeNs = getBootTimeMilliSec() * 1000000;
     if (!(out.location.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT)) {
-        out.location.elapsedRealTime = getBootTimeMilliSec() * 1000000;
-        out.location.elapsedRealTimeUnc = mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
-        out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
+       needToUseCurrentBootTime = true;
+       LOC_LOGw("can not calculate elapsed real time, set to current time");
+    } else if (out.location.elapsedRealTime > currentBootTimeNs) {
+       needToUseCurrentBootTime = true;
+       LOC_LOGw("elapsed real time is %" PRIu64 " nsec in future, set to current time",
+                out.location.elapsedRealTime - currentBootTimeNs);
+    }
+    if (needToUseCurrentBootTime) {
+       out.location.elapsedRealTime = currentBootTimeNs;
+       out.location.elapsedRealTimeUnc = mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+       out.location.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
     }
 #endif //FEATURE_AUTOMOTIVE
 }
@@ -3113,7 +3116,6 @@ GnssAdapter::handleEngineUpEvent()
             // must be called only after capabilities are known
             mAdapter.setConfig();
             mAdapter.setTribandState();
-            mAdapter.setPreciseSessionConfig(mAdapter.mPreciseType);
             mAdapter.notifyPreciseLocation();
             mAdapter.gnssSvConfigUpdate();
             mAdapter.updateSystemPowerState(mAdapter.getSystemPowerState());
@@ -4112,8 +4114,7 @@ void
 GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
                                  const GpsLocationExtended& locationExtended,
                                  enum loc_sess_status status,
-                                 LocPosTechMask techMask,
-                                 GnssDataNotification* pDataNotify)
+                                 LocPosTechMask techMask)
 {
     // this position is from QMI LOC API, then send report to engine hub
     // also, send out SPE fix promptly to the clients that have registered
@@ -4127,21 +4128,18 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
         mutable GpsLocationExtended mLocationExtended;
         mutable enum loc_sess_status mStatus;
         mutable LocPosTechMask mTechMask;
-        mutable GnssDataNotification mDataNotify;
 
         inline MsgReportSPEPosition(GnssAdapter& adapter,
                                     const UlpLocation& ulpLocation,
                                     const GpsLocationExtended& locationExtended,
                                     enum loc_sess_status status,
-                                    LocPosTechMask techMask,
-                                    GnssDataNotification dataNotify) :
+                                    LocPosTechMask techMask) :
             LocMsg(),
             mAdapter(adapter),
             mUlpLocation(ulpLocation),
             mLocationExtended(locationExtended),
             mStatus(status),
-            mTechMask(techMask),
-            mDataNotify(dataNotify) {}
+            mTechMask(techMask) {}
         inline virtual void proc() const {
             if (mAdapter.mTimeBasedTrackingSessions.empty()) {
                 LOC_LOGD("MsgReportSPEPosition, no session on-going, "
@@ -4197,10 +4195,6 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
                 }
             }
 
-            if (mDataNotify.size != 0) {
-                mAdapter.reportData(mDataNotify);
-            }
-
             // save the association of GPS timestamp and qtimer tick cnt in PVT report
             mAdapter.mPositionElapsedRealTimeCal
                     .saveGpsTimeAndQtimerPairInPvtReport(mLocationExtended, mStatus);
@@ -4252,13 +4246,7 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
     // unpropagated report: is only for engine hub to consume and no need
     // to send out to the clients
     if (!ulpLocation.unpropagatedPosition) {
-        GnssDataNotification dataNotifyCopy = {};
         uint64_t pvtReportTimeDelta = 0ULL;
-
-        if (pDataNotify) {
-            dataNotifyCopy = *pDataNotify;
-            dataNotifyCopy.size = sizeof(dataNotifyCopy);
-        }
 
         if (locationExtended.isReportTimeAccurate()) {
 #define NSEC_IN_ONE_MSEC 1000000ULL
@@ -4277,7 +4265,7 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
         }
 
         MsgReportSPEPosition* pLocMsg = new MsgReportSPEPosition(*this, ulpLocation,
-                locationExtended, status, techMask, dataNotifyCopy);
+                locationExtended, status, techMask);
         sendMsg((const LocMsg*)pLocMsg, (uint32_t)pvtReportTimeDelta);
     }
 }
@@ -5861,6 +5849,7 @@ bool GnssAdapter::reportQwesCapabilities(
                             mAdapter.isPreciseSession()) {
                         mAdapter.stopTracking();
                         mAdapter.restartSessions();
+                        mAdapter.setPreciseSessionConfig(mAdapter.mPreciseType);
                     }
                     mAdapter.mPpFeatureStatusMask |= DLP_FEATURE_ENABLED_BY_DEFAULT;
                     mAdapter.notifyPreciseLocation();
@@ -8485,7 +8474,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
     std::vector<GnssAntennaInformation> gnssAntennaInformations;
     GnssAntennaInformation gnssAntennaInfo;
 
-    uint32_t antennaInfoVectorSize;
+    uint32_t antennaInfoVectorSize = 0;
     loc_param_s_type ant_info_vector_table[] =
     {
         { "ANTENNA_INFO_VECTOR_SIZE", &antennaInfoVectorSize, NULL, 'n' }
@@ -8493,7 +8482,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
     UTIL_READ_CONF(LOC_PATH_ANT_CORR, ant_info_vector_table);
 
     for (uint32_t i = 0; i < antennaInfoVectorSize; i++) {
-        double carrierFrequencyMHz;
+        double carrierFrequencyMHz = 0.0;
         char pcOffsetStr[LOC_MAX_PARAM_STRING];
         uint32_t numberOfRows = 0;
         uint32_t numberOfColumns = 0;
