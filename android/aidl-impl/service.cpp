@@ -30,8 +30,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <android/binder_manager.h>
 #include <android/binder_process.h>
 #include "Gnss.h"
-#include <pthread.h>
-#include <log_util.h>
 
 #ifdef LOG_TAG
 #undef LOG_TAG
@@ -125,8 +123,7 @@ int main() {
 
     ALOGI("%s, start Gnss HAL process", __FUNCTION__);
     sleepIfInShutdown();
-    ABinderProcess_setThreadPoolMaxThreadCount(1);
-    ABinderProcess_startThreadPool();
+    ABinderProcess_setThreadPoolMaxThreadCount(0);
 
     std::shared_ptr<GnssAidl> gnssAidl = ndk::SharedRefBase::make<GnssAidl>();
     const std::string instance = std::string() + GnssAidl::descriptor + "/default";
