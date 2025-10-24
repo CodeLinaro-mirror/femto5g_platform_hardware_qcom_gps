@@ -59,6 +59,9 @@ static uint32_t DEBUG_LEVEL = UINT32_MAX;
 static uint32_t TIMESTAMP = 0;
 static uint32_t sLogBufferEnabled = 0;
 static uint32_t sQxdmLogEnabled = 0;
+#ifdef USE_GLIB
+static uint32_t sLogTidEnabled = 0;
+#endif
 
 // Each conf item is a name, value pair
 struct ConfPair
@@ -83,6 +86,10 @@ static loc_param_s_type gps_default_param_table[] =
     {"TIMESTAMP",               &TIMESTAMP,          NULL, 'n'},
     {"LOG_BUFFER_ENABLED",      &sLogBufferEnabled,  NULL, 'n'},
     {"QXDM_LOG",                &sQxdmLogEnabled,    NULL, 'n'},
+#ifdef USE_GLIB
+    {"LOG_TID",                 &sLogTidEnabled,     NULL, 'n'},
+#endif
+
 };
 
 typedef bool(*LogGnssF3Init)(void);
@@ -398,6 +405,9 @@ void loc_read_gps_conf_default() {
    loc_logger_init(DEBUG_LEVEL, TIMESTAMP, qxdmF3);
    log_buffer_init(sLogBufferEnabled);
    log_tag_level_map_init();
+#ifdef USE_GLIB
+   log_tid_init(sLogTidEnabled);
+#endif
 }
 
 void loc_read_conf_long(const char* conf_file_name,

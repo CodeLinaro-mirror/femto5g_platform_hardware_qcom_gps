@@ -39,11 +39,20 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <inttypes.h>
 #include <stdbool.h>
 #include <loc_pla.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+
+#ifdef SYS_gettid
+// gettid() is another alternative but not available on all platforms
+#define GET_TID() (long)syscall(SYS_gettid)
+#else
+// return pid in case SYS_gettid is not defined
+#define GET_TID() (long)getpid()
+#endif
+
 #if defined (USE_ANDROID_LOGGING) || defined (ANDROID)
 // Android and LE targets with logcat support
 #include <utils/Log.h>
-#include <unistd.h>
-#include <sys/syscall.h>
 
 #elif defined (USE_GLIB)
 // LE targets with no logcat support
@@ -51,41 +60,10 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <string.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#include <unistd.h>
-#include <sys/syscall.h>
 
 #ifndef LOG_TAG
 #define LOG_TAG "GPS_UTILS"
 #endif /* LOG_TAG */
-
-// LE targets with no logcat support
-#if defined(FEATURE_EXTERNAL_AP) || defined(USE_SYSLOG_LOGGING)
-#include <syslog.h>
-#define ALOGE(format, x...) syslog(LOG_ERR,     "E/%s (%d): " format, LOG_TAG, getpid(), ##x);
-#define ALOGW(format, x...) syslog(LOG_WARNING, "W/%s (%d): " format, LOG_TAG, getpid(), ##x);
-#define ALOGI(format, x...) syslog(LOG_NOTICE,  "I/%s (%d): " format, LOG_TAG, getpid(), ##x);
-#define ALOGD(format, x...) syslog(LOG_DEBUG,   "D/%s (%d): " format, LOG_TAG, getpid(), ##x);
-#define ALOGV(format, x...) syslog(LOG_NOTICE,  "V/%s (%d): " format, LOG_TAG, getpid(), ##x);
-#define ALOGA(format, x...) syslog(LOG_NOTICE,  "A/%s (%d): " format, LOG_TAG, getpid(), ##x);
-#else /* FEATURE_EXTERNAL_AP */
-#define TS_PRINTF(format, x...)                                  \
-{                                                                \
-    struct timeval tv;                                           \
-    struct timezone tz;                                          \
-    int hh, mm, ss;                                              \
-    gettimeofday(&tv, &tz);                                      \
-    hh = tv.tv_sec/3600%24;                                      \
-    mm = (tv.tv_sec%3600)/60;                                    \
-    ss = tv.tv_sec%60;                                           \
-    fprintf(stdout,"%02d:%02d:%02d.%06ld]" format "\n", hh, mm, ss, tv.tv_usec, ##x);    \
-}
-
-#define ALOGE(format, x...) TS_PRINTF("E/%s (%d): " format , LOG_TAG, getpid(), ##x)
-#define ALOGW(format, x...) TS_PRINTF("W/%s (%d): " format , LOG_TAG, getpid(), ##x)
-#define ALOGI(format, x...) TS_PRINTF("I/%s (%d): " format , LOG_TAG, getpid(), ##x)
-#define ALOGD(format, x...) TS_PRINTF("D/%s (%d): " format , LOG_TAG, getpid(), ##x)
-#define ALOGV(format, x...) TS_PRINTF("V/%s (%d): " format , LOG_TAG, getpid(), ##x)
-#endif /* FEATURE_EXTERNAL_AP */
 
 #endif /* #if defined (USE_ANDROID_LOGGING) || defined (ANDROID) */
 
@@ -108,6 +86,9 @@ typedef struct loc_logger_s
   unsigned long  TIMESTAMP;
   bool           LOG_BUFFER_ENABLE;
   QxdmF3         QXDMF3;
+#ifdef USE_GLIB
+  bool           LOG_TID_ENABLED;
+#endif
 } loc_logger_s_type;
 
 
@@ -173,6 +154,11 @@ inline static void loc_logger_init(unsigned long debug, unsigned long timestamp,
 inline static void log_buffer_init(bool enabled) {
     loc_logger.LOG_BUFFER_ENABLE = enabled;
 }
+#ifdef USE_GLIB
+inline static void log_tid_init(bool enabled) {
+    loc_logger.LOG_TID_ENABLED = enabled;
+}
+#endif
 extern void log_tag_level_map_init();
 extern int get_tag_log_level(const char* tag);
 extern char* get_timestamp(char* str, unsigned long buf_size);
@@ -196,7 +182,7 @@ extern char* get_timestamp(char* str, unsigned long buf_size);
             get_timestamp(timestr, sizeof(timestr));                                          \
             char log_str[LOGGING_BUFFER_MAX_LEN];                                             \
             snprintf(log_str, LOGGING_BUFFER_MAX_LEN, "%s %d %ld %s :" format "\n",           \
-                    timestr, getpid(), syscall(SYS_gettid), LOG_TAG==NULL ? "": LOG_TAG, ##x);\
+                    timestr, getpid(), GET_TID(), LOG_TAG==NULL ? "": LOG_TAG, ##x);            \
             log_buffer_insert(log_str, sizeof(log_str), level);                               \
         }                                                                                     \
     }                                                                                         \
@@ -213,6 +199,129 @@ extern void log_buffer_insert(char *str, unsigned long buf_size, int level);
 
 #define MAX_QXDM_STRING     1024
 #define IF_QXDM_LOG_ENABLE if (loc_logger.QXDMF3)
+
+#if defined(USE_GLIB) && defined(OPENWRT_BUILD) && defined(USE_ANDROID_LOGGING)
+
+#define A_LOG_E(fmt, ...)                                   \
+    if (loc_logger.LOG_TID_ENABLED) {                       \
+        ALOGE("[TID: %ld] " fmt, GET_TID(), ##__VA_ARGS__); \
+    } else {                                                \
+        ALOGE(fmt, ##__VA_ARGS__);                          \
+    }
+#define A_LOG_W(fmt, ...)                                   \
+    if (loc_logger.LOG_TID_ENABLED) {                       \
+        ALOGW("[TID: %ld] " fmt, GET_TID(), ##__VA_ARGS__); \
+    } else {                                                \
+        ALOGW(fmt, ##__VA_ARGS__);                          \
+    }
+#define A_LOG_I(fmt, ...)                                   \
+    if (loc_logger.LOG_TID_ENABLED) {                       \
+        ALOGI("[TID: %ld] " fmt, GET_TID(), ##__VA_ARGS__); \
+    } else {                                                \
+        ALOGI(fmt, ##__VA_ARGS__);                          \
+    }
+#define A_LOG_D(fmt, ...)                                   \
+    if (loc_logger.LOG_TID_ENABLED) {                       \
+        ALOGD("[TID: %ld] " fmt, GET_TID(), ##__VA_ARGS__); \
+    } else {                                                \
+        ALOGD(fmt, ##__VA_ARGS__);                          \
+    }
+#define A_LOG_V(fmt, ...)                                   \
+    if (loc_logger.LOG_TID_ENABLED) {                       \
+        ALOGV("[TID: %ld] " fmt, GET_TID(), ##__VA_ARGS__); \
+    } else {                                                \
+        ALOGV(fmt, ##__VA_ARGS__);                          \
+    }
+
+#elif defined(USE_GLIB) && (defined(FEATURE_EXTERNAL_AP) || defined(USE_SYSLOG_LOGGING))
+
+// LE targets with no logcat support
+#include <syslog.h>
+#define A_LOG_E(format, x...)                                                               \
+    if (loc_logger.LOG_TID_ENABLED) {                                                       \
+        syslog(LOG_ERR, "E/%s (P: %d,T: %ld): " format, LOG_TAG, getpid(), GET_TID(), ##x); \
+    } else {                                                                                \
+        syslog(LOG_ERR, "E/%s (P: %d): " format, LOG_TAG, getpid(), ##x);                   \
+    }
+#define A_LOG_W(format, x...)                                                                   \
+    if (loc_logger.LOG_TID_ENABLED) {                                                           \
+        syslog(LOG_WARNING, "W/%s (P: %d,T: %ld): " format, LOG_TAG, getpid(), GET_TID(), ##x); \
+    } else {                                                                                    \
+        syslog(LOG_WARNING, "W/%s (P: %d): " format, LOG_TAG, getpid(), ##x);                   \
+    }
+#define A_LOG_I(format, x...)                                                                  \
+    if (loc_logger.LOG_TID_ENABLED) {                                                          \
+        syslog(LOG_NOTICE, "I/%s (P: %d,T: %ld): " format, LOG_TAG, getpid(), GET_TID(), ##x); \
+    } else {                                                                                   \
+        syslog(LOG_NOTICE, "I/%s (P: %d): " format, LOG_TAG, getpid(), ##x);                   \
+    }
+#define A_LOG_D(format, x...)                                                                 \
+    if (loc_logger.LOG_TID_ENABLED) {                                                         \
+        syslog(LOG_DEBUG, "D/%s (P: %d,T: %ld): " format, LOG_TAG, getpid(), GET_TID(), ##x); \
+    } else {                                                                                  \
+        syslog(LOG_DEBUG, "D/%s (P: %d): " format, LOG_TAG, getpid(), ##x);                   \
+    }
+#define A_LOG_V(format, x...)                                                                 \
+    if (loc_logger.LOG_TID_ENABLED) {                                                         \
+        syslog(LOG_DEBUG, "V/%s (P: %d,T: %ld): " format, LOG_TAG, getpid(), GET_TID(), ##x); \
+    } else {                                                                                  \
+        syslog(LOG_DEBUG, "V/%s (P: %d): " format, LOG_TAG, getpid(), ##x);                   \
+    }
+
+#elif defined(USE_ANDROID_LOGGING) || defined(ANDROID)
+
+#define A_LOG_E(...) ALOGE(__VA_ARGS__)
+#define A_LOG_W(...) ALOGW(__VA_ARGS__)
+#define A_LOG_I(...) ALOGI(__VA_ARGS__)
+#define A_LOG_D(...) ALOGD(__VA_ARGS__)
+#define A_LOG_V(...) ALOGV(__VA_ARGS__)
+
+#elif defined(USE_GLIB)
+
+#define TS_PRINTF(format, x...)                                                            \
+    {                                                                                      \
+        struct timeval  tv;                                                                \
+        struct timezone tz;                                                                \
+        int             hh, mm, ss;                                                        \
+        gettimeofday(&tv, &tz);                                                            \
+        hh = tv.tv_sec / 3600 % 24;                                                        \
+        mm = (tv.tv_sec % 3600) / 60;                                                      \
+        ss = tv.tv_sec % 60;                                                               \
+        fprintf(stdout, "%02d:%02d:%02d.%06ld]" format "\n", hh, mm, ss, tv.tv_usec, ##x); \
+    }
+
+#define A_LOG_E(format, x...)                                                        \
+    if (loc_logger.LOG_TID_ENABLED) {                                                \
+        TS_PRINTF("E/%s (P: %d,T: %ld): " format, LOG_TAG, getpid(), GET_TID(), ##x) \
+    } else {                                                                         \
+        TS_PRINTF("E/%s (P: %d): " format, LOG_TAG, getpid(), ##x)                   \
+    }
+#define A_LOG_W(format, x...)                                                        \
+    if (loc_logger.LOG_TID_ENABLED) {                                                \
+        TS_PRINTF("W/%s (P: %d,T: %ld): " format, LOG_TAG, getpid(), GET_TID(), ##x) \
+    } else {                                                                         \
+        TS_PRINTF("W/%s (P: %d): " format, LOG_TAG, getpid(), ##x)                   \
+    }
+#define A_LOG_I(format, x...)                                                        \
+    if (loc_logger.LOG_TID_ENABLED) {                                                \
+        TS_PRINTF("I/%s (P: %d,T: %ld): " format, LOG_TAG, getpid(), GET_TID(), ##x) \
+    } else {                                                                         \
+        TS_PRINTF("I/%s (P: %d): " format, LOG_TAG, getpid(), ##x)                   \
+    }
+#define A_LOG_D(format, x...)                                                        \
+    if (loc_logger.LOG_TID_ENABLED) {                                                \
+        TS_PRINTF("D/%s (P: %d,T: %ld): " format, LOG_TAG, getpid(), GET_TID(), ##x) \
+    } else {                                                                         \
+        TS_PRINTF("D/%s (P: %d): " format, LOG_TAG, getpid(), ##x)                   \
+    }
+#define A_LOG_V(format, x...)                                                        \
+    if (loc_logger.LOG_TID_ENABLED) {                                                \
+        TS_PRINTF("V/%s (P: %d,T: %ld): " format, LOG_TAG, getpid(), GET_TID(), ##x) \
+    } else {                                                                         \
+        TS_PRINTF("V/%s (P: %d): " format, LOG_TAG, getpid(), ##x)                   \
+    }
+
+#endif //defined(USE_GLIB) && defined(OPENWRT_BUILD) && defined(USE_ANDROID_LOGGING)
 
 #ifndef DEBUG_DMN_LOC_API
 
@@ -247,7 +356,7 @@ static int LOCAL_LOG_LEVEL = -1;
 
 #define LOC_LOGE(...)                                                   \
     IF_LOC_LOGE {                                                       \
-        ALOGE(__VA_ARGS__);                                             \
+        A_LOG_E(__VA_ARGS__);                                           \
         INSERT_BUFFER(LOG_NDEBUG, 0, __VA_ARGS__);                      \
         IF_QXDM_LOG_ENABLE {                                            \
             char buf[MAX_QXDM_STRING];                                  \
@@ -258,7 +367,7 @@ static int LOCAL_LOG_LEVEL = -1;
 
 #define LOC_LOGW(...)                                                   \
     IF_LOC_LOGW {                                                       \
-        ALOGW(__VA_ARGS__);                                             \
+        A_LOG_W(__VA_ARGS__);                                           \
         INSERT_BUFFER(LOG_NDEBUG, 1, __VA_ARGS__);                      \
         IF_QXDM_LOG_ENABLE {                                            \
             char buf[MAX_QXDM_STRING];                                  \
@@ -269,7 +378,7 @@ static int LOCAL_LOG_LEVEL = -1;
 
 #define LOC_LOGI(...)                                                   \
     IF_LOC_LOGI {                                                       \
-        ALOGI(__VA_ARGS__);                                             \
+        A_LOG_I(__VA_ARGS__);                                           \
         INSERT_BUFFER(LOG_NDEBUG, 2, __VA_ARGS__);                      \
         IF_QXDM_LOG_ENABLE {                                            \
             char buf[MAX_QXDM_STRING];                                  \
@@ -280,7 +389,7 @@ static int LOCAL_LOG_LEVEL = -1;
 
 #define LOC_LOGD(...)                                                   \
     IF_LOC_LOGD {                                                       \
-        ALOGD(__VA_ARGS__);                                             \
+        A_LOG_D(__VA_ARGS__);                                           \
         INSERT_BUFFER(LOG_NDEBUG, 3, __VA_ARGS__);                      \
         IF_QXDM_LOG_ENABLE {                                            \
             char buf[MAX_QXDM_STRING];                                  \
@@ -291,7 +400,7 @@ static int LOCAL_LOG_LEVEL = -1;
 
 #define LOC_LOGV(...)                                                   \
     IF_LOC_LOGV {                                                       \
-        ALOGV(__VA_ARGS__);                                             \
+        A_LOG_V(__VA_ARGS__);                                           \
         INSERT_BUFFER(LOG_NDEBUG, 4, __VA_ARGS__);                      \
         IF_QXDM_LOG_ENABLE {                                            \
             char buf[MAX_QXDM_STRING];                                  \
@@ -302,7 +411,7 @@ static int LOCAL_LOG_LEVEL = -1;
 
 #define LOC_LOGA(...)                                                   \
     IF_LOC_LOGA {                                                       \
-        ALOGV(__VA_ARGS__);                                             \
+        A_LOG_V(__VA_ARGS__);                                           \
         INSERT_BUFFER(LOG_NDEBUG, 5, __VA_ARGS__);                      \
         IF_QXDM_LOG_ENABLE {                                            \
             char buf[MAX_QXDM_STRING];                                  \
@@ -315,7 +424,7 @@ static int LOCAL_LOG_LEVEL = -1;
 
 #define LOC_LOGE(...)                                                   \
     IF_LOC_LOGE {                                                       \
-        ALOGE(__VA_ARGS__);                                             \
+        A_LOG_E(__VA_ARGS__);                                           \
         IF_QXDM_LOG_ENABLE {                                            \
             char buf[MAX_QXDM_STRING];                                  \
             snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
@@ -325,7 +434,7 @@ static int LOCAL_LOG_LEVEL = -1;
 
 #define LOC_LOGW(...)                                                   \
     IF_LOC_LOGW {                                                       \
-        ALOGW(__VA_ARGS__);                                             \
+        A_LOG_W(__VA_ARGS__);                                           \
         IF_QXDM_LOG_ENABLE {                                            \
             char buf[MAX_QXDM_STRING];                                  \
             snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
@@ -335,7 +444,7 @@ static int LOCAL_LOG_LEVEL = -1;
 
 #define LOC_LOGI(...)                                                   \
     IF_LOC_LOGI {                                                       \
-        ALOGI(__VA_ARGS__);                                             \
+        A_LOG_I(__VA_ARGS__);                                           \
         IF_QXDM_LOG_ENABLE {                                            \
             char buf[MAX_QXDM_STRING];                                  \
             snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
@@ -345,7 +454,7 @@ static int LOCAL_LOG_LEVEL = -1;
 
 #define LOC_LOGD(...)                                                   \
     IF_LOC_LOGD {                                                       \
-        ALOGD(__VA_ARGS__);                                             \
+        A_LOG_D(__VA_ARGS__);                                           \
         IF_QXDM_LOG_ENABLE {                                            \
             char buf[MAX_QXDM_STRING];                                  \
             snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
@@ -355,7 +464,7 @@ static int LOCAL_LOG_LEVEL = -1;
 
 #define LOC_LOGV(...)                                                   \
     IF_LOC_LOGV {                                                       \
-        ALOGV(__VA_ARGS__);                                             \
+        A_LOG_V(__VA_ARGS__);                                           \
         IF_QXDM_LOG_ENABLE {                                            \
             char buf[MAX_QXDM_STRING];                                  \
             snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
@@ -365,7 +474,7 @@ static int LOCAL_LOG_LEVEL = -1;
 
 #define LOC_LOGA(...)                                                   \
     IF_LOC_LOGA {                                                       \
-        ALOGV(__VA_ARGS__);                                             \
+        A_LOG_V(__VA_ARGS__);                                           \
         IF_QXDM_LOG_ENABLE {                                            \
             char buf[MAX_QXDM_STRING];                                  \
             snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
