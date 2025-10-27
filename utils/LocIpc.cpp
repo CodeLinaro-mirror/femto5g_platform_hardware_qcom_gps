@@ -439,7 +439,8 @@ std::string LocIpc::generateThreadName(const std::string& recverName) {
 }
 
 shared_ptr<LocIpcSender> LocIpc::getLocIpcLocalSender(const char* localSockName) {
-    return make_shared<LocIpcLocalSender>(localSockName);
+    auto sender = make_shared<LocIpcLocalSender>(localSockName);
+    return sender;
 }
 unique_ptr<LocIpcRecver> LocIpc::getLocIpcLocalRecver(const shared_ptr<ILocIpcListener>& listener,
                                                       const char* localSockName) {
