@@ -214,10 +214,10 @@ unsigned int loc_get_target(void)
     if (gTarget != (unsigned int)-1)
         return gTarget;
 
-    static const char hw_platform[]      = "/sys/devices/soc0/hw_platform";
-    static const char hw_platform_dep[]  =
+    static const char hw_platform[LINE_LEN]      = "/sys/devices/soc0/hw_platform";
+    static const char hw_platform_dep[LINE_LEN]  =
         "/sys/devices/system/soc/soc0/hw_platform";
-    static const char mdm[]              = "/target"; // mdm target we are using
+    static const char mdm[LINE_LEN]              = "/target"; // mdm target we are using
 
     char rd_hw_platform[LINE_LEN];
     char rd_id[LINE_LEN];
