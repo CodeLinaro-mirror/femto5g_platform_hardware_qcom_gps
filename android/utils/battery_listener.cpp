@@ -235,6 +235,7 @@ bool batteryPropertiesListenerIsCharging() {
 }
 
 status_t batteryPropertiesListenerInit(cb_fn_t cb) {
+    pthread_setname_np(pthread_self(), "loc_battery");
     LOC_LOGd("batteryPropertiesListenerInit entry");
     auto service_name = std::string() + IHealth::descriptor + "/default";
     batteryListenerAidl = ndk::SharedRefBase::make<AidlBatteryListenerImpl>(cb);

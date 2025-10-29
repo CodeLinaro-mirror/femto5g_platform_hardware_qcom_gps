@@ -30,13 +30,16 @@ LOCAL_HEADER_LIBRARIES := \
     libgps.utils_headers \
     libloc_core_headers \
     libloc_pla_headers \
-    liblocbatterylistener_headers \
     liblocation_api_headers
 
 LOCAL_C_INCLUDES:= \
     $(LOCAL_PATH)/location_api
 
-LOCAL_STATIC_LIBRARIES := liblocbatterylistener
+ifeq ($(TARGET_SUPPORTS_WEAR_OS), true)
+    LOCAL_HEADER_LIBRARIES += liblocbatterylistener_headers
+    LOCAL_STATIC_LIBRARIES := liblocbatterylistener
+    LOCAL_CFLAGS += -DENABLE_NATIVE_BAT_LISTENER
+endif
 
 LOCAL_SHARED_LIBRARIES := \
     libbase \
