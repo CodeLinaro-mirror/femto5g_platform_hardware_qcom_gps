@@ -114,6 +114,7 @@ private:
     bool mNmeaEnabled;
     bool mIsNlpActive;
     bool mSignalTypeCbExpected;
+    bool mReportSpeOnly;
     const shared_ptr<IGnssCallback>& mGnssCbIface;
 };
 
