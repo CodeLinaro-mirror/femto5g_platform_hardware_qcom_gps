@@ -119,6 +119,7 @@ GnssAPIClient::GnssAPIClient(const shared_ptr<IGnssCallback>& gpsCb) :
         {"ANDROID_REPORT_SPE_ONLY",      &mReportSpeOnly,       nullptr, 'n'},
     };
     UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izatConfParamTable);
+    LOC_LOGd("ANDROID_REPORT_SPE_ONLY = %d", mReportSpeOnly);
 }
 
 GnssAPIClient::~GnssAPIClient() {
@@ -286,8 +287,9 @@ bool GnssAPIClient::gnssSetPositionMode(IGnss::GnssPositionMode mode,
     }
     mTrackingOptions.powerMode = powerMode;
     mTrackingOptions.tbm = timeBetweenMeasurement;
-    mTrackingOptions.locReqEngTypeMask = LOC_REQ_ENGINE_SPE_BIT;
-    if (0 == mReportSpeOnly) {
+    if (true == mReportSpeOnly) {
+        mTrackingOptions.locReqEngTypeMask = LOC_REQ_ENGINE_SPE_BIT;
+    } else {
         mTrackingOptions.locReqEngTypeMask = LOC_REQ_ENGINE_FUSED_BIT;
     }
     locAPIUpdateTrackingOptions(mTrackingOptions);
@@ -537,19 +539,20 @@ void GnssAPIClient::onEngineLocationsInfoCb(uint32_t count,
         return;
     }
     GnssLocationInfoNotification* locPtr = nullptr;
-    bool foundSPE = false;
 
     for (int i = 0; i < count; i++) {
         locPtr = engineLocationInfoNotification + i;
         if (nullptr == locPtr) return;
-        LOC_LOGv("count %d, type %d", i, locPtr->locOutputEngType);
-        if (LOC_OUTPUT_ENGINE_SPE == locPtr->locOutputEngType) {
-            foundSPE = true;
+        LOC_LOGv("pvt report[%d], output engine type %d, report spe %d",
+                 i, locPtr->locOutputEngType, mReportSpeOnly);
+        if (mReportSpeOnly && (LOC_OUTPUT_ENGINE_SPE == locPtr->locOutputEngType)) {
+            onTrackingCb(locPtr->location);
+            break;
+        } else if (!mReportSpeOnly &&
+                   (LOC_OUTPUT_ENGINE_FUSED == locPtr->locOutputEngType)) {
+            onTrackingCb(locPtr->location);
             break;
         }
-    }
-    if (foundSPE) {
-        onTrackingCb(locPtr->location);
     }
 }
 void GnssAPIClient::onStartTrackingCb(LocationError error) {
