@@ -102,8 +102,17 @@ GnssAPIClient::GnssAPIClient(const sp<V1_0::IGnssCallback>& gpsCb,
     mLocationCapabilitiesMask(0),
     mLocationCapabilitiesCached(false),
     mTracking(false),
+    mReportSpeOnly(true),
     mGnssCbIface_2_0(nullptr)
 {
+    const loc_param_s_type gps_conf_table[] =
+    {
+       {"ANDROID_REPORT_SPE_ONLY", &mReportSpeOnly, NULL, 'n'},
+    };
+    // read configuration file
+    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_table);
+    LOC_LOGd("ANDROID_REPORT_SPE_ONLY = %d", mReportSpeOnly);
+
     LOC_LOGD("%s]: (%p %p)", __FUNCTION__, &gpsCb, &niCb);
 
     initLocationOptions();
@@ -118,8 +127,17 @@ GnssAPIClient::GnssAPIClient(const sp<V2_0::IGnssCallback>& gpsCb) :
     mLocationCapabilitiesMask(0),
     mLocationCapabilitiesCached(false),
     mTracking(false),
+    mReportSpeOnly(true),
     mGnssCbIface_2_0(nullptr)
 {
+    const loc_param_s_type gps_conf_table[] =
+    {
+       {"ANDROID_REPORT_SPE_ONLY", &mReportSpeOnly, NULL, 'n'},
+    };
+    // read configuration file
+    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_table);
+    LOC_LOGd("ANDROID_REPORT_SPE_ONLY = %d", mReportSpeOnly);
+
     LOC_LOGD("%s]: (%p)", __FUNCTION__, &gpsCb);
 
     initLocationOptions();
@@ -134,8 +152,17 @@ GnssAPIClient::GnssAPIClient(const sp<V2_1::IGnssCallback>& gpsCb) :
     mLocationCapabilitiesMask(0),
     mLocationCapabilitiesCached(false),
     mTracking(false),
+    mReportSpeOnly(true),
     mGnssCbIface_2_1(nullptr)
 {
+    const loc_param_s_type gps_conf_table[] =
+    {
+       {"ANDROID_REPORT_SPE_ONLY", &mReportSpeOnly, NULL, 'n'},
+    };
+    // read configuration file
+    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_table);
+    LOC_LOGd("ANDROID_REPORT_SPE_ONLY = %d", mReportSpeOnly);
+
     LOC_LOGD("%s]: (%p)", __FUNCTION__, &gpsCb);
 
     initLocationOptions();
@@ -308,7 +335,12 @@ bool GnssAPIClient::gnssSetPositionMode(IGnss::GnssPositionMode mode,
     mTrackingOptions.powerMode = powerMode;
     mTrackingOptions.tbm = timeBetweenMeasurement;
 
-    mTrackingOptions.locReqEngTypeMask = LOC_REQ_ENGINE_SPE_BIT;
+    if (true == mReportSpeOnly) {
+       mTrackingOptions.locReqEngTypeMask = LOC_REQ_ENGINE_SPE_BIT;
+    } else {
+       mTrackingOptions.locReqEngTypeMask = LOC_REQ_ENGINE_FUSED_BIT;
+    }
+
     locAPIUpdateTrackingOptions(mTrackingOptions);
     return retVal;
 }
@@ -726,19 +758,20 @@ void GnssAPIClient::onEngineLocationsInfoCb(uint32_t count,
         return;
     }
     GnssLocationInfoNotification* locPtr = nullptr;
-    bool foundSPE = false;
 
     for (int i = 0; i < count; i++) {
         locPtr = engineLocationInfoNotification + i;
         if (nullptr == locPtr) return;
-        LOC_LOGv("count %d, type %d", i, locPtr->locOutputEngType);
-        if (LOC_OUTPUT_ENGINE_SPE == locPtr->locOutputEngType) {
-            foundSPE = true;
+        LOC_LOGv("pvt report[%d], output engine type %d, report spe %d",
+                 i, locPtr->locOutputEngType, mReportSpeOnly);
+        if (mReportSpeOnly && (LOC_OUTPUT_ENGINE_SPE == locPtr->locOutputEngType)) {
+            onTrackingCb(locPtr->location);
+            break;
+        } else if (!mReportSpeOnly &&
+                   (LOC_OUTPUT_ENGINE_FUSED == locPtr->locOutputEngType)) {
+            onTrackingCb(locPtr->location);
             break;
         }
-    }
-    if (foundSPE) {
-        onTrackingCb(locPtr->location);
     }
 }
 
