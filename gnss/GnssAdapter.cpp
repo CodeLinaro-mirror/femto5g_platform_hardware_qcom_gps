@@ -8474,7 +8474,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
     std::vector<GnssAntennaInformation> gnssAntennaInformations;
     GnssAntennaInformation gnssAntennaInfo;
 
-    uint32_t antennaInfoVectorSize;
+    uint32_t antennaInfoVectorSize = 0;
     loc_param_s_type ant_info_vector_table[] =
     {
         { "ANTENNA_INFO_VECTOR_SIZE", &antennaInfoVectorSize, NULL, 'n' }
@@ -8482,7 +8482,7 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb)
     UTIL_READ_CONF(LOC_PATH_ANT_CORR, ant_info_vector_table);
 
     for (uint32_t i = 0; i < antennaInfoVectorSize; i++) {
-        double carrierFrequencyMHz;
+        double carrierFrequencyMHz = 0.0;
         char pcOffsetStr[LOC_MAX_PARAM_STRING];
         uint32_t numberOfRows = 0;
         uint32_t numberOfColumns = 0;
