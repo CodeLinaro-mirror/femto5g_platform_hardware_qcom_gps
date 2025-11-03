@@ -229,7 +229,6 @@ class GnssAdapter : public LocAdapterBase {
     /* ==== CONTROL ======================================================================== */
     LocationControlCallbacks mControlCallbacks;
     uint32_t mAfwControlId;
-    uint32_t mNmeaMask;
     LocReqEngineTypeMask mNmeaReqEngTypeMask;
     uint64_t mPrevNmeaRptTimeNsec;
     GnssSvIdConfig mGnssSvIdConfig;

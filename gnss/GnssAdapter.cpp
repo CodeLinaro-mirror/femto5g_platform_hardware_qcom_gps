@@ -2906,10 +2906,6 @@ GnssAdapter::updateClientsEventMask()
         }
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_ENGINE_DEBUG_DATA)) {
             mask |= LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT;
-        } else {
-            if ((it->second.gnssNmeaCb != nullptr) && (mNmeaMask)) {
-                mask |= LOC_API_ADAPTER_BIT_NMEA_1HZ_REPORT;
-            }
         }
         if (it->second.gnssMeasurementsCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT;
