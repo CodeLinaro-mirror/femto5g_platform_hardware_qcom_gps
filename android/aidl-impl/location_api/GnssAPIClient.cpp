@@ -41,7 +41,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <fstream>
 
 #include "GnssAPIClient.h"
-#include <LocContext.h>
 #include "LocationUtil.h"
 
 #define META_INFO_FILE "/vendor/firmware_mnt/verinfo/ver_info.txt"

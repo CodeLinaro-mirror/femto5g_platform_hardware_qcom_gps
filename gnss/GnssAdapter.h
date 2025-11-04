@@ -290,10 +290,7 @@ class GnssAdapter : public LocAdapterBase {
     OdcpiRequestInfo mOdcpiRequest;
     std::unordered_map<OdcpiPrioritytype, odcpiRequestCallback> mNonEsOdcpiReqCbMap;
     void odcpiTimerExpire();
-
     std::function<void(const Location&)> mAddressRequestCb;
-    /* ==== Emergency Status =============================================================== */
-    std::function<void(bool)> mEsStatusCb;
 
     /* ==== DELETEAIDINGDATA =============================================================== */
     int64_t mLastDeleteAidingDataTime;
@@ -784,9 +781,6 @@ public:
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
     void updateSystemPowerStateCommand(PowerStateType systemPowerState);
     void updatePowerConnectStateCommand(bool connected);
-    void setEsStatusCallbackCommand(std::function<void(bool)> esStatusCb);
-    inline void setEsStatusCallback (std::function<void(bool)> esStatusCb) {
-            mEsStatusCb = esStatusCb; }
     void setTribandState();
     /*==== DGnss Usable Report Flag ====================================================*/
     inline void setDGnssUsableFLag(bool dGnssNeedReport) { mDGnssNeedReport = dGnssNeedReport;}

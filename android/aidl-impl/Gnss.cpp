@@ -18,8 +18,8 @@
  * limitations under the License.
  */
 /*
-Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -29,6 +29,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #include "Gnss.h"
 #include <log_util.h>
+#include <LocContext.h>
 #include "loc_misc_utils.h"
 #include "LocationUtil.h"
 #include "GnssConfiguration.h"
@@ -53,7 +54,9 @@ namespace implementation {
 using measurement_corrections::aidl::implementation::MeasurementCorrectionsInterface;
 using ::android::hardware::gnss::visibility_control::aidl::implementation::GnssVisibilityControl;
 
-static Gnss* sGnss;
+static Gnss* sGnss = NULL;
+static loc_core::ContextBase* sContext = NULL;
+
 void gnssServiceDied(void* cookie) {
     LOC_LOGe("IGnssCallback AIDL service died");
     Gnss* iface = static_cast<Gnss*>(cookie);
@@ -82,6 +85,7 @@ ScopedAStatus Gnss::setCallback(const shared_ptr<IGnssCallback>& callback) {
     mApi.gnssEnable(LOCATION_TECHNOLOGY_TYPE_GNSS);
     mApi.requestCapabilities();
 
+    sContext = loc_core::LocContext::getLocContext(loc_core::LocContext::mLocationHalName);
     return ScopedAStatus::ok();
 }
 
@@ -240,7 +244,7 @@ ScopedAStatus Gnss::injectTime(int64_t timeMs, int64_t timeReferenceMs,
 ScopedAStatus Gnss::injectLocation(const GnssLocation& location) {
     ENTRY_LOG_CALLFLOW();
     ILocationControlAPI* pCtrlApi = getLocationControlApi();
-    if (pCtrlApi != nullptr) {
+    if (pCtrlApi && !sContext->getLBSProxyBase()->getIzatFusedProviderOverride()) {
         pCtrlApi->injectLocation(location.latitudeDegrees, location.longitudeDegrees,
                 location.horizontalAccuracyMeters);
     }

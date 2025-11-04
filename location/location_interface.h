@@ -84,7 +84,6 @@ struct GnssInterface {
            OdcpiCallbackTypeMask typeMask);
     void (*deRegisterOdcpi)(OdcpiPrioritytype priority, OdcpiCallbackTypeMask typeMask);
     void (*odcpiInject)(const Location& location);
-    void (*setEsStatusCallback)(std::function<void(bool)> esStatusCb);
     void (*getGnssEnergyConsumed)(GnssEnergyConsumedCallback energyConsumedCb);
     void (*enableNfwLocationAccess)(const std::vector<std::string>& enabledNfws);
     void (*nfwInit)(const NfwCbInfo& cbInfo);

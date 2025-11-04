@@ -173,7 +173,6 @@ GnssAdapter::GnssAdapter() :
     mLocSystemInfo{},
     mSystemPowerState(POWER_STATE_UNKNOWN),
     mPowerConnectState(POWER_CONNECT_UNKNOWN),
-    mEsStatusCb(nullptr),
     mEngHubLoadSuccessful(false),
     mPowerOn(false),
     mNativeAgpsHandler(mSystemStatus->getOsObserver(), *this),
@@ -2721,27 +2720,6 @@ GnssAdapter::injectTimeCommand(int64_t time, int64_t timeReference, int32_t unce
     };
 
     sendMsg(new MsgInjectTime(*mLocApi, *mContext, time, timeReference, uncertainty));
-}
-
-void
-GnssAdapter::setEsStatusCallbackCommand(std::function<void(bool)> esStatusCb)
-{
-    LOC_LOGd();
-
-    struct MsgReportEsStatus : public LocMsg {
-        GnssAdapter& mAdapter;
-        std::function<void(bool)> mEsStatusCb;
-        inline MsgReportEsStatus(GnssAdapter& adapter,
-                                 std::function<void(bool)> esStatusCb) :
-            LocMsg(),
-            mAdapter(adapter),
-            mEsStatusCb(esStatusCb) {}
-        inline virtual void proc() const {
-            mAdapter.setEsStatusCallback(mEsStatusCb);
-        }
-    };
-
-    sendMsg(new MsgReportEsStatus(*this, esStatusCb));
 }
 
 void
@@ -5591,7 +5569,6 @@ GnssAdapter::requestOdcpiEvent(OdcpiRequestInfo& request)
 void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
 {
     if (nullptr != mControlCallbacks.odcpiReqCb) {
-        bool sendEmergencyCallStatusEvent = false;
         LOC_LOGd("request: type %d, tbf %d, isEmergency %d"
                  " requestActive: %d timerActive: %d",
                  request.type, request.tbfMillis, request.isEmergencyMode,
@@ -5604,11 +5581,7 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
             if (!(mOdcpiStateMask & ODCPI_REQ_ACTIVE)  && false == mOdcpiTimer.isActive()) {
                 fireOdcpiRequest(request);
                 mOdcpiStateMask |= ODCPI_REQ_ACTIVE;
-                if (nullptr != mEsStatusCb) {
-                    mEsStatusCb(request.isEmergencyMode);
-                }
                 mOdcpiTimer.start();
-                sendEmergencyCallStatusEvent = true;
             // if the current active odcpi session is non-emergency, and the new
             // odcpi request is emergency, replace the odcpi request with new request
             // and restart the timer
@@ -5616,24 +5589,16 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
                        true == request.isEmergencyMode) {
                 fireOdcpiRequest(request);
                 mOdcpiStateMask |= ODCPI_REQ_ACTIVE;
-                if (nullptr != mEsStatusCb) {
-                    mEsStatusCb(request.isEmergencyMode);
-                }
                 if (true == mOdcpiTimer.isActive()) {
                     mOdcpiTimer.restart();
                 } else {
                     mOdcpiTimer.start();
                 }
-                sendEmergencyCallStatusEvent = true;
             // if ODCPI request is not active but the timer is active, then
             // just update the active state and wait for timer to expire
             // before requesting new ODCPI to avoid spamming ODCPI requests
             } else if (!(mOdcpiStateMask & ODCPI_REQ_ACTIVE) && true == mOdcpiTimer.isActive()) {
                 mOdcpiStateMask |= ODCPI_REQ_ACTIVE;
-                if (nullptr != mEsStatusCb) {
-                    mEsStatusCb(request.isEmergencyMode);
-                }
-                sendEmergencyCallStatusEvent = true;
             }
             mOdcpiRequest = request;
 
@@ -5648,16 +5613,12 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request)
             LOC_LOGd("request: type %d, isEmergency %d", request.type, request.isEmergencyMode);
             fireOdcpiRequest(request);
             mOdcpiStateMask = 0;
-            sendEmergencyCallStatusEvent = true;
-            if (nullptr != mEsStatusCb) {
-                mEsStatusCb(false);
-            }
         } else {
             LOC_LOGe("Invalid ODCPI request type.");
         }
 
         // Raise InEmergencyCall event
-        if (sendEmergencyCallStatusEvent && request.isEmergencyMode) {
+        if (request.isEmergencyMode) {
             SystemStatus* systemstatus = getSystemStatus();
             if (nullptr != systemstatus) {
                 systemstatus->getOsObserver()->eventInEmergencyCall(0 != mOdcpiStateMask);
