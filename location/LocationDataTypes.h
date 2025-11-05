@@ -2215,6 +2215,7 @@ struct GnssDcReportInfo {
 // Specify the set of terrestrial technologies
 enum TerrestrialTechMask {
     TERRESTRIAL_TECH_GTP_WWAN = 1 << 0,
+    TERRESTRIAL_TECH_GTP_WIFI = 1 << 1,
 };
 
 // Specify parameters related to lever arm
