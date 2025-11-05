@@ -120,7 +120,6 @@ struct GnssInterface {
     uint32_t (*configXtraParams) (bool enable, const XtraConfigParams& configParams);
     uint32_t (*gnssGetXtraStatus)();
     uint32_t (*gnssRegisterXtraStatusUpdate)(bool registerUpdate);
-    void (*configPrecisePositioning)(uint32_t featureId, bool enable, const std::string& appHash);
     uint32_t (*configMerkleTree) (const char * merkleTreeConfigBuffer, int bufferLength);
     uint32_t (*configOsnmaEnablement) (bool enable);
     uint32_t (*gnssInjectMmfData) (const GnssMapMatchedData& data);

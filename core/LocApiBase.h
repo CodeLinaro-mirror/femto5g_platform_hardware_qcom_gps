@@ -195,7 +195,6 @@ public:
     void geofenceStatus(GeofenceStatusAvailable available);
     void reportLocations(Location* locations, size_t count);
     void handleBatchStatusEvent(BatchingStatus batchStatus);
-    void reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask);
     void reportNtnStatusEvent(LocationError status,
             const GnssSignalTypeMask& gpsSignalTypeConfigMask, bool isSetResponse);
     void reportNtnConfigUpdateEvent(const GnssSignalTypeMask& gpsSignalTypeConfigMask);
@@ -311,9 +310,6 @@ public:
     }
 
     virtual void setTribandState(bool enabled);
-
-    virtual void configPrecisePositioning(uint32_t featureId, bool enable,
-            const std::string& appHash, LocApiResponse* adapterResponse=nullptr);
     virtual void configPrecisePositioning(PreciseType preciseType, bool enable,
             LocApiResponse* adapterResponse=nullptr);
     virtual void configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* merkleTree,

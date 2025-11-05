@@ -395,10 +395,6 @@ void LocApiBase::reportSignalTypeCapabilities(const GnssCapabNotification& gnssC
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportSignalTypeCapabilities(gnssCapabNotification));
 }
 
-void LocApiBase::reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask) {
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportModemGnssQesdkFeatureStatus(mask));
-}
-
 void LocApiBase::reportNtnStatusEvent(LocationError status,
         const GnssSignalTypeMask& gpsSignalTypeConfigMask, bool isSetResponse) {
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportNtnStatusEvent(
@@ -758,11 +754,6 @@ void LocApiBase::
 DEFAULT_IMPL()
 
 void LocApiBase::setTribandState(bool /*enabled*/)
-DEFAULT_IMPL()
-
-void LocApiBase::
-    configPrecisePositioning(uint32_t featureId, bool enable, const std::string& appHash,
-            LocApiResponse* /*adpterResponse*/)
 DEFAULT_IMPL()
 
 void LocApiBase::

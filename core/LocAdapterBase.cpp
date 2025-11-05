@@ -145,10 +145,6 @@ void LocAdapterBase::
     reportLocationSystemInfoEvent(const LocationSystemInfo& /*locationSystemInfo*/)
 DEFAULT_IMPL()
 
-void LocAdapterBase::
-    reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& /*mask*/)
-DEFAULT_IMPL()
-
 bool LocAdapterBase::
     requestTime()
 DEFAULT_IMPL(false)

@@ -65,9 +65,7 @@ class LocAdapterProxyBase;
 
 typedef uint16_t PpFeatureStatusMask;
 #define DLP_FEATURE_ENABLED_BY_DEFAULT            0X01
-#define DLP_FEATURE_ENABLED_BY_QESDK              0X02
 #define MLP_FEATURE_ENABLED_BY_DEFAULT            0X04
-#define MLP_FEATURE_ENABLED_BY_QESDK              0X08
 #define WOCS_FEATURE_ENABLED_BY_DEFAULT           0X10
 
 class LocAdapterBase {
@@ -183,7 +181,6 @@ public:
     virtual void reportSvPolynomialEvent(GnssSvPolynomial &svPolynomial);
     virtual void reportSvEphemerisEvent(GnssSvEphemerisReport &svEphemeris);
     virtual void reportLocationSystemInfoEvent(const LocationSystemInfo& locationSystemInfo);
-    virtual void reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask);
     virtual bool requestTime();
     virtual bool requestATL(int connHandle, LocAGpsType agps_type,
                             LocApnTypeMask apn_type_mask, LocSubId sub_id, uint32_t timeout);

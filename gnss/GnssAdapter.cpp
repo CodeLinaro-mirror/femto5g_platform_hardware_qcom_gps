@@ -187,7 +187,6 @@ GnssAdapter::GnssAdapter() :
     mPositionElapsedRealTimeCal(),
     mAddressRequestCb(nullptr),
     mGnssCapabNotification{},
-    mAppHash(""),
     m3GppSourceMask(QDGNSS_3GPP_SOURCE_UNKNOWN),
 #ifdef _ANDROID_
     // android only use SPE to generate nmea
@@ -2952,9 +2951,9 @@ GnssAdapter::handleEngineLockStatus(EngineLockState engineLockState) {
 }
 
 void
-GnssAdapter::handleEngineUpEvent() {
-    LOC_LOGd("mPpFeatureStatusMask: %x, isInSession(): %d, mAppHash: %s",
-            mPpFeatureStatusMask, isInSession(), mAppHash.c_str());
+GnssAdapter::handleEngineUpEvent()
+{
+    LOC_LOGd("mPpFeatureStatusMask: %x, isInSession(): %d", mPpFeatureStatusMask, isInSession());
 
     struct MsgHandleEngineUpEvent : public LocMsg {
         GnssAdapter& mAdapter;
@@ -2975,16 +2974,6 @@ GnssAdapter::handleEngineUpEvent() {
             if (mAdapter.mPowerConnectState != POWER_CONNECT_UNKNOWN) {
                 mAdapter.mLocApi->updatePowerConnectState(
                    mAdapter.mPowerConnectState == POWER_CONNECT_YES);
-            }
-            // inject AppHash when modem SSR but there is session ongoing
-            if (mAdapter.isInSession() && !mAdapter.mAppHash.empty()) {
-                if (mAdapter.isPreciseEnabled()) { //RTK will also enable eDGNSS, check DLP at first
-                    mAdapter.mLocApi->configPrecisePositioning(QESDK_FEATURE_ID_RTK, true,
-                            mAdapter.mAppHash);
-                } else if (mAdapter.isMlpEnabled()) { //eDGNSS only
-                    mAdapter.mLocApi->configPrecisePositioning(QESDK_FEATURE_ID_EDGNSS, true,
-                            mAdapter.mAppHash);
-                }
             }
 
             // When modem SSR, reset mTimeBasedTrackingRunning to indicate that
@@ -5233,30 +5222,9 @@ bool GnssAdapter::reportGnssAdditionalSystemInfoEvent(
     return true;
 }
 
-void GnssAdapter::reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask) {
-    struct MsgSetModemQesdkFeatureStatus : public LocMsg {
-        GnssAdapter& mAdapter;
-        const ModemGnssQesdkFeatureMask mMask;
-
-        inline MsgSetModemQesdkFeatureStatus(GnssAdapter& adapter,
-                const ModemGnssQesdkFeatureMask& mask) :
-            LocMsg(),
-            mAdapter(adapter),
-            mMask(mask) {}
-
-        inline virtual void proc() const {
-            if (mMask & MODEM_QESDK_FEATURE_DGNSS) {
-                mAdapter.mPpFeatureStatusMask |= MLP_FEATURE_ENABLED_BY_QESDK;
-            } else {
-                mAdapter.mPpFeatureStatusMask &= (~MLP_FEATURE_ENABLED_BY_QESDK);
-            }
-        }
-    };
-    sendMsg(new MsgSetModemQesdkFeatureStatus(*this, mask));
-}
-
-void GnssAdapter::handleQesdkQwesStatusFromEHub(
-        const std::unordered_map<LocationQwesFeatureType, bool> &featureMap) {
+void GnssAdapter::handleFeatureStatusUpdateFromEHub(
+        const std::unordered_map<LocationQwesFeatureType, bool> &featureMap)
+{
     struct MsgReportQwesStatusFromEHub : public LocMsg {
         GnssAdapter& mAdapter;
         const std::unordered_map<LocationQwesFeatureType, bool> mFeatureMap;
@@ -5268,11 +5236,7 @@ void GnssAdapter::handleQesdkQwesStatusFromEHub(
         inline virtual void proc() const {
             LOC_LOGD("MsgReportQwesStatusFromEHub: before mPpFeatureStatusMask: 0x%x",
                      mAdapter.mPpFeatureStatusMask);
-            auto ppeInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_PPE);
-            auto dlpQesdkInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_DLP_QESDK);
-            auto qfeInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_QDR3);
             auto cdParserInFeatureMap = mFeatureMap.find(LOCATION_FEATURE_TYPE_CORR_DATA_PARSER);
-            auto wocsInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_WOCS);
 
             //QESDK feature status call back handling logic:
             //1, DLP_FEATURE_ENABLED_BY_DEFAULT bit is set in reportQwesCapabilities
@@ -5283,23 +5247,7 @@ void GnssAdapter::handleQesdkQwesStatusFromEHub(
             //   configPreciseLocation command from GnssAdapter, and already checked
             //   QESDK feature status via QWES call checkInstalledLicense, set
             //   DLP_FEATURE_ENABLED_BY_QESDK bit according to QESDK feature status.
-            if (dlpQesdkInFeatureMap != mFeatureMap.end()) {
-                if (dlpQesdkInFeatureMap->second) {
-                    mAdapter.mPpFeatureStatusMask |= DLP_FEATURE_ENABLED_BY_QESDK;
-                    //Send enable precise location data item to loclauncher to inform
-                    //it QPPE engine-service need to launch
-                    if (ContextBase::mIzat_process_conf.engineServiceEnabled) {
-                        mAdapter.notifyPreciseLocation();
-                    }
-                } else {
-                    mAdapter.mPpFeatureStatusMask &= (~DLP_FEATURE_ENABLED_BY_QESDK);
-                    //Send disable precise location data item to loclauncher to inform
-                    //it QPPE engine-service need to exit
-                    if (ContextBase::mIzat_process_conf.engineServiceEnabled) {
-                        mAdapter.notifyPreciseLocation();
-                    }
-                }
-            } else if (cdParserInFeatureMap != mFeatureMap.end()) {
+            if (cdParserInFeatureMap != mFeatureMap.end()) {
                 // If EngineHubMgr calls this cb, QPPE is loaded as 3GPP SSR2OSR
                 // correction data parser, so set QDGNSS_3GPP_EP_PARSER_AVAIL
                 mAdapter.m3GppSourceMask |= QDGNSS_3GPP_EP_PARSER_AVAIL;
@@ -7371,38 +7319,6 @@ uint32_t GnssAdapter::registerXtraStatusUpdateCommand(bool registerUpdate) {
     return sessionId;
 }
 
-void GnssAdapter::configPrecisePositioningCommand(
-        uint32_t featureId, bool enable, const std::string& appHash) {
-
-    struct MsgConfigPrecisePositioning : public LocMsg {
-        GnssAdapter& mAdapter;
-        bool mEnable;
-        std::string mAppHash;
-        uint32_t mFeatureId;
-
-        inline MsgConfigPrecisePositioning(GnssAdapter& adapter,
-                                           bool enable,
-                                           const std::string& appHash,
-                                           uint32_t featureId) :
-            LocMsg(),
-            mAdapter(adapter),
-            mEnable(enable),
-            mAppHash(appHash),
-            mFeatureId(featureId) {}
-        inline virtual void proc() const {
-            LOC_LOGD("ConfigPrecisePositioning: enable: %d, appHash: %s, featureId: %d", mEnable,
-                    mAppHash.c_str(), mFeatureId);
-            if (QESDK_FEATURE_ID_EDGNSS == mFeatureId || QESDK_FEATURE_ID_RTK == mFeatureId) {
-                mAdapter.mEngHubProxy->configPrecisePositioning(mFeatureId, mEnable, mAppHash);
-                mAdapter.mLocApi->configPrecisePositioning(mFeatureId, mEnable, mAppHash);
-                // cache the Qesdk Feature Status
-                mAdapter.mAppHash = mAppHash;
-            }
-        }
-    };
-    sendMsg(new MsgConfigPrecisePositioning(*this, enable, appHash, featureId));
-}
-
 void GnssAdapter::setPreciseSessionConfig(PreciseType preciseType) {
 
     struct MsgConfigPrecisePositioning : public LocMsg {
@@ -7915,7 +7831,7 @@ GnssAdapter::initEngineHub() {
 
         GnssAdapterUpdateQwesFeatureStatusCb updateQwesFeatureStatusCb =
             [this] (const std::unordered_map<LocationQwesFeatureType, bool> &featureMap) {
-            handleQesdkQwesStatusFromEHub(featureMap);
+            handleFeatureStatusUpdateFromEHub(featureMap);
             ContextBase::setQwesFeatureStatus(featureMap);
             reportQwesCapabilities(featureMap);
         };
