@@ -29,13 +29,12 @@
 
 #ifndef __LOC_DELAY_H__
 #define __LOC_DELAY_H__
-
+#include <loc_pla.h>
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 #include <stddef.h>
 #include <stdint.h>
-#include <loc_pla.h>
 /*
     user_data: client context pointer, passthrough. Originally received
                from calling client when loc_timer_start() is called.

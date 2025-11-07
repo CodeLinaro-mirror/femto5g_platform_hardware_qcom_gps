@@ -36,7 +36,7 @@
 #include <inttypes.h>
 #include <sys/time.h>
 #include <time.h>
-
+#include <glib.h>
 
 #if defined(__GNUC__) && defined(__GNUC_PREREQ)
 #if __GNUC_PREREQ(6,0)
@@ -87,7 +87,6 @@ extern "C" {
 #define MAX_COMMAND_STR_LEN (255)
 #define BOOT_KPI_FILE "/sys/kernel/boot_kpi/kpi_values"
 #ifndef OFF_TARGET
-#include <glib.h>
 #define strlcat g_strlcat
 #define strlcpy g_strlcpy
 #else
