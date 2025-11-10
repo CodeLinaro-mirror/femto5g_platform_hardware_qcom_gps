@@ -43,7 +43,9 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "GnssPowerIndication.h"
 #include "GnssMeasurementInterface.h"
 #include "MeasurementCorrectionsInterface.h"
+#ifdef ENABLE_NATIVE_BAT_LISTENER
 #include "battery_listener.h"
+#endif
 
 #define MAX_GNSS_ACCURACY_ALLOWED 10000
 namespace android {
@@ -97,12 +99,14 @@ ScopedAStatus Gnss::close() {
     return ScopedAStatus::ok();
 }
 
+#ifdef ENABLE_NATIVE_BAT_LISTENER
 void location_on_battery_status_changed(bool charging) {
     LOC_LOGd("battery status changed to %s charging", charging ? "" : "not");
     if ((sGnss != nullptr) && (sGnss->getLocationControlApi() != nullptr)) {
         sGnss->getLocationControlApi()->updateBatteryStatus(charging);
     }
 }
+#endif
 
 Gnss::Gnss(): mApi(mGnssCallback), mGnssCallback(nullptr),
     mDeathRecipient(AIBinder_DeathRecipient_new(&gnssServiceDied)) {
@@ -110,8 +114,11 @@ Gnss::Gnss(): mApi(mGnssCallback), mGnssCallback(nullptr),
     if (sGnss == nullptr) {
         sGnss = this;
     }
-    // register health client to listen on battery change
+#ifdef ENABLE_NATIVE_BAT_LISTENER
+    // For LW target, register health client to listen on battery change
+    // FOr LA/LAW targets, listen to power connected state from SDK layer
     loc_extn_battery_properties_listener_init(location_on_battery_status_changed);
+#endif
     getLocationControlApi();
 }
 
