@@ -53,14 +53,6 @@ namespace loc_core {
 enum NetworkType {
     TYPE_MOBILE = 0,
     TYPE_WIFI,
-    TYPE_ETHERNET,
-    TYPE_BLUETOOTH,
-    TYPE_MMS,
-    TYPE_SUPL,
-    TYPE_DUN,
-    TYPE_HIPRI,
-    TYPE_WIMAX,
-    TYPE_PROXY,
     TYPE_UNKNOWN,
 };
 
@@ -180,31 +172,9 @@ public:
             case 100:
                 typeout = TYPE_WIFI;
                 break;
-            case 101:
-                typeout = TYPE_ETHERNET;
-                break;
-            case 102:
-                typeout = TYPE_BLUETOOTH;
-                break;
             case 201:
                 typeout = TYPE_MOBILE;
                 break;
-            case 202:
-                typeout = TYPE_DUN;
-                break;
-            case 203:
-                typeout = TYPE_HIPRI;
-                break;
-            case 204:
-                typeout = TYPE_MMS;
-                break;
-            case 205:
-                typeout = TYPE_SUPL;
-                break;
-            case 220:
-                typeout = TYPE_WIMAX;
-                break;
-            case 300:
             default:
                 typeout = TYPE_UNKNOWN;
                 break;
