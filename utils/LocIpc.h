@@ -128,10 +128,6 @@ public:
                                 int service, int instance,
                                 const shared_ptr<LocIpcQrtrWatcher>& qrtrWatcher);
 
-    static pair<shared_ptr<LocIpcSender>, unique_ptr<LocIpcRecver>>
-            getLocIpcQmiLocServiceSenderRecverPair(const shared_ptr<ILocIpcListener>& listener,
-                                                   int instance);
-
     // Listen for new messages in current thread. Calling this funciton will
     // block current thread.
     // The listening can be stopped by calling stopBlockingListening() passing
