@@ -266,32 +266,6 @@ public:
     }
 };
 
-class LocIpcInetTcpSender : public LocIpcInetSender {
-protected:
-    mutable bool mFirstTime;
-
-    virtual ssize_t send(const uint8_t data[], uint32_t length, int32_t /* msgId */) const {
-        int connStatus = 0;
-        if (mFirstTime) {
-            connStatus = ::connect(mSock->mSid, (const struct sockaddr*)&mAddr, sizeof(mAddr));
-            if (0 == connStatus) {
-                mFirstTime = false;
-            }
-        }
-
-        if (0 == connStatus) {
-            return mSock->send(data, length, 0, (struct sockaddr*)&mAddr, sizeof(mAddr));
-        }
-
-        return 0;
-    }
-
-public:
-    inline LocIpcInetTcpSender(const char* name, int32_t port) :
-            LocIpcInetSender(name, port, SOCK_STREAM),
-            mFirstTime(true) {}
-};
-
 class LocIpcInetRecver : public LocIpcInetSender, public LocIpcRecver {
      int32_t mPort;
 protected:
@@ -316,34 +290,6 @@ public:
     inline virtual unique_ptr<LocIpcSender> getLastSender() const override {
         return make_unique<LocIpcInetSender>(static_cast<const LocIpcInetSender&>(*this));
     }
-};
-
-class LocIpcInetTcpRecver : public LocIpcInetRecver {
-    mutable int32_t mConnFd;
-protected:
-    inline virtual ssize_t recv() const override {
-        socklen_t size = sizeof(mAddr);
-        if (-1 == mConnFd && mSock->isValid()) {
-            if (::listen(mSock->mSid, 3) < 0 ||
-                (mConnFd = accept(mSock->mSid, (struct sockaddr*)&mAddr, &size)) < 0) {
-                mSock->close();
-                mConnFd = -1;
-            }
-        }
-        ssize_t nBytes = mSock->recv(*this, mDataCb, 0, (struct sockaddr*)&mAddr, &size, mConnFd);
-        if (0 == nBytes) {
-            // tcp connection closed, accept new connection for next recv
-            // But do not exit the receiver thread by returning 0 bytes.
-            mConnFd = -1;
-            nBytes = 100;
-        }
-        return nBytes;
-    }
-public:
-    inline LocIpcInetTcpRecver(const shared_ptr<ILocIpcListener>& listener, const char* name,
-                               int32_t port) :
-            LocIpcInetRecver(listener, name, port, SOCK_STREAM), mConnFd(-1) {}
-    inline virtual ~LocIpcInetTcpRecver() { if (-1 != mConnFd) ::close(mConnFd);}
 };
 
 class LocIpcInetUdpRecver : public LocIpcInetRecver {
@@ -459,13 +405,6 @@ unique_ptr<LocIpcRecver> LocIpc::getLocIpcQrtrRecver(const shared_ptr<ILocIpcLis
             "_ZN8loc_util22createLocIpcQrtrRecverERKNSt3__110shared_ptrINS_15ILocIpcListenerEEEiiRKNS1_INS_17LocIpcQrtrWatcherEEE");
 #endif
     return (nullptr == creator) ? nullptr : creator(listener, service, instance, watcher);
-}
-shared_ptr<LocIpcSender> LocIpc::getLocIpcInetTcpSender(const char* serverName, int32_t port) {
-    return make_shared<LocIpcInetTcpSender>(serverName, port);
-}
-unique_ptr<LocIpcRecver> LocIpc::getLocIpcInetTcpRecver(const shared_ptr<ILocIpcListener>& listener,
-                                                            const char* serverName, int32_t port) {
-    return make_unique<LocIpcInetTcpRecver>(listener, serverName, port);
 }
 shared_ptr<LocIpcSender> LocIpc::getLocIpcInetUdpSender(const char* serverName, int32_t port) {
     return make_shared<LocIpcInetSender>(serverName, port, SOCK_DGRAM);

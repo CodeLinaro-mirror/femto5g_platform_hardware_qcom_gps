@@ -104,8 +104,6 @@ public:
     static shared_ptr<LocIpcSender>
             getLocIpcInetUdpSender(const char* serverName, int32_t port);
     static shared_ptr<LocIpcSender>
-            getLocIpcInetTcpSender(const char* serverName, int32_t port);
-    static shared_ptr<LocIpcSender>
             getLocIpcQrtrSender(int service, int instance);
 
     static unique_ptr<LocIpcRecver>
@@ -114,9 +112,6 @@ public:
     static unique_ptr<LocIpcRecver>
             getLocIpcInetUdpRecver(const shared_ptr<ILocIpcListener>& listener,
                                  const char* serverName, int32_t port);
-    static unique_ptr<LocIpcRecver>
-            getLocIpcInetTcpRecver(const shared_ptr<ILocIpcListener>& listener,
-                                   const char* serverName, int32_t port);
     inline static unique_ptr<LocIpcRecver>
             getLocIpcQrtrRecver(const shared_ptr<ILocIpcListener>& listener,
                                 int service, int instance) {
