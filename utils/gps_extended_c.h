@@ -1673,10 +1673,6 @@ typedef void (*LocAgpsCloseResultCb)(bool isSuccess, AGpsExtType agpsType, void*
 // every client can get the notification that hal daemon has restarted.
 #define LOC_INTAPI_NAME_PREFIX         LOC_CLIENT_NAME_PREFIX "_intapi"
 
-typedef uint64_t NetworkHandle;
-#define NETWORK_HANDLE_UNKNOWN  ~0
-#define MAX_NETWORK_HANDLES 10
-
 typedef enum {
   ENGINE_LOCK_STATE_INVALID = 0,
   ENGINE_LOCK_STATE_ENABLED = 1,  /**<  Location engine is enabled.  */

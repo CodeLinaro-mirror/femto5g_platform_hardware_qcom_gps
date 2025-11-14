@@ -3687,7 +3687,6 @@ enum PowerStateType {
 
 typedef uint64_t NetworkHandle;
 #define NETWORK_HANDLE_UNKNOWN  ~0
-#define MAX_NETWORK_HANDLES 10
 
 enum OdcpiCallbackTypeMaskBits {
     NON_EMERGENCY_ODCPI = (1<<0),
