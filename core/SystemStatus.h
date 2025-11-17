@@ -167,9 +167,21 @@ public:
 class SystemStatusXoState : public SystemStatusItemBase
 {
 public:
-    uint8_t  mXoState;
+    uint8_t             mXoState;
+    float               mXoTemp;
+    float               mXoTempSlope;
+    float               mXoTempAccel;
+    uint32_t            mXoCalResetCount;
+    GnssRotatorQuality  mXoRotatorQuality;
+    uint8_t             mTimeInconsistencyStatus;
     inline SystemStatusXoState() :
-        mXoState(0) {}
+        mXoState(0),
+        mXoTemp(0),
+        mXoTempSlope(0),
+        mXoTempAccel(0),
+        mXoCalResetCount(0),
+        mXoRotatorQuality(ROTATOR_QUALITY_NONE),
+        mTimeInconsistencyStatus(0) {}
     inline SystemStatusXoState(const GnssEngineDebugDataInfo& info);
     bool equals(const SystemStatusItemBase& peer) override;
     void dump(void) override;
