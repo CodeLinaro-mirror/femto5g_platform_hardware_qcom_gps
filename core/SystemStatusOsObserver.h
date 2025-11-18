@@ -128,14 +128,12 @@ public:
     void eventLocFeatureStatus(std::unordered_set<int> fids);
     void eventNlpSessionStatus(bool nlpStarted);
     void eventGpsEnabled(bool gpsEnabled);
-    void eventWwanAppInfo(int32_t pid = 0,
+    void eventWwanAppInfo(
             int32_t uid = 0,
             bool appHasFinePermission = false,
             bool appHasBackgroundPermission = false,
-            string appHash = "",
             string appPackageName = "",
-            string appCookie = "",
-            string appQwesLicenseId = "");
+            string appCookie = "");
     void eventAssistedGpsEnabled(bool aGpsEnabled);
 
 /*****************  None Android specific start ***************************/

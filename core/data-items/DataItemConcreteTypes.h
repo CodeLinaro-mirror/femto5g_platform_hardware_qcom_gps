@@ -129,14 +129,11 @@ struct LocFeatureStatusInfo {
 
 //WWAN app info data structure
 #define APP_COOKIE_MAX_SIZE 40
-#define APP_HASH_KEY_MAX_SIZE 64
 #define PACKAGE_NAME_MAX_SIZE 256
 struct LocWwanAppInfo {
-    uint32_t mPid;
     uint32_t mUid;
     bool mAppHasFinePermission;
     bool mAppHasBackgroundPermission;
-    char mAppHash[APP_HASH_KEY_MAX_SIZE];
     char mAppPackageName[PACKAGE_NAME_MAX_SIZE];
     char mAppCookie[APP_COOKIE_MAX_SIZE];
 };
@@ -451,20 +448,17 @@ public:
 
 class WwanAppInfoDataItem: public IDataItemCore {
 public:
-    WwanAppInfoDataItem(uint32_t pid = 0,
+    WwanAppInfoDataItem(
                 uint32_t uid = 0,
                 bool appHasFinePermission = false,
                 bool appHasBackgroundPermission = false,
-                std::string appHash = "",
                 std::string appPackageName = "",
                 std::string appCookie = "") {
         mId = WWAN_APP_INFO_DATA_ITEM_ID;
         mName = WWAN_APP_INFO_CARD;
-        mWwanAppInfo.mPid = pid;
         mWwanAppInfo.mUid = uid;
         mWwanAppInfo.mAppHasFinePermission = appHasFinePermission;
         mWwanAppInfo.mAppHasBackgroundPermission = appHasBackgroundPermission;
-        copyStringToCharArray(appHash, mWwanAppInfo.mAppHash, sizeof(mWwanAppInfo.mAppHash));
         copyStringToCharArray(appPackageName, mWwanAppInfo.mAppPackageName,
                 sizeof(mWwanAppInfo.mAppPackageName));
         copyStringToCharArray(appCookie, mWwanAppInfo.mAppCookie, sizeof(mWwanAppInfo.mAppCookie));

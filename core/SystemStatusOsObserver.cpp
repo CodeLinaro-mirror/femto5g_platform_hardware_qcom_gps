@@ -413,16 +413,14 @@ void SystemStatusOsObserver::eventGpsEnabled(bool isEnabled) {
     notify(di);
 }
 
-void SystemStatusOsObserver::eventWwanAppInfo(int32_t pid,
+void SystemStatusOsObserver::eventWwanAppInfo(
         int32_t uid,
         bool appHasFinePermission,
         bool appHasBackgroundPermission,
-        string appHash,
         string appPackageName,
-        string appCookie,
-        string appQwesLicenseId) {
-    IDataItemCore* di = new WwanAppInfoDataItem(pid, uid, appHasFinePermission,
-            appHasBackgroundPermission, appHash, appPackageName, appCookie);
+        string appCookie) {
+    IDataItemCore* di = new WwanAppInfoDataItem(uid, appHasFinePermission,
+            appHasBackgroundPermission, appPackageName, appCookie);
     notify(di);
 }
 
