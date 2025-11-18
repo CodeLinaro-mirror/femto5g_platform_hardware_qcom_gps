@@ -9,7 +9,8 @@ AM_CFLAGS = \
 
 liblocation_api_la_SOURCES = \
     LocationAPI.cpp \
-    LocationAPIClientBase.cpp
+    LocationAPIClientBase.cpp \
+    LocationAPIUtils.cpp
 
 if USE_EXTERNAL_AP
 AM_CFLAGS += -DFEATURE_EXTERNAL_AP

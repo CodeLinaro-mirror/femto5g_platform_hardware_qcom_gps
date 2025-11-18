@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 /*
-Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
-SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_LocationAPIUtils"
@@ -33,7 +34,7 @@ static const long OFFSET_UPDATE_INTERVAL_MS = 60 * 60 * 1000;
 static const double CHANGE_PER_INTERVAL = 0.03;
 static const double NEW_WEIGHT = CHANGE_PER_INTERVAL;
 static const double OLD_WEIGHT = std::sqrt(1 - NEW_WEIGHT * NEW_WEIGHT);
-static const int APPROXIMATE_METERS_PER_DEGREE_AT_EQUATOR = 111'000;
+static const int APPROXIMATE_METERS_PER_DEGREE_AT_EQUATOR = 111000;
 static const double MAX_LATITUDE = 90.0 - (1.0 / APPROXIMATE_METERS_PER_DEGREE_AT_EQUATOR);
 static const float sAccuracyM = MIN_ACCURACY_M;
 

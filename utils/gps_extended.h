@@ -191,6 +191,12 @@ typedef enum {
     NAVIC_XTRA_VALID_BIT   = 1 << 5
 } GnssXtraValidMaskBits;
 
+typedef enum {
+    ROTATOR_QUALITY_NONE = 0,     /* Rotator Quality not available. */
+    ROTATOR_QUALITY_GOOD,         /* Rotator quality is good. */
+    ROTATOR_QUALITY_XO_COMP_HIGH  /* Rotator quality is degraded due to XO compensation > 2 ppm.*/
+} GnssRotatorQuality;
+
 typedef struct {
 
     uint8_t timeValid;
@@ -220,6 +226,30 @@ typedef struct {
 
     uint8_t xoState;
     /**<   XO calibration. */
+
+    float xoTemp;
+    /**<   Temperature at XO thermistor (Units -- Degrees Celcius) */
+
+    float xoTempSlope;
+    /**<   Rate of temperature change at XO thermistor (Units -- Degrees Celcius per Second ) */
+
+    float xoTempAccel;
+    /**<   Acceleration of temperature change at XO thermistor.
+     *      (Units -- Degrees Celcius per Second^2) */
+
+    uint32_t xoCalResetCount;
+    /**<   Reset counter for XO calibration data. \n
+           Indication to check GNSS outage issue due to bad XO cal, XO aging or rotator push. \n
+           (Units -- uint32)  */
+
+    GnssRotatorQuality xoRotatorQuality;
+    /**<   XO rotator quality. */
+
+    uint8_t timeInconsistencyStatus;
+    /**<   GNSS time inconsistency check. \n
+            Indication to check potential time issue due to XO/TCXO switch during sleep. \n
+            - FALSE -- GNSS time was not detected. \n
+            - TRUE -- GNSS time inconsistency was detected.   */
 
     uint32_t rcvrErrRecovery;
     /**<   Error recovery reason. */
