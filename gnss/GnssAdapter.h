@@ -217,6 +217,9 @@ class GnssAdapter : public LocAdapterBase {
     bool mSPEAlreadyRunningAtHighestInterval;
 
     /* ==== TRACKING ======================================================================= */
+    // This variable will only be set to true if QMI Loc API call for
+    // time based tracking session returns SUCCESS
+    bool mTimeBasedTrackingRunning;
     TrackingOptionsMap mTimeBasedTrackingSessions;
     LocPosMode mLocPositionMode;
     PreciseType mPreciseType;
@@ -387,7 +390,6 @@ class GnssAdapter : public LocAdapterBase {
     GnssSignalTypeMask mNtnSignalTypeConfigMask;
 
     /*==== WakeLock acquire/release based on TBF ==================================*/
-    bool mIsWakeLockActive;
     uint32_t mWakeLockEnableTbfThreshold;
     void acquireWakeLockBasedOnTBF(uint32_t tbfInMs);
 
