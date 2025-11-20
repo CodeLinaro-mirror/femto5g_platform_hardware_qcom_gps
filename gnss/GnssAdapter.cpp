@@ -167,12 +167,19 @@ GnssAdapter::GnssAdapter() :
     mControlCallbacks(),
     mAfwControlId(0),
     mNmeaMask(0),
+    mPrevNmeaRptTimeNsec(0),
     mGnssSvIdConfig(),
     mGnssSeconaryBandConfig(),
     mGnssSvTypeConfigCb(nullptr),
+    mSupportNfwControl(true),
     mLocConfigInfo{},
     mNiData(),
     mAgpsManager(),
+    mPowerIndicationCb(nullptr),
+    mGnssPowerStatisticsInit(false),
+    mBootReferenceEnergy(0),
+    mPowerElapsedRealTimeCal(30000000),
+    mIsMeasCorrInterfaceOpen(false),
     mQDgnssListenerHDL(nullptr),
     mCdfwInterface(nullptr),
     mDGnssNeedReport(false),
@@ -181,6 +188,9 @@ GnssAdapter::GnssAdapter() :
     mCallbackPriority(OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_LOW),
     mOdcpiTimer(this),
     mOdcpiRequest(),
+    mAddressRequestCb(nullptr),
+    mEsStatusCb(nullptr),
+    mLastDeleteAidingDataTime(0),
     mSystemStatus(SystemStatus::getInstance(mMsgTask)),
     mServerUrl(":"),
     mXtraObserver(this, mSystemStatus->getOsObserver(), mMsgTask),
@@ -189,25 +199,17 @@ GnssAdapter::GnssAdapter() :
     mSystemPowerState(POWER_STATE_UNKNOWN),
     mPowerConnectState(POWER_CONNECT_UNKNOWN),
     mBlockCPIInfo{},
-    mEsStatusCb(nullptr),
-    mEngServiceInfo{},
     mPowerOn(false),
+    mEngServiceInfo{},
+    mPositionElapsedRealTimeCal(30000000),
+    mHmacConfig(HMAC_CONFIG_UNKNOWN),
     mNativeAgpsHandler(mSystemStatus->getOsObserver(), *this),
     mGnssEnergyConsumedCb(nullptr),
     mPowerStateCb(nullptr),
-    mSupportNfwControl(true),
-    mIsMeasCorrInterfaceOpen(false),
-    mLastDeleteAidingDataTime(0),
-    mDgnssState(0),
     mSendNmeaConsent(false),
+    mDgnssState(0),
     mDgnssLastNmeaBootTimeMilli(0),
-    mPowerIndicationCb(nullptr),
-    mGnssPowerStatisticsInit(false),
-    mBootReferenceEnergy(0),
-    mPowerElapsedRealTimeCal(30000000),
-    mPositionElapsedRealTimeCal(30000000),
-    mAddressRequestCb(nullptr),
-    mHmacConfig(HMAC_CONFIG_UNKNOWN),
+    mQppeResp(false),
     mPvtJitterCounter(0)
 {
     LOC_LOGD("%s]: Constructor %p", __func__, this);
@@ -1060,7 +1062,7 @@ void
 GnssAdapter::setSuplHostServer(const char* server, int port, LocServerType type)
 {
     if (ContextBase::mGps_conf.AGPS_CONFIG_INJECT) {
-        char serverUrl[MAX_URL_LEN] = {};
+        char serverUrl[LOC_MAX_PARAM_STRING] = {};
         int32_t length = -1;
         const char noHost[] = "NONE";
 
@@ -1077,7 +1079,7 @@ GnssAdapter::setSuplHostServer(const char* server, int port, LocServerType type)
             if (LOC_AGPS_SUPL_SERVER == type) {
                 getServerUrl().assign(serverUrl);
                 strlcpy(ContextBase::mGps_conf.SUPL_HOST,
-                        (nullptr == server) ? serverUrl : server,
+                        ((nullptr == server) ? serverUrl : server),
                         LOC_MAX_PARAM_STRING);
                 ContextBase::mGps_conf.SUPL_PORT = port;
             } else {
@@ -1852,8 +1854,8 @@ GnssAdapter::gnssGetConfigCommand(GnssConfigFlagsMask configMask) {
             mAdapter(adapter),
             mApi(api),
             mConfigMask(configMask),
-            mCount(count),
-            mIds(nullptr) {
+            mIds(nullptr),
+            mCount(count) {
                 if (mCount > 0) {
                     mIds = new uint32_t[count];
                     if (mIds) {
@@ -3672,8 +3674,8 @@ GnssAdapter::updateTrackingOptionsCommand(LocationAPI* client, uint32_t id,
                             mOptions.tbm, TRACKING_TBM_THRESHOLD_MILLIS);
                     mOptions.powerMode = GNSS_POWER_MODE_M2;
                 }
-                if (mOptions.minInterval < MIN_TRACKING_INTERVAL) {
-                    mOptions.minInterval = MIN_TRACKING_INTERVAL;
+                if (mOptions.minInterval < MIN_TRACKING_INTERVAL_10HZ) {
+                    mOptions.minInterval = MIN_TRACKING_INTERVAL_10HZ;
                 }
                 // Now update session as required
                 if (isTimeBased && mOptions.minDistance > 0) {
@@ -4633,8 +4635,8 @@ void GnssAdapter::reportEngDebugDataInfoEvent(GnssEngineDebugDataInfo& gnssEngin
         GnssAdapter& mAdapter;
         const GnssEngineDebugDataInfo mGnssEngineDebugDataInfo;
         inline MsgReportEngDebugDataInfo(GnssAdapter& adapter, GnssEngineDebugDataInfo&
-            gnssEngineDebugDataInfo) : mGnssEngineDebugDataInfo(gnssEngineDebugDataInfo),
-                mAdapter(adapter) {}
+            gnssEngineDebugDataInfo) : mAdapter(adapter),
+                mGnssEngineDebugDataInfo(gnssEngineDebugDataInfo) {}
         inline virtual void proc() const {
             mAdapter.reportEngDebugDataInfo(mGnssEngineDebugDataInfo);
         }
@@ -4649,8 +4651,8 @@ GnssAdapter::reportLatencyInfoEvent(const GnssLatencyInfo& gnssLatencyInfo) {
         GnssLatencyInfo mGnssLatencyInfo;
         inline MsgReportLatencyInfo(GnssAdapter& adapter,
             const GnssLatencyInfo& gnssLatencyInfo) :
-            mGnssLatencyInfo(gnssLatencyInfo),
-            mAdapter(adapter) {}
+            mAdapter(adapter),
+            mGnssLatencyInfo(gnssLatencyInfo) {}
         inline virtual void proc() const {
             mAdapter.mGnssLatencyInfoQueue.push(mGnssLatencyInfo);
             LOC_LOGv("mGnssLatencyInfoQueue.size after push=%zu",
@@ -6159,9 +6161,9 @@ void GnssAdapter::reportPdnTypeFromWds(int pdnType, AGpsExtType agpsType, std::s
         inline MsgReportAtlPdn(GnssAdapter& adapter, int pdnType,
                 AgpsManager* agpsManager, AGpsExtType agpsType,
                 const string& apnName, AGpsBearerType bearerType) :
-            LocMsg(), mAgpsManager(agpsManager), mAgpsType(agpsType),
-            mApnName(apnName), mBearerType(bearerType),
-            mAdapter(adapter), mPdnType(pdnType) {}
+            LocMsg(), mAdapter(adapter), mPdnType(pdnType),
+            mAgpsManager(agpsManager), mAgpsType(agpsType),
+            mApnName(apnName), mBearerType(bearerType) {}
         inline virtual void proc() const {
             mAgpsManager->reportAtlOpenSuccess(mAgpsType,
                     const_cast<char*>(mApnName.c_str()),
@@ -6182,11 +6184,11 @@ void GnssAdapter::dataConnOpenCommand(
     LOC_LOGI("GnssAdapter::frameworkDataConnOpen");
 
     struct AgpsMsgAtlOpenSuccess: public LocMsg {
-        GnssAdapter& mAdapter;
         AgpsManager* mAgpsManager;
         AGpsExtType mAgpsType;
         char* mApnName;
         AGpsBearerType mBearerType;
+        GnssAdapter& mAdapter;
 
         inline AgpsMsgAtlOpenSuccess(GnssAdapter& adapter, AgpsManager* agpsManager,
                 AGpsExtType agpsType, const char* apnName, int apnLen, AGpsBearerType bearerType) :

@@ -117,7 +117,7 @@ const string& loc_get_name_from_tbl(const NameValTbl& tbl, int64_t key,
 
 /* puts to string formatted "TAG: VAL" with option ending string, default to newline */
 inline string loc_put_tag_val(const string& tag, const string& val, const string& eol = "\n") {
-    return tag + ": " + val + eol;
+    return (tag + ": " + val + eol);
 }
 
 inline string loc_parenthesize(const string& str) {

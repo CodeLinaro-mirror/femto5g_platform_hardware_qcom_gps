@@ -110,8 +110,8 @@ static void convertGnssSvStatus(const GnssSvNotification& in,
 
 GnssAPIClient::GnssAPIClient(const shared_ptr<IGnssCallback>& gpsCb) :
     LocationAPIClientBase(),
-    mControlClient(new LocationAPIControlClient()),
     mTracking(false),
+    mControlClient(new LocationAPIControlClient()),
     mReportSpeOnly(true),
     mLocationCapabilitiesMask(0),
     mLocationCapabilitiesCached(false),
