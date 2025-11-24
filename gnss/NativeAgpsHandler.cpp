@@ -121,14 +121,14 @@ void NativeAgpsHandler::processATLRequestRelease(AGnssExtStatusIpV4 statusInfo) 
         switch (statusInfo.status) {
         case LOC_GPS_REQUEST_AGPS_DATA_CONN:
             if (mConnected) {
-                mAdapter.dataConnOpenCommand(LOC_AGPS_TYPE_WWAN_ANY, mApn.c_str(), mApn.size(),
-                    AGPS_APN_BEARER_IPV4);
+                mAdapter.dataConnOpenCommand((AGpsExtType)LOC_AGPS_TYPE_WWAN_ANY, mApn.c_str(),
+                        mApn.size(), AGPS_APN_BEARER_IPV4);
             } else {
-                mAdapter.dataConnFailedCommand(LOC_AGPS_TYPE_WWAN_ANY);
+                mAdapter.dataConnFailedCommand((AGpsExtType)LOC_AGPS_TYPE_WWAN_ANY);
             }
             break;
         case LOC_GPS_RELEASE_AGPS_DATA_CONN:
-            mAdapter.dataConnClosedCommand(LOC_AGPS_TYPE_WWAN_ANY);
+            mAdapter.dataConnClosedCommand((AGpsExtType)LOC_AGPS_TYPE_WWAN_ANY);
             break;
         default:
             LOC_LOGe("Invalid Request: %d", statusInfo.status);

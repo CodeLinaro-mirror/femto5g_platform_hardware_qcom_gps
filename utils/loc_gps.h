@@ -388,18 +388,6 @@ typedef struct {
     char           extras[LOC_GPS_NI_LONG_STRING_MAXLEN];
 
 } LocGpsNiNotification;
-
-
-#define LOC_GPS_GEOFENCE_ENTERED     (1<<0L)
-#define LOC_GPS_GEOFENCE_EXITED      (1<<1L)
-
-#define LOC_GPS_GEOFENCE_DWELL_INSIDE  (1<<0L)
-#define LOC_GPS_GEOFENCE_DWELL_OUTSIDE (1<<1L)
-
-#define LOC_GPS_GEOFENCE_CONFIDENCE_LOW    1
-#define LOC_GPS_GEOFENCE_CONFIDENCE_MEDIUM 2
-#define LOC_GPS_GEOFENCE_CONFIDENCE_HIGH   3
-
 #ifdef __cplusplus
 }
 #endif

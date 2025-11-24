@@ -1,5 +1,6 @@
 /*
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 #include <aidl/android/hardware/gnss/BnAGnss.h>
@@ -22,7 +23,7 @@ void agnssServiceDied(void* cookie) {
         iface = nullptr;
     }
 }
-AGnss::AGnss(Gnss* gnss) : mGnss(gnss), mType(LOC_AGPS_TYPE_INVALID),
+AGnss::AGnss(Gnss* gnss) : mGnss(gnss), mType((AGpsExtType)LOC_AGPS_TYPE_INVALID),
     mDeathRecipient(AIBinder_DeathRecipient_new(&agnssServiceDied)) {
     spAGnss = this;
     LocationControlCallbacks locCtrlCbs;
