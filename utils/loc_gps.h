@@ -140,6 +140,7 @@ typedef uint16_t LocGpsAidingData;
 
 /** AGPS type */
 typedef uint16_t LocAGpsType;
+#define LOC_AGPS_TYPE_INVALID       -1
 #define LOC_AGPS_TYPE_ANY           0
 #define LOC_AGPS_TYPE_SUPL          1
 #define LOC_AGPS_TYPE_C2K           2

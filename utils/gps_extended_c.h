@@ -179,48 +179,11 @@ typedef struct {
     bool            unpropagatedPosition;
 } UlpLocation;
 
-
-/** SSID length */
-#define SSID_BUF_SIZE (32+1)
-
-/** AGPS type */
-typedef int8_t AGpsExtType;
-#define LOC_AGPS_TYPE_INVALID       -1
-#define LOC_AGPS_TYPE_ANY           0
-#define LOC_AGPS_TYPE_SUPL          1
-#define LOC_AGPS_TYPE_C2K           2
-#define LOC_AGPS_TYPE_WWAN_ANY      3
-#define LOC_AGPS_TYPE_WIFI          4
-#define LOC_AGPS_TYPE_SUPL_ES       5
-
 typedef int16_t AGpsBearerType;
 #define AGPS_APN_BEARER_INVALID     0
 #define AGPS_APN_BEARER_IPV4        1
 #define AGPS_APN_BEARER_IPV6        2
 #define AGPS_APN_BEARER_IPV4V6      3
-
-typedef uint32_t LocApnTypeMask;
-/**<  Denotes APN type for Default/Internet traffic  */
-#define LOC_APN_TYPE_MASK_DEFAULT   ((LocApnTypeMask)0x00000001)
-/**<  Denotes  APN type for IP Multimedia Subsystem  */
-#define LOC_APN_TYPE_MASK_IMS       ((LocApnTypeMask)0x00000002)
-/**<  Denotes APN type for Multimedia Messaging Service  */
-#define LOC_APN_TYPE_MASK_MMS       ((LocApnTypeMask)0x00000004)
-/**<  Denotes APN type for Dial Up Network  */
-#define LOC_APN_TYPE_MASK_DUN       ((LocApnTypeMask)0x00000008)
-/**<  Denotes APN type for Secure User Plane Location  */
-#define LOC_APN_TYPE_MASK_SUPL      ((LocApnTypeMask)0x00000010)
-/**<  Denotes APN type for High Priority Mobile Data  */
-#define LOC_APN_TYPE_MASK_HIPRI     ((LocApnTypeMask)0x00000020)
-/**<  Denotes APN type for over the air administration  */
-#define LOC_APN_TYPE_MASK_FOTA      ((LocApnTypeMask)0x00000040)
-/**<  Denotes APN type for Carrier Branded Services  */
-#define LOC_APN_TYPE_MASK_CBS       ((LocApnTypeMask)0x00000080)
-/**<  Denotes APN type for Initial Attach  */
-#define LOC_APN_TYPE_MASK_IA        ((LocApnTypeMask)0x00000100)
-/**<  Denotes APN type for emergency  */
-#define LOC_APN_TYPE_MASK_EMERGENCY ((LocApnTypeMask)0x00000200)
-
 
 typedef struct {
     agnssStatusIpV4Callback statusV4Cb;

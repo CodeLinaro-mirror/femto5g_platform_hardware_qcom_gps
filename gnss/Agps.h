@@ -50,7 +50,7 @@ using namespace loc_util;
 typedef std::function<void(
         int handle, int isSuccess, char* apn, uint32_t apnLen,
         AGpsBearerType bearerType, AGpsExtType agpsType,
-        ApnTypeMask mask)> AgpsAtlOpenStatusCb;
+        LocApnTypeMask mask)> AgpsAtlOpenStatusCb;
 
 typedef std::function<void(int handle, int isSuccess)> AgpsAtlCloseStatusCb;
 
@@ -141,11 +141,11 @@ public:
      * inactive state. */
     bool mWaitForCloseComplete;
     bool mIsInactive;
-    ApnTypeMask mApnTypeMask;
+    LocApnTypeMask mApnTypeMask;
 
     inline AgpsSubscriber(
             int connHandle, bool waitForCloseComplete, bool isInactive,
-            ApnTypeMask apnTypeMask) :
+            LocApnTypeMask apnTypeMask) :
             mConnHandle(connHandle),
             mWaitForCloseComplete(waitForCloseComplete),
             mIsInactive(isInactive),
@@ -216,8 +216,8 @@ public:
     inline char* getAPN() const { return mAPN; }
     inline uint32_t getAPNLen() const { return mAPNLen; }
     inline void setBearer(AGpsBearerType bearer) { mBearer = bearer; }
-    inline ApnTypeMask getApnTypeMask() const { return mApnTypeMask; }
-    inline void setApnTypeMask(ApnTypeMask apnTypeMask)
+    inline LocApnTypeMask getApnTypeMask() const { return mApnTypeMask; }
+    inline void setApnTypeMask(LocApnTypeMask apnTypeMask)
     { mApnTypeMask = apnTypeMask; }
     inline void setSubId(SubId subId) { mSubId = subId; }
     inline AGpsBearerType getBearer() const { return mBearer; }
