@@ -149,10 +149,12 @@ typedef uint16_t LocAGpsType;
 #define LOC_AGPS_TYPE_SUPL_ES       5
 
 typedef uint16_t LocSubId;
-#define LOC_DEFAULT_SUB    0
-#define LOC_PRIMARY_SUB    1
-#define LOC_SECONDARY_SUB  2
-#define LOC_TERTIARY_SUB   3
+enum {
+    LOC_DEFAULT_SUB   = 0,
+    LOC_PRIMARY_SUB   = 1,
+    LOC_SECONDARY_SUB = 2,
+    LOC_TERTIARY_SUB  = 3
+};
 
 typedef uint16_t LocAGpsSetIDType;
 #define LOC_AGPS_SETID_TYPE_NONE    0

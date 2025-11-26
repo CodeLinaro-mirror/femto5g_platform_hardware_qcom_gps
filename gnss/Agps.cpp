@@ -683,7 +683,7 @@ AtlTimer* AgpsManager::getAtlTimerInstance() {
 }
 
 void AgpsManager::requestATL(int connHandle, AGpsExtType agpsType,
-                             LocApnTypeMask apnTypeMask, SubId subId, uint32_t timeout) {
+                             LocApnTypeMask apnTypeMask, LocSubId subId, uint32_t timeout) {
 
     LOC_LOGD("AgpsManager::requestATL(): connHandle %d, agpsType 0x%X apnTypeMask: 0x%X",
                connHandle, agpsType, apnTypeMask);

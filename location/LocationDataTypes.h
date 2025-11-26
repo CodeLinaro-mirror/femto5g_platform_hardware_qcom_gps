@@ -1517,7 +1517,6 @@ typedef uint32_t DrSolutionStatusMask;
 #define DRE_WARNING_MMF_UNAVAILABLE            (1<<16)
 #define DRE_WARNING_MMF_NOT_USABLE             (1<<17)
 
-
 struct LLAInfo {
     double latitude;  // in degree
     double longitude; // in degree
@@ -2434,13 +2433,6 @@ enum AGpsType {
 };
 typedef enum AGpsType AGpsExtType;
 
-enum SubId {
-    DEFAULT_SUB = 0,
-    PRIMARY_SUB = 1,
-    SECONDARY_SUB =  2,
-    TERTIARY_SUB =  3
-};
-
 typedef uint32_t AGpsTypeMask;
 enum AGpsTypeBits {
     AGPS_ATL_TYPE_SUPL    = 1 << 0,
@@ -2501,7 +2493,7 @@ struct AGnssExtStatusIpV4 {
      * 32-bit IPv4 address.
      */
     uint32_t          ipV4Addr;
-    SubId             subId;
+    uint8_t             subId;
 };
 
 struct GnssCoordinate {
@@ -2513,7 +2505,6 @@ struct GnssCoordinate {
     double z;
     double zUncertainty;
 };
-
 
 struct GnssAntennaInformation{
     uint32_t size;                        // set to sizeof
@@ -3556,7 +3547,6 @@ typedef enum {
 typedef std::function <void(
     AGnssExtStatusIpV4 status
 )> agnssStatusIpV4Callback;
-
 
 /* Callback to send ODCPI request to framework */
 typedef std::function<void(

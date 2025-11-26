@@ -471,7 +471,7 @@ void LocApiBase::requestTime() {
 }
 
 void LocApiBase::requestATL(int connHandle, LocAGpsType agps_type,
-                            LocApnTypeMask apn_type_mask, SubId sub_id,
+                            LocApnTypeMask apn_type_mask, LocSubId sub_id,
                             uint32_t timeout)
 {
     // loop through adapters, and deliver to the first handling adapter.

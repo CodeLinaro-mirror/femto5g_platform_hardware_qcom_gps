@@ -6267,7 +6267,7 @@ void GnssAdapter::reportNfwNotificationEvent(GnssNfwNotification& notification) 
  * eQMI_LOC_WWAN_TYPE_AGNSS_V02
  * eQMI_LOC_WWAN_TYPE_AGNSS_EMERGENCY_V02 */
 bool GnssAdapter::requestATL(int connHandle, LocAGpsType agpsType,
-                             LocApnTypeMask apnTypeMask, SubId subId,
+                             LocApnTypeMask apnTypeMask, LocSubId subId,
                              uint32_t timeout){
 
     LOC_LOGi("GnssAdapter::requestATL handle=%d agpsType=0x%X "
@@ -6280,12 +6280,12 @@ bool GnssAdapter::requestATL(int connHandle, LocAGpsType agpsType,
         int mConnHandle;
         AGpsExtType mAgpsType;
         LocApnTypeMask mApnTypeMask;
-        SubId mSubId;
+        LocSubId mSubId;
         uint32_t mTimeout;
 
         inline AgpsMsgRequestATL(AgpsManager* agpsManager, int connHandle,
                 AGpsExtType agpsType, LocApnTypeMask apnTypeMask,
-                SubId subId, uint32_t timeout) :
+                LocSubId subId, uint32_t timeout) :
                 LocMsg(), mAgpsManager(agpsManager), mConnHandle(connHandle),
                 mAgpsType(agpsType), mApnTypeMask(apnTypeMask), mSubId(subId),
                 mTimeout(timeout){

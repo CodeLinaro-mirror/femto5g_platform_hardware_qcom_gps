@@ -190,7 +190,7 @@ private:
        LOC_AGPS_TYPE_SUPL_ES       5 */
     AGpsExtType mAgpsType;
     LocApnTypeMask mApnTypeMask;
-    SubId mSubId;
+    LocSubId mSubId;
 
     /* APN and IP Type info for AGPS Call */
     char* mAPN;
@@ -219,7 +219,7 @@ public:
     inline LocApnTypeMask getApnTypeMask() const { return mApnTypeMask; }
     inline void setApnTypeMask(LocApnTypeMask apnTypeMask)
     { mApnTypeMask = apnTypeMask; }
-    inline void setSubId(SubId subId) { mSubId = subId; }
+    inline void setSubId(LocSubId subId) { mSubId = subId; }
     inline AGpsBearerType getBearer() const { return mBearer; }
     inline void setType(AGpsExtType type) { mAgpsType = type; }
     inline AGpsExtType getType() const { return mAgpsType; }
@@ -318,7 +318,7 @@ public:
 
     /* Process incoming ATL requests */
     void requestATL(int connHandle, AGpsExtType agpsType,
-                    LocApnTypeMask apnTypeMask, SubId subId, uint32_t timeout);
+                    LocApnTypeMask apnTypeMask, LocSubId subId, uint32_t timeout);
     void releaseATL(int connHandle, uint32_t timeout);
     /* Process incoming framework data call events */
     void reportAtlOpenSuccess(AGpsExtType agpsType, char* apnName, int apnLen,
