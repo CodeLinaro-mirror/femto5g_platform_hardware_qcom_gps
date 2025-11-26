@@ -268,7 +268,7 @@ class GnssAdapter : public LocAdapterBase {
     bool mDGnssNeedReport;
     bool mDGnssDataUsage;
     QDgnss3GppSourceBitMask m3GppSourceMask;
-    void reportDGnssDataUsable(const GnssSvMeasurementSet &svMeasurementSet);
+    void reportDGnssDataUsable(bool dgnssDataUsage);
     void updateModme3GppSourceStatus(QDgnss3GppSourceBitMask modem3GppSourceMask);
 
     /* ==== QWES Feature Status ============================================================ */
