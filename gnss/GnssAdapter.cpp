@@ -63,8 +63,6 @@
 #define RAD2DEG    (180.0 / M_PI)
 #define DEG2RAD    (M_PI / 180.0)
 #define MIN_TRACKING_INTERVAL (MIN_GNSS_TRACKING_INTERVAL) // 100 msec
-#define NHZ_ENABLED_MIN_TRACKING_INTERVAL (100) // 100 msec
-#define NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL (1000) // 1 sec
 #define BILLION_NSEC (1000000000ULL)
 #define NMEA_MIN_THRESHOLD_MSEC (99)
 #define NMEA_MAX_THRESHOLD_MSEC (975)
@@ -3373,13 +3371,8 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                 err = LOCATION_ERROR_INVALID_PARAMETER;
             } else {
 
-                uint32_t minIntervalToSet = NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL;
-                bool nHzStatus = mAdapter.getCapabilities() & LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
-                if (nHzStatus) {
-                    minIntervalToSet = NHZ_ENABLED_MIN_TRACKING_INTERVAL;
-                }
-                if (mOptions.minInterval < minIntervalToSet) {
-                    mOptions.minInterval = minIntervalToSet;
+                if (mOptions.minInterval < MIN_TRACKING_INTERVAL) {
+                    mOptions.minInterval = MIN_TRACKING_INTERVAL;
                 }
 
                 if (GNSS_POWER_MODE_M4 == mOptions.powerMode &&
@@ -3409,10 +3402,10 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                     mOptions.preciseType = PRECISE_TYPE_RTK;
                 }
 #endif
-                LOC_LOGd("Updated min Interval: %u, nHzEnabled: %s, emergency: %d mode: %u, "
+                LOC_LOGd("Updated min Interval: %u, emergency: %d mode: %u, "
                         "agps : %d, SUPL_MODE: %d, ppeEnabled: %d, dreIntEnabled: %d,"
                         "preciseType: %d",
-                        mOptions.minInterval, nHzStatus ? "true" : "false", mAdapter.mInEmergency,
+                        mOptions.minInterval, mAdapter.mInEmergency,
                         mOptions.mode, mAdapter.isAssistedGpsEnabled(),
                         ContextBase::mGps_conf.SUPL_MODE,
                         ContextBase::mIzat_process_conf.engineServiceInfo.ppeEnabled,
@@ -3651,16 +3644,10 @@ GnssAdapter::updateTrackingOptionsCommand(LocationAPI* client, uint32_t id,
                             mOptions.tbm, TRACKING_TBM_THRESHOLD_MILLIS);
                     mOptions.powerMode = GNSS_POWER_MODE_M2;
                 }
-                uint32_t minIntervalToSet = NHZ_NOT_ENABLED_MIN_TRACKING_INTERVAL;
-                bool nHzStatus = mAdapter.getCapabilities() & LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
-                if (nHzStatus) {
-                    minIntervalToSet = NHZ_ENABLED_MIN_TRACKING_INTERVAL;
+                if (mOptions.minInterval < MIN_TRACKING_INTERVAL) {
+                    mOptions.minInterval = MIN_TRACKING_INTERVAL;
                 }
-                if (mOptions.minInterval < minIntervalToSet) {
-                    mOptions.minInterval = minIntervalToSet;
-                }
-                LOC_LOGd("Updated min Interval: %d, nHzEnabled: %s",
-                        mOptions.minInterval, nHzStatus ? "true" : "false");
+                LOC_LOGd("Updated min Interval: %d", mOptions.minInterval);
 
                 // Now update session as required
                 // Api doesn't support multiple clients for time based tracking, so mutiplex
