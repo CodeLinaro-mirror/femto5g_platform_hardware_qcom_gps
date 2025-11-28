@@ -33,9 +33,9 @@ MeasurementCorrectionsInterface::~MeasurementCorrectionsInterface() {
 
 void MeasurementCorrectionsInterface::setCapabilitiesCb(
     GnssMeasurementCorrectionsCapabilitiesMask capabilities) {
-    std::unique_lock<std::mutex> lock(mMutex);
+    gSharedMtx.lock();
     auto measCorrCbIface(mMeasurementCorrectionsCbIface);
-    lock.unlock();
+    gSharedMtx.unlock();
     if (measCorrCbIface != nullptr) {
         uint32_t measCorrCapabilities = 0;
 
@@ -121,7 +121,7 @@ ScopedAStatus MeasurementCorrectionsInterface::setCallback(
         LOC_LOGe("Null GNSS interface");
         return ScopedAStatus::fromExceptionCode(STATUS_INVALID_OPERATION);
     }
-    std::unique_lock<std::mutex> lock(mMutex);
+    std::unique_lock<std::recursive_mutex> lock(gSharedMtx);
     if (mMeasurementCorrectionsCbIface != nullptr) {
         AIBinder_unlinkToDeath(mMeasurementCorrectionsCbIface->asBinder().get(), mDeathRecipient,
                 this);

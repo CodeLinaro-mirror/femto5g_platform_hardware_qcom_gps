@@ -34,7 +34,6 @@ private:
     shared_ptr<IGnssGeofenceCallback> mGnssGeofencingCbIface = nullptr;
     GeofenceAPIClient* mApi = nullptr;
     AIBinder_DeathRecipient *mDeathRecipient = nullptr;
-    std::mutex mMutex;
 };
 }  // namespace implementation
 }  // namespace aidl

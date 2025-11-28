@@ -46,12 +46,12 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define META_INFO_FILE "/vendor/firmware_mnt/verinfo/ver_info.txt"
 #define DELIMITER ";"
 
+std::recursive_mutex gSharedMtx;
 namespace android {
 namespace hardware {
 namespace gnss {
 namespace aidl {
 namespace implementation {
-
 static std::string getVersionString() {
     static std::string version;
     if (!version.empty()) {
@@ -213,10 +213,10 @@ void GnssAPIClient::setCallbacks() {
 // for GpsInterface
 void GnssAPIClient::gnssUpdateCallbacks(const shared_ptr<IGnssCallback>& gpsCb) {
     if (gpsCb != nullptr) {
-        mMutex.lock();
+        gSharedMtx.lock();
         LOC_LOGd("mSignalTypeCbExpected = %d, set to true", mSignalTypeCbExpected);
         mSignalTypeCbExpected = true;
-        mMutex.unlock();
+        gSharedMtx.unlock();
         setCallbacks();
     }
 }
@@ -249,18 +249,18 @@ void GnssAPIClient::initLocationOptions() {
 
 bool GnssAPIClient::gnssStart() {
     LOC_LOGd("]: ()");
-    mMutex.lock();
+    gSharedMtx.lock();
     mTracking = true;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     locAPIStartTracking(mTrackingOptions);
     return true;
 }
 
 bool GnssAPIClient::gnssStop() {
     LOC_LOGd("]: ()");
-    mMutex.lock();
+    gSharedMtx.lock();
     mTracking = false;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     locAPIStopTracking();
     if (nullptr != sNlpRequestCb && mIsNlpActive) {
         mIsNlpActive = false;
@@ -415,10 +415,10 @@ void GnssAPIClient::gnssDisable() {
         return;
     }
 
-    mMutex.lock();
+    gSharedMtx.lock();
     LOC_LOGd("mSignalTypeCbExpected = %d, set to false", mSignalTypeCbExpected);
     mSignalTypeCbExpected = false;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     mControlClient->locAPIDisable();
     if (nullptr != sGnssStatusCb) {
         sGnssStatusCb(false);
@@ -456,9 +456,9 @@ void GnssAPIClient::updateCapabilities(LocationCapabilitiesMask capabilitiesMask
     }
     mLocationCapabilitiesMask = capabilitiesMask;
     mLocationCapabilitiesCached = true;
-    mMutex.lock();
+    gSharedMtx.lock();
     auto gnssCbIface(mGnssCbIface);
-    mMutex.unlock();
+    gSharedMtx.unlock();
 
     uint32_t data = 0;
     if ((capabilitiesMask & LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT) ||
@@ -534,10 +534,10 @@ void GnssAPIClient::updateCapabilities(LocationCapabilitiesMask capabilitiesMask
 }
 
 void GnssAPIClient::onTrackingCb(const Location& location) {
-    mMutex.lock();
+    gSharedMtx.lock();
     auto gnssCbIface(mGnssCbIface);
     bool isTracking = mTracking;
-    mMutex.unlock();
+    gSharedMtx.unlock();
 
     LOC_LOGd("]: (flags: %02x isTracking: %d)", location.flags, isTracking);
 
@@ -571,9 +571,9 @@ void GnssAPIClient::onTrackingCb(const Location& location) {
 
 void GnssAPIClient::onGnssSvCb(const GnssSvNotification& gnssSvNotification) {
     LOC_LOGd("]: (count: %u)", gnssSvNotification.count);
-    mMutex.lock();
+    gSharedMtx.lock();
     auto gnssCbIface(mGnssCbIface);
-    mMutex.unlock();
+    gSharedMtx.unlock();
 
     if (gnssCbIface != nullptr) {
         std::vector<IGnssCallback::GnssSvInfo> svInfoList;
@@ -586,9 +586,9 @@ void GnssAPIClient::onGnssSvCb(const GnssSvNotification& gnssSvNotification) {
 }
 
 void GnssAPIClient::onGnssNmeaCb(const GnssNmeaNotification& gnssNmeaNotification) {
-    mMutex.lock();
+    gSharedMtx.lock();
     auto gnssCbIface(mGnssCbIface);
-    mMutex.unlock();
+    gSharedMtx.unlock();
 
     if (gnssCbIface != nullptr) {
         const std::string s(gnssNmeaNotification.nmea);
@@ -635,7 +635,7 @@ void GnssAPIClient::onEngineLocationsInfoCb(uint32_t count,
 }
 
 void GnssAPIClient::onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNotification) {
-    mMutex.lock();
+    gSharedMtx.lock();
 
     LOC_LOGd("mSignalTypeCbExpected = %d", mSignalTypeCbExpected);
     if (mGnssCbIface != nullptr) {
@@ -654,14 +654,14 @@ void GnssAPIClient::onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNo
        LOC_LOGd("mGnssCbIface is null");
     }
 
-    mMutex.unlock();
+    gSharedMtx.unlock();
 }
 
 void GnssAPIClient::onStartTrackingCb(LocationError error) {
     LOC_LOGd("]: (%d)", error);
-    mMutex.lock();
+    gSharedMtx.lock();
     auto gnssCbIface(mGnssCbIface);
-    mMutex.unlock();
+    gSharedMtx.unlock();
 
     if (error == LOCATION_ERROR_SUCCESS) {
         if (gnssCbIface != nullptr) {
@@ -679,9 +679,9 @@ void GnssAPIClient::onStartTrackingCb(LocationError error) {
 
 void GnssAPIClient::onStopTrackingCb(LocationError error) {
     LOC_LOGd("]: (%d)", error);
-    mMutex.lock();
+    gSharedMtx.lock();
     auto gnssCbIface(mGnssCbIface);
-    mMutex.unlock();
+    gSharedMtx.unlock();
 
     if (error == LOCATION_ERROR_SUCCESS) {
         if (gnssCbIface != nullptr) {

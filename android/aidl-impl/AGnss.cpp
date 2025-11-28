@@ -49,9 +49,9 @@ void AGnss::statusCb(AGpsExtType type, LocAGpsStatusValue status) {
     IAGnssCallback::AGnssStatusValue aStatus;
     // cache the AGps Type
     if (type > LOC_AGPS_TYPE_INVALID && type <= LOC_AGPS_TYPE_SUPL_ES) {
-        mMutex.lock();
+        gSharedMtx.lock();
         mType = type;
-        mMutex.unlock();
+        gSharedMtx.unlock();
     }
 
     switch (type) {
@@ -87,9 +87,9 @@ void AGnss::statusCb(AGpsExtType type, LocAGpsStatusValue status) {
         return;
     }
 
-    mMutex.lock();
+    gSharedMtx.lock();
     auto aGnssCbIface = mAGnssCbIface;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     if (aGnssCbIface != nullptr) {
         auto r = aGnssCbIface->agnssStatusCb(aType, aStatus);
         if (!r.isOk()) {
@@ -112,9 +112,9 @@ ScopedAStatus AGnss::setCallback(const shared_ptr<IAGnssCallback>& callback) {
     }
 
     // Save the interface
-    mMutex.lock();
+    gSharedMtx.lock();
     mAGnssCbIface = callback;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     if (mAGnssCbIface != nullptr) {
         AIBinder_linkToDeath(mAGnssCbIface->asBinder().get(), mDeathRecipient, this);
     }
@@ -147,9 +147,9 @@ ScopedAStatus AGnss::dataConnOpen(int64_t networkHandle, const std::string& apn,
     }
 
     std::string apnString(apn.c_str());
-    mMutex.lock();
+    gSharedMtx.lock();
     auto agpsType = mType;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     // During Emergency SUPL, an apn name of "sos" means that no
     // apn was found, like in the simless case, so apn is cleared
     if (LOC_AGPS_TYPE_SUPL_ES == agpsType && "sos" == apnString) {

@@ -39,7 +39,6 @@ private:
     shared_ptr<IGnssAntennaInfoCallback> mGnssAntennaInfoCbIface = nullptr;
     AIBinder_DeathRecipient *mDeathRecipient = nullptr;
     Gnss* mGnss = nullptr;
-    std::mutex mMutex;
     AntennaInfoAidlCallback mAntennaInfoCb;
 };
 }

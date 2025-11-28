@@ -72,7 +72,7 @@ ScopedAStatus Gnss::setCallback(const shared_ptr<IGnssCallback>& callback) {
         return ScopedAStatus::fromExceptionCode(STATUS_INVALID_OPERATION);
     }
 
-    mMutex.lock();
+    gSharedMtx.lock();
     if (mGnssCallback != nullptr) {
         AIBinder_unlinkToDeath(mGnssCallback->asBinder().get(), mDeathRecipient, this);
     }
@@ -81,7 +81,7 @@ ScopedAStatus Gnss::setCallback(const shared_ptr<IGnssCallback>& callback) {
     if (mGnssCallback != nullptr) {
         AIBinder_linkToDeath(callback->asBinder().get(), mDeathRecipient, this);
     }
-    mMutex.unlock();
+    gSharedMtx.unlock();
 
     mApi.gnssUpdateCallbacks(callback);
     mApi.gnssEnable(LOCATION_TECHNOLOGY_TYPE_GNSS);
@@ -281,9 +281,9 @@ void Gnss::odcpiRequestCb(const OdcpiRequestInfo& request) {
     if (ODCPI_REQUEST_TYPE_STOP == request.type) {
         return;
     }
-    mMutex.lock();
+    gSharedMtx.lock();
     auto gnssCb = mGnssCallback;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     if (gnssCb != nullptr) {
         // For emergency mode, request DBH (Device based hybrid) location
         // Mark Independent from GNSS flag to false.

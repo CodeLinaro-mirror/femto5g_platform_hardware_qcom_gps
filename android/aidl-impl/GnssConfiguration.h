@@ -27,7 +27,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <aidl/android/hardware/gnss/BnGnssConfiguration.h>
 #include <aidl/android/hardware/gnss/GnssConstellationType.h>
 #include <aidl/android/hardware/gnss/BlocklistedSource.h>
-#include <mutex>
 #include <unordered_set>
 #include <vector>
 
@@ -83,7 +82,6 @@ private:
             const BlocklistedSource& copyFromSource);
     BlocklistedSourceSet mBlocklistedSourceSet;
     BlocklistedConstellationSet mBlocklistedConstellationSet;
-    mutable std::recursive_mutex mMutex;
 };
 
 }  // namespace implementation

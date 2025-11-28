@@ -5,12 +5,11 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define LOG_TAG "GnssBatchingAidl"
 
 #include "GnssBatching.h"
+#include "GnssAPIClient.h"
 #include <android/binder_auto_utils.h>
 #include <log_util.h>
 #include <inttypes.h>
 #include "loc_misc_utils.h"
-
-
 namespace android {
 namespace hardware {
 namespace gnss {
@@ -39,7 +38,7 @@ ScopedAStatus GnssBatching::init(const shared_ptr<IGnssBatchingCallback>& callba
         mApi = new BatchingAPIClient(callback);
     }
 
-    mMutex.lock();
+    gSharedMtx.lock();
     if (mGnssBatchingCbIface != nullptr) {
         AIBinder_unlinkToDeath(mGnssBatchingCbIface->asBinder().get(), mDeathRecipient, this);
     }
@@ -48,7 +47,7 @@ ScopedAStatus GnssBatching::init(const shared_ptr<IGnssBatchingCallback>& callba
     if (mGnssBatchingCbIface != nullptr) {
         AIBinder_linkToDeath(mGnssBatchingCbIface->asBinder().get(), mDeathRecipient, this);
     }
-    mMutex.unlock();
+    gSharedMtx.unlock();
     return ScopedAStatus::ok();
 }
 ScopedAStatus GnssBatching::getBatchSize(int32_t* _aidl_return) {
@@ -90,11 +89,11 @@ ScopedAStatus GnssBatching::cleanup() {
         mApi->gnssUpdateCallbacks(nullptr);
         mApi->stopSession();
     }
-    mMutex.lock();
+    gSharedMtx.lock();
     if (mGnssBatchingCbIface != nullptr) {
         mGnssBatchingCbIface = nullptr;
     }
-    mMutex.unlock();
+    gSharedMtx.unlock();
     return ScopedAStatus::ok();
 }
 

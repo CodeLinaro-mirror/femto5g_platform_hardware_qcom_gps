@@ -31,7 +31,6 @@ private:
     Gnss* mGnss = nullptr;
     shared_ptr<IGnssVisibilityControlCallback> mGnssVisibilityControlCbIface = nullptr;
     AIBinder_DeathRecipient* mDeathRecipient;
-    mutable std::mutex mMutex;
 };
 }  // namespace implementation
 }  // namespace aidl

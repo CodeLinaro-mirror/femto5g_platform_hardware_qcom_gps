@@ -33,7 +33,6 @@ public:
     void statusCb(AGpsExtType type, LocAGpsStatusValue status);
 private:
     Gnss* mGnss = nullptr;
-    std::mutex mMutex;
     shared_ptr<IAGnssCallback> mAGnssCbIface = nullptr;
     AIBinder_DeathRecipient *mDeathRecipient = nullptr;
 

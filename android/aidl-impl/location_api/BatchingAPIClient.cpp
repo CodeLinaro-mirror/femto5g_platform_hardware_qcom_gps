@@ -11,6 +11,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <thread>
 #include "LocationUtil.h"
 #include "BatchingAPIClient.h"
+#include "GnssAPIClient.h"
 
 #include "limits.h"
 
@@ -58,10 +59,10 @@ void BatchingAPIClient::setCallbacks() {
 }
 
 void BatchingAPIClient::gnssUpdateCallbacks(const shared_ptr<IGnssBatchingCallback>& callback) {
-    mMutex.lock();
+    gSharedMtx.lock();
     bool cbWasNull = (mGnssBatchingCbIface == nullptr);
     mGnssBatchingCbIface = callback;
-    mMutex.unlock();
+    gSharedMtx.unlock();
 
     if (cbWasNull) {
         setCallbacks();
@@ -69,9 +70,9 @@ void BatchingAPIClient::gnssUpdateCallbacks(const shared_ptr<IGnssBatchingCallba
 }
 
 int BatchingAPIClient::startSession(const IGnssBatching::Options& opts) {
-    mMutex.lock();
+    gSharedMtx.lock();
     mState = STARTED;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     LOC_LOGd("]: (%lld %d)",
             static_cast<long long>(opts.periodNanos), static_cast<uint8_t>(opts.flags));
     int retVal = -1;
@@ -105,14 +106,14 @@ int BatchingAPIClient::updateSessionOptions(const IGnssBatching::Options& opts) 
 }
 
 int BatchingAPIClient::stopSession() {
-    mMutex.lock();
+    gSharedMtx.lock();
     if (mState != STARTED) {
         LOC_LOGe("] Error Stop called without start");
-        mMutex.unlock();
+        gSharedMtx.unlock();
         return -1;
     }
     mState = STOPPING;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     LOC_LOGd("]: ");
     int retVal = -1;
     locAPIGetBatchedLocations(mDefaultId, SIZE_MAX);
@@ -147,7 +148,7 @@ void BatchingAPIClient::onBatchingCb(size_t count, Location* location,
         const BatchingOptions& /*batchOptions*/) {
     bool processReport = false;
     LOC_LOGd("(count: %zu)", count);
-    mMutex.lock();
+    gSharedMtx.lock();
     // back to back stop() and flush() could bring twice onBatchingCb(). Each one might come first.
     // Combine them both (the first goes to cache, the second in location*) before report to FW
     switch (mState) {
@@ -180,19 +181,19 @@ void BatchingAPIClient::onBatchingCb(size_t count, Location* location,
                     convertGnssLocation(location[i], locationVec[i+batchCacheCnt]);
                 }
             }
-            mMutex.unlock();
+            gSharedMtx.unlock();
             auto r = gnssBatchingCbIface->gnssLocationBatchCb(locationVec);
             if (!r.isOk()) {
                 LOC_LOGe("] Error from gnssLocationBatchCb");
             }
         } else {
-            mMutex.unlock();
+            gSharedMtx.unlock();
         }
-        mMutex.lock();
+        gSharedMtx.lock();
         mBatchedLocationInCache.clear();
-        mMutex.unlock();
+        gSharedMtx.unlock();
     } else {
-        mMutex.unlock();
+        gSharedMtx.unlock();
     }
 }
 
