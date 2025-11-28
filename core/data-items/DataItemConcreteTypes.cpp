@@ -175,13 +175,10 @@ void NlpSessionStartedDataItem::stringify(string& valueStr) {
 
 void WwanAppInfoDataItem::stringify(string& valueStr) {
     valueStr = mName;
-    valueStr += ": mPid: " + std::to_string(mWwanAppInfo.mPid);
     valueStr += " mUid: " + std::to_string(mWwanAppInfo.mUid);
     valueStr += " mAppHasFinePermission: " + std::to_string(mWwanAppInfo.mAppHasFinePermission);
     valueStr += " mAppHasBackgroundPermission: " +
         std::to_string(mWwanAppInfo.mAppHasBackgroundPermission);
-    string appHashStr(mWwanAppInfo.mAppHash, mWwanAppInfo.mAppHash + sizeof(mWwanAppInfo.mAppHash));
-    valueStr += " mAppHash: " + appHashStr;
     string appPkgStr(mWwanAppInfo.mAppPackageName,
             mWwanAppInfo.mAppPackageName + sizeof(mWwanAppInfo.mAppPackageName));
     valueStr += " mAppPackageName: " + appPkgStr;
