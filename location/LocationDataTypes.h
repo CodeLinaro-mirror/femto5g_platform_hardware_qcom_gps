@@ -1780,8 +1780,6 @@ struct GnssMeasurementsData {
     // valid when GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_BIT is set
     // total time is: receivedSvTimeNs + receivedSvTimeSubNs
     int64_t receivedSvTimeNs;
-    // valid when GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_BIT is set
-    // total time is: receivedSvTimeNs + receivedSvTimeSubNs
     float  receivedSvTimeSubNs;
     int64_t  receivedSvTimeUncertaintyNs;
     double carrierToNoiseDbHz;
@@ -2434,6 +2432,7 @@ enum AGpsType {
     AGPS_TYPE_WIFI,
     AGPS_TYPE_SUPL_ES
 };
+typedef enum AGpsType AGpsExtType;
 
 enum SubId {
     DEFAULT_SUB = 0,
@@ -2469,37 +2468,34 @@ enum AGpsStatusValue {
     AGPS_DATA_CONN_FAILED
 };
 
-typedef uint32_t ApnTypeMask;
-enum ApnTypeBits {
-    /**<  Denotes APN type for Default/Internet traffic  */
-    APN_TYPE_DEFAULT_BIT = (1 << 0),
-    /**<  Denotes  APN type for IP Multimedia Subsystem  */
-    APN_TYPE_IMS_BIT = (1 << 1),
-    /**<  Denotes APN type for Multimedia Messaging Service  */
-    APN_TYPE_MMS_BIT = (1 << 2),
-    /**<  Denotes APN type for Dial Up Network  */
-    APN_TYPE_DUN_BIT = (1 << 3),
-    /**<  Denotes APN type for Secure User Plane Location  */
-    APN_TYPE_SUPL_BIT = (1 << 4),
-    /**<  Denotes APN type for High Priority Mobile Data  */
-    APN_TYPE_HIPRI_BIT = (1 << 5),
-    /**<  Denotes APN type for over the air administration  */
-    APN_TYPE_FOTA_BIT = (1 << 6),
-    /**<  Denotes APN type for Carrier Branded Services  */
-    APN_TYPE_CBS_BIT = (1 << 7),
-    /**<  Denotes APN type for Initial Attach  */
-    APN_TYPE_IA_BIT = (1 << 8),
-    /**<  Denotes APN type for emergency  */
-    APN_TYPE_EMERGENCY_BIT  = (1 << 9)
-};
-
+typedef uint32_t LocApnTypeMask;
+/**<  Denotes APN type for Default/Internet traffic  */
+#define LOC_APN_TYPE_MASK_DEFAULT   ((LocApnTypeMask)0x00000001)
+/**<  Denotes  APN type for IP Multimedia Subsystem  */
+#define LOC_APN_TYPE_MASK_IMS       ((LocApnTypeMask)0x00000002)
+/**<  Denotes APN type for Multimedia Messaging Service  */
+#define LOC_APN_TYPE_MASK_MMS       ((LocApnTypeMask)0x00000004)
+/**<  Denotes APN type for Dial Up Network  */
+#define LOC_APN_TYPE_MASK_DUN       ((LocApnTypeMask)0x00000008)
+/**<  Denotes APN type for Secure User Plane Location  */
+#define LOC_APN_TYPE_MASK_SUPL      ((LocApnTypeMask)0x00000010)
+/**<  Denotes APN type for High Priority Mobile Data  */
+#define LOC_APN_TYPE_MASK_HIPRI     ((LocApnTypeMask)0x00000020)
+/**<  Denotes APN type for over the air administration  */
+#define LOC_APN_TYPE_MASK_FOTA      ((LocApnTypeMask)0x00000040)
+/**<  Denotes APN type for Carrier Branded Services  */
+#define LOC_APN_TYPE_MASK_CBS       ((LocApnTypeMask)0x00000080)
+/**<  Denotes APN type for Initial Attach  */
+#define LOC_APN_TYPE_MASK_IA        ((LocApnTypeMask)0x00000100)
+/**<  Denotes APN type for emergency  */
+#define LOC_APN_TYPE_MASK_EMERGENCY ((LocApnTypeMask)0x00000200)
 
 /*
  * Represents the status of AGNSS augmented to support IPv4.
  */
 struct AGnssExtStatusIpV4 {
     AGpsType         type;
-    ApnTypeMask      apnTypeMask;
+    LocApnTypeMask   apnTypeMask;
     AGpsStatusValue  status;
     /*
      * 32-bit IPv4 address.

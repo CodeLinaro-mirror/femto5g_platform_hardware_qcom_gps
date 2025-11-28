@@ -691,8 +691,8 @@ void AgpsManager::requestATL(int connHandle, AGpsExtType agpsType,
     if (0 == loc_core::ContextBase::mGps_conf.USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL &&
         AGPS_TYPE_SUPL_ES == agpsType) {
         agpsType = AGPS_TYPE_SUPL;
-        apnTypeMask &= ~APN_TYPE_EMERGENCY_BIT;
-        apnTypeMask |= APN_TYPE_SUPL_BIT;
+        apnTypeMask &= ~LOC_APN_TYPE_MASK_EMERGENCY;
+        apnTypeMask |= LOC_APN_TYPE_MASK_SUPL;
         LOC_LOGD("Changed agpsType to non-emergency when USE_EMERGENCY... is 0"
                  "and removed APN_TYPE_EMERGENCY_BIT from apnTypeMask"
                  "agpsType 0x%X apnTypeMask : 0x%X",
