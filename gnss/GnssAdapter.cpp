@@ -59,6 +59,9 @@
 #include <thread>
 #include <cutils/properties.h>
 #include "XmlFileParser.h"
+#ifdef USE_GLIB
+#include <loc_target.h>
+#endif
 
 #define RAD2DEG    (180.0 / M_PI)
 #define DEG2RAD    (M_PI / 180.0)
@@ -85,9 +88,12 @@ static loc_param_s_type izatConfLocGlinkParamTable[] = {
     {"LOAD_LOC_SLATE_PUNC_MODEL", &loadLocSlatePUNCModel, nullptr, 'n'}
 };
 
+#ifdef USE_GLIB
 /* Method to fetch status cb from loc_net_iface library */
 typedef AgpsCbInfo& (*LocAgpsGetAgpsCbInfo)(LocAgpsOpenResultCb openResultCb,
         LocAgpsCloseResultCb closeResultCb, void* userDataPtr);
+#endif
+
 
 static void agpsOpenResultCb (bool isSuccess, AGpsExtType agpsType, const char* apn,
         AGpsBearerType bearerType, void* userDataPtr);
@@ -6268,28 +6274,65 @@ GnssAdapter::reportGnssEngEnergyConsumedEvent(uint64_t energyConsumedSinceFirstB
 
 void GnssAdapter::initDefaultAgps() {
     LOC_LOGd();
-    void *handle = nullptr;
-
-    LocAgpsGetAgpsCbInfo getAgpsCbInfo =
-        (LocAgpsGetAgpsCbInfo)dlGetSymFromLib(handle, "libloc_net_iface.so",
-            "LocNetIfaceAgps_getAgpsCbInfo");
-    // Below step is to make sure we init nativeAgpsHandler
-    // for Android platforms only
     AgpsCbInfo cbInfo = {};
-    if (nullptr != getAgpsCbInfo) {
-        cbInfo = getAgpsCbInfo(agpsOpenResultCb, agpsCloseResultCb, this);
+#ifdef USE_GLIB
+    int soc_id = loc_get_device_soc_id();
+    if (soc_id <= 0) {
+        LOC_LOGi("Unable to fetch soc_id");
+        int isAPQTargetConf  = 0;
+        loc_param_s_type gps_conf_param_table[] = {
+            {"IS_APQ_TARGET", &isAPQTargetConf, NULL, 'n'},
+        };
+        UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_param_table);
+        if (isAPQTargetConf != 0) {
+            LOC_LOGi("IS_APQ_TARGET configured in gps.conf, not initializing AGPS");
+            return;
+        }
     } else {
-        cbInfo = mNativeAgpsHandler.getAgpsCbInfo();
+        bool isAPQTarget = isLEAPQTarget(soc_id);
+        LOC_LOGi("isAPQTarget: %d", isAPQTarget);
+        if (isAPQTarget) {
+            LOC_LOGi("APQ target, not initializing AGPS");
+            return;
+        }
     }
 
-    if (cbInfo.statusV4Cb == nullptr) {
-        LOC_LOGe("statusV4Cb is nullptr!");
-        if (nullptr != handle) {
-            // handle could be null if dlGetSymFromLib fails
-            dlclose(handle);
+#define BREAK_IF_NULL(ERR, X) \
+    if (nullptr == (X)) {     \
+        result = ERR;         \
+        break;                \
+    }
+
+    int result = 0;
+    void* libHandle = nullptr;
+
+    do {
+        LocAgpsGetAgpsCbInfo getAgpsCbInfo = (LocAgpsGetAgpsCbInfo)dlGetSymFromLib(
+            libHandle, "libloc_net_iface.so", "LocNetIfaceAgps_getAgpsCbInfo");
+        BREAK_IF_NULL(1, getAgpsCbInfo);
+
+        cbInfo = getAgpsCbInfo(agpsOpenResultCb, agpsCloseResultCb, this);
+        BREAK_IF_NULL(2, cbInfo.statusV4Cb);
+    } while (0);
+
+    if (0 != result) {
+        LOC_LOGe("Agps init failed, result = %d", result);
+        if (nullptr != libHandle) {
+            dlclose(libHandle);
         }
         return;
     }
+
+#else
+    // Below step is to make sure we init nativeAgpsHandler
+    // for Android platforms only
+    cbInfo = mNativeAgpsHandler.getAgpsCbInfo();
+
+    if (cbInfo.statusV4Cb == nullptr) {
+        LOC_LOGe("statusV4Cb is nullptr!");
+        return;
+    }
+#endif
 
     initAgps(cbInfo);
 }
