@@ -28,40 +28,10 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2024, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #define LOG_NDEBUG 0 //Define to enable LOGV
 #define LOG_TAG "LocSvc_LocApiBase"
@@ -140,6 +110,24 @@ struct LocSsrMsg : public LocMsg {
     }
     inline virtual void proc() const {
         mLocApi->close();
+        // Reset all QWES feature flags to false during SSR
+        std::unordered_map<LocationQwesFeatureType, bool> featureMap;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_CARRIER_PHASE] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_SV_POLYNOMIAL] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_SV_EPH] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_GNSS_SINGLE_FREQUENCY] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_GNSS_MULTI_FREQUENCY] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_TIME_FREQUENCY] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_TIME_UNCERTAINTY] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_CLOCK_ESTIMATE] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_DGNSS] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_PPE] = false;
+        featureMap[LOCATION_QWES_FEATURE_NLOS_ML20] = false;
+        featureMap[LOCATION_QWES_FEATURE_STATUS_GNSS_NHZ] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_SBAS] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_ROBUST_LOCATION] = false;
+        featureMap[LOCATION_QWES_FEATURE_TYPE_WOCS] = false;
+        mLocApi->reportQwesCapabilities(featureMap);
         if (LOC_API_ADAPTER_ERR_SUCCESS == mLocApi->open(mLocApi->getEvtMask())) {
             // Notify adapters that engine up after SSR
             mLocApi->handleEngineUpEvent();
@@ -310,8 +298,7 @@ void LocApiBase::handleEngineDownEvent()
 void LocApiBase::reportPosition(UlpLocation& location,
                                 GpsLocationExtended& locationExtended,
                                 enum loc_sess_status status,
-                                LocPosTechMask loc_technology_mask,
-                                GnssDataNotification* pDataNotify)
+                                LocPosTechMask loc_technology_mask)
 {
     // print the location info before delivering
     LOC_LOGd("\n  flags: 0x%x\n  source: %d\n  latitude: %f\n  longitude: %f\n  "
@@ -335,8 +322,7 @@ void LocApiBase::reportPosition(UlpLocation& location,
     // loop through adapters, and deliver to all adapters.
     TO_ALL_LOCADAPTERS(
         mLocAdapters[i]->reportPositionEvent(location, locationExtended,
-                                             status, loc_technology_mask,
-                                             pDataNotify)
+                                             status, loc_technology_mask)
     );
 }
 
@@ -697,7 +683,7 @@ void LocApiBase::setMeasurementCorrections(
 DEFAULT_IMPL()
 
 bool LocApiBase::
-   getBestAvailableZppFixSync(LocGpsLocation &zppLoc, LocPosTechMask &tech_mask)
+   getBestAvailableZppFixSync(LocGpsLocation &zppLoc, LocPosTechMask &tech_mask, float* vertUnc)
 DEFAULT_IMPL(false)
 
 LocationError LocApiBase::
@@ -890,31 +876,6 @@ void RealtimeEstimator::saveGpsTimeAndQtimerPairInPvtReport(
     }
 }
 
-void RealtimeEstimator::saveGpsTimeAndQtimerPairInMeasReport(
-        const GnssSvMeasurementSet& svMeasurementSet) {
-
-    const GnssSvMeasurementHeader& svMeasSetHeader = svMeasurementSet.svMeasSetHeader;
-
-    // Use 1Hz measurement report timestamp and qtimer tick for association
-    if ((svMeasurementSet.isNhz == false) &&
-            (svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_GPS_SYSTEM_TIME) &&
-            (svMeasSetHeader.gpsSystemTime.hasAccurateTime() == true) &&
-            (svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS) &&
-            (svMeasurementSet.svMeasSetHeader.refCountTicks != 0) &&
-            (svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS_UNC) &&
-            (svMeasurementSet.svMeasSetHeader.refCountTicksUnc != 0.0f)) {
-        LOC_LOGv("save time association from meas report with gps time %u %u, "
-                 "qtimer %" PRIi64 " %f ",
-                 svMeasSetHeader.gpsSystemTime.systemWeek,
-                 svMeasSetHeader.gpsSystemTime.systemMsec,
-                 svMeasurementSet.svMeasSetHeader.refCountTicks,
-                 svMeasurementSet.svMeasSetHeader.refCountTicksUnc);
-            mTimePairMeasReport.gpsTime.gpsWeek = svMeasSetHeader.gpsSystemTime.systemWeek;
-            mTimePairMeasReport.gpsTime.gpsTimeOfWeekMs = svMeasSetHeader.gpsSystemTime.systemMsec;
-            mTimePairMeasReport.qtimerTick = svMeasurementSet.svMeasSetHeader.refCountTicks;
-            mTimePairMeasReport.timeUncMsec = svMeasurementSet.svMeasSetHeader.refCountTicksUnc;
-        }
-    }
 
 bool RealtimeEstimator::fillAdditionalTimestamps(
         const GPSTimeStruct& gpsTimeAtOrigin,
@@ -928,10 +889,7 @@ bool RealtimeEstimator::fillAdditionalTimestamps(
     GpsTimeQtimerTickPair timePair;
 
     // We have valid association
-    if (mTimePairMeasReport.gpsTime.gpsWeek != 0) {
-        timePair = mTimePairMeasReport;
-        LOC_LOGv("use meas time association");
-    } else if (mTimePairPVTReport.gpsTime.gpsWeek != 0) {
+   if (mTimePairPVTReport.gpsTime.gpsWeek != 0) {
         LOC_LOGv("use PVT time association");
         timePair = mTimePairPVTReport;
     } else {

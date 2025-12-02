@@ -27,39 +27,9 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef GPS_EXTENDED_H
@@ -168,6 +138,13 @@ struct BackhaulContext {
     };
 };
 
+//struct for holding profile details fetched from modem using QMI WDS
+struct ModemProfileDetails {
+    std::string apn;
+    uint16_t ipType;
+    uint8_t profileIndex;
+};
+
 /* Engine Debug data Information */
 
 #define GNSS_MAX_SV_INFO_LIST_SIZE 176
@@ -214,6 +191,12 @@ typedef enum {
     NAVIC_XTRA_VALID_BIT   = 1 << 5
 } GnssXtraValidMaskBits;
 
+typedef enum {
+    ROTATOR_QUALITY_NONE = 0,     /* Rotator Quality not available. */
+    ROTATOR_QUALITY_GOOD,         /* Rotator quality is good. */
+    ROTATOR_QUALITY_XO_COMP_HIGH  /* Rotator quality is degraded due to XO compensation > 2 ppm.*/
+} GnssRotatorQuality;
+
 typedef struct {
 
     uint8_t timeValid;
@@ -243,6 +226,30 @@ typedef struct {
 
     uint8_t xoState;
     /**<   XO calibration. */
+
+    float xoTemp;
+    /**<   Temperature at XO thermistor (Units -- Degrees Celcius) */
+
+    float xoTempSlope;
+    /**<   Rate of temperature change at XO thermistor (Units -- Degrees Celcius per Second ) */
+
+    float xoTempAccel;
+    /**<   Acceleration of temperature change at XO thermistor.
+     *      (Units -- Degrees Celcius per Second^2) */
+
+    uint32_t xoCalResetCount;
+    /**<   Reset counter for XO calibration data. \n
+           Indication to check GNSS outage issue due to bad XO cal, XO aging or rotator push. \n
+           (Units -- uint32)  */
+
+    GnssRotatorQuality xoRotatorQuality;
+    /**<   XO rotator quality. */
+
+    uint8_t timeInconsistencyStatus;
+    /**<   GNSS time inconsistency check. \n
+            Indication to check potential time issue due to XO/TCXO switch during sleep. \n
+            - FALSE -- GNSS time was not detected. \n
+            - TRUE -- GNSS time inconsistency was detected.   */
 
     uint32_t rcvrErrRecovery;
     /**<   Error recovery reason. */
