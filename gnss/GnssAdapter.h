@@ -256,12 +256,16 @@ class GnssAdapter : public LocAdapterBase {
     void reportDGnssDataUsable(const GnssSvMeasurementSet &svMeasurementSet);
 
     /* ==== ODCPI ========================================================================== */
+    bool mInEmergency;
+    LocGpsLocation mInjectedWifiFix;
+    bool mInjectedWifiFixUsed;
+
     OdcpiRequestCallback mOdcpiRequestCb;
     bool mOdcpiRequestActive;
     OdcpiPrioritytype mCallbackPriority;
-	typedef uint8_t OdcpiStateMask;
-	OdcpiStateMask mOdcpiStateMask;
-	typedef enum {
+    typedef uint8_t OdcpiStateMask;
+    OdcpiStateMask mOdcpiStateMask;
+    typedef enum {
         ODCPI_REQ_ACTIVE = (1<<0),
         CIVIC_ADDRESS_REQ_ACTIVE = (1<<1)
     } OdcpiStateBits;
@@ -269,7 +273,7 @@ class GnssAdapter : public LocAdapterBase {
     OdcpiRequestInfo mOdcpiRequest;
     std::unordered_map<OdcpiPrioritytype, OdcpiRequestCallback> mNonEsOdcpiReqCbMap;
     void odcpiTimerExpire();
-	std::function<void(const Location&)> mAddressRequestCb;
+    std::function<void(const Location&)> mAddressRequestCb;
     /* ==== DELETEAIDINGDATA =============================================================== */
     int64_t mLastDeleteAidingDataTime;
 
@@ -285,7 +289,6 @@ class GnssAdapter : public LocAdapterBase {
     /* === Misc ===================================================================== */
     BlockCPIInfo mBlockCPIInfo;
     bool mPowerOn;
-    uint32_t mAllowFlpNetworkFixes;
     std::queue<GnssLatencyInfo> mGnssLatencyInfoQueue;
     GnssReportLoggerUtil mLogger;
     bool mDreIntEnabled;
@@ -488,7 +491,7 @@ public:
                                          LocEngineRunState engState);
 
     /* ========= ODCPI ===================================================================== */
-	
+
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
     void initOdcpiCommand(const OdcpiRequestCallback& callback,
                           OdcpiPrioritytype priority,
@@ -647,8 +650,6 @@ public:
     bool getPowerState() { return mPowerOn; }
     inline PowerStateType getSystemPowerState() { return mSystemPowerState; }
 
-    void setAllowFlpNetworkFixes(uint32_t allow) { mAllowFlpNetworkFixes = allow; }
-    uint32_t getAllowFlpNetworkFixes() { return mAllowFlpNetworkFixes; }
     void setSuplHostServer(const char* server, int port, LocServerType type);
     void notifyClientOfCachedLocationSystemInfo(LocationAPI* client,
                                                 const LocationCallbacks& callbacks);
