@@ -56,7 +56,6 @@
 #include <gps_extended_c.h>
 #include <sys/stat.h>
 #include <thread>
-#include <cutils/properties.h>
 #include "XmlFileParser.h"
 
 #define RAD2DEG    (180.0 / M_PI)
@@ -2965,8 +2964,7 @@ GnssAdapter::handleEngineUpEvent()
             mAdapter.broadcastCapabilities(mAdapter.getCapabilities());
             // must be called only after capabilities are known
             mAdapter.setConfig();
-            mAdapter.setTribandState();
-            mAdapter.notifyPreciseLocation();
+            mAdapter.setPreciseSessionConfig(mAdapter.mPreciseType);
             mAdapter.gnssSvConfigUpdate();
             mAdapter.updateSystemPowerState(mAdapter.getSystemPowerState());
             if (mAdapter.mPowerConnectState != POWER_CONNECT_UNKNOWN) {
@@ -3248,10 +3246,7 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                 bool reportToClientWithNoWait =
                     mAdapter.startTimeBasedTrackingMultiplex(mClient, mSessionId, mOptions);
                 mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
-                mAdapter.setTribandState();
                 mAdapter.setPreciseSessionConfig(mOptions.preciseType);
-                mAdapter.notifyPreciseLocation();
-
                 if (reportToClientWithNoWait) {
                     mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
                 }
@@ -3407,7 +3402,6 @@ GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
     setLocPositionMode(locPosMode);
 
     setPreciseSessionConfig(updatedOptions.preciseType);
-
     // want to run SPE session at a fixed min interval in some automotive scenarios
     // use a local copy of TrackingOptions as the TBF may get modified in the
     // checkAndSetSPEToRunforNHz function
@@ -3583,9 +3577,7 @@ GnssAdapter::stopTrackingCommand(LocationAPI* client, uint32_t id) {
             bool reportToClientWithNoWait =
                     mAdapter.stopTimeBasedTrackingMultiplex(mClient, mSessionId);
             mAdapter.eraseTrackingSession(mClient, mSessionId);
-            mAdapter.setTribandState();
             mAdapter.setPreciseSessionConfig(mPreciseType);
-            mAdapter.notifyPreciseLocation();
 
             if (reportToClientWithNoWait) {
                 mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
@@ -7318,52 +7310,39 @@ uint32_t GnssAdapter::registerXtraStatusUpdateCommand(bool registerUpdate) {
 }
 
 void GnssAdapter::setPreciseSessionConfig(PreciseType preciseType) {
-
-    struct MsgConfigPrecisePositioning : public LocMsg {
-        GnssAdapter& mAdapter;
-        bool mIsPreciseRunning;
-        PreciseType mPreciseType;
-
-        inline MsgConfigPrecisePositioning(GnssAdapter& adapter,
-                                           bool isPreciseRunning,
-                                           PreciseType preciseType) :
-            LocMsg(),
-            mAdapter(adapter),
-            mIsPreciseRunning(isPreciseRunning),
-            mPreciseType(preciseType) {}
-        inline virtual void proc() const {
-            if (!mIsPreciseRunning) {
-                // inform engine hub that GNSS session has stopped
-                mAdapter.mEngHubProxy->gnssStopFix(mPreciseType);
-                if (mAdapter.isDgnssNmeaRequired()) {
-                    mAdapter.mDgnssState &= ~DGNSS_STATE_NO_NMEA_PENDING;
-                }
-                mAdapter.stopDgnssNtrip();
-                // inform CDFW that GNSS session has stopped
-                if (mAdapter.mCdfwInterface) {
-                    mAdapter.mCdfwInterface->updateTrackingStatus(false);
-                }
-            } else {
-                // inform engine hub that GNSS session is about to start
-                mAdapter.mEngHubProxy->gnssSetFixMode(mAdapter.mLocPositionMode);
-                mAdapter.mEngHubProxy->gnssStartFix(mPreciseType);
-                // inform CDFW that GNSS session is about to start
-                if (mAdapter.mCdfwInterface) {
-                    mAdapter.mCdfwInterface->updateTrackingStatus(true);
-                }
-            }
-            /** if mIsPreciseRunning is true, notify precise session with mPreciseType will start
-             *  if mIsPreciseRunning is false, noify precise session with mPreciseType will stop
-             */
-            if (PRECISE_TYPE_UNKNOWN != mPreciseType) {
-                mAdapter.mLocApi->configPrecisePositioning(mPreciseType, mIsPreciseRunning);
-            }
-        }
-    };
+    if (!isPreciseEnabled() && !isMlpEnabled()) {
+        LOC_LOGd("Both MLP and DLP are disabled, no op in setPreciseSessionConfig");
+        return;
+    }
     LOC_LOGd("isPreciseSession()=%d, preciseType=%d", isPreciseSession(), preciseType);
-    sendMsg(new MsgConfigPrecisePositioning(*this, isPreciseSession(), preciseType));
+    if (!isPreciseSession()) {
+        // inform engine hub that GNSS session has stopped
+        mEngHubProxy->gnssStopFix(preciseType);
+        if (isDgnssNmeaRequired()) {
+            mDgnssState &= ~DGNSS_STATE_NO_NMEA_PENDING;
+        }
+        stopDgnssNtrip();
+        // inform CDFW that GNSS session has stopped
+        if (mCdfwInterface) {
+            mCdfwInterface->updateTrackingStatus(false);
+        }
+    } else {
+        // inform engine hub that GNSS session is about to start
+        mEngHubProxy->gnssSetFixMode(mLocPositionMode);
+        mEngHubProxy->gnssStartFix(preciseType);
+        // inform CDFW that GNSS session is about to start
+        if (mCdfwInterface) {
+            mCdfwInterface->updateTrackingStatus(true);
+        }
+    }
+    /** if mIsPreciseRunning is true, notify precise session with preciseType will start
+     *  if mIsPreciseRunning is false, noify precise session with preciseType will stop
+     */
+    if (PRECISE_TYPE_UNKNOWN != preciseType) {
+        mLocApi->configPrecisePositioning(preciseType, isPreciseSession());
+    }
+    notifyPreciseLocation();
 }
-
 
 uint32_t GnssAdapter::configMerkleTreeCommand(const char * merkleTreeConfigBuffer, int bufLen) {
     // generated session id will be none-zero
