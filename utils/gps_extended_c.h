@@ -704,7 +704,6 @@ enum loc_api_adapter_event_index {
     LOC_API_ADAPTER_BATCHED_GENFENCE_BREACH_REPORT,    //
     LOC_API_ADAPTER_GNSS_MEASUREMENT_REPORT,           // GNSS Measurement Report
     LOC_API_ADAPTER_GNSS_SV_POLYNOMIAL_REPORT,         // GNSS SV Polynomial Report
-    LOC_API_ADAPTER_GNSS_MEASUREMENT,                  // GNSS Measurement report
     LOC_API_ADAPTER_REQUEST_TIMEZONE,                  // Timezone injection request
     LOC_API_ADAPTER_REPORT_GENFENCE_DWELL_REPORT,      // Geofence dwell report
     LOC_API_ADAPTER_BATCH_STATUS,                      // batch status
@@ -739,7 +738,6 @@ enum loc_api_adapter_event_index {
 #define LOC_API_ADAPTER_BIT_BATCH_FULL                       (1ULL<<LOC_API_ADAPTER_BATCH_FULL)
 #define LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT_REPORT          (1ULL<<LOC_API_ADAPTER_GNSS_MEASUREMENT_REPORT)
 #define LOC_API_ADAPTER_BIT_GNSS_SV_POLYNOMIAL_REPORT        (1ULL<<LOC_API_ADAPTER_GNSS_SV_POLYNOMIAL_REPORT)
-#define LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT                 (1ULL<<LOC_API_ADAPTER_GNSS_MEASUREMENT)
 #define LOC_API_ADAPTER_BIT_REQUEST_TIMEZONE                 (1ULL<<LOC_API_ADAPTER_REQUEST_TIMEZONE)
 #define LOC_API_ADAPTER_BIT_REPORT_GENFENCE_DWELL            (1ULL<<LOC_API_ADAPTER_REPORT_GENFENCE_DWELL_REPORT)
 #define LOC_API_ADAPTER_BIT_BATCH_STATUS                     (1ULL<<LOC_API_ADAPTER_BATCH_STATUS)
@@ -1331,7 +1329,7 @@ typedef struct {
 
 typedef struct {
     uint32_t size;                  // set to sizeof(GnssMeasurements)
-    GnssSvMeasurementSet            gnssSvMeasurementSet;
+    GnssSvMeasurementSet*           gnssSvMeasurementSet;
     GnssMeasurementsNotification    gnssMeasNotification;
 } GnssMeasurements;
 

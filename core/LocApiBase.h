@@ -102,7 +102,6 @@ public:
     inline virtual double getGloRfLoss(uint32_t left,
             uint32_t center, uint32_t right, uint8_t gloFrequency) { return 0.0; }
     inline virtual bool getSatellitePVT(GnssSvPolynomial& svPolynomial,
-            GnssSvMeasurementHeader& svMeasSetHeader,
             GnssMeasurementsData& measurementData) { return false; }
     inline virtual float getGeoidalSeparation(double latitude, double longitude) { return 0.0; }
 };

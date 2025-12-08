@@ -587,7 +587,14 @@ GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
 void GnssAdapter::fillElapsedRealTimeForMeas(GnssMeasurements& measurementSet) {
     int64_t elapsedTimeNs = -1;
     GnssMeasurementsNotification& gnssMeasNotification = measurementSet.gnssMeasNotification;
-    GnssSvMeasurementHeader& svMeasSetHeader = measurementSet.gnssSvMeasurementSet.svMeasSetHeader;
+    gnssMeasNotification.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
+    gnssMeasNotification.clock.elapsedRealTime = getBootTimeMilliSec() * 1000000;
+    gnssMeasNotification.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
+    gnssMeasNotification.clock.elapsedRealTimeUnc = RealtimeEstimator::getElapsedRealtimeUncNanos();
+    if (!measurementSet.gnssSvMeasurementSet) {
+        return;
+    }
+    GnssSvMeasurementHeader& svMeasSetHeader = measurementSet.gnssSvMeasurementSet->svMeasSetHeader;
     if ((svMeasSetHeader.flags & GNSS_SV_MEAS_HEADER_HAS_GPS_SYSTEM_TIME) &&
         (svMeasSetHeader.gpsSystemTime.hasAccurateTime() == true)) {
         float elapsedTimeUncMsec = 0.0;
@@ -616,13 +623,6 @@ void GnssAdapter::fillElapsedRealTimeForMeas(GnssMeasurements& measurementSet) {
                     GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT;
             }
         }
-    }
-    if (-1 == elapsedTimeNs) {
-        gnssMeasNotification.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
-        gnssMeasNotification.clock.elapsedRealTime = getBootTimeMilliSec() * 1000000;
-        gnssMeasNotification.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
-        gnssMeasNotification.clock.elapsedRealTimeUnc =
-            RealtimeEstimator::getElapsedRealtimeUncNanos();
     }
 }
 
@@ -2900,7 +2900,7 @@ GnssAdapter::updateClientsEventMask()
             mask |= LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT;
         }
         if (it->second.gnssMeasurementsCb != nullptr) {
-            mask |= LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT;
+            mask |= LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT_REPORT;
             if (nullptr != mPowerIndicationCb) {
                 /* If power reporting is requested this implies Android 'S' or higher,
                    meaning we need to enable poly message (necessary for satellite
@@ -2936,7 +2936,7 @@ GnssAdapter::updateClientsEventMask()
     */
     if (1 == ContextBase::mGps_conf.EXTERNAL_DR_ENABLED ||
         (true == isPreciseEnabled())) {
-        mask |= LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT;
+        mask |= LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT_REPORT;
         mask |= LOC_API_ADAPTER_BIT_GNSS_SV_POLYNOMIAL_REPORT;
         mask |= LOC_API_ADAPTER_BIT_PARSED_UNPROPAGATED_POSITION_REPORT;
         mask |= LOC_API_ADAPTER_BIT_GNSS_SV_EPHEMERIS_REPORT;
@@ -5246,7 +5246,7 @@ GnssAdapter::requestNiNotify(const GnssNiNotification& notify, const void* data,
 void
 GnssAdapter::reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurements)
 {
-    LOC_LOGv("isNhz = %d", gnssMeasurements.gnssSvMeasurementSet.isNhz);
+    LOC_LOGv("isNhz = %d", gnssMeasurements.gnssMeasNotification.isNhz);
 
     struct MsgReportGnssMeasurementData : public LocMsg {
         GnssAdapter& mAdapter;
@@ -5261,9 +5261,10 @@ GnssAdapter::reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurement
         inline virtual void proc() const {
             mAdapter.fillElapsedRealTimeForMeas(mGnssMeasurements);
             mAdapter.reportGnssMeasurementData(mGnssMeasurements.gnssMeasNotification);
-            if ((false == mGnssMeasurements.gnssSvMeasurementSet.isNhz) &&
+            if (!mGnssMeasurements.gnssMeasNotification.isNhz &&
                     mAdapter.mDGnssNeedReport) {
-                mAdapter.reportDGnssDataUsable(mGnssMeasurements.gnssSvMeasurementSet);
+                mAdapter.reportDGnssDataUsable(
+                        mGnssMeasurements.gnssMeasNotification.dgnssDataUsage);
             }
         }
     };
@@ -5273,7 +5274,9 @@ GnssAdapter::reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurement
     // some position engine requires the QMI order of PVT report and SV measurement
     // report to be preserved. So, send out both SV measurement report and PVT report
     // directly to engine hub
-    mEngHubProxy->gnssReportSvMeasurement(gnssMeasurements.gnssSvMeasurementSet);
+    if (gnssMeasurements.gnssSvMeasurementSet) {
+        mEngHubProxy->gnssReportSvMeasurement(*gnssMeasurements.gnssSvMeasurementSet);
+    }
 }
 
 void
@@ -5293,20 +5296,9 @@ GnssAdapter::reportGnssMeasurementData(const GnssMeasurementsNotification& measu
 }
 
 void
-GnssAdapter::reportDGnssDataUsable(const GnssSvMeasurementSet &svMeasurementSet)
-{
-    uint32_t i;
-    bool preDGnssDataUsage = mDGnssDataUsage;
-
-    mDGnssDataUsage = false;
-    for (i = 0; i < svMeasurementSet.svMeasCount; i++) {
-        const Gnss_SVMeasurementStructType& svMeas = svMeasurementSet.svMeas[i];
-        if (svMeas.dgnssSvMeas.dgnssMeasStatus) {
-            mDGnssDataUsage = true;
-            break;
-        }
-    }
-    if (mDGnssDataUsage != preDGnssDataUsage) {
+GnssAdapter::reportDGnssDataUsable(bool dgnssDataUsage) {
+    if (mDGnssDataUsage != dgnssDataUsage) {
+        mDGnssDataUsage = dgnssDataUsage;
         if (mCdfwInterface) {
             mCdfwInterface->reportUsable(mQDgnssListenerHDL, mDGnssDataUsage);
         }

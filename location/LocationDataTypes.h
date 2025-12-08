@@ -1914,6 +1914,7 @@ struct GnssMeasurementsNotification {
     AgcStatus     agcStatusL2; // RF Automatic gain control status for L2 band.
     AgcStatus     agcStatusL5; // RF Automatic gain control status for L5 band.
     bool isFullTracking;
+    bool dgnssDataUsage;
     uint32_t agcCount;     // number of items in GnssMeasurementsAgc array
     GnssMeasurementsAgc gnssAgc[GNSS_BANDS_MAX];
 };
