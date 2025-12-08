@@ -38,22 +38,8 @@ extern "C" {
 /** Milliseconds since January 1, 1970 */
 typedef int64_t LocGpsUtcTime;
 
-/** Maximum number of SVs for loc_gps_sv_status_callback(). */
-#define LOC_GNSS_MAX_SVS 64
-
-/** Requested operational mode for GPS operation. */
-typedef uint32_t LocGpsPositionMode;
 /* IMPORTANT: Note that the following values must match
  * constants in GpsLocationProvider.java. */
-/** Mode for running GPS standalone (no assistance). */
-#define LOC_GPS_POSITION_MODE_STANDALONE    0
-/** AGPS MS-Based mode. */
-#define LOC_GPS_POSITION_MODE_MS_BASED      1
-/**
- * AGPS MS-Assisted mode. This mode is not maintained by the platform anymore.
- * It is strongly recommended to use LOC_GPS_POSITION_MODE_MS_BASED instead.
- */
-#define LOC_GPS_POSITION_MODE_MS_ASSISTED   2
 
 /** Requested recurrence mode for GPS operation. */
 typedef uint32_t LocGpsPositionRecurrence;
@@ -64,8 +50,6 @@ typedef uint32_t LocGpsPositionRecurrence;
 /** Request a single shot GPS fix. */
 #define LOC_GPS_POSITION_RECURRENCE_SINGLE      1
 
-/** GPS status event values. */
-typedef uint16_t LocGpsStatusValue;
 /* IMPORTANT: Note that the following values must match
  * constants in GpsLocationProvider.java. */
 /** GPS status unknown. */
@@ -167,52 +151,6 @@ typedef uint16_t LocApnIpType;
 #define LOC_APN_IP_IPV6             6
 #define LOC_APN_IP_IPV4V6           10
 
-/**
- * String length constants
- */
-#define LOC_GPS_NI_SHORT_STRING_MAXLEN      256
-#define LOC_GPS_NI_LONG_STRING_MAXLEN       2048
-
-/**
- * LocGpsNiType constants
- */
-typedef uint32_t LocGpsNiType;
-#define LOC_GPS_NI_TYPE_VOICE              1
-#define LOC_GPS_NI_TYPE_UMTS_SUPL          2
-#define LOC_GPS_NI_TYPE_UMTS_CTRL_PLANE    3
-/*Emergency SUPL*/
-#define LOC_GPS_NI_TYPE_EMERGENCY_SUPL     4
-
-/**
- * LocGpsNiNotifyFlags constants
- */
-typedef uint32_t LocGpsNiNotifyFlags;
-/** NI requires notification */
-#define LOC_GPS_NI_NEED_NOTIFY          0x0001
-/** NI requires verification */
-#define LOC_GPS_NI_NEED_VERIFY          0x0002
-/** NI requires privacy override, no notification/minimal trace */
-#define LOC_GPS_NI_PRIVACY_OVERRIDE     0x0004
-
-/**
- * GPS NI responses, used to define the response in
- * NI structures
- */
-typedef int LocGpsUserResponseType;
-#define LOC_GPS_NI_RESPONSE_ACCEPT         1
-#define LOC_GPS_NI_RESPONSE_DENY           2
-#define LOC_GPS_NI_RESPONSE_NORESP         3
-
-/**
- * NI data encoding scheme
- */
-typedef int LocGpsNiEncodingType;
-#define LOC_GPS_ENC_NONE                   0
-#define LOC_GPS_ENC_SUPL_GSM_DEFAULT       1
-#define LOC_GPS_ENC_SUPL_UTF8              2
-#define LOC_GPS_ENC_SUPL_UCS2              3
-#define LOC_GPS_ENC_UNKNOWN                -1
-
 /** AGPS status event values. */
 typedef uint8_t LocAGpsStatusValue;
 /** GPS requests data connection for AGPS. */
@@ -262,134 +200,11 @@ typedef struct {
     uint64_t        elapsedRealTimeUnc;
 } LocGpsLocation;
 
-/** Represents the status. */
-typedef struct {
-    /** set to sizeof(LocGpsStatus) */
-    size_t          size;
-    LocGpsStatusValue status;
-} LocGpsStatus;
-
-/**
- * Callback with status information. Can only be called from a thread created by
- * create_thread_cb.
- */
-typedef void (* loc_gps_status_callback)(LocGpsStatus* status);
-
-/**
- * Callback to inform framework of the GPS engine's capabilities. Capability
- * parameter is a bit field of LOC_GPS_CAPABILITY_* flags.
- */
-typedef void (* loc_gps_set_capabilities)(uint32_t capabilities);
-
-/**
- * Callback utility for acquiring the GPS wakelock. This can be used to prevent
- * the CPU from suspending while handling GPS events.
- */
-typedef void (* loc_gps_acquire_wakelock)();
-
-/** Callback utility for releasing the GPS wakelock. */
-typedef void (* loc_gps_release_wakelock)();
-
-/** Callback for requesting NTP time */
-typedef void (* loc_gps_request_utc_time)();
-
-/**
- * Callback for creating a thread that can call into the Java framework code.
- * This must be used to create any threads that report events up to the
- * framework.
- */
-typedef pthread_t (* loc_gps_create_thread)(const char* name, void (*start)(void *), void* arg);
-
-
-/*
- * Represents the status of AGPS augmented to support IPv4 and IPv6.
- */
-typedef struct {
-    /** set to sizeof(LocAGpsStatus) */
-    size_t                  size;
-
-    LocAGpsType                type;
-    LocAGpsStatusValue         status;
-
-    /**
-     * Must be set to a valid IPv4 address if the field 'addr' contains an IPv4
-     * address, or set to INADDR_NONE otherwise.
-     */
-    uint32_t                ipaddr;
-
-    /**
-     * Must contain the IPv4 (AF_INET) or IPv6 (AF_INET6) address to report.
-     * Any other value of addr.ss_family will be rejected.
-     */
-    struct sockaddr_storage addr;
-} LocAGpsStatus;
-
 typedef struct {
     size_t  length;
     u_char* data;
 } LocDerEncodedCertificate;
 
-/** Represents an NI request */
-typedef struct {
-    /** set to sizeof(LocGpsNiNotification) */
-    size_t          size;
-
-    /**
-     * An ID generated by HAL to associate NI notifications and UI
-     * responses
-     */
-    int             notification_id;
-
-    /**
-     * An NI type used to distinguish different categories of NI
-     * events, such as LOC_GPS_NI_TYPE_VOICE, LOC_GPS_NI_TYPE_UMTS_SUPL, ...
-     */
-    LocGpsNiType       ni_type;
-
-    /**
-     * Notification/verification options, combinations of LocGpsNiNotifyFlags constants
-     */
-    LocGpsNiNotifyFlags notify_flags;
-
-    /**
-     * Timeout period to wait for user response.
-     * Set to 0 for no time out limit.
-     */
-    int             timeout;
-
-    /**
-     * Default response when time out.
-     */
-    LocGpsUserResponseType default_response;
-
-    /**
-     * Requestor ID
-     */
-    char            requestor_id[LOC_GPS_NI_SHORT_STRING_MAXLEN];
-
-    /**
-     * Notification message. It can also be used to store client_id in some cases
-     */
-    char            text[LOC_GPS_NI_LONG_STRING_MAXLEN];
-
-    /**
-     * Client name decoding scheme
-     */
-    LocGpsNiEncodingType requestor_id_encoding;
-
-    /**
-     * Client name decoding scheme
-     */
-    LocGpsNiEncodingType text_encoding;
-
-    /**
-     * A pointer to extra data. Format:
-     * key_1 = value_1
-     * key_2 = value_2
-     */
-    char           extras[LOC_GPS_NI_LONG_STRING_MAXLEN];
-
-} LocGpsNiNotification;
 #ifdef __cplusplus
 }
 #endif

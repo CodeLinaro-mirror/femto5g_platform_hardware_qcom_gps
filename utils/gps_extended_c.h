@@ -196,17 +196,6 @@ typedef struct {
     isInEmergencySessionCallback isInEmergencySession;
 } NfwCbInfo;
 
-/** GPS extended callback structure. */
-typedef struct {
-    /** set to sizeof(LocGpsCallbacks) */
-    uint32_t      size;
-    loc_gps_set_capabilities set_capabilities_cb;
-    loc_gps_acquire_wakelock acquire_wakelock_cb;
-    loc_gps_release_wakelock release_wakelock_cb;
-    loc_gps_create_thread create_thread_cb;
-    loc_gps_request_utc_time request_utc_time_cb;
-} GpsExtCallbacks;
-
 typedef enum loc_server_type {
     LOC_AGPS_CDMA_PDE_SERVER,
     LOC_AGPS_CUSTOM_PDE_SERVER,
