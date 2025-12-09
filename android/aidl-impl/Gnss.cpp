@@ -95,7 +95,9 @@ ScopedAStatus Gnss::close() {
     mApi.gnssStop();
     mApi.gnssDisable();
     LOC_LOGv("IGnss::close triggering IGnssMeasurement::close");
-    mGnssMeasurementInterface->close();
+    if (mGnssMeasurementInterface != nullptr) {
+        mGnssMeasurementInterface->close();
+    }
     return ScopedAStatus::ok();
 }
 
