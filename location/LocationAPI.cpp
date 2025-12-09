@@ -26,10 +26,10 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
-Changes from Qualcomm Technologies, Inc. are provided under the following license:
-Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
-SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_LocationAPI"
@@ -162,8 +162,6 @@ void LocationAPI::onRemoveClientCompleteCb (LocationAdapterTypeMask adapterType)
         if (destroyCompleteCb) {
             destroyCompleteCb();
         }
-
-        delete this;
     }
 }
 
@@ -340,7 +338,6 @@ LocationAPI::destroy(locationApiDestroyCompleteCallback destroyCompleteCb)
         if (destroyCompleteCb) {
             destroyCompleteCb();
         }
-        delete this;
     }
 }
 
