@@ -3312,8 +3312,6 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                 if (mOptions.minInterval < minIntervalToSet) {
                     mOptions.minInterval = minIntervalToSet;
                 }
-                LOC_LOGd("Updated min Interval: %u, nHzEnabled: %s",
-                        mOptions.minInterval, nHzStatus ? "true" : "false");
 
                 if (GNSS_POWER_MODE_M4 == mOptions.powerMode &&
                         mOptions.tbm > TRACKING_TBM_THRESHOLD_MILLIS) {
@@ -3322,8 +3320,11 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                     mOptions.powerMode = GNSS_POWER_MODE_M2;
                 }
 
-                // Update request SUPL mode if not specified
-                if (mOptions.mode == GNSS_SUPL_MODE_UNKNOWN) {
+                // In emergency: force request SUPL mode as standalone
+                // Non emergency: Update request SUPL mode if not specified
+                if (mAdapter.mInEmergency) {
+                    mOptions.mode = GNSS_SUPL_MODE_STANDALONE;
+                } else if (mOptions.mode == GNSS_SUPL_MODE_UNKNOWN) {
                     if (mAdapter.isAssistedGpsEnabled() &&
                             (ContextBase::mGps_conf.SUPL_MODE & GNSS_SUPL_MODE_MSB) != 0) {
                         mOptions.mode = GNSS_SUPL_MODE_MSB;
@@ -3332,6 +3333,11 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                     }
                     LOC_LOGd("Updated UNKNOWN SUPL mode to %d", mOptions.mode);
                 }
+                LOC_LOGd("Updated min Interval: %u, nHzEnabled: %s, emergency: %d mode: %u, "
+                        "agps : %d, SUPL_MODE: %d",
+                        mOptions.minInterval, nHzStatus ? "true" : "false",
+                        mAdapter.mInEmergency, mOptions.mode, mAdapter.isAssistedGpsEnabled(),
+                        ContextBase::mGps_conf.SUPL_MODE);
 
                 // On LE/OWRT, when PPE or DRE is enabled, set precise type to RTK
 #ifdef USE_GLIB
