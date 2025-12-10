@@ -381,6 +381,13 @@ typedef uint64_t LocationCapabilitiesMask;
 // This mask indicates SBAS is supported.
 #define   LOCATION_CAPABILITIES_QWES_SBAS                             (1ULL<<41)
 
+/** GPS supports MS-Based AGPS mode */
+#define LOC_GPS_CAPABILITY_MSB              (1 << 1)
+/** GPS supports MS-Assisted AGPS mode */
+#define LOC_GPS_CAPABILITY_MSA              (1 << 2)
+/** GPS supports on demand time injection */
+#define LOC_GPS_CAPABILITY_ON_DEMAND_TIME   (1 << 4)
+
 typedef uint8_t LocationQwesFeatureType;
 enum LocationQwesFeatureTypes {
     // Modem supports Carrier Phase for Precise Positioning
@@ -2433,6 +2440,7 @@ enum AGpsType {
     AGPS_TYPE_SUPL_ES
 };
 typedef enum AGpsType AGpsExtType;
+typedef enum AGpsType LocAGpsType;
 
 typedef uint32_t AGpsTypeMask;
 enum AGpsTypeBits {

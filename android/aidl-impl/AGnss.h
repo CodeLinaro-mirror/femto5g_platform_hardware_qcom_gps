@@ -30,7 +30,7 @@ public:
     ScopedAStatus dataConnOpen(int64_t networkHandle, const std::string& apn,
             ApnIpType apnIpType) override;
     /* Data call setup callback passed down to GNSS HAL implementation */
-    void statusCb(AGpsExtType type, LocAGpsStatusValue status);
+    void statusCb(AGpsExtType type, AGpsStatusValue status);
 private:
     Gnss* mGnss = nullptr;
     shared_ptr<IAGnssCallback> mAGnssCbIface = nullptr;

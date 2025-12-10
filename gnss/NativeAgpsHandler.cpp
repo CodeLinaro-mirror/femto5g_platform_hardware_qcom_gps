@@ -115,20 +115,20 @@ void NativeAgpsHandler::agnssStatusIpV4Cb(AGnssExtStatusIpV4 statusInfo) {
 }
 
 void NativeAgpsHandler::processATLRequestRelease(AGnssExtStatusIpV4 statusInfo) {
-    if (LOC_AGPS_TYPE_WWAN_ANY == statusInfo.type) {
+    if (AGPS_TYPE_WWAN_ANY == statusInfo.type) {
         LOC_LOGd("status.type = %d status.apnTypeMask = 0x%X", statusInfo.type,
                  statusInfo.apnTypeMask);
         switch (statusInfo.status) {
-        case LOC_GPS_REQUEST_AGPS_DATA_CONN:
+        case AGPS_REQUEST_AGPS_DATA_CONN:
             if (mConnected) {
-                mAdapter.dataConnOpenCommand((AGpsExtType)LOC_AGPS_TYPE_WWAN_ANY, mApn.c_str(),
+                mAdapter.dataConnOpenCommand((AGpsExtType)AGPS_TYPE_WWAN_ANY, mApn.c_str(),
                         mApn.size(), AGPS_APN_BEARER_IPV4);
             } else {
-                mAdapter.dataConnFailedCommand((AGpsExtType)LOC_AGPS_TYPE_WWAN_ANY);
+                mAdapter.dataConnFailedCommand((AGpsExtType)AGPS_TYPE_WWAN_ANY);
             }
             break;
-        case LOC_GPS_RELEASE_AGPS_DATA_CONN:
-            mAdapter.dataConnClosedCommand((AGpsExtType)LOC_AGPS_TYPE_WWAN_ANY);
+        case AGPS_RELEASE_AGPS_DATA_CONN:
+            mAdapter.dataConnClosedCommand((AGpsExtType)AGPS_TYPE_WWAN_ANY);
             break;
         default:
             LOC_LOGe("Invalid Request: %d", statusInfo.status);

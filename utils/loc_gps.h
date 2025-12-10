@@ -50,19 +50,6 @@ typedef uint32_t LocGpsPositionRecurrence;
 /** Request a single shot GPS fix. */
 #define LOC_GPS_POSITION_RECURRENCE_SINGLE      1
 
-/* IMPORTANT: Note that the following values must match
- * constants in GpsLocationProvider.java. */
-/** GPS status unknown. */
-#define LOC_GPS_STATUS_NONE             0
-/** GPS has begun navigating. */
-#define LOC_GPS_STATUS_SESSION_BEGIN    1
-/** GPS has stopped navigating. */
-#define LOC_GPS_STATUS_SESSION_END      2
-/** GPS has powered on but is not navigating. */
-#define LOC_GPS_STATUS_ENGINE_ON        3
-/** GPS is powered off. */
-#define LOC_GPS_STATUS_ENGINE_OFF       4
-
 /** Flags to indicate which values are valid in a LocGpsLocation. */
 typedef uint16_t LocGpsLocationFlags;
 /* IMPORTANT: Note that the following values must match
@@ -86,52 +73,6 @@ typedef uint16_t LocGpsLocationFlags;
 /** Location has valid source information. */
 #define LOC_GPS_LOCATION_HAS_SOURCE_INFO   0x0200
 
-/** Flags for the loc_gps_set_capabilities callback. */
-
-/**
- * GPS HAL schedules fixes for LOC_GPS_POSITION_RECURRENCE_PERIODIC mode. If this is
- * not set, then the framework will use 1000ms for min_interval and will start
- * and call start() and stop() to schedule the GPS.
- */
-/** GPS supports MS-Based AGPS mode */
-#define LOC_GPS_CAPABILITY_MSB              (1 << 1)
-/** GPS supports MS-Assisted AGPS mode */
-#define LOC_GPS_CAPABILITY_MSA              (1 << 2)
-/** GPS supports on demand time injection */
-#define LOC_GPS_CAPABILITY_ON_DEMAND_TIME   (1 << 4)
-
-/**
- * Flags used to specify which aiding data to delete when calling
- * delete_aiding_data().
- */
-typedef uint16_t LocGpsAidingData;
-/* IMPORTANT: Note that the following values must match
- * constants in GpsLocationProvider.java. */
-#define LOC_GPS_DELETE_EPHEMERIS        0x0001
-#define LOC_GPS_DELETE_ALMANAC          0x0002
-#define LOC_GPS_DELETE_POSITION         0x0004
-#define LOC_GPS_DELETE_TIME             0x0008
-#define LOC_GPS_DELETE_IONO             0x0010
-#define LOC_GPS_DELETE_UTC              0x0020
-#define LOC_GPS_DELETE_HEALTH           0x0040
-#define LOC_GPS_DELETE_SVDIR            0x0080
-#define LOC_GPS_DELETE_SVSTEER          0x0100
-#define LOC_GPS_DELETE_SADATA           0x0200
-#define LOC_GPS_DELETE_RTI              0x0400
-#define LOC_GPS_DELETE_MB_DATA          0x0800
-#define LOC_GPS_DELETE_CELLDB_INFO      0x8000
-#define LOC_GPS_DELETE_ALL              0xFFFF
-
-/** AGPS type */
-typedef uint16_t LocAGpsType;
-#define LOC_AGPS_TYPE_INVALID       -1
-#define LOC_AGPS_TYPE_ANY           0
-#define LOC_AGPS_TYPE_SUPL          1
-#define LOC_AGPS_TYPE_C2K           2
-#define LOC_AGPS_TYPE_WWAN_ANY      3
-#define LOC_AGPS_TYPE_WIFI          4
-#define LOC_AGPS_TYPE_SUPL_ES       5
-
 typedef uint16_t LocSubId;
 enum {
     LOC_DEFAULT_SUB   = 0,
@@ -140,35 +81,11 @@ enum {
     LOC_TERTIARY_SUB  = 3
 };
 
-typedef uint16_t LocAGpsSetIDType;
-#define LOC_AGPS_SETID_TYPE_NONE    0
-#define LOC_AGPS_SETID_TYPE_IMSI    1
-#define LOC_AGPS_SETID_TYPE_MSISDN  2
-
 typedef uint16_t LocApnIpType;
 #define LOC_APN_IP_INVALID          0
 #define LOC_APN_IP_IPV4             4
 #define LOC_APN_IP_IPV6             6
 #define LOC_APN_IP_IPV4V6           10
-
-/** AGPS status event values. */
-typedef uint8_t LocAGpsStatusValue;
-/** GPS requests data connection for AGPS. */
-#define LOC_GPS_REQUEST_AGPS_DATA_CONN  1
-/** GPS releases the AGPS data connection. */
-#define LOC_GPS_RELEASE_AGPS_DATA_CONN  2
-/** AGPS data connection initiated */
-#define LOC_GPS_AGPS_DATA_CONNECTED     3
-/** AGPS data connection completed */
-#define LOC_GPS_AGPS_DATA_CONN_DONE     4
-/** AGPS data connection failed */
-#define LOC_GPS_AGPS_DATA_CONN_FAILED   5
-
-typedef uint16_t LocAGpsRefLocationType;
-#define LOC_AGPS_REF_LOCATION_TYPE_GSM_CELLID   1
-#define LOC_AGPS_REF_LOCATION_TYPE_UMTS_CELLID  2
-#define LOC_AGPS_REF_LOCATION_TYPE_MAC          3
-#define LOC_AGPS_REF_LOCATION_TYPE_LTE_CELLID   4
 
 /** Represents a location. */
 typedef struct {

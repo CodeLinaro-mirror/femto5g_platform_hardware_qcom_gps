@@ -184,10 +184,10 @@ protected:
 
 private:
     /* AGPS Type for this state machine
-       LOC_AGPS_TYPE_ANY           0
-       LOC_AGPS_TYPE_SUPL          1
-       LOC_AGPS_TYPE_WWAN_ANY      3
-       LOC_AGPS_TYPE_SUPL_ES       5 */
+       AGPS_TYPE_ANY           0
+       AGPS_TYPE_SUPL          1
+       AGPS_TYPE_WWAN_ANY      3
+       AGPS_TYPE_SUPL_ES       5 */
     AGpsExtType mAgpsType;
     LocApnTypeMask mApnTypeMask;
     LocSubId mSubId;
@@ -260,8 +260,8 @@ protected:
 
 private:
     /* Send call setup request to framework
-     * sendRsrcRequest(LOC_GPS_REQUEST_AGPS_DATA_CONN)
-     * sendRsrcRequest(LOC_GPS_RELEASE_AGPS_DATA_CONN) */
+     * sendRsrcRequest(AGPS_REQUEST_AGPS_DATA_CONN)
+     * sendRsrcRequest(AGPS_RELEASE_AGPS_DATA_CONN) */
     void requestOrReleaseDataConn(bool request);
 
     /* Individual event processing methods */
@@ -346,12 +346,4 @@ private:
     AgpsCbPriority mCbPriority;
     void processAltTimerExpiredEvent();
 };
-
-namespace AgpsUtils {
-
-AGpsBearerType ipTypeToBearerType(LocApnIpType ipType);
-LocApnIpType bearerTypeToIpType(AGpsBearerType bearerType);
-
-}
-
 #endif /* AGPS_H */

@@ -23,7 +23,7 @@ void agnssServiceDied(void* cookie) {
         iface = nullptr;
     }
 }
-AGnss::AGnss(Gnss* gnss) : mGnss(gnss), mType((AGpsExtType)LOC_AGPS_TYPE_INVALID),
+AGnss::AGnss(Gnss* gnss) : mGnss(gnss), mType((AGpsExtType)AGPS_TYPE_INVALID),
     mDeathRecipient(AIBinder_DeathRecipient_new(&agnssServiceDied)) {
     spAGnss = this;
     LocationControlCallbacks locCtrlCbs;
@@ -43,22 +43,22 @@ AGnss::~AGnss() {
     spAGnss = nullptr;
 }
 
-void AGnss::statusCb(AGpsExtType type, LocAGpsStatusValue status) {
+void AGnss::statusCb(AGpsExtType type, AGpsStatusValue status) {
 
     IAGnssCallback::AGnssType  aType;
     IAGnssCallback::AGnssStatusValue aStatus;
     // cache the AGps Type
-    if (type > LOC_AGPS_TYPE_INVALID && type <= LOC_AGPS_TYPE_SUPL_ES) {
+    if (type > AGPS_TYPE_INVALID && type <= AGPS_TYPE_SUPL_ES) {
         gSharedMtx.lock();
         mType = type;
         gSharedMtx.unlock();
     }
 
     switch (type) {
-    case LOC_AGPS_TYPE_SUPL:
+    case AGPS_TYPE_SUPL:
         aType = IAGnssCallback::AGnssType::SUPL;
         break;
-    case LOC_AGPS_TYPE_SUPL_ES:
+    case AGPS_TYPE_SUPL_ES:
         aType = IAGnssCallback::AGnssType::SUPL_EIMS;
         break;
     default:
@@ -67,19 +67,19 @@ void AGnss::statusCb(AGpsExtType type, LocAGpsStatusValue status) {
     }
 
     switch (status) {
-    case LOC_GPS_REQUEST_AGPS_DATA_CONN:
+    case AGPS_REQUEST_AGPS_DATA_CONN:
         aStatus = IAGnssCallback::AGnssStatusValue::REQUEST_AGNSS_DATA_CONN;
         break;
-    case LOC_GPS_RELEASE_AGPS_DATA_CONN:
+    case AGPS_RELEASE_AGPS_DATA_CONN:
         aStatus = IAGnssCallback::AGnssStatusValue::RELEASE_AGNSS_DATA_CONN;
         break;
-    case LOC_GPS_AGPS_DATA_CONNECTED:
+    case AGPS_DATA_CONNECTED:
         aStatus = IAGnssCallback::AGnssStatusValue::AGNSS_DATA_CONNECTED;
         break;
-    case LOC_GPS_AGPS_DATA_CONN_DONE:
+    case AGPS_DATA_CONN_DONE:
         aStatus = IAGnssCallback::AGnssStatusValue::AGNSS_DATA_CONN_DONE;
         break;
-    case LOC_GPS_AGPS_DATA_CONN_FAILED:
+    case AGPS_DATA_CONN_FAILED:
         aStatus = IAGnssCallback::AGnssStatusValue::AGNSS_DATA_CONN_FAILED;
         break;
     default:
@@ -152,7 +152,7 @@ ScopedAStatus AGnss::dataConnOpen(int64_t networkHandle, const std::string& apn,
     gSharedMtx.unlock();
     // During Emergency SUPL, an apn name of "sos" means that no
     // apn was found, like in the simless case, so apn is cleared
-    if (LOC_AGPS_TYPE_SUPL_ES == agpsType && "sos" == apnString) {
+    if (AGPS_TYPE_SUPL_ES == agpsType && "sos" == apnString) {
         LOC_LOGd("dataConnOpen APN name = [sos] cleared");
         apnString.clear();
     }
