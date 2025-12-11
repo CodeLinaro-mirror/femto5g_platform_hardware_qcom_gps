@@ -34,9 +34,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 /*
-Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
-SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #include "GnssAdapter.h"
