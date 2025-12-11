@@ -3046,7 +3046,6 @@ GnssAdapter::handleEngineUpEvent()
             // must be called only after capabilities are known
             mAdapter.setConfig();
             mAdapter.setTribandState();
-            mAdapter.setPreciseSessionConfig(mAdapter.mPreciseType);
             mAdapter.notifyPreciseLocation();
             mAdapter.gnssSvConfigUpdate();
             mAdapter.updateSystemPowerState(mAdapter.getSystemPowerState());
@@ -5811,6 +5810,7 @@ bool GnssAdapter::reportQwesCapabilities(
                             mAdapter.isPreciseSession()) {
                         mAdapter.stopTracking();
                         mAdapter.restartSessions();
+                        mAdapter.setPreciseSessionConfig(mAdapter.mPreciseType);
                     }
                     mAdapter.mPpFeatureStatusMask |= DLP_FEATURE_ENABLED_BY_DEFAULT;
                     mAdapter.notifyPreciseLocation();
