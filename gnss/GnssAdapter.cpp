@@ -96,8 +96,7 @@ uint32_t gcd(uint32_t a, uint32_t b) {
     return a;
 }
 
-bool multiplexWithForTimeBasedRequest(TrackingOptions& current, const TrackingOptions& other) {
-    bool updated = false;
+void multiplexWithForTimeBasedRequest(TrackingOptions& current, const TrackingOptions& other) {
     uint32_t tbfNew = 0;
 
     if (other.powerMode == GNSS_POWER_MODE_M5 || current.powerMode == GNSS_POWER_MODE_M5) {
@@ -109,16 +108,16 @@ bool multiplexWithForTimeBasedRequest(TrackingOptions& current, const TrackingOp
         tbfNew = MIN_GNSS_TRACKING_INTERVAL;
     }
     if (tbfNew != current.minInterval) {
-        updated = true;
         current.minInterval = tbfNew;
     }
-
+    // Mode MSA>MSB>STANDALONE
+    if (other.mode > current.mode) {
+        current.mode = other.mode;
+    }
     if (other.powerMode < current.powerMode) {
-        updated = true;
         current.powerMode = other.powerMode;
     }
     if (other.tbm < current.tbm) {
-        updated = true;
         current.tbm = other.tbm;
     }
     if (other.qualityLevelAccepted > current.qualityLevelAccepted) {
@@ -130,7 +129,6 @@ bool multiplexWithForTimeBasedRequest(TrackingOptions& current, const TrackingOp
     if (other.correctionType > current.correctionType) {
         current.correctionType = other.correctionType;
     }
-    return updated;
 }
 
 GnssAdapter::GnssAdapter() :

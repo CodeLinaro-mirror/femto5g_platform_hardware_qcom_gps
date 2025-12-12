@@ -641,6 +641,7 @@ enum GnssAssistanceType {
     GNSS_ASSISTANCE_TYPE_SUPL_IMS,
 };
 
+// Mode need to be defined in the order that MSA>MSB>STANDALONE
 enum GnssSuplMode {
     GNSS_SUPL_MODE_UNKNOWN = -1,
     GNSS_SUPL_MODE_STANDALONE = 0,
