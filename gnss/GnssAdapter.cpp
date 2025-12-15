@@ -5928,8 +5928,8 @@ void GnssAdapter::injectOdcpiCommand(const Location& location)
                 LocMsg(),
                 mAdapter(adapter),
                 mLocation(location) {
-            // Update techMask to tell whether ALE FLP or Android FLP
-            if (context.getLBSProxyBase()->getIzatFusedProviderOverride()) {
+            // Update techMask as FLP_ALE when xtwifi-client and RSSI enabled
+            if (ContextBase::isWiFiPositioningEnabled()) {
                 mLocation.techMask |= LOCATION_TECHNOLOGY_HYBRID_ALE_BIT;
             }
         }

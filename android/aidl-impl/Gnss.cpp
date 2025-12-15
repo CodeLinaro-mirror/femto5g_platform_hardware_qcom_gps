@@ -29,7 +29,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #include "Gnss.h"
 #include <log_util.h>
-#include <LocContext.h>
+#include "ContextBase.h"
 #include "loc_misc_utils.h"
 #include "LocationUtil.h"
 #include "GnssConfiguration.h"
@@ -57,7 +57,6 @@ using measurement_corrections::aidl::implementation::MeasurementCorrectionsInter
 using ::android::hardware::gnss::visibility_control::aidl::implementation::GnssVisibilityControl;
 
 static Gnss* sGnss = NULL;
-static loc_core::ContextBase* sContext = NULL;
 
 void gnssServiceDied(void* cookie) {
     LOC_LOGe("IGnssCallback AIDL service died");
@@ -86,8 +85,6 @@ ScopedAStatus Gnss::setCallback(const shared_ptr<IGnssCallback>& callback) {
     mApi.gnssUpdateCallbacks(callback);
     mApi.gnssEnable(LOCATION_TECHNOLOGY_TYPE_GNSS);
     mApi.requestCapabilities();
-
-    sContext = loc_core::LocContext::getLocContext(loc_core::LocContext::mLocationHalName);
     return ScopedAStatus::ok();
 }
 
@@ -253,7 +250,7 @@ ScopedAStatus Gnss::injectTime(int64_t timeMs, int64_t timeReferenceMs,
 ScopedAStatus Gnss::injectLocation(const GnssLocation& location) {
     ENTRY_LOG_CALLFLOW();
     ILocationControlAPI* pCtrlApi = getLocationControlApi();
-    if (pCtrlApi && !sContext->getLBSProxyBase()->getIzatFusedProviderOverride()) {
+    if (pCtrlApi && !loc_core::ContextBase::isWiFiPositioningEnabled()) {
         pCtrlApi->injectLocation(location.latitudeDegrees, location.longitudeDegrees,
                 location.horizontalAccuracyMeters);
     }

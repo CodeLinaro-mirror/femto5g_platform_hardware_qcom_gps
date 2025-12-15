@@ -572,18 +572,18 @@ void ContextBase::setQwesFeatureStatus(
                     sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_DGNSS;
                 }
                 break;
-            case LOCATION_QWES_FEATURE_TYPE_RSSI_POSITIONING:
+            case LOCATION_QWES_FEATURE_TYPE_WIFI_STANDARD_POSITIONING:
                 if (itr->second) {
-                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_WIFI_RSSI_POSITIONING;
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_WIFI_STANDARD_POSITIONING;
                 } else {
-                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_WIFI_RSSI_POSITIONING;
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_WIFI_STANDARD_POSITIONING;
                 }
                 break;
-            case LOCATION_QWES_FEATURE_TYPE_RTT_POSITIONING:
+            case LOCATION_QWES_FEATURE_TYPE_WIFI_PREMIUM_POSITIONING:
                 if (itr->second) {
-                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_WIFI_RTT_POSITIONING;
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_WIFI_PREMIUM_POSITIONING;
                 } else {
-                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_WIFI_RTT_POSITIONING;
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_WIFI_PREMIUM_POSITIONING;
                 }
                 break;
             case LOCATION_QWES_FEATURE_NLOS_ML20:

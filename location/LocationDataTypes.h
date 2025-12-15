@@ -358,10 +358,10 @@ typedef uint64_t LocationCapabilitiesMask;
 #define   LOCATION_CAPABILITIES_PRECISE_LIB_PRESENT              (1<<29)
 // This mask indicates wifi RSSI positioning is
 // enabled by QWES license.
-#define   LOCATION_CAPABILITIES_QWES_WIFI_RSSI_POSITIONING       (1ULL<<30)
+#define   LOCATION_CAPABILITIES_QWES_WIFI_STANDARD_POSITIONING        (1ULL<<30)
 // This mask indicates wifi RTT positioning is
 // enabled by QWES license.
-#define   LOCATION_CAPABILITIES_QWES_WIFI_RTT_POSITIONING        (1ULL<<31)
+#define   LOCATION_CAPABILITIES_QWES_WIFI_PREMIUM_POSITIONING         (1ULL<<31)
 // support GNSS bands
 #define   LOCATION_CAPABILITIES_GNSS_BANDS_BIT                        (1ULL<<34)
 // This mask indicates modem 3GPP source is available.
@@ -437,10 +437,10 @@ enum LocationQwesFeatureTypes {
     LOCATION_QWES_FEATURE_NLOS_ML20                          = 16,
     // This indicates wifi RSSI positioning is
     // enabled by QWES license.
-    LOCATION_QWES_FEATURE_TYPE_RSSI_POSITIONING              = 17,
+    LOCATION_QWES_FEATURE_TYPE_WIFI_STANDARD_POSITIONING     = 17,
     // This indicates wifi RTT positioning is
     // enabled by QWES license.
-    LOCATION_QWES_FEATURE_TYPE_RTT_POSITIONING               = 18,
+    LOCATION_QWES_FEATURE_TYPE_WIFI_PREMIUM_POSITIONING      = 18,
     // This indicates if NHz feature is supported
     LOCATION_QWES_FEATURE_STATUS_GNSS_NHZ                    = 19,
     // This indicates wwan standard positioning is

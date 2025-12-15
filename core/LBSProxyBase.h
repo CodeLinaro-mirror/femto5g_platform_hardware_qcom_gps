@@ -57,8 +57,6 @@ public:
         (void)power;
     }
     inline virtual IzatDevId_t getIzatDevId() const { return 0; }
-    virtual void setIzatFusedProviderOverride(bool izatFused) {}
-    virtual bool getIzatFusedProviderOverride() const { return false; }
     inline virtual void populateAltitudeAndBroadCast(Location location,
             trackingCallback cb) const {
         cb(location);

@@ -204,6 +204,10 @@ public:
     static inline uint32_t getAntennaInfoVectorSize() {
         return mAntennaInfoVectorSize;
     }
+    static inline bool isWiFiPositioningEnabled() {
+        return mIzat_process_conf.gtpDaemonEnabled &&
+                (getQwesFeatureStatus() & LOCATION_CAPABILITIES_QWES_WIFI_STANDARD_POSITIONING);
+    }
 };
 
 struct LocApiResponse: LocMsg {
