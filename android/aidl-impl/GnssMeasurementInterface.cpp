@@ -104,7 +104,6 @@ ScopedAStatus GnssMeasurementInterface::close()  {
     // Clear measurement callback
     LocationCallbacks locationCallbacks;
     memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
-    locationCallbacks.size = sizeof(LocationCallbacks);
     locAPISetCallbacks(locationCallbacks);
 
     return ScopedAStatus::ok();
@@ -142,7 +141,6 @@ void GnssMeasurementInterface::startTracking(
 
     LocationCallbacks locationCallbacks;
     memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
-    locationCallbacks.size = sizeof(LocationCallbacks);
 
     if (nullptr != mGnssMeasurementCbIface) {
         locationCallbacks.gnssMeasurementsCb =
@@ -154,7 +152,6 @@ void GnssMeasurementInterface::startTracking(
     locAPISetCallbacks(locationCallbacks);
 
     TrackingOptions options;
-    options.size = sizeof(TrackingOptions);
     options.minInterval = timeBetweenMeasurement;
     options.mode = GNSS_SUPL_MODE_UNKNOWN;
     options.powerMode = powerMode;

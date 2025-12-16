@@ -122,7 +122,6 @@ public:
             uint8_t downloadReason[XTRA_STATS_DL_REASON_CODE_MAX_LEN];
             XtraStatusUpdateType updateType = XTRA_STATUS_UPDATE_UNDEFINED;
             GnssConfig gnssConfig = {};
-            gnssConfig.size = sizeof(gnssConfig);
             gnssConfig.flags = GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT;
             sscanf(data, "%*s %d %d %d %d %d %63s %d", &sessionId, &updateType,
                    (int *)&gnssConfig.xtraStatus.featureEnabled,
@@ -136,7 +135,6 @@ public:
             mXSSO.mAdapter->reportXtraMpDisabledEvent();
         } else if (!STRNCMP(data, "setConstellation")) {
             GnssSvTypeConfig constellationsConfig;
-            constellationsConfig.size = sizeof(GnssSvTypeConfig);
 
             sscanf(data, "%*s %" PRIu64 " %" PRIu64, &constellationsConfig.enabledSvTypesMask,
                     &constellationsConfig.blacklistedSvTypesMask);

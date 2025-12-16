@@ -51,7 +51,6 @@ static void updateSystemPowerState(PowerStateType systemPowerState);
 
 
 static const BatchingInterface gBatchingInterface = {
-    sizeof(BatchingInterface),
     initialize,
     addClient,
     removeClient,
@@ -73,36 +72,31 @@ const BatchingInterface* getBatchingInterface()
    return &gBatchingInterface;
 }
 
-static void initialize()
-{
+static void initialize() {
     if (NULL == gBatchingAdapter) {
         gBatchingAdapter = new BatchingAdapter();
     }
 }
 
-static void addClient(LocationAPI* client, const LocationCallbacks& callbacks)
-{
+static void addClient(LocationAPI* client, const LocationCallbacks& callbacks) {
     if (NULL != gBatchingAdapter) {
         gBatchingAdapter->addClientCommand(client, callbacks);
     }
 }
 
-static void removeClient(LocationAPI* client, removeClientCompleteCallback rmClientCb)
-{
+static void removeClient(LocationAPI* client, removeClientCompleteCallback rmClientCb) {
     if (NULL != gBatchingAdapter) {
         gBatchingAdapter->removeClientCommand(client, rmClientCb);
     }
 }
 
-static void requestCapabilities(LocationAPI* client)
-{
+static void requestCapabilities(LocationAPI* client) {
     if (NULL != gBatchingAdapter) {
         gBatchingAdapter->requestCapabilitiesCommand(client);
     }
 }
 
-static uint32_t startBatching(LocationAPI* client, const BatchingOptions &batchOptions)
-{
+static uint32_t startBatching(LocationAPI* client, const BatchingOptions &batchOptions) {
     if (NULL != gBatchingAdapter) {
         return gBatchingAdapter->startBatchingCommand(client, batchOptions);
     } else {
@@ -110,23 +104,20 @@ static uint32_t startBatching(LocationAPI* client, const BatchingOptions &batchO
     }
 }
 
-static void stopBatching(LocationAPI* client, uint32_t id)
-{
+static void stopBatching(LocationAPI* client, uint32_t id) {
     if (NULL != gBatchingAdapter) {
         gBatchingAdapter->stopBatchingCommand(client, id);
     }
 }
 
 static void updateBatchingOptions(
-        LocationAPI* client, uint32_t id, const BatchingOptions& batchOptions)
-{
+        LocationAPI* client, uint32_t id, const BatchingOptions& batchOptions) {
     if (NULL != gBatchingAdapter) {
         gBatchingAdapter->updateBatchingOptionsCommand(client, id, batchOptions);
     }
 }
 
-static void getBatchedLocations(LocationAPI* client, uint32_t id, size_t count)
-{
+static void getBatchedLocations(LocationAPI* client, uint32_t id, size_t count) {
     if (NULL != gBatchingAdapter) {
         gBatchingAdapter->getBatchedLocationsCommand(client, id, count);
     }
@@ -140,8 +131,7 @@ static int32_t getBatchSize(LocationAPI* client) {
     }
 }
 
-static void updateSystemPowerState(PowerStateType systemPowerState)
-{
+static void updateSystemPowerState(PowerStateType systemPowerState) {
     if (NULL != gBatchingAdapter) {
         gBatchingAdapter->updateSystemPowerStateCommand(systemPowerState);
     }

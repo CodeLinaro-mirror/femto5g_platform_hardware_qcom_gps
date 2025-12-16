@@ -47,7 +47,6 @@ ScopedAStatus GnssConfiguration::setSuplVersion(int version) {
 
     GnssConfig config;
     memset(&config, 0, sizeof(GnssConfig));
-    config.size = sizeof(GnssConfig);
     config.flags = GNSS_CONFIG_FLAGS_SUPL_VERSION_VALID_BIT;
     switch (version) {
         case 0x00020004:
@@ -78,7 +77,6 @@ ScopedAStatus GnssConfiguration::setSuplMode(int mode) {
 
     GnssConfig config;
     memset(&config, 0, sizeof(GnssConfig));
-    config.size = sizeof(GnssConfig);
     config.flags = GNSS_CONFIG_FLAGS_SUPL_MODE_BIT;
     switch (mode) {
         case 0:
@@ -108,7 +106,6 @@ ScopedAStatus GnssConfiguration::setLppProfile(int lppProfileMask) {
     }
 
     GnssConfig config = {};
-    config.size = sizeof(GnssConfig);
     config.flags = GNSS_CONFIG_FLAGS_LPP_PROFILE_VALID_BIT;
     config.lppProfileMask = GNSS_CONFIG_LPP_PROFILE_RRLP_ON_LTE; //default
 
@@ -136,7 +133,6 @@ ScopedAStatus GnssConfiguration::setGlonassPositioningProtocol(int protocol) {
 
     GnssConfig config;
     memset(&config, 0, sizeof(GnssConfig));
-    config.size = sizeof(GnssConfig);
 
     config.flags = GNSS_CONFIG_FLAGS_AGLONASS_POSITION_PROTOCOL_VALID_BIT;
     if (protocol & (1<<0)) {
@@ -163,7 +159,6 @@ ScopedAStatus GnssConfiguration::setEmergencySuplPdn(bool enabled) {
 
     GnssConfig config;
     memset(&config, 0, sizeof(GnssConfig));
-    config.size = sizeof(GnssConfig);
     config.flags = GNSS_CONFIG_FLAGS_EM_PDN_FOR_EM_SUPL_VALID_BIT;
     config.emergencyPdnForEmergencySupl = (enabled ?
             GNSS_CONFIG_EMERGENCY_PDN_FOR_EMERGENCY_SUPL_YES :
@@ -181,7 +176,6 @@ ScopedAStatus GnssConfiguration::setEsExtensionSec(int emergencyExtensionSeconds
 
     GnssConfig config;
     memset(&config, 0, sizeof(GnssConfig));
-    config.size = sizeof(GnssConfig);
     config.flags = GNSS_CONFIG_FLAGS_EMERGENCY_EXTENSION_SECONDS_BIT;
     config.emergencyExtensionSeconds = emergencyExtensionSeconds;
 
@@ -202,7 +196,6 @@ ScopedAStatus GnssConfiguration::setBlocklist(const vector<BlocklistedSource>& s
     bool blValid = (0 == sourceList.size());
     GnssConfig config;
     memset(&config, 0, sizeof(GnssConfig));
-    config.size = sizeof(GnssConfig);
     config.flags = GNSS_CONFIG_FLAGS_BLACKLISTED_SV_IDS_BIT;
     config.blacklistedSvIds.clear();
 
@@ -229,7 +222,6 @@ bool GnssConfiguration::setBlocklistedSource(GnssSvIdSource& copyToSource,
 
     bool retVal = true;
     uint16_t svIdOffset = 0;
-    copyToSource.size = sizeof(GnssSvIdSource);
     copyToSource.svId = copyFromSource.svid;
 
     switch (copyFromSource.constellation) {

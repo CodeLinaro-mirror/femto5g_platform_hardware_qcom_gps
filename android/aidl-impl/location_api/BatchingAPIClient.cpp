@@ -49,7 +49,6 @@ int BatchingAPIClient::getBatchSize() {
 void BatchingAPIClient::setCallbacks() {
     LocationCallbacks locationCallbacks;
     memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
-    locationCallbacks.size = sizeof(LocationCallbacks);
     locationCallbacks.batchingCb = [this](size_t count, Location* location,
         const BatchingOptions& batchOptions) {
         onBatchingCb(count, location, batchOptions);
@@ -200,7 +199,6 @@ void BatchingAPIClient::onBatchingCb(size_t count, Location* location,
 static void convertBatchOption(const IGnssBatching::Options& in, LocationOptions& out,
         LocationCapabilitiesMask mask) {
     memset(&out, 0, sizeof(LocationOptions));
-    out.size = sizeof(LocationOptions);
     out.minInterval = (uint32_t)(in.periodNanos / 1000000L);
     out.mode = GNSS_SUPL_MODE_STANDALONE;
     if (mask & LOCATION_CAPABILITIES_GNSS_MSA_BIT)

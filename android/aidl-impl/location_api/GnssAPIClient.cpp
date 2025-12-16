@@ -167,7 +167,6 @@ void GnssAPIClient::setFlpCallbacks() {
     LOC_LOGd("Going to set Flp Callbacks...");
     LocationCallbacks locationCallbacks;
     memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
-    locationCallbacks.size = sizeof(LocationCallbacks);
     mTrackingOptions.qualityLevelAccepted = QUALITY_ANY_VALID_FIX;
 
     locationCallbacks.trackingCb = [this](const Location& location) {
@@ -186,7 +185,6 @@ void GnssAPIClient::setCallbacks() {
              mSvStatusEnabled, mNmeaEnabled);
     LocationCallbacks locationCallbacks;
     memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
-    locationCallbacks.size = sizeof(LocationCallbacks);
     mTrackingOptions.qualityLevelAccepted = QUALITY_HIGH_ACCU_FIX_ONLY;
     locationCallbacks.engineLocationsInfoCb = [this](uint32_t count,
             GnssLocationInfoNotification* engineLocationInfoNotification) {
@@ -242,7 +240,6 @@ void GnssAPIClient::updateCallbacksByAccuracy(uint32_t preferredAccuracyMeters) 
 
 void GnssAPIClient::initLocationOptions() {
     // set default LocationOptions.
-    mTrackingOptions.size = sizeof(TrackingOptions);
     mTrackingOptions.minInterval = 1000;
     mTrackingOptions.mode = GNSS_SUPL_MODE_STANDALONE;
 }
@@ -284,8 +281,7 @@ void GnssAPIClient::configNmea(bool enable) {
 bool GnssAPIClient::gnssSetPositionMode(IGnss::GnssPositionMode mode,
         IGnss::GnssPositionRecurrence recurrence, uint32_t minIntervalMs,
         uint32_t preferredAccuracyMeters, uint32_t preferredTimeMs,
-        GnssPowerMode powerMode, uint32_t timeBetweenMeasurement)
-{
+        GnssPowerMode powerMode, uint32_t timeBetweenMeasurement) {
     LOC_LOGd("]: (%d %d %d %d %d %d %d)",
             (int)mode, (int)recurrence, minIntervalMs, preferredAccuracyMeters,
             preferredTimeMs, (int)powerMode, timeBetweenMeasurement);
@@ -299,7 +295,6 @@ bool GnssAPIClient::gnssSetPositionMode(IGnss::GnssPositionMode mode,
         minIntervalMs = 1000;
     }
 
-    mTrackingOptions.size = sizeof(TrackingOptions);
     mTrackingOptions.minInterval = minIntervalMs;
     if (IGnss::GnssPositionMode::MS_ASSISTED == mode ||
             IGnss::GnssPositionRecurrence::RECURRENCE_SINGLE == recurrence) {
@@ -329,8 +324,7 @@ bool GnssAPIClient::gnssSetPositionMode(IGnss::GnssPositionMode mode,
     return retVal;
 }
 
-void GnssAPIClient::gnssDeleteAidingData(IGnss::GnssAidingData aidingDataFlags)
-{
+void GnssAPIClient::gnssDeleteAidingData(IGnss::GnssAidingData aidingDataFlags) {
     LOC_LOGd("]: (%02x)", (uint32_t)aidingDataFlags);
     if (mControlClient == nullptr) {
         return;

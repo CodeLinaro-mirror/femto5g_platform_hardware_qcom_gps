@@ -170,8 +170,6 @@ typedef enum {
 } loc_supported_feature_enum;
 
 typedef struct {
-    /** set to sizeof(UlpLocation) */
-    uint32_t          size;
     LocGpsLocation     gpsLocation;
     /* Provider indicator for HYBRID or GPS */
     uint16_t        position_source;
@@ -851,8 +849,7 @@ enum ulp_gnss_sv_measurement_valid_flags{
 #define ULP_GNSS_SV_POLY_BIT_NAVIC_ISC_L1P          (0x200000000000)
 #define ULP_GNSS_SV_POLY_BIT_SBAS_CORRUNC           (0x400000000000)
 
-typedef enum
-{
+typedef enum {
     GNSS_LOC_FREQ_SOURCE_INVALID = 0,
     /**< Source of the frequency is invalid */
     GNSS_LOC_FREQ_SOURCE_EXTERNAL = 1,
@@ -863,9 +860,7 @@ typedef enum
     /**< Source of the frequency is unknown */
 } Gnss_LocSourceofFreqEnumType;
 
-typedef struct
-{
-    uint32_t                          size;
+typedef struct {
     float                           clockDrift;
     /**< Receiver clock Drift \n
          - Units: meter per sec \n
@@ -877,9 +872,7 @@ typedef struct
     Gnss_LocSourceofFreqEnumType    sourceOfFreq;
 }Gnss_LocRcvrClockFrequencyInfoStructType;
 
-typedef struct
-{
-    uint32_t      size;
+typedef struct {
     uint8_t     leapSec;
     /**< GPS time leap second delta to UTC time  \n
          - Units: sec \n
@@ -890,17 +883,14 @@ typedef struct
        */
 }Gnss_LeapSecondInfoStructType;
 
-typedef enum
-{
+typedef enum {
    GNSS_LOC_SYS_TIME_BIAS_VALID                = 0x01,
    /**< System time bias valid */
    GNSS_LOC_SYS_TIME_BIAS_UNC_VALID            = 0x02,
    /**< System time bias uncertainty valid */
 }Gnss_LocInterSystemBiasValidMaskType;
 
-typedef struct
-{
-    uint32_t          size;
+typedef struct {
     uint32_t        validMask;
     /* Validity mask as per Gnss_LocInterSystemBiasValidMaskType */
 
@@ -916,9 +906,6 @@ typedef struct
 
 
 typedef struct {
-
-  uint32_t    size;
-
   uint8_t   systemRtc_valid;
   /**<   Validity indicator for System RTC */
 
@@ -929,8 +916,7 @@ typedef struct {
 
 }Gnss_LocGnssTimeExtStructType;
 
-typedef enum
-{
+typedef enum {
     GNSS_LOC_MEAS_STATUS_NULL                    = 0x00000000,
     /**< No information state */
     GNSS_LOC_MEAS_STATUS_SM_VALID                = 0x00000001,
@@ -967,9 +953,7 @@ typedef enum
     /**< TRUE -- Fresh GNSS measurement observed in last second    */
 }Gnss_LocSvMeasStatusMaskType;
 
-typedef struct
-{
-    uint32_t              size;
+typedef struct {
     uint32_t            svMs;
     /**<  Satellite time milisecond.\n
           For GPS, BDS, GAL range of 0 thru (604800000-1) \n
@@ -997,8 +981,7 @@ typedef struct
        */
 }Gnss_LocSVTimeSpeedStructType;
 
-typedef enum
-{
+typedef enum {
   GNSS_SV_STATE_IDLE = 0,
   GNSS_SV_STATE_SEARCH = 1,
   GNSS_SV_STATE_SEARCH_VERIFY = 2,
@@ -1009,16 +992,14 @@ typedef enum
   GNSS_SV_STATE_DPO_TRACK = 7
 } Gnss_LocSVStateEnumType;
 
-typedef enum
-{
+typedef enum {
   GNSS_LOC_SVINFO_MASK_HAS_EPHEMERIS   = 0x01,
   /**< Ephemeris is available for this SV */
   GNSS_LOC_SVINFO_MASK_HAS_ALMANAC     = 0x02
   /**< Almanac is available for this SV */
 }Gnss_LocSvInfoMaskT;
 
-typedef enum
-{
+typedef enum {
   GNSS_LOC_SV_SRCH_STATUS_IDLE      = 1,
     /**< SV is not being actively processed */
   GNSS_LOC_SV_SRCH_STATUS_SEARCH    = 2,
@@ -1059,9 +1040,7 @@ typedef struct {
   */
 } Gnss_MlInferSVMeasurementStruct;
 
-typedef struct
-{
-    uint32_t                          size;
+typedef struct {
     Gnss_LocSvSystemEnumType        gnssSystem;
     // 0 signal type mask indicates invalid value
     GnssSignalTypeMask              gnssSignalTypeMask;
@@ -1244,9 +1223,7 @@ typedef uint64_t GpsSvMeasHeaderFlags;
 #define GNSS_SV_MEAS_HEADER_HAS_DWELL_ALIGN_TIME_MSEC         0x4000000000
 #define GNSS_SV_MEAS_HEADER_HAS_NAVICL5L1_TIME_BIAS           0x8000000000
 
-typedef struct
-{
-    uint32_t                                      size;
+typedef struct {
     // see defines in GNSS_SV_MEAS_HEADER_HAS_XXX_XXX
     uint64_t                                    flags;
 
@@ -1319,7 +1296,6 @@ typedef struct
 } GnssSvMeasurementHeader;
 
 typedef struct {
-    uint32_t                        size;
     bool                          isNhz;
     GnssSvMeasurementHeader       svMeasSetHeader;
     uint32_t                      svMeasCount;
@@ -1328,13 +1304,11 @@ typedef struct {
 } GnssSvMeasurementSet;
 
 typedef struct {
-    uint32_t size;                  // set to sizeof(GnssMeasurements)
     GnssSvMeasurementSet*           gnssSvMeasurementSet;
     GnssMeasurementsNotification    gnssMeasNotification;
 } GnssMeasurements;
 
-typedef enum
-{
+typedef enum {
    GNSS_SV_POLY_COEFF_VALID             = 0x01,
    /**< SV position in orbit coefficients are valid */
    GNSS_SV_POLY_IONO_VALID              = 0x02,
@@ -1357,7 +1331,6 @@ typedef enum
 } Gnss_SvPolyStatusMaskType;
 
 typedef struct {
-    uint32_t      size;
     uint16_t     gnssSvId;
     /** Unique SV Identifier.
      *  For SV Range of supported constellation, please refer to the
@@ -1588,7 +1561,6 @@ struct EngineServiceInfo {
 };
 
 typedef struct {
-    uint32_t size;                        // set to sizeof
     uint64_t elapsedRealTime;    // in ns
     uint64_t elapsedRealTimeUnc; // in ns
     double totalEnergyMilliJoule;

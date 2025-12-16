@@ -170,13 +170,11 @@ GeofenceAdapter::restartGeofences()
 
     for (auto it = oldGeofences.begin(); it != oldGeofences.end(); it++) {
         GeofenceObject object = it->second;
-        GeofenceOption options = {sizeof(GeofenceOption),
-                                   object.breachMask,
+        GeofenceOption options = {object.breachMask,
                                    object.responsiveness,
                                    object.dwellTime,
                                    object.confidence};
-        GeofenceInfo info = {sizeof(GeofenceInfo),
-                             object.latitude,
+        GeofenceInfo info = {object.latitude,
                              object.longitude,
                              object.radius};
         mLocApi->addGeofence(object.key.id,
@@ -829,13 +827,7 @@ GeofenceAdapter::geofenceBreach(size_t count, uint32_t* hwIds, const Location& l
             }
         }
         if (index > 0 && it->second.geofenceBreachCb != nullptr) {
-            GeofenceBreachNotification notify = {sizeof(GeofenceBreachNotification),
-                                                 index,
-                                                 clientIds,
-                                                 location,
-                                                 breachType,
-                                                 timestamp};
-
+            GeofenceBreachNotification notify = {index, clientIds, location, breachType, timestamp};
             it->second.geofenceBreachCb(notify);
         }
         delete[] clientIds;
@@ -868,9 +860,7 @@ GeofenceAdapter::geofenceStatus(GeofenceStatusAvailable available)
 {
     for (auto it = mClientData.begin(); it != mClientData.end(); ++it) {
         if (it->second.geofenceStatusCb != nullptr) {
-            GeofenceStatusNotification notify = {sizeof(GeofenceStatusNotification),
-                                                 available,
-                                                 LOCATION_TECHNOLOGY_TYPE_GNSS};
+            GeofenceStatusNotification notify = {available, LOCATION_TECHNOLOGY_TYPE_GNSS};
             it->second.geofenceStatusCb(notify);
         }
     }

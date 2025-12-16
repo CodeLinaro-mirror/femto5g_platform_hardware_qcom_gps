@@ -28,7 +28,6 @@ GnssVisibilityControl::GnssVisibilityControl(Gnss* gnss) : mGnss(gnss),
     mDeathRecipient(AIBinder_DeathRecipient_new(&gnssVisibilityControlServiceDied)) {
     LocationControlCallbacks locCtrlCbs;
     memset(&locCtrlCbs, 0, sizeof(locCtrlCbs));
-    locCtrlCbs.size = sizeof(LocationControlCallbacks);
 
     locCtrlCbs.nfwStatusCb = [this](const GnssNfwNotification& notification) {
         statusCb(notification);

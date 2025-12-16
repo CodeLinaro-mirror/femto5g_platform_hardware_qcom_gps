@@ -20,13 +20,11 @@ using ::aidl::android::hardware::gnss::GnssLocation;
 
 GeofenceAPIClient::GeofenceAPIClient(const shared_ptr<IGnssGeofenceCallback>& callback) :
     LocationAPIClientBase(),
-    mGnssGeofencingCbIface(callback)
-{
+    mGnssGeofencingCbIface(callback) {
     LOC_LOGd("callback: %p", &callback);
 
     LocationCallbacks locationCallbacks;
     memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
-    locationCallbacks.size = sizeof(LocationCallbacks);
     locationCallbacks.geofenceBreachCb =
             [this](const GeofenceBreachNotification& geofenceBreachNotification) {
         onGeofenceBreachCb(geofenceBreachNotification);
@@ -47,15 +45,13 @@ void GeofenceAPIClient::updateCallback(const shared_ptr<IGnssGeofenceCallback>& 
 
 void GeofenceAPIClient::geofenceAdd(uint32_t geofence_id, double latitude, double longitude,
         double radius_meters, int32_t last_transition, int32_t monitor_transitions,
-        uint32_t notification_responsiveness_ms, uint32_t unknown_timer_ms)
-{
+        uint32_t notification_responsiveness_ms, uint32_t unknown_timer_ms) {
     LOC_LOGd("geofence id: %d, geofence info: %f %f %f %d %d %d %d",
             geofence_id, latitude, longitude, radius_meters,
             last_transition, monitor_transitions, notification_responsiveness_ms, unknown_timer_ms);
 
     GeofenceOption options;
     memset(&options, 0, sizeof(GeofenceOption));
-    options.size = sizeof(GeofenceOption);
     if (monitor_transitions & IGnssGeofenceCallback::ENTERED)
         options.breachTypeMask |= GEOFENCE_BREACH_ENTER_BIT;
     if (monitor_transitions & IGnssGeofenceCallback::EXITED)
@@ -64,7 +60,6 @@ void GeofenceAPIClient::geofenceAdd(uint32_t geofence_id, double latitude, doubl
     options.confidence = GEOFENCE_CONFIDENCE_HIGH;
 
     GeofenceInfo data;
-    data.size = sizeof(GeofenceInfo);
     data.latitude = latitude;
     data.longitude = longitude;
     data.radius = radius_meters;
@@ -75,14 +70,12 @@ void GeofenceAPIClient::geofenceAdd(uint32_t geofence_id, double latitude, doubl
     }
 }
 
-void GeofenceAPIClient::geofencePause(uint32_t geofence_id)
-{
+void GeofenceAPIClient::geofencePause(uint32_t geofence_id) {
     LOC_LOGd("geofence id %d", geofence_id);
     locAPIPauseGeofences(1, &geofence_id);
 }
 
-void GeofenceAPIClient::geofenceResume(uint32_t geofence_id, int32_t monitor_transitions)
-{
+void GeofenceAPIClient::geofenceResume(uint32_t geofence_id, int32_t monitor_transitions) {
     LOC_LOGd("geofence_id: %d monitor_transitions: %d", geofence_id, monitor_transitions);
     GeofenceBreachTypeMask mask = 0;
     if (monitor_transitions & IGnssGeofenceCallback::ENTERED)

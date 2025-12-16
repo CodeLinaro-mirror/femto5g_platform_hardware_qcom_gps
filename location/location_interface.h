@@ -55,7 +55,6 @@ typedef std::function<void(
 typedef void (*removeClientCompleteCallback)(LocationAPI* client);
 
 struct GnssInterface {
-    size_t size;
     void (*initialize)(void);
     void (*addClient)(LocationAPI* client, const LocationCallbacks& callbacks);
     void (*removeClient)(LocationAPI* client, removeClientCompleteCallback rmClientCb);
@@ -134,7 +133,6 @@ struct GnssInterface {
 };
 
 struct BatchingInterface {
-    size_t size;
     void (*initialize)(void);
     void (*addClient)(LocationAPI* client, const LocationCallbacks& callbacks);
     void (*removeClient)(LocationAPI* client, removeClientCompleteCallback rmClientCb);
@@ -148,7 +146,6 @@ struct BatchingInterface {
 };
 
 struct GeofenceInterface {
-    size_t size;
     void (*initialize)(void);
     void (*addClient)(LocationAPI* client, const LocationCallbacks& callbacks);
     void (*removeClient)(LocationAPI* client, removeClientCompleteCallback rmClientCb);

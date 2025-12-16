@@ -135,8 +135,6 @@ ScopedAStatus MeasurementCorrectionsInterface::setCallback(
 
     LocationControlCallbacks locCtrlCbs;
     memset(&locCtrlCbs, 0, sizeof(locCtrlCbs));
-    locCtrlCbs.size = sizeof(LocationControlCallbacks);
-
     locCtrlCbs.measCorrSetCapabilitiesCb =
             [this] (GnssMeasurementCorrectionsCapabilitiesMask capabilities) {
             setCapabilitiesCb(capabilities);

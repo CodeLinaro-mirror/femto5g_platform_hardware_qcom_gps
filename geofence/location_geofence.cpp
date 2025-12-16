@@ -26,6 +26,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 #include "GeofenceAdapter.h"
 #include "location_interface.h"
 
@@ -47,7 +52,6 @@ static void updateSystemPowerState(PowerStateType systemPowerState);
 
 
 static const GeofenceInterface gGeofenceInterface = {
-    sizeof(GeofenceInterface),
     initialize,
     addClient,
     removeClient,

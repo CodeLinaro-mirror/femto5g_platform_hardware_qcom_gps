@@ -446,8 +446,6 @@ typedef struct {
 
 /** Represents gps location extended. */
 typedef struct {
-    /** set to sizeof(GpsLocationExtended) */
-    uint32_t          size;
     /** Contains GpsLocationExtendedFlags bits. */
     uint64_t        flags;
     /** Contains the Altitude wrt mean sea level */

@@ -1150,7 +1150,6 @@ enum loc_sess_status {
 };
 
 struct Location {
-    uint32_t size;           // set to sizeof(Location)
     LocationFlagsMask flags; // bitwise OR of LocationFlagsBits to mark which params are valid
     loc_sess_status sessionStatus; // location session status
     uint64_t timestamp;      // UTC timestamp for location fix, milliseconds since January 1, 1970
@@ -1205,7 +1204,6 @@ enum FixQualityLevel {
 };
 
 struct LocationOptions {
-    uint32_t size;          // set to sizeof(LocationOptions)
     uint32_t minInterval; // in milliseconds
     GnssSuplMode mode;    // Standalone/MS-Based/MS-Assisted
     // behavior when this field is 0:
@@ -1215,7 +1213,7 @@ struct LocationOptions {
     FixQualityLevel qualityLevelAccepted; /* Send through position reports with which accuracy. */
 
     inline LocationOptions() :
-            size(0), minInterval(0), mode(GNSS_SUPL_MODE_STANDALONE),
+            minInterval(0), mode(GNSS_SUPL_MODE_STANDALONE),
             locReqEngTypeMask((LocReqEngineTypeMask)0),
             qualityLevelAccepted(QUALITY_HIGH_ACCU_FIX_ONLY) {}
 };
@@ -1270,7 +1268,6 @@ struct TrackingOptions : LocationOptions {
                preciseType == other.preciseType;
     }
     inline void setLocationOptions(const LocationOptions& options) {
-        size = sizeof(TrackingOptions);
         minInterval = options.minInterval;
         mode = options.mode;
         locReqEngTypeMask = options.locReqEngTypeMask;
@@ -1281,10 +1278,8 @@ struct TrackingOptions : LocationOptions {
 struct BatchingOptions : LocationOptions {
     BatchingMode batchingMode;
 
-    inline BatchingOptions() :
-            LocationOptions(), batchingMode(BATCHING_MODE_ROUTINE) {}
-    inline BatchingOptions(uint32_t s, BatchingMode m) :
-            LocationOptions(), batchingMode(m) { LocationOptions::size = s; }
+    inline BatchingOptions(BatchingMode m = BATCHING_MODE_ROUTINE) :
+            LocationOptions(), batchingMode(m) {}
     inline BatchingOptions(const LocationOptions& options) :
             LocationOptions(options), batchingMode(BATCHING_MODE_ROUTINE) {}
     inline void setLocationOptions(const LocationOptions& options) {
@@ -1294,12 +1289,10 @@ struct BatchingOptions : LocationOptions {
 };
 
 struct BatchingStatusInfo {
-    uint32_t size;
     BatchingStatus batchingStatus;
 };
 
 struct GeofenceOption {
-    uint32_t size;                          // set to sizeof(GeofenceOption)
     GeofenceBreachTypeMask breachTypeMask;  // bitwise OR of GeofenceBreachTypeBits
     uint32_t responsiveness;                // in milliseconds
     uint32_t dwellTime;                     // in seconds
@@ -1307,14 +1300,12 @@ struct GeofenceOption {
 };
 
 struct GeofenceInfo {
-    uint32_t size;    // set to sizeof(GeofenceInfo)
     double latitude;  // in degrees
     double longitude; // in degrees
     double radius;    // in meters
 };
 
 struct GeofenceBreachNotification {
-    uint32_t size;             // set to sizeof(GeofenceBreachNotification)
     uint32_t count;            // number of ids in array
     uint32_t* ids;           // array of ids that have breached
     Location location;       // location associated with breach
@@ -1323,7 +1314,6 @@ struct GeofenceBreachNotification {
 };
 
 struct GeofenceStatusNotification {
-    uint32_t size;                       // set to sizeof(GeofenceBreachNotification)
     GeofenceStatusAvailable available; // GEOFENCE_STATUS_AVAILABILE_NO/_YES
     LocationTechnologyType techType;   // GNSS
 };
@@ -1531,7 +1521,6 @@ struct LLAInfo {
 };
 
 struct GnssLocationInfoNotification {
-    uint32_t size;                      // set to sizeof(GnssLocationInfo)
     Location location;                  // basic locaiton info, latitude, longitude, and etc
     GnssLocationInfoFlagMask flags;     // bitwise OR of GnssLocationInfoBits for param validity
     float altitudeMeanSeaLevel;         // altitude wrt mean sea level
@@ -1655,7 +1644,6 @@ struct DiagLocationInfoExt {
 };
 
 struct GnssNiNotification {
-    uint32_t size;                           // set to sizeof(GnssNiNotification)
     GnssNiType type;                       // type of NI (Voice, SUPL, Control Plane)
     GnssNiOptionsMask options;             // bitwise OR of GnssNiOptionsBits
     uint32_t timeout;                      // time (seconds) to wait for user input
@@ -1693,7 +1681,6 @@ struct GnssNiNotification {
 #define NAVIC_L1_CARRIER_FREQUENCY      (1575420000.0)
 
 struct GnssSv {
-    uint32_t size;       // set to sizeof(GnssSv)
     // Unique SV Identifier.
     // SV Range for supported constellation is specified as below:
     //    - For GPS:     1 to 32
@@ -1716,7 +1703,6 @@ struct GnssSv {
 };
 
 struct GnssConfigSetAssistanceServer {
-    uint32_t size;             // set to sizeof(GnssConfigSetAssistanceServer)
     GnssAssistanceType type; // SUPL or C2K
     const char* hostName;    // null terminated string
     uint32_t port;           // port of server
@@ -1772,8 +1758,6 @@ struct GnssSatellitePvt {
 };
 
 struct GnssMeasurementsData {
-    // set to sizeof(GnssMeasurementsData)
-    uint32_t size;
     // bitwise OR of GnssMeasurementsDataFlagsBits
     GnssMeasurementsDataFlagsMask flags;
     // Unique SV Identifier
@@ -1822,7 +1806,6 @@ struct GnssMeasurementsSignalType {
 };
 
 struct GnssReflectingPlane {
-    uint32_t size;                          // set to sizeof(GnssReflectingPlane)
     double latitudeDegrees;
     double longitudeDegrees;
     double altitudeMeters;
@@ -1830,7 +1813,6 @@ struct GnssReflectingPlane {
 };
 
 struct GnssSingleSatCorrection {
-    uint32_t size;                          // set to sizeof(GnssSingleSatCorrection)
     GnssSingleSatCorrectionMask flags;
     GnssSvType svType;
     uint16_t svId;
@@ -1842,7 +1824,6 @@ struct GnssSingleSatCorrection {
 };
 
 struct GnssMeasurementCorrections {
-    uint32_t size;                          // set to sizeof(GnssMeasurementCorrections)
     double latitudeDegrees;
     double longitudeDegrees;
     double altitudeMeters;
@@ -1856,7 +1837,6 @@ struct GnssMeasurementCorrections {
 };
 
 struct GnssMeasurementsClock {
-    uint32_t size;                          // set to sizeof(GnssMeasurementsClock)
     GnssMeasurementsClockFlagsMask flags; // bitwise OR of GnssMeasurementsClockFlagsBits
     int16_t leapSecond;
     int64_t timeNs;
@@ -1875,14 +1855,12 @@ struct GnssMeasurementsClock {
 };
 
 struct GnssSvNotification {
-    uint32_t size;                 // set to sizeof(GnssSvNotification)
     uint32_t count;                // number of SVs in the GnssSv array
     bool gnssSignalTypeMaskValid;
     GnssSv gnssSvs[GNSS_SV_MAX]; // information on a number of SVs
 };
 
 struct GnssNmeaNotification {
-    uint32_t size;         // set to sizeof(GnssNmeaNotification)
     uint64_t timestamp;  // timestamp
     LocOutputEngineType locOutputEngType; // engine type
     const char* nmea;    // nmea text
@@ -1891,7 +1869,6 @@ struct GnssNmeaNotification {
 };
 
 struct GnssDataNotification {
-    uint32_t     size;                  // set to sizeof(GnssDataNotification)
     GnssDataValidityMask gnssDataValidityMask;  // bitwise OR of GnssDataValidity
     GnssDataMask gnssDataMask[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];  // bitwise OR of GnssDataBits
                                                                      // for each signal type
@@ -1912,7 +1889,6 @@ struct GnssMeasurementsAgc {
 };
 
 struct GnssMeasurementsNotification {
-    uint32_t size;         // set to sizeof(GnssMeasurementsNotification)
     bool isNhz;            // NHz indicator
     uint32_t count;        // number of items in GnssMeasurements array
     GnssMeasurementsData measurements[GNSS_MEASUREMENTS_MAX];
@@ -1927,7 +1903,6 @@ struct GnssMeasurementsNotification {
 };
 
 struct GnssCapabNotification {
-    uint32_t size;              // set to sizeof(GnssCapabilitiesNotification)
     uint32_t count;             // number of SVs in the gnssSignalType array
     GnssMeasurementsSignalType  gnssSignalType[GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES];
     GnssSignalTypeMask gnssSupportedSignals; // GNSS Supported Signals
@@ -1936,7 +1911,6 @@ struct GnssCapabNotification {
 typedef uint32_t GnssSvId;
 
 struct GnssSvIdSource{
-    uint32_t size;              // set to sizeof(GnssSvIdSource)
     GnssSvType constellation;   // constellation for the sv to blacklist
     GnssSvId svId;              // Unique SV Identifier,
                                 // For SV Range of supported constellation,
@@ -1945,8 +1919,6 @@ struct GnssSvIdSource{
 
 #define GNSS_SV_CONFIG_ALL_BITS_ENABLED_MASK ((uint64_t)0xFFFFFFFFFFFFFFFF)
 struct GnssSvIdConfig {
-    uint32_t size; // set to sizeof(GnssSvIdConfig)
-
     // GPS - SV 1 maps to bit 0
 #define GNSS_SV_CONFIG_GPS_INITIAL_SV_ID 1
     uint64_t gpsBlacklistSvMask;
@@ -2023,7 +1995,6 @@ enum GnssSvTypesMaskBits {
 /* This SV Type config is injected directly to GNSS Adapter
  * bypassing Location API */
 struct GnssSvTypeConfig{
-    uint32_t size; // set to sizeof(GnssSvTypeConfig)
     // Enabled Constellations
     GnssSvTypesMask enabledSvTypesMask;
     // Disabled Constellations
@@ -2075,7 +2046,6 @@ struct XtraStatus {
 };
 
 struct GnssConfig {
-    uint32_t size;  // set to sizeof(GnssConfig)
     GnssConfigFlagsMask flags; // bitwise OR of GnssConfigFlagsBits to mark which params are valid
     GnssConfigGpsLock gpsLock;
     GnssConfigSuplVersion suplVersion;
@@ -2097,7 +2067,6 @@ struct GnssConfig {
 };
 
 struct GnssDebugLocation {
-    uint32_t size;                        // set to sizeof
     bool                                mValid;
     Location                            mLocation;
     double                              verticalAccuracyMeters;
@@ -2107,7 +2076,6 @@ struct GnssDebugLocation {
 };
 
 struct GnssDebugTime {
-    uint32_t size;                        // set to sizeof
     bool                                mValid;
     int64_t                             timeEstimate;
     float                               timeUncertaintyNs;
@@ -2115,8 +2083,6 @@ struct GnssDebugTime {
 };
 
 struct GnssDebugSatelliteInfo {
-    // set to sizeof
-    uint32_t size;
     // Unique SV Identifier
     // For SV Range of supported constellation,
     // please refer to the comment section of svId in GnssSv.
@@ -2131,7 +2097,6 @@ struct GnssDebugSatelliteInfo {
 };
 
 struct GnssDebugReport {
-    uint32_t size;                        // set to sizeof
     GnssDebugLocation                   mLocation;
     GnssDebugTime                       mTime;
     std::vector<GnssDebugSatelliteInfo> mSatelliteInfo;
@@ -2422,7 +2387,6 @@ enum OdcpiPrioritytype {
 };
 
 struct OdcpiRequestInfo {
-    uint32_t size;
     OdcpiRequestType type;
     uint32_t tbfMillis;
     bool isEmergencyMode;
@@ -2506,7 +2470,6 @@ struct AGnssExtStatusIpV4 {
 };
 
 struct GnssCoordinate {
-    uint32_t size;                        // set to sizeof
     double x;
     double xUncertainty;
     double y;
@@ -2516,7 +2479,6 @@ struct GnssCoordinate {
 };
 
 struct GnssAntennaInformation{
-    uint32_t size;                        // set to sizeof
     double carrierFrequencyMHz;
     GnssCoordinate phaseCenterOffsetCoordinateMillimeters;
     std::vector<std::vector<double>> phaseCenterVariationCorrectionMillimeters;
@@ -2526,7 +2488,6 @@ struct GnssAntennaInformation{
 };
 
 struct GnssNtripConnectionParams {
-    uint32_t size;                        // set to sizeof
     bool requiresNmeaLocation;
     std::string hostNameOrIp;    // null terminated string
     std::string mountPoint;      // null terminated string
@@ -3610,7 +3571,6 @@ typedef std::function<void(const GnssSignalTypeMask& gpsSignalTypeConfigMask)>
         ntnConfigSignalMaskChangedCb;
 
 struct LocationCallbacks {
-    uint32_t size; // set to sizeof(LocationCallbacks)
     capabilitiesCallback capabilitiesCb;                // mandatory
     responseCallback responseCb;                        // mandatory
     collectiveResponseCallback collectiveResponseCb;    // mandatory
@@ -3635,7 +3595,6 @@ struct LocationCallbacks {
 };
 
 struct LocationControlCallbacks {
-    size_t size; // set to sizeof(LocationControlCallbacks)
     responseCallback responseCb;                     // mandatory
     collectiveResponseCallback collectiveResponseCb; // mandatory
     gnssConfigCallback gnssConfigCb;                 // optional
@@ -3650,7 +3609,6 @@ struct LocationControlCallbacks {
 };
 
 struct GnssCivicAddress {
-    uint32_t size;
     std::string adminArea;
     std::string countryCode;
     std::string countryName;

@@ -140,8 +140,6 @@ ILocationControlAPI* Gnss::getLocationControlApi() {
     if (mLocationControlApi == nullptr) {
         LocationControlCallbacks locCtrlCbs;
         memset(&locCtrlCbs, 0, sizeof(locCtrlCbs));
-        locCtrlCbs.size = sizeof(LocationControlCallbacks);
-
         locCtrlCbs.odcpiReqCb =
                 [this](const OdcpiRequestInfo& odcpiRequest) {
             odcpiRequestCb(odcpiRequest);

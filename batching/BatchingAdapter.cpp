@@ -50,8 +50,7 @@ BatchingAdapter::BatchingAdapter() :
     mBatchingTimeout(0),
     mBatchingAccuracy(1),
     mBatchSize(20),
-    mSystemPowerState(POWER_STATE_UNKNOWN)
-{
+    mSystemPowerState(POWER_STATE_UNKNOWN) {
     LOC_LOGD("%s]: Constructor", __func__);
     const loc_param_s_type batching_conf_param_table[] =
     {
@@ -70,8 +69,7 @@ BatchingAdapter::BatchingAdapter() :
 }
 
 void
-BatchingAdapter::stopClientSessions(LocationAPI* client, bool eraseSession)
-{
+BatchingAdapter::stopClientSessions(LocationAPI* client, bool eraseSession) {
     LOC_LOGD("%s]: client %p", __func__, client);
 
     typedef struct pairKeyBatchMode {
@@ -92,8 +90,7 @@ BatchingAdapter::stopClientSessions(LocationAPI* client, bool eraseSession)
 }
 
 void
-BatchingAdapter::updateClientsEventMask()
-{
+BatchingAdapter::updateClientsEventMask() {
     LOC_API_ADAPTER_EVENT_MASK_T mask = 0;
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
         // we don't register LOC_API_ADAPTER_BIT_BATCH_FULL until we
@@ -148,8 +145,7 @@ BatchingAdapter::handleEngineLockStatus(EngineLockState engineLockState) {
 }
 
 void
-BatchingAdapter::handleEngineUpEvent()
-{
+BatchingAdapter::handleEngineUpEvent() {
     struct MsgSSREvent : public LocMsg {
         BatchingAdapter& mAdapter;
         LocApiBase& mApi;
@@ -181,8 +177,7 @@ BatchingAdapter::handleEngineUpEvent()
 }
 
 void
-BatchingAdapter::restartSessions()
-{
+BatchingAdapter::restartSessions() {
     LOC_LOGD("%s]: ", __func__);
 
     if (autoReportBatchingSessionsCount() > 0) {
@@ -199,30 +194,26 @@ BatchingAdapter::restartSessions()
 }
 
 bool
-BatchingAdapter::hasBatchingCallback(LocationAPI* client)
-{
+BatchingAdapter::hasBatchingCallback(LocationAPI* client) {
     auto it = mClientData.find(client);
     return (it != mClientData.end() && it->second.batchingCb);
 }
 
 bool
-BatchingAdapter::isBatchingSession(LocationAPI* client, uint32_t sessionId)
-{
+BatchingAdapter::isBatchingSession(LocationAPI* client, uint32_t sessionId) {
     LocationSessionKey key(client, sessionId);
     return (mBatchingSessions.find(key) != mBatchingSessions.end());
 }
 
 void
 BatchingAdapter::saveBatchingSession(LocationAPI* client, uint32_t sessionId,
-        const BatchingOptions& batchingOptions)
-{
+        const BatchingOptions& batchingOptions) {
     LocationSessionKey key(client, sessionId);
     mBatchingSessions[key] = batchingOptions;
 }
 
 void
-BatchingAdapter::eraseBatchingSession(LocationAPI* client, uint32_t sessionId)
-{
+BatchingAdapter::eraseBatchingSession(LocationAPI* client, uint32_t sessionId) {
     LocationSessionKey key(client, sessionId);
     auto it = mBatchingSessions.find(key);
     if (it != mBatchingSessions.end()) {
@@ -231,8 +222,7 @@ BatchingAdapter::eraseBatchingSession(LocationAPI* client, uint32_t sessionId)
 }
 
 void
-BatchingAdapter::reportResponse(LocationAPI* client, LocationError err, uint32_t sessionId)
-{
+BatchingAdapter::reportResponse(LocationAPI* client, LocationError err, uint32_t sessionId) {
     LOC_LOGD("%s]: client %p id %u err %u", __func__, client, sessionId, err);
 
     auto it = mClientData.find(client);
@@ -245,8 +235,7 @@ BatchingAdapter::reportResponse(LocationAPI* client, LocationError err, uint32_t
 }
 
 uint32_t
-BatchingAdapter::autoReportBatchingSessionsCount()
-{
+BatchingAdapter::autoReportBatchingSessionsCount() {
     uint32_t count = 0;
     for (auto batchingSession: mBatchingSessions) {
         if (batchingSession.second.batchingMode != BATCHING_MODE_NO_AUTO_REPORT) {
@@ -258,8 +247,7 @@ BatchingAdapter::autoReportBatchingSessionsCount()
 
 uint32_t
 BatchingAdapter::startBatchingCommand(
-        LocationAPI* client, const BatchingOptions& batchOptions)
-{
+        LocationAPI* client, const BatchingOptions& batchOptions) {
     uint32_t sessionId = generateSessionId();
     LOC_LOGD("%s]: client %p id %u minInterval %u mode %u Batching Mode %d",
              __func__, client, sessionId, batchOptions.minInterval,
@@ -291,8 +279,6 @@ BatchingAdapter::startBatchingCommand(
 
             if (!mAdapter.hasBatchingCallback(mClient)) {
                 err = LOCATION_ERROR_CALLBACK_MISSING;
-            } else if (0 == mBatchingOptions.size) {
-                err = LOCATION_ERROR_INVALID_PARAMETER;
             }
             if (LOCATION_ERROR_SUCCESS == err) {
                 mAdapter.startBatching(mClient, mSessionId, mBatchingOptions);
@@ -309,8 +295,7 @@ BatchingAdapter::startBatchingCommand(
 
 void
 BatchingAdapter::startBatching(LocationAPI* client, uint32_t sessionId,
-        const BatchingOptions& batchingOptions)
-{
+        const BatchingOptions& batchingOptions) {
     saveBatchingSession(client, sessionId, batchingOptions);
     if (ENGINE_LOCK_STATE_DISABLED == mLocApi->getEngineLockState()) {
         LOC_LOGe("engine lock disabled, return!");
@@ -348,8 +333,7 @@ BatchingAdapter::startBatching(LocationAPI* client, uint32_t sessionId,
 
 void
 BatchingAdapter::updateBatchingOptionsCommand(LocationAPI* client, uint32_t id,
-        const BatchingOptions& batchOptions)
-{
+        const BatchingOptions& batchOptions) {
     LOC_LOGD("%s]: client %p id %u minInterval %u mode %u batchMode %u",
              __func__, client, id, batchOptions.minInterval,
              batchOptions.mode,
@@ -380,8 +364,7 @@ BatchingAdapter::updateBatchingOptionsCommand(LocationAPI* client, uint32_t id,
             LocationError err = LOCATION_ERROR_SUCCESS;
             if (!mAdapter.isBatchingSession(mClient, mSessionId)) {
                 err = LOCATION_ERROR_ID_UNKNOWN;
-            } else if ((0 == mBatchOptions.size) ||
-                       (mBatchOptions.batchingMode > BATCHING_MODE_NO_AUTO_REPORT)) {
+            } else if (mBatchOptions.batchingMode > BATCHING_MODE_NO_AUTO_REPORT) {
                 err = LOCATION_ERROR_INVALID_PARAMETER;
             }
             if (LOCATION_ERROR_SUCCESS == err) {
@@ -394,8 +377,7 @@ BatchingAdapter::updateBatchingOptionsCommand(LocationAPI* client, uint32_t id,
 }
 
 void
-BatchingAdapter::stopBatchingCommand(LocationAPI* client, uint32_t id)
-{
+BatchingAdapter::stopBatchingCommand(LocationAPI* client, uint32_t id) {
     LOC_LOGD("%s]: client %p id %u", __func__, client, id);
 
     struct MsgStopBatching : public LocMsg {
@@ -432,8 +414,7 @@ BatchingAdapter::stopBatchingCommand(LocationAPI* client, uint32_t id)
 
 void
 BatchingAdapter::stopBatching(LocationAPI* client, uint32_t sessionId, bool restartNeeded,
-        const BatchingOptions& batchOptions, bool eraseSession)
-{
+        const BatchingOptions& batchOptions, bool eraseSession) {
     LocationSessionKey key(client, sessionId);
     auto it = mBatchingSessions.find(key);
     if (it != mBatchingSessions.end()) {
@@ -474,8 +455,7 @@ BatchingAdapter::stopBatching(LocationAPI* client, uint32_t sessionId, bool rest
 }
 
 void
-BatchingAdapter::getBatchedLocationsCommand(LocationAPI* client, uint32_t id, size_t count)
-{
+BatchingAdapter::getBatchedLocationsCommand(LocationAPI* client, uint32_t id, size_t count) {
     LOC_LOGD("%s]: client %p id %u count %zu", __func__, client, id, count);
 
     struct MsgGetBatchedLocations : public LocMsg {
@@ -522,8 +502,7 @@ BatchingAdapter::getBatchedLocationsCommand(LocationAPI* client, uint32_t id, si
 }
 
 void
-BatchingAdapter::reportLocationsEvent(const Location* locations, size_t count)
-{
+BatchingAdapter::reportLocationsEvent(const Location* locations, size_t count) {
     LOC_LOGD("%s]: count %zu ", __func__, count);
 
     struct MsgReportLocations : public LocMsg {
@@ -559,9 +538,8 @@ BatchingAdapter::reportLocationsEvent(const Location* locations, size_t count)
 }
 
 void
-BatchingAdapter::reportLocations(Location* locations, size_t count)
-{
-    BatchingOptions batchOptions = {sizeof(BatchingOptions), BATCHING_MODE_ROUTINE};
+BatchingAdapter::reportLocations(Location* locations, size_t count) {
+    BatchingOptions batchOptions(BATCHING_MODE_ROUTINE);
 
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
         if (nullptr != it->second.batchingCb) {
@@ -572,10 +550,8 @@ BatchingAdapter::reportLocations(Location* locations, size_t count)
 
 void
 BatchingAdapter::reportBatchStatusChange(BatchingStatus batchStatus,
-        std::list<uint32_t> & completedTripsList)
-{
-    BatchingStatusInfo batchStatusInfo =
-            {sizeof(BatchingStatusInfo), batchStatus};
+        std::list<uint32_t> & completedTripsList) {
+    BatchingStatusInfo batchStatusInfo = {batchStatus};
 
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
         if (nullptr != it->second.batchingStatusCb) {
@@ -585,8 +561,7 @@ BatchingAdapter::reportBatchStatusChange(BatchingStatus batchStatus,
 }
 
 void
-BatchingAdapter::reportBatchStatusChangeEvent(BatchingStatus batchStatus)
-{
+BatchingAdapter::reportBatchStatusChangeEvent(BatchingStatus batchStatus) {
     struct MsgReportBatchStatus : public LocMsg {
         BatchingAdapter& mAdapter;
         BatchingStatus mBatchStatus;
@@ -610,8 +585,7 @@ BatchingAdapter::reportBatchStatusChangeEvent(BatchingStatus batchStatus)
 }
 
 void
-BatchingAdapter::updateSystemPowerStateCommand(PowerStateType powerState)
-{
+BatchingAdapter::updateSystemPowerStateCommand(PowerStateType powerState) {
     LOC_LOGD("%s]: powerState: %d", __func__, powerState);
 
     struct MsgUpdateSystemPowerState : public LocMsg {
@@ -630,8 +604,7 @@ BatchingAdapter::updateSystemPowerStateCommand(PowerStateType powerState)
 }
 
 void
-BatchingAdapter::suspendBatchingSessions()
-{
+BatchingAdapter::suspendBatchingSessions() {
     for (auto it = mBatchingSessions.begin(); it != mBatchingSessions.end(); ++it) {
         LocationSessionKey key(it->first);
         stopClientSessions(key.client, false);
@@ -639,8 +612,7 @@ BatchingAdapter::suspendBatchingSessions()
 }
 
 void
-BatchingAdapter::updateSystemPowerState(PowerStateType systemPowerState)
-{
+BatchingAdapter::updateSystemPowerState(PowerStateType systemPowerState) {
 
     if (POWER_STATE_UNKNOWN != systemPowerState) {
         mSystemPowerState = systemPowerState;

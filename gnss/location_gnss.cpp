@@ -126,7 +126,6 @@ static void setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask);
 static void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
 
 static const GnssInterface gGnssInterface = {
-    sizeof(GnssInterface),
     initialize,
     addClient,
     removeClient,
@@ -219,8 +218,7 @@ static void createOSFrameworkInstance() {
     }
 }
 
-static void initialize()
-{
+static void initialize() {
     LOC_LOGd("read config");
     ContextBase::readConfig();
     if (NULL == gGnssAdapter) {
@@ -229,30 +227,26 @@ static void initialize()
     }
 }
 
-static void addClient(LocationAPI* client, const LocationCallbacks& callbacks)
-{
+static void addClient(LocationAPI* client, const LocationCallbacks& callbacks) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->addClientCommand(client, callbacks);
     }
 }
 
-static void removeClient(LocationAPI* client, removeClientCompleteCallback rmClientCb)
-{
+static void removeClient(LocationAPI* client, removeClientCompleteCallback rmClientCb) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->removeClientCommand(client, rmClientCb);
     }
 }
 
-static void requestCapabilities(LocationAPI* client)
-{
+static void requestCapabilities(LocationAPI* client) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->requestCapabilitiesCommand(client);
     }
 }
 
 static uint32_t startTracking(
-        LocationAPI* client, const TrackingOptions& trackingOptions)
-{
+        LocationAPI* client, const TrackingOptions& trackingOptions) {
     if (NULL != gGnssAdapter) {
         return gGnssAdapter->startTrackingCommand(client, trackingOptions);
     } else {
@@ -261,37 +255,32 @@ static uint32_t startTracking(
 }
 
 static void updateTrackingOptions(
-        LocationAPI* client, uint32_t id, const TrackingOptions& trackingOptions)
-{
+        LocationAPI* client, uint32_t id, const TrackingOptions& trackingOptions) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->updateTrackingOptionsCommand(
                 client, id, trackingOptions);
     }
 }
 
-static void stopTracking(LocationAPI* client, uint32_t id)
-{
+static void stopTracking(LocationAPI* client, uint32_t id) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->stopTrackingCommand(client, id);
     }
 }
 
-static void gnssNiResponse(LocationAPI* client, uint32_t id, GnssNiResponse response)
-{
+static void gnssNiResponse(LocationAPI* client, uint32_t id, GnssNiResponse response) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->gnssNiResponseCommand(client, id, response);
     }
 }
 
-static void setControlCallbacks(LocationControlCallbacks& controlCallbacks)
-{
+static void setControlCallbacks(LocationControlCallbacks& controlCallbacks) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->setControlCallbacksCommand(controlCallbacks);
     }
 }
 
-static uint32_t enable(LocationTechnologyType techType)
-{
+static uint32_t enable(LocationTechnologyType techType) {
     if (NULL != gGnssAdapter) {
         return gGnssAdapter->enableCommand(techType);
     } else {
@@ -299,15 +288,13 @@ static uint32_t enable(LocationTechnologyType techType)
     }
 }
 
-static void disable(uint32_t id)
-{
+static void disable(uint32_t id) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->disableCommand(id);
     }
 }
 
-static uint32_t* gnssUpdateConfig(const GnssConfig& config)
-{
+static uint32_t* gnssUpdateConfig(const GnssConfig& config) {
     if (NULL != gGnssAdapter) {
         return gGnssAdapter->gnssUpdateConfigCommand(config);
     } else {
@@ -315,8 +302,7 @@ static uint32_t* gnssUpdateConfig(const GnssConfig& config)
     }
 }
 
-static uint32_t* gnssGetConfig(GnssConfigFlagsMask mask)
-{
+static uint32_t* gnssGetConfig(GnssConfigFlagsMask mask) {
     if (NULL != gGnssAdapter) {
         return gGnssAdapter->gnssGetConfigCommand(mask);
     } else {
@@ -324,8 +310,7 @@ static uint32_t* gnssGetConfig(GnssConfigFlagsMask mask)
     }
 }
 
-static uint32_t gnssDeleteAidingData(const GnssAidingData& data)
-{
+static uint32_t gnssDeleteAidingData(const GnssAidingData& data) {
     if (NULL != gGnssAdapter) {
         return gGnssAdapter->gnssDeleteAidingDataCommand(data);
     } else {
@@ -333,22 +318,19 @@ static uint32_t gnssDeleteAidingData(const GnssAidingData& data)
     }
 }
 
-static void gnssUpdateXtraThrottle(const bool enabled)
-{
+static void gnssUpdateXtraThrottle(const bool enabled) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->gnssUpdateXtraThrottleCommand(enabled);
     }
 }
 
-static void injectLocation(double latitude, double longitude, float accuracy)
-{
+static void injectLocation(double latitude, double longitude, float accuracy) {
    if (NULL != gGnssAdapter) {
        gGnssAdapter->injectLocationCommand(latitude, longitude, accuracy);
    }
 }
 
-static void injectTime(int64_t time, int64_t timeReference, int32_t uncertainty)
-{
+static void injectTime(int64_t time, int64_t timeReference, int32_t uncertainty) {
    if (NULL != gGnssAdapter) {
        gGnssAdapter->injectTimeCommand(time, timeReference, uncertainty);
    }
@@ -398,8 +380,7 @@ static void updateConnectionStatus(bool connected, int8_t type,
 }
 
 static void odcpiInit(const odcpiRequestCallback& callback, OdcpiPrioritytype priority,
-        OdcpiCallbackTypeMask typeMask)
-{
+        OdcpiCallbackTypeMask typeMask) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->initOdcpiCommand(callback, priority, typeMask);
     }
@@ -411,8 +392,7 @@ static void deRegisterOdcpi(OdcpiPrioritytype priority, OdcpiCallbackTypeMask ty
     }
 }
 
-static void odcpiInject(const Location& location)
-{
+static void odcpiInject(const Location& location) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->injectOdcpiCommand(location);
     }
@@ -697,8 +677,7 @@ static uint32_t configOsnmaEnablement(bool enable) {
     }
 }
 
-static uint32_t gnssInjectMmfData(const GnssMapMatchedData& data)
-{
+static uint32_t gnssInjectMmfData(const GnssMapMatchedData& data) {
     if (NULL != gGnssAdapter) {
         return gGnssAdapter->gnssInjectMmfDataCommand(data);
     } else {

@@ -28,7 +28,6 @@ AGnss::AGnss(Gnss* gnss) : mGnss(gnss), mType((AGpsExtType)AGPS_TYPE_INVALID),
     spAGnss = this;
     LocationControlCallbacks locCtrlCbs;
     memset(&locCtrlCbs, 0, sizeof(locCtrlCbs));
-    locCtrlCbs.size = sizeof(LocationControlCallbacks);
 
     locCtrlCbs.agpsStatusIpV4Cb = [this](AGnssExtStatusIpV4 status) {
             statusCb(status.type, status.status);
@@ -188,9 +187,7 @@ ScopedAStatus AGnss::setServer(::aidl::android::hardware::gnss::IAGnssCallback::
 
     GnssConfig config;
     memset(&config, 0, sizeof(GnssConfig));
-    config.size = sizeof(GnssConfig);
     config.flags = GNSS_CONFIG_FLAGS_SET_ASSISTANCE_DATA_VALID_BIT;
-    config.assistanceServer.size = sizeof(GnssConfigSetAssistanceServer);
     if (type == IAGnssCallback::AGnssType::SUPL) {
         config.assistanceServer.type = GNSS_ASSISTANCE_TYPE_SUPL;
     } else if (type == IAGnssCallback::AGnssType::C2K) {
