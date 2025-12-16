@@ -5,10 +5,8 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #ifndef GEOFENCE_API_CLINET_H
 #define GEOFENCE_API_CLINET_H
 
-#include <mutex>
 #include <LocationAPIClientBase.h>
 #include <aidl/android/hardware/gnss/IGnssGeofenceCallback.h>
-
 namespace android {
 namespace hardware {
 namespace gnss {
@@ -16,13 +14,10 @@ namespace aidl {
 namespace implementation {
 using ::aidl::android::hardware::gnss::IGnssGeofenceCallback;
 using ::std::shared_ptr;
-
-
-class GeofenceAPIClient : public LocationAPIClientBase
-{
+class GeofenceAPIClient : public LocationAPIClientBase {
 public:
     GeofenceAPIClient(const shared_ptr<IGnssGeofenceCallback>& callback);
-    void upcateCallback(const shared_ptr<IGnssGeofenceCallback>& callback);
+    void updateCallback(const shared_ptr<IGnssGeofenceCallback>& callback);
     void geofenceAdd(uint32_t geofence_id, double latitude, double longitude,
             double radius_meters, int32_t last_transition, int32_t monitor_transitions,
             uint32_t notification_responsiveness_ms, uint32_t unknown_timer_ms);
@@ -41,7 +36,6 @@ public:
 
 private:
     virtual ~GeofenceAPIClient() = default;
-    std::mutex mMutex;
     shared_ptr<IGnssGeofenceCallback> mGnssGeofencingCbIface;
 };
 

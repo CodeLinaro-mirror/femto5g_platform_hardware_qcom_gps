@@ -28,7 +28,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <aidl/android/hardware/gnss/BnGnssMeasurementInterface.h>
 #include <aidl/android/hardware/gnss/BnGnssMeasurementCallback.h>
 #include <atomic>
-#include <mutex>
 #include <thread>
 #include <LocationAPIClientBase.h>
 #include <gps_extended_c.h>
@@ -69,7 +68,6 @@ public:
 private:
     shared_ptr<IGnssMeasurementCallback> mGnssMeasurementCbIface = nullptr;
     // Synchronization lock for mGnssMeasurementCbIface
-    mutable std::mutex mMutex;
     AIBinder_DeathRecipient* mDeathRecipient;
     bool mTracking;
 

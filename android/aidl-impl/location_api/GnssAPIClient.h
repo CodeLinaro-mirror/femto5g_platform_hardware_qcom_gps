@@ -40,12 +40,12 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <aidl/android/hardware/gnss/IGnssCallback.h>
 #include <aidl/android/hardware/gnss/BnGnss.h>
 
+extern std::recursive_mutex gSharedMtx;
 namespace android {
 namespace hardware {
 namespace gnss {
 namespace aidl {
 namespace implementation {
-
 using ::std::shared_ptr;
 using ::aidl::android::hardware::gnss::IGnssCallback;
 using ::aidl::android::hardware::gnss::IGnss;
@@ -103,8 +103,6 @@ private:
     void updateCapabilities(LocationCapabilitiesMask capabilitiesMask,
                             bool forceSendCapabilities);
     void updateCallbacksByAccuracy(uint32_t preferredAccuracyMeters);
-
-    std::mutex mMutex;
     bool mTracking;
     TrackingOptions mTrackingOptions;
     LocationAPIControlClient* mControlClient;

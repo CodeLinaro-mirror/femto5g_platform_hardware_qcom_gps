@@ -34,7 +34,6 @@ private:
   shared_ptr<IGnssBatchingCallback> mGnssBatchingCbIface = nullptr;
   AIBinder_DeathRecipient *mDeathRecipient = nullptr;
   int mBatchSize;
-  std::mutex mMutex;
 };
 }  // namespace implementation
 }  // namespace aidl

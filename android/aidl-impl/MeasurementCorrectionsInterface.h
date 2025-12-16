@@ -31,7 +31,6 @@ ScopedAStatus setCallback(const shared_ptr<IMeasurementCorrectionsCallback>& in_
 void setCapabilitiesCb(GnssMeasurementCorrectionsCapabilitiesMask capabilities);
 
 private:
-mutable std::mutex mMutex;
 Gnss* mGnss = nullptr;
 shared_ptr<IMeasurementCorrectionsCallback> mMeasurementCorrectionsCbIface = nullptr;
 AIBinder_DeathRecipient *mDeathRecipient = nullptr;

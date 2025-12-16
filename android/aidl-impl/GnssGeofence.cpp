@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 #include <aidl/android/hardware/gnss/IGnssGeofenceCallback.h>
 #include "GnssGeofence.h"
+#include "GnssAPIClient.h"
 
 namespace android {
 namespace hardware {
@@ -25,14 +26,14 @@ GnssGeofence::~GnssGeofence() {}
 
 ScopedAStatus GnssGeofence::setCallback(const shared_ptr<IGnssGeofenceCallback>& callback) {
     if (mApi != nullptr) {
-        mApi->upcateCallback(callback);
+        mApi->updateCallback(callback);
     } else {
         mApi = new GeofenceAPIClient(callback);
     }
     if (mApi == nullptr) {
         LOC_LOGe("]: failed to create mApi");
     }
-    mMutex.lock();
+    gSharedMtx.lock();
     if (mGnssGeofencingCbIface != nullptr) {
         AIBinder_unlinkToDeath(mGnssGeofencingCbIface->asBinder().get(), mDeathRecipient, this);
     }
@@ -40,7 +41,7 @@ ScopedAStatus GnssGeofence::setCallback(const shared_ptr<IGnssGeofenceCallback>&
     if (mGnssGeofencingCbIface != nullptr) {
         AIBinder_linkToDeath(mGnssGeofencingCbIface->asBinder().get(), mDeathRecipient, this);
     }
-    mMutex.unlock();
+    gSharedMtx.unlock();
     return ScopedAStatus::ok();
 }
 

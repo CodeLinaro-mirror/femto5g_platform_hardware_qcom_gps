@@ -58,7 +58,6 @@ public:
 private:
     shared_ptr<IGnssPowerIndicationCallback> mGnssPowerIndicationCb = nullptr;
     // Synchronization lock for mGnssPowerIndicationCb
-    mutable std::mutex mMutex;
     AIBinder_DeathRecipient* mDeathRecipient;
     const GnssInterface* mGnssInterface = nullptr;
 

@@ -26,6 +26,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define LOG_TAG "GnssPowerIndicationAidl"
 
 #include "GnssPowerIndication.h"
+#include "GnssAPIClient.h"
 #include <android/binder_auto_utils.h>
 #include <log_util.h>
 #include <inttypes.h>
@@ -58,9 +59,9 @@ ScopedAStatus GnssPowerIndication::setCallback(
     }
 
     AIBinder_linkToDeath(callback->asBinder().get(), mDeathRecipient, this);
-    std::unique_lock<std::mutex> lock(mMutex);
+    gSharedMtx.lock();
     mGnssPowerIndicationCb = callback;
-    lock.unlock();
+    gSharedMtx.unlock();
 
     if (nullptr != mGnssInterface) {
         mGnssInterface->powerIndicationInit(piGnssPowerIndicationCb);
@@ -76,7 +77,7 @@ ScopedAStatus GnssPowerIndication::setCallback(
 
 void GnssPowerIndication::cleanup() {
     LOC_LOGd("()");
-    std::unique_lock<std::mutex> lock(mMutex);
+    std::unique_lock<std::recursive_mutex> lock(gSharedMtx);
     if (nullptr != mGnssPowerIndicationCb) {
         AIBinder_unlinkToDeath(mGnssPowerIndicationCb->asBinder().get(), mDeathRecipient, this);
         mGnssPowerIndicationCb = nullptr;
@@ -93,7 +94,7 @@ void GnssPowerIndication::gnssPowerIndicationDied(void* cookie) {
 
 ScopedAStatus GnssPowerIndication::requestGnssPowerStats() {
     LOC_LOGd("requestGnssPowerStats");
-    std::unique_lock<std::mutex> lock(mMutex);
+    std::unique_lock<std::recursive_mutex> lock(gSharedMtx);
 
     if (nullptr != mGnssInterface) {
         lock.unlock();
@@ -138,10 +139,9 @@ void GnssPowerIndication::gnssPowerIndicationCb(GnssPowerStatistics gnssPowerSta
              gnssPowerStats.elapsedRealtime.timestampNs,
              gnssPowerStats.elapsedRealtime.timeUncertaintyNs,
              gnssPowerStats.totalEnergyMilliJoule);
-
-    std::unique_lock<std::mutex> lock(mMutex);
+    gSharedMtx.lock();
     auto gnssPowerIndicationCb = mGnssPowerIndicationCb;
-    lock.unlock();
+    gSharedMtx.unlock();
     if (nullptr != gnssPowerIndicationCb) {
         gnssPowerIndicationCb->gnssPowerStatsCb(gnssPowerStats);
     }

@@ -28,6 +28,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <log_util.h>
 #include "GnssMeasurementInterface.h"
 #include "LocationUtil.h"
+#include "GnssAPIClient.h"
 #include <android/binder_auto_utils.h>
 #include <aidl/android/hardware/gnss/BnGnss.h>
 #include <inttypes.h>
@@ -73,7 +74,7 @@ ScopedAStatus GnssMeasurementInterface::setCallbackWithOptions(
              (int)options.enableFullTracking,
              (int)options.enableCorrVecOutputs,
              (int)options.intervalMs);
-    std::unique_lock<std::mutex> lock(mMutex);
+    std::unique_lock<std::recursive_mutex> lock(gSharedMtx);
 
     if (nullptr == callback) {
         LOC_LOGe("callback is nullptr");
@@ -95,7 +96,7 @@ ScopedAStatus GnssMeasurementInterface::close()  {
         AIBinder_unlinkToDeath(mGnssMeasurementCbIface->asBinder().get(), mDeathRecipient, this);
         mGnssMeasurementCbIface = nullptr;
     }
-    std::unique_lock<std::mutex> lock(mMutex);
+    std::unique_lock<std::recursive_mutex> lock(gSharedMtx);
     mTracking = false;
     lock.unlock();
     locAPIStopTracking();
@@ -112,7 +113,7 @@ ScopedAStatus GnssMeasurementInterface::close()  {
 void GnssMeasurementInterface::onGnssMeasurementsCb(
         const GnssMeasurementsNotification &gnssMeasurementsNotification) {
 
-    std::unique_lock<std::mutex> lock(mMutex);
+    std::unique_lock<std::recursive_mutex> lock(gSharedMtx);
     LOC_LOGv("(count: %u active: %d)", gnssMeasurementsNotification.count, mTracking);
     if (mTracking) {
         auto gnssMeasurementCbIface = mGnssMeasurementCbIface;
@@ -159,9 +160,9 @@ void GnssMeasurementInterface::startTracking(
     options.powerMode = powerMode;
     options.tbm = timeBetweenMeasurement;
 
-    std::unique_lock<std::mutex> lock(mMutex);
+    gSharedMtx.lock();
     mTracking = true;
-    lock.unlock();
+    gSharedMtx.unlock();
     LOC_LOGd("start tracking session");
     locAPIStartTracking(options);
 }

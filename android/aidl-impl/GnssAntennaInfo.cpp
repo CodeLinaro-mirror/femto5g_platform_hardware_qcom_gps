@@ -103,7 +103,7 @@ ScopedAStatus GnssAntennaInfo::setCallback(
         return ScopedAStatus::fromExceptionCode(IGnss::ERROR_GENERIC);
     }
 
-    mMutex.lock();
+    gSharedMtx.lock();
     if (mGnssAntennaInfoCbIface != nullptr) {
         AIBinder_unlinkToDeath(mGnssAntennaInfoCbIface->asBinder().get(), mDeathRecipient, this);
     }
@@ -112,7 +112,7 @@ ScopedAStatus GnssAntennaInfo::setCallback(
     if (mGnssAntennaInfoCbIface != nullptr) {
         AIBinder_linkToDeath(mGnssAntennaInfoCbIface->asBinder().get(), mDeathRecipient, this);
     }
-    mMutex.unlock();
+    gSharedMtx.unlock();
 
     mGnss->getApi().locAPIGetAntennaInfo(&mAntennaInfoCb);
     return ScopedAStatus::ok();
@@ -131,9 +131,9 @@ ScopedAStatus GnssAntennaInfo::close() {
 void GnssAntennaInfo::gnssAntennaInfoCb
         (std::vector<GnssAntennaInformation>& gnssAntennaInformations) {
 
-    mMutex.lock();
+    gSharedMtx.lock();
     auto gnssAntennaInfoCb = mGnssAntennaInfoCbIface;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     if (gnssAntennaInfoCb != nullptr) {
         std::vector<IGnssAntennaInfoCallback::GnssAntennaInfo> antennaInfos;
 

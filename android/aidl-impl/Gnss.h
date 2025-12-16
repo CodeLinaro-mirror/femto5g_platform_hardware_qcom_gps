@@ -126,7 +126,6 @@ private:
     shared_ptr<IGnssCallback> mGnssCallback = nullptr;
     ILocationControlAPI* mLocationControlApi = nullptr;
     AIBinder_DeathRecipient *mDeathRecipient = nullptr;
-    std::mutex mMutex;
 };
 
 extern "C" void registerGnssStatusCallback(std::function<void(bool)> gnssCb,

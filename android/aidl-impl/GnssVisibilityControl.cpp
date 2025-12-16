@@ -71,9 +71,9 @@ static void convertGnssNfwNotification(const GnssNfwNotification& in,
     out.isCachedLocation = in.isCachedLocation;
 }
 void GnssVisibilityControl::statusCb(const GnssNfwNotification& notification) {
-    std::unique_lock<std::mutex> lock(mMutex);
+    gSharedMtx.lock();
     auto gnssVisibilityControlCbIface(mGnssVisibilityControlCbIface);
-    lock.unlock();
+    gSharedMtx.unlock();
     if (gnssVisibilityControlCbIface != nullptr) {
         IGnssVisibilityControlCallback::NfwNotification nfwNotification;
 
@@ -90,9 +90,9 @@ void GnssVisibilityControl::statusCb(const GnssNfwNotification& notification) {
 }
 
 bool GnssVisibilityControl::isE911Session() {
-    std::unique_lock<std::mutex> lock(mMutex);
+    gSharedMtx.lock();
     auto gnssVisibilityControlCbIface(mGnssVisibilityControlCbIface);
-    lock.unlock();
+    gSharedMtx.unlock();
     if (gnssVisibilityControlCbIface != nullptr) {
         bool res = false;
         auto r = gnssVisibilityControlCbIface->isInEmergencySession(&res);
@@ -118,7 +118,7 @@ ScopedAStatus GnssVisibilityControl::setCallback(
         LOC_LOGe("Null GNSS interface");
         return ScopedAStatus::fromExceptionCode(STATUS_INVALID_OPERATION);
     }
-    std::unique_lock<std::mutex> lock(mMutex);
+    std::unique_lock<std::recursive_mutex> lock(gSharedMtx);
     if (mGnssVisibilityControlCbIface != nullptr) {
         AIBinder_unlinkToDeath(mGnssVisibilityControlCbIface->asBinder().get(), mDeathRecipient,
                 this);

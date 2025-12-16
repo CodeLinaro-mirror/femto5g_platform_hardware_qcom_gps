@@ -4,12 +4,11 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_GeofenceApiClient"
-
 #include <log_util.h>
 #include <loc_cfg.h>
-
 #include "LocationUtil.h"
 #include "GeofenceAPIClient.h"
+#include "GnssAPIClient.h"
 
 namespace android {
 namespace hardware {
@@ -40,10 +39,10 @@ GeofenceAPIClient::GeofenceAPIClient(const shared_ptr<IGnssGeofenceCallback>& ca
     locAPISetCallbacks(locationCallbacks);
 }
 
-void GeofenceAPIClient::upcateCallback(const shared_ptr<IGnssGeofenceCallback>& callback) {
-    mMutex.lock();
+void GeofenceAPIClient::updateCallback(const shared_ptr<IGnssGeofenceCallback>& callback) {
+    gSharedMtx.lock();
     mGnssGeofencingCbIface = callback;
-    mMutex.unlock();
+    gSharedMtx.unlock();
 }
 
 void GeofenceAPIClient::geofenceAdd(uint32_t geofence_id, double latitude, double longitude,
@@ -110,9 +109,9 @@ void GeofenceAPIClient::onGeofenceBreachCb(
         const GeofenceBreachNotification& geofenceBreachNotification)
 {
     LOC_LOGd("BreachNotification.count %d", geofenceBreachNotification.count);
-    mMutex.lock();
+    gSharedMtx.lock();
     auto cbIface = mGnssGeofencingCbIface;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     if (cbIface != nullptr) {
         for (size_t i = 0; i < geofenceBreachNotification.count; i++) {
             GnssLocation gnssLocation;
@@ -142,9 +141,9 @@ void GeofenceAPIClient::onGeofenceBreachCb(
 void GeofenceAPIClient::onGeofenceStatusCb(
         const GeofenceStatusNotification& geofenceStatusNotification) {
     LOC_LOGd("geofenceStatusNotification: %d", geofenceStatusNotification.available);
-    mMutex.lock();
+    gSharedMtx.lock();
     auto cbIface = mGnssGeofencingCbIface;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     if (cbIface != nullptr) {
         int status = IGnssGeofenceCallback::UNAVAILABLE;
         if (geofenceStatusNotification.available == GEOFENCE_STATUS_AVAILABILE_YES) {
@@ -162,9 +161,9 @@ void GeofenceAPIClient::onGeofenceStatusCb(
 void GeofenceAPIClient::onAddGeofencesCb(size_t count, LocationError* errors, uint32_t* ids)
 {
     LOC_LOGd("count: %zu", count);
-    mMutex.lock();
+    gSharedMtx.lock();
     auto cbIface = mGnssGeofencingCbIface;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     if (cbIface != nullptr) {
         for (size_t i = 0; i < count; i++) {
             int status = IGnssGeofenceCallback::ERROR_GENERIC;
@@ -183,9 +182,9 @@ void GeofenceAPIClient::onAddGeofencesCb(size_t count, LocationError* errors, ui
 void GeofenceAPIClient::onRemoveGeofencesCb(size_t count, LocationError* errors, uint32_t* ids)
 {
     LOC_LOGd("count: %zu", count);
-    mMutex.lock();
+    gSharedMtx.lock();
     auto cbIface = mGnssGeofencingCbIface;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     if (cbIface != nullptr) {
         for (size_t i = 0; i < count; i++) {
             int status = IGnssGeofenceCallback::ERROR_GENERIC;
@@ -204,9 +203,9 @@ void GeofenceAPIClient::onRemoveGeofencesCb(size_t count, LocationError* errors,
 void GeofenceAPIClient::onPauseGeofencesCb(size_t count, LocationError* errors, uint32_t* ids)
 {
     LOC_LOGd("count: %zu", count);
-    mMutex.lock();
+    gSharedMtx.lock();
     auto cbIface = mGnssGeofencingCbIface;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     if (cbIface != nullptr) {
         for (size_t i = 0; i < count; i++) {
             int status = IGnssGeofenceCallback::ERROR_GENERIC;
@@ -225,9 +224,9 @@ void GeofenceAPIClient::onPauseGeofencesCb(size_t count, LocationError* errors, 
 void GeofenceAPIClient::onResumeGeofencesCb(size_t count, LocationError* errors, uint32_t* ids)
 {
     LOC_LOGd("count: %zu", count);
-    mMutex.lock();
+    gSharedMtx.lock();
     auto cbIface = mGnssGeofencingCbIface;
-    mMutex.unlock();
+    gSharedMtx.unlock();
     if (cbIface != nullptr) {
         for (size_t i = 0; i < count; i++) {
             int status = IGnssGeofenceCallback::ERROR_GENERIC;
