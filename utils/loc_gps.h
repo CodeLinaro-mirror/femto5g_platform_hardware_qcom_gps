@@ -117,11 +117,6 @@ typedef struct {
     uint64_t        elapsedRealTimeUnc;
 } LocGpsLocation;
 
-typedef struct {
-    size_t  length;
-    u_char* data;
-} LocDerEncodedCertificate;
-
 #ifdef __cplusplus
 }
 #endif
