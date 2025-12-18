@@ -527,6 +527,7 @@ public:
     void getNtnConfigSignalMaskCommand();
     void setNtnConfigSignalMaskCommand(GnssSignalTypeMask gpsSignalTypeConfigMask);
     void injectSuplCertCommand(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
+    void setPreferredConstellationCommand(Gnss_LocSvSystemEnumType type);
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */

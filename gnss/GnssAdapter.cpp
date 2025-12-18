@@ -7691,7 +7691,41 @@ void GnssAdapter::injectSuplCertCommand(int32_t suplCertId,
     sendMsg(new MsgInjectSuplCert(*this, *mLocApi, sessionId, suplCertId, suplCertData));
 }
 
-void GnssAdapter::reportGnssConfigEvent(uint32_t sessionId, const GnssConfig& gnssConfig) {
+void GnssAdapter::setPreferredConstellationCommand(Gnss_LocSvSystemEnumType type) {
+    uint32_t sessionId = generateSessionId();
+    LOC_LOGd("Gnss Constellation Type  %u", type);
+    struct MsgSetPreferredConstellation : public LocMsg {
+        GnssAdapter&        mAdapter;
+        LocApiBase&         mApi;
+        uint32_t            mSessionId;
+        Gnss_LocSvSystemEnumType mType;
+
+        inline MsgSetPreferredConstellation(GnssAdapter& adapter, LocApiBase& api,
+                uint32_t sessionId, Gnss_LocSvSystemEnumType type) :
+            LocMsg(),
+            mAdapter(adapter),
+            mApi(api),
+            mSessionId(sessionId),
+            mType(type) {}
+
+        inline virtual void proc() const {
+            LocApiResponse* locApiResponse = new LocApiResponse(*mAdapter.getContext(),
+                    [&mAdapter = mAdapter, mSessionId = mSessionId] (LocationError err) mutable {
+                mAdapter.reportResponse(err, mSessionId);
+            });
+            if (!locApiResponse) {
+                LOC_LOGe("memory alloc failed");
+                mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
+            } else {
+                mApi.setPreferredConstellation(mType);
+            }
+        }
+    };
+    sendMsg(new MsgSetPreferredConstellation(*this, *mLocApi, sessionId, type));
+}
+
+void GnssAdapter::reportGnssConfigEvent(uint32_t sessionId, const GnssConfig& gnssConfig)
+{
     struct MsgReportGnssConfig : public LocMsg {
         GnssAdapter& mAdapter;
         uint32_t     mSessionId;
