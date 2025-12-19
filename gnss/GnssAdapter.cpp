@@ -3850,6 +3850,12 @@ GnssAdapter::enableCommand(LocationTechnologyType techType) {
                 } else {
                     mAdapter.mXtraObserver.updateLockStatus(gpsLock);
                 }
+#ifdef _ANDROID_
+                if (0 != property_set("vendor.qti.izat.gnssenabled", "1")) {
+                    LOC_LOGe("Failed to set vendor.qti.izat.gnssenabled property");
+                    err = LOCATION_ERROR_GENERAL_FAILURE;
+                }
+#endif /* _ANDROID_ */
             }
             mAdapter.reportResponse(err, mSessionId);
         }
@@ -3907,6 +3913,12 @@ GnssAdapter::disableCommand(uint32_t id) {
                 } else {
                     mAdapter.mXtraObserver.updateLockStatus(gpsLock);
                 }
+#ifdef _ANDROID_
+                if (0 != property_set("vendor.qti.izat.gnssenabled", "0")) {
+                    LOC_LOGe("Failed to set vendor.qti.izat.gnssenabled property");
+                    err = LOCATION_ERROR_GENERAL_FAILURE;
+                }
+#endif /* _ANDROID_ */
             }
             mAdapter.reportResponse(err, mSessionId);
         }
