@@ -86,12 +86,8 @@ void ContextBase::readConfig()
     mGps_conf.NMEA_TAG_BLOCK_GROUPING_ENABLED = 0;
     // external DR disabled by default
     mGps_conf.EXTERNAL_DR_ENABLED = 0;
-    mGps_conf.CP_MTLR_ES = 0;
-    mGps_conf.SUPL_ES = 0;
     // Use emergency PDN by default
     mGps_conf.USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL = 1;
-    // default configuration for NI_SUPL_DENY_ON_NFW_LOCKED
-    mGps_conf.NI_SUPL_DENY_ON_NFW_LOCKED = 1;
     // inject supl config to modem with config values from config.xml or gps.conf, default 0
     mGps_conf.AGPS_CONFIG_INJECT = 0;
     // By default no LPPe CP technology is enabled
@@ -121,11 +117,8 @@ void ContextBase::readConfig()
            {"NMEA_TAG_BLOCK_GROUPING_ENABLED",
                   &mGps_conf.NMEA_TAG_BLOCK_GROUPING_ENABLED,                           NULL, 'n'},
            {"EXTERNAL_DR_ENABLED",            &mGps_conf.EXTERNAL_DR_ENABLED,           NULL, 'n'},
-           {"CP_MTLR_ES",                     &mGps_conf.CP_MTLR_ES,                    NULL, 'n' },
-           {"SUPL_ES",                        &mGps_conf.SUPL_ES,                       NULL, 'n'},
            {"USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL",
                   &mGps_conf.USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL,                      NULL, 'n'},
-           {"NI_SUPL_DENY_ON_NFW_LOCKED",     &mGps_conf.NI_SUPL_DENY_ON_NFW_LOCKED,    NULL, 'n'},
            {"AGPS_CONFIG_INJECT",             &mGps_conf.AGPS_CONFIG_INJECT,            NULL, 'n'},
            {"LPPE_CP_TECHNOLOGY",             &mGps_conf.LPPE_CP_TECHNOLOGY,            NULL, 'n'},
            {"LPPE_UP_TECHNOLOGY",             &mGps_conf.LPPE_UP_TECHNOLOGY,            NULL, 'n'},

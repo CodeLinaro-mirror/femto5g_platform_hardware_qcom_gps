@@ -53,11 +53,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <base_util/nvparam_mgr.h>
 
 #define MAX_URL_LEN 256
-#define NMEA_SENTENCE_MAX_LENGTH 200
-#define GLONASS_SV_ID_OFFSET 64
-#define MAX_SATELLITES_IN_USE 12
-#define LOC_NI_NO_RESPONSE_TIME 20
-#define LOC_GPS_NI_RESPONSE_IGNORE 4
 #define ODCPI_EXPECTED_INJECTION_TIME_MS 10000
 #define DELETE_AIDING_DATA_EXPECTED_TIME_MS 5000
 #define ONE_SECOND_IN_MS  1000
@@ -121,30 +116,6 @@ private:
     LocationError mErr;
     uint32_t mSessionID;
 };
-
-typedef struct {
-    pthread_t               thread;        /* NI thread */
-    uint32_t                respTimeLeft;  /* examine time for NI response */
-    bool                    respRecvd;     /* NI User reponse received or not from Java layer*/
-    void*                   rawRequest;
-    uint32_t                reqID;         /* ID to check against response */
-    GnssNiResponse          resp;
-    pthread_cond_t          tCond;
-    pthread_mutex_t         tLock;
-    GnssAdapter*            adapter;
-} NiSession;
-typedef struct {
-    NiSession session;    /* SUPL NI Session */
-    NiSession sessionEs;  /* Emergency SUPL NI Session */
-    uint32_t reqIDCounter;
-} NiData;
-
-typedef struct {
-    GnssSvType svType;
-    const char* talker;
-    uint64_t mask;
-    uint32_t svIdOffset;
-} NmeaSvMeta;
 
 enum PowerConnectState {
     POWER_CONNECT_UNKNOWN = -1,
@@ -241,9 +212,6 @@ class GnssAdapter : public LocAdapterBase {
     GnssConstellationConfig mGnssSvTypeConfigs[SV_TYPE_CONFIG_MAX_SOURCE];
     bool mSupportNfwControl;
     LocIntegrationConfigInfo mLocConfigInfo;
-
-    /* ==== NI ============================================================================= */
-    NiData mNiData;
 
     /* ==== AGPS =========================================================================== */
     // This must be initialized via initAgps()
@@ -469,14 +437,6 @@ public:
     void configRobustLocation(); // Session based config
     void configMinGpsWeek(uint32_t sessionId, uint16_t minGpsWeek);
     void injectMmfData(uint32_t sessionId, const GnssMapMatchedData& mapData);
-    /* ==== NI ============================================================================= */
-    /* ======== COMMANDS ====(Called from Client Thread)==================================== */
-    void gnssNiResponseCommand(LocationAPI* client, uint32_t id, GnssNiResponse response);
-    /* ======================(Called from NI Thread)======================================== */
-    void gnssNiResponseCommand(GnssNiResponse response, void* rawRequest);
-    /* ======== UTILITIES ================================================================== */
-    bool hasNiNotifyCallback(LocationAPI* client);
-    NiData& getNiData() { return mNiData; }
 
     /* ==== CONTROL CLIENT ================================================================= */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
@@ -634,8 +594,6 @@ public:
 
     virtual void reportSvEvent(const GnssSvNotification& svNotify);
     virtual void reportDataEvent(const GnssDataNotification& dataNotify);
-    virtual bool requestNiNotifyEvent(const GnssNiNotification& notify, const void* data,
-                                      const LocInEmergency emergencyState);
     virtual void reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurements);
     virtual void reportSvPolynomialEvent(GnssSvPolynomial &svPolynomial);
     virtual void reportSvEphemerisEvent(GnssSvEphemerisReport & svEphemeris);
@@ -700,8 +658,6 @@ public:
                     LocOutputEngineType engineType = LOC_OUTPUT_ENGINE_FUSED,
                     bool isSvNmea = false);
     void reportData(GnssDataNotification& dataNotify);
-    bool requestNiNotify(const GnssNiNotification& notify, const void* data,
-                         const bool bInformNiAccept);
     void reportGnssMeasurementData(const GnssMeasurementsNotification& measurements);
     void reportGnssSvIdConfig(const GnssSvIdConfig& config);
     void requestOdcpi(const OdcpiRequestInfo& request);
@@ -714,20 +670,6 @@ public:
         }
     }
     void reportSvEphemerisData (const GnssSvEphemerisReport& svEphemeris);
-    inline bool getE911State(GnssNiType niType) {
-        if (NULL != mControlCallbacks.isInEmergencyStatusCb) {
-            return mControlCallbacks.isInEmergencyStatusCb();
-        } else {
-            /* On LE targets(mIsE911Session is NULL) with old modem
-            and when (!LOC_SUPPORTED_FEATURE_LOCATION_PRIVACY) there is no way of
-            knowing for GNSS_NI_TYPE_EMERGENCY_SUPL we are "in emergency",
-            so we treat all emergency SUPL sessions as being "in emergency" so
-            the session will be auto-accepted */
-            return (!ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_LOCATION_PRIVACY) &&
-                    GNSS_NI_TYPE_EMERGENCY_SUPL == niType);
-        }
-    }
-
     void updateSystemPowerState(PowerStateType systemPowerState);
     void reportSvPolynomial(const GnssSvPolynomial &svPolynomial);
 
@@ -752,7 +694,6 @@ public:
     /*==== CONVERSION ===================================================================*/
     static uint32_t convertSuplVersion(const GnssConfigSuplVersion suplVersion);
     static uint32_t convertEP4ES(const GnssConfigEmergencyPdnForEmergencySupl);
-    static uint32_t convertSuplEs(const GnssConfigSuplEmergencyServices suplEmergencyServices);
     static uint32_t convertLppeCp(const GnssConfigLppeControlPlaneMask lppeControlPlaneMask);
     static uint32_t convertLppeUp(const GnssConfigLppeUserPlaneMask lppeUserPlaneMask);
     static uint32_t convertAGloProt(const GnssConfigAGlonassPositionProtocolMask);

@@ -56,10 +56,7 @@ typedef struct loc_gps_cfg_s
     uint32_t           ENABLE_NMEA_PRINT;
     uint32_t           NMEA_TAG_BLOCK_GROUPING_ENABLED;
     uint32_t           EXTERNAL_DR_ENABLED;
-    uint32_t           CP_MTLR_ES;
-    uint32_t           SUPL_ES;
     uint32_t           USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL;
-    uint32_t           NI_SUPL_DENY_ON_NFW_LOCKED;
     uint32_t           AGPS_CONFIG_INJECT;
     uint32_t           LPPE_CP_TECHNOLOGY;
     uint32_t           LPPE_UP_TECHNOLOGY;

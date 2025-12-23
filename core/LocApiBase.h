@@ -59,11 +59,6 @@ class ContextBase;
 struct LocApiResponse;
 template <typename> struct LocApiResponseData;
 
-int hexcode(char *hexstring, int string_size,
-            const char *data, int data_size);
-int decodeAddress(char *addr_string, int string_size,
-                  const char *data, int data_size);
-
 #define MAX_ADAPTERS          10
 #define MAX_FEATURE_LENGTH    100
 
@@ -179,8 +174,6 @@ public:
                     LocApnTypeMask apn_type_mask, LocSubId sub_id=LOC_DEFAULT_SUB,
                     uint32_t timeout=ATL_OPEN_DEFAULT_TIMEOUT_MSEC);
     void releaseATL(int connHandle, uint32_t timeout=ATL_CLOSE_DEFAULT_TIMEOUT_MSEC);
-    void requestNiNotify(GnssNiNotification &notify, const void* data,
-                         const LocInEmergency emergencyState);
     void reportGnssMeasurements(GnssMeasurements& gnssMeasurements);
     void reportGnssSvIdConfig(const GnssSvIdConfig& config);
     void requestOdcpi(OdcpiRequestInfo& request);
@@ -224,7 +217,6 @@ public:
     virtual void atlCloseStatus(int handle, int is_succ);
     virtual LocationError setServerSync(const char* url, int len, LocServerType type);
     virtual LocationError setServerSync(unsigned int ip, int port, LocServerType type);
-    virtual void informNiResponse(GnssNiResponse userResponse, const void* passThroughData);
     virtual LocationError setSUPLVersionSync(GnssConfigSuplVersion version);
     virtual enum loc_api_adapter_err setNMEATypesSync(uint32_t typesMask);
     virtual LocationError setLPPConfigSync(GnssConfigLppProfileMask profileMask);

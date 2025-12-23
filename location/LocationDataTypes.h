@@ -564,11 +564,6 @@ enum GnssConfigEmergencyPdnForEmergencySupl {
     GNSS_CONFIG_EMERGENCY_PDN_FOR_EMERGENCY_SUPL_YES,
 };
 
-enum GnssConfigSuplEmergencyServices {
-    GNSS_CONFIG_SUPL_EMERGENCY_SERVICES_NO = 0,
-    GNSS_CONFIG_SUPL_EMERGENCY_SERVICES_YES,
-};
-
 typedef uint16_t GnssConfigSuplModeMask;
 enum GnssConfigSuplModeBits {
     GNSS_CONFIG_SUPL_MODE_MSB_BIT = (1<<0),
@@ -593,34 +588,6 @@ enum GnssConfigFlagsBits {
     GNSS_CONFIG_FLAGS_MIN_SV_ELEVATION_BIT                 = (1<<13),
     GNSS_CONFIG_FLAGS_CONSTELLATION_SECONDARY_BAND_BIT     = (1<<14),
     GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT                      = (1<<15),
-};
-
-enum GnssNiEncodingType {
-    GNSS_NI_ENCODING_TYPE_NONE = 0,
-    GNSS_NI_ENCODING_TYPE_GSM_DEFAULT,
-    GNSS_NI_ENCODING_TYPE_UTF8,
-    GNSS_NI_ENCODING_TYPE_UCS2,
-};
-
-enum GnssNiType {
-    GNSS_NI_TYPE_VOICE = 0,
-    GNSS_NI_TYPE_SUPL,
-    GNSS_NI_TYPE_CONTROL_PLANE,
-    GNSS_NI_TYPE_EMERGENCY_SUPL
-};
-
-typedef uint16_t GnssNiOptionsMask;
-enum GnssNiOptionsBits {
-    GNSS_NI_OPTIONS_NOTIFICATION_BIT     = (1<<0),
-    GNSS_NI_OPTIONS_VERIFICATION_BIT     = (1<<1),
-    GNSS_NI_OPTIONS_PRIVACY_OVERRIDE_BIT = (1<<2),
-};
-
-enum GnssNiResponse {
-    GNSS_NI_RESPONSE_ACCEPT = 1,
-    GNSS_NI_RESPONSE_DENY,
-    GNSS_NI_RESPONSE_NO_RESPONSE,
-    GNSS_NI_RESPONSE_IGNORE,
 };
 
 enum GnssSvType {
@@ -1643,18 +1610,6 @@ struct DiagLocationInfoExt {
             reportTriggerType(inReportTriggerType) {}
 };
 
-struct GnssNiNotification {
-    GnssNiType type;                       // type of NI (Voice, SUPL, Control Plane)
-    GnssNiOptionsMask options;             // bitwise OR of GnssNiOptionsBits
-    uint32_t timeout;                      // time (seconds) to wait for user input
-    GnssNiResponse timeoutResponse;        // the response that should be sent when timeout expires
-    char requestor[GNSS_NI_REQUESTOR_MAX]; // the requestor that is making the request
-    GnssNiEncodingType requestorEncoding;  // the encoding type for requestor
-    char message[GNSS_NI_MESSAGE_ID_MAX];  // the message to show user
-    GnssNiEncodingType messageEncoding;    // the encoding type for message
-    char extras[GNSS_NI_MESSAGE_ID_MAX];
-};
-
 // carrier frequency of the signal tracked
 #define GPS_L1CA_CARRIER_FREQUENCY      (1575420000.0)
 #define GPS_L1C_CARRIER_FREQUENCY       (1575420000.0)
@@ -2055,7 +2010,6 @@ struct GnssConfig {
     GnssConfigLppeUserPlaneMask lppeUserPlaneMask;
     GnssConfigAGlonassPositionProtocolMask aGlonassPositionProtocolMask;
     GnssConfigEmergencyPdnForEmergencySupl emergencyPdnForEmergencySupl;
-    GnssConfigSuplEmergencyServices suplEmergencyServices;
     GnssConfigSuplModeMask suplModeMask; //bitwise OR of GnssConfigSuplModeBits
     std::vector<GnssSvIdSource> blacklistedSvIds;
     uint32_t emergencyExtensionSeconds;
@@ -3442,13 +3396,6 @@ typedef std::function<void(
     const GeofenceStatusNotification& geofenceStatusNotification
 )> geofenceStatusCallback;
 
-/* Network Initiated request, optional can be NULL
-   This callback should be responded to by calling gnssNiResponse */
-typedef std::function<void(
-    uint32_t id, // id that should be used to respond by calling gnssNiResponse
-    const GnssNiNotification& gnssNiNotification
-)> gnssNiCallback;
-
 /* Gives GNSS SV information, optional can be NULL
     gnssSvCallback is called only during a tracking session
     broadcasted to all clients, no matter if a session has started by client */
@@ -3579,7 +3526,6 @@ struct LocationCallbacks {
     geofenceBreachCallback geofenceBreachCb;            // optional
     geofenceStatusCallback geofenceStatusCb;            // optional
     gnssLocationInfoCallback gnssLocationInfoCb;        // optional
-    gnssNiCallback gnssNiCb;                            // optional
     gnssSvCallback gnssSvCb;                            // optional
     gnssNmeaCallback gnssNmeaCb;                        // optional
     gnssDataCallback gnssDataCb;                        // optional

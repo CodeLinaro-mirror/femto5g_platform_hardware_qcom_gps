@@ -188,8 +188,6 @@ public:
     virtual bool requestATL(int connHandle, LocAGpsType agps_type,
                             LocApnTypeMask apn_type_mask, LocSubId sub_id, uint32_t timeout);
     virtual bool releaseATL(int connHandle, uint32_t timeout);
-    virtual bool requestNiNotifyEvent(const GnssNiNotification &notify, const void* data,
-                                      const LocInEmergency emergencyState);
     inline virtual bool isInSession() { return false; }
     ContextBase* getContext() const { return mContext; }
     virtual void reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurements);

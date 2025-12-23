@@ -53,7 +53,6 @@ enum REQUEST_TYPE {
     REQUEST_TRACKING = 0,
     REQUEST_SESSION,
     REQUEST_GEOFENCE,
-    REQUEST_NIRESPONSE,
     REQUEST_MAX,
 };
 
@@ -222,7 +221,6 @@ public:
     void locAPIResumeGeofences(size_t count, uint32_t* ids, GeofenceBreachTypeMask* mask);
     void locAPIRemoveAllGeofences();
 
-    void locAPIGnssNiResponse(uint32_t id, GnssNiResponse response);
     void locAPIGetDebugReport(GnssDebugReport &report);
     uint32_t locAPIGetAntennaInfo(AntennaInfoCallback* cb);
 
@@ -271,10 +269,6 @@ public:
             size_t /*count*/, LocationError* /*errors*/, uint32_t* /*ids*/) {}
     inline virtual void onResumeGeofencesCb(
             size_t /*count*/, LocationError* /*errors*/, uint32_t* /*ids*/) {}
-
-    inline virtual void onGnssNiCb(uint32_t /*id*/,
-            const GnssNiNotification &/*gnssNiNotification*/) {}
-    inline virtual void onGnssNiResponseCb(LocationError /*error*/) {}
 
     inline virtual void onLocationSystemInfoCb(const LocationSystemInfo& /*locationSystemInfo*/) {}
 
@@ -557,15 +551,6 @@ private:
             }
             mAPI.onResumeGeofencesCb(count, errors, ids);
             free(ids);
-        }
-        LocationAPIClientBase& mAPI;
-    };
-
-    class GnssNiResponseRequest : public LocationAPIRequest {
-    public:
-        GnssNiResponseRequest(LocationAPIClientBase& API) : mAPI(API) {}
-        inline void onResponse(LocationError error, uint32_t /*id*/) {
-            mAPI.onGnssNiResponseCb(error);
         }
         LocationAPIClientBase& mAPI;
     };

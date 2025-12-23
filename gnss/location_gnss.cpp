@@ -49,7 +49,6 @@ static uint32_t startTracking(LocationAPI* client, const TrackingOptions&);
 static void updateTrackingOptions(LocationAPI* client, uint32_t id, const TrackingOptions&);
 static void stopTracking(LocationAPI* client, uint32_t id);
 
-static void gnssNiResponse(LocationAPI* client, uint32_t id, GnssNiResponse response);
 static uint32_t gnssDeleteAidingData(const GnssAidingData& data);
 static void gnssUpdateXtraThrottle(const bool enabled);
 
@@ -133,7 +132,6 @@ static const GnssInterface gGnssInterface = {
     startTracking,
     updateTrackingOptions,
     stopTracking,
-    gnssNiResponse,
     setControlCallbacks,
     enable,
     disable,
@@ -265,12 +263,6 @@ static void updateTrackingOptions(
 static void stopTracking(LocationAPI* client, uint32_t id) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->stopTrackingCommand(client, id);
-    }
-}
-
-static void gnssNiResponse(LocationAPI* client, uint32_t id, GnssNiResponse response) {
-    if (NULL != gGnssAdapter) {
-        gGnssAdapter->gnssNiResponseCommand(client, id, response);
     }
 }
 

@@ -766,18 +766,6 @@ void LocationAPIClientBase::locAPIRemoveAllGeofences() {
     }
 }
 
-void LocationAPIClientBase::locAPIGnssNiResponse(uint32_t id, GnssNiResponse response) {
-    pthread_mutex_lock(&mMutex);
-    if (mLocationAPI) {
-        uint32_t session = id;
-        mLocationAPI->gnssNiResponse(id, response);
-        LOC_LOGI("%s:%d] start new session: %d", __FUNCTION__, __LINE__, session);
-        mRequestQueues[REQUEST_NIRESPONSE].reset(session);
-        mRequestQueues[REQUEST_NIRESPONSE].push(new GnssNiResponseRequest(*this));
-    }
-    pthread_mutex_unlock(&mMutex);
-}
-
 void LocationAPIClientBase::locAPIGetDebugReport(GnssDebugReport &report) {
     pthread_mutex_lock(&mMutex);
     if (mLocationAPI) {
