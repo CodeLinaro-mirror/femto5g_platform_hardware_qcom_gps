@@ -387,6 +387,7 @@ class GnssAdapter : public LocAdapterBase {
     std::vector<GnssSvIdSource> mBlacklistedSvIds;
     PowerStateType mSystemPowerState;
     PowerConnectState mPowerConnectState;
+    bool mInDebugDataSession;
 
     /* === Misc ===================================================================== */
     bool mPowerOn;
@@ -910,6 +911,9 @@ public:
     LeverArmConfigInfo readVrpDataFromNvm();
     bool storeVrpData2Nvm(const LeverArmConfigInfo& configInfo);
 #endif
+
+    // Debug Report init/deinit calls from LocAidl
+    void setDebugSessionStatusCommand(bool debugSessionStatus);
 };
 
 #endif //GNSS_ADAPTER_H

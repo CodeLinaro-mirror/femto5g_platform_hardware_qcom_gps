@@ -172,6 +172,7 @@ GnssAdapter::GnssAdapter() :
     mLocSystemInfo{},
     mSystemPowerState(POWER_STATE_UNKNOWN),
     mPowerConnectState(POWER_CONNECT_UNKNOWN),
+    mInDebugDataSession(false),
     mEngHubLoadSuccessful(false),
     mPowerOn(false),
     mNativeAgpsHandler(mSystemStatus->getOsObserver(), *this),
@@ -2821,7 +2822,8 @@ void GnssAdapter::updateClientsEventMask() {
         if (it->second.gnssSvCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_SATELLITE_REPORT;
         }
-        if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_ENGINE_DEBUG_DATA)) {
+        if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_ENGINE_DEBUG_DATA) &&
+                (!mTimeBasedTrackingSessions.empty() || mInDebugDataSession)) {
             mask |= LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT;
         }
         if (it->second.gnssMeasurementsCb != nullptr) {
@@ -8581,4 +8583,21 @@ void GnssAdapter::readPPENtripConfig() {
     if (pNtripParams->requiresNmeaLocation) {
         mDgnssState &= ~DGNSS_STATE_NO_NMEA_PENDING;
     }
+}
+
+void GnssAdapter::setDebugSessionStatusCommand(bool debugSessionStatus) {
+    struct setDebugSessionStatusMsg : public LocMsg {
+        GnssAdapter& mAdapter;
+        bool mDebugSessionStatus;
+
+        inline setDebugSessionStatusMsg(GnssAdapter& adapter, bool debugSessionStatus) :
+            LocMsg(),
+            mAdapter(adapter),
+            mDebugSessionStatus(debugSessionStatus) {}
+        inline virtual void proc() const {
+            mAdapter.mInDebugDataSession = mDebugSessionStatus;
+            mAdapter.updateClientsEventMask();
+        }
+    };
+    sendMsg(new setDebugSessionStatusMsg(*this, debugSessionStatus));
 }
