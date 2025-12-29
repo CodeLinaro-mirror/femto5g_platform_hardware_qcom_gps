@@ -303,8 +303,8 @@ BatchingAdapter::startBatching(LocationAPI* client, uint32_t sessionId,
         return;
     }
     if (batchingOptions.batchingMode != BATCHING_MODE_NO_AUTO_REPORT &&
-        0 == autoReportBatchingSessionsCount()) {
-        // if there is currenty no batching sessions interested in batch full event, then this
+        1 == autoReportBatchingSessionsCount()) {
+        // if there is no other batching session interested in batch full event, then this
         // new session will need to register for batch full event
         updateEvtMask(LOC_API_ADAPTER_BIT_BATCH_FULL,
                       LOC_REGISTRATION_MASK_ENABLED);
