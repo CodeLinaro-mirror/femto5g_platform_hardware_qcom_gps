@@ -222,11 +222,13 @@ public:
 #ifdef USE_GLIB
     /** @brief startNetworkLocation starts tracking session for
        network location request */
-    virtual void startNetworkLocation(trackingCallback* callback) {}
+    virtual void startNetworkLocation(trackingCallback*   callback,
+                                      TerrestrialTechMask techMask = TERRESTRIAL_TECH_GTP_WIFI) {}
 
     /** @brief stopNetworkLocation stops the ongoing tracking session for
        network location request */
-    virtual void stopNetworkLocation(trackingCallback* callback) {}
+    virtual void stopNetworkLocation(trackingCallback*   callback,
+                                     TerrestrialTechMask techMask = TERRESTRIAL_TECH_GTP_WIFI) {}
 #endif
 };
 
