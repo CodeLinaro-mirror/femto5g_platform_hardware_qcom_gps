@@ -199,7 +199,8 @@ static bool isGnssClient(LocationCallbacks& locationCallbacks)
             locationCallbacks.gnssNHzMeasurementsCb != nullptr ||
             locationCallbacks.locationSystemInfoCb != nullptr ||
             locationCallbacks.gnssDcReportCb != nullptr ||
-            locationCallbacks.gnssSignalTypesCb != nullptr);
+            locationCallbacks.gnssSignalTypesCb != nullptr ||
+            locationCallbacks.svResidualDataCb != nullptr);
 }
 
 static bool isBatchingClient(LocationCallbacks& locationCallbacks)

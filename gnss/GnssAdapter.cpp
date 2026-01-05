@@ -3130,7 +3130,7 @@ GnssAdapter::hasCallbacksToStartTracking(LocationAPI* client)
                 it->second.engineLocationsInfoCb || it->second.gnssMeasurementsCb ||
                 it->second.gnssNHzMeasurementsCb || it->second.gnssDataCb ||
                 it->second.gnssSvCb || it->second.gnssNmeaCb || it->second.gnssDcReportCb||
-                it->second.gnssSignalTypesCb) {
+                it->second.gnssSignalTypesCb || it->second.svResidualDataCb) {
             allowed = true;
         } else {
             LOC_LOGi("missing right callback to start tracking")
@@ -5450,6 +5450,18 @@ bool GnssAdapter::reportQwesCapabilities(
     return true;
 }
 
+bool GnssAdapter::reportSvResidualData(const GnssSvResidualReport &svResReport)
+{
+    LOC_LOGi("numSvs %d", svResReport.numSvs);
+     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
+
+        if (nullptr != it->second.svResidualDataCb) {
+            it->second.svResidualDataCb(svResReport);
+        }
+    }
+    return true;
+}
+
 void GnssAdapter::initOdcpiCommand(const odcpiRequestCallback& callback,
                                    OdcpiPrioritytype priority)
 {
@@ -7560,6 +7572,10 @@ GnssAdapter::initEngHubProxy() {
             [this] (const std::unordered_map<LocationQwesFeatureType, bool> &featureMap) {
             reportQwesCapabilities(featureMap);
         };
+        GnssAdapterSvResidualReportCb svResidualReportCb =
+            [this] (const GnssSvResidualReport &svResReport) {
+            reportSvResidualData(svResReport);
+        };
 
         getEngHubProxyFn* getter = (getEngHubProxyFn*) dlsym(handle, "getEngHubProxy");
         if(getter != nullptr) {
@@ -7567,7 +7583,7 @@ GnssAdapter::initEngHubProxy() {
             locUtilWaitForDir(SOCKET_DIR_EHUB);
             EngineHubProxyBase* hubProxy = (*getter) (mMsgTask, mSystemStatus->getOsObserver(),
                       mEngServiceInfo, reportPositionEventCb, reqAidingDataCb,
-                      updateNHzRequirementCb, updateQwesFeatureStatusCb);
+                      updateNHzRequirementCb, updateQwesFeatureStatusCb, svResidualReportCb);
             if (hubProxy != nullptr) {
                 mEngHubProxy = hubProxy;
                 engHubLoadSuccessful = true;

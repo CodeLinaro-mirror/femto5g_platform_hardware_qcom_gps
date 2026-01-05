@@ -1713,6 +1713,321 @@ typedef struct {
     GnssSv gnssSvs[GNSS_SV_MAX]; // information on a number of SVs
 } GnssSvNotification;
 
+
+/*========================  SV Residuals – Masks & Structures  =======================*/
+
+/** Validity mask for GnssSvResidualInfo fields */
+typedef uint32_t GnssSvResidualInfoValidityMask;
+typedef enum {
+    /** prRes is valid */
+    GNSS_SV_RES_PR_RES_VALID_BIT       = (1 << 0),
+    /** prUnc is valid */
+    GNSS_SV_RES_PR_UNC_VALID_BIT       = (1 << 1),
+    /** cpRes is valid */
+    GNSS_SV_RES_CP_RES_VALID_BIT       = (1 << 2),
+    /** cpUnc is valid */
+    GNSS_SV_RES_CP_UNC_VALID_BIT       = (1 << 3),
+    /** dopplerRes is valid */
+    GNSS_SV_RES_DOPPLER_RES_VALID_BIT  = (1 << 4),
+    /** dopplerUnc is valid */
+    GNSS_SV_RES_DOPPLER_UNC_VALID_BIT  = (1 << 5),
+    /** iode is valid */
+    GNSS_SV_RES_IODE_VALID_BIT         = (1 << 6),
+    /** gloTb is valid */
+    GNSS_SV_RES_GLO_TB_VALID_BIT       = (1 << 7),
+    /** freqNum is valid */
+    GNSS_SV_RES_FREQ_NUM_VALID_BIT     = (1 << 8),
+    /** cNo is valid */
+    GNSS_SV_RES_CNO_VALID_BIT          = (1 << 9),
+    /** azim is valid */
+    GNSS_SV_RES_AZIM_VALID_BIT         = (1 << 10),
+    /** elev is valid */
+    GNSS_SV_RES_ELEV_VALID_BIT         = (1 << 11)
+} GnssSvResidualInfoValidityBits;
+
+/**
+ * Satellite residual information for a single SV.
+ */
+typedef struct {
+    /** Unique SV Identifier.
+     *  SV Range:
+     *   - GPS: 1–32
+     *   - GLONASS: 65–96
+     *   - SBAS: 120–158, 183–191
+     *   - QZSS: 193–197
+     *   - BEIDOU: 201–263
+     *   - GALILEO: 301–336
+     *   - NAVIC: 401–414
+     */
+    uint16_t svId;
+
+    /** GNSS signal type mask (see GnssSignalTypeMask) */
+    GnssSignalTypeMask signalTypeMask;
+
+    /** Bitwise OR of GnssSvResidualInfoValidityBits indicating which fields are valid */
+    GnssSvResidualInfoValidityMask validityMask;
+
+    /** Pseudorange residual (meters) */
+    float prRes;
+    /** Pseudorange uncertainty (meters) */
+    float prUnc;
+
+    /** Carrier phase residual (meters) */
+    float cpRes;
+    /** Carrier phase uncertainty (meters) */
+    float cpUnc;
+
+    /** Doppler residual (meters/second) */
+    float dopplerRes;
+    /** Doppler uncertainty (meters/second) */
+    float dopplerUnc;
+
+    /** Issue of Data Ephemeris (for GPS/BDS/GAL) */
+    uint8_t iode;
+    /** Tb for GLONASS SV */
+    uint8_t gloTb;
+    /** Frequency number for GLONASS SV (-7 ~ +6), invalid for other constellations */
+    int8_t freqNum;
+
+    /** SV carrier to noise ratio at antenna (dB-Hz) */
+    float cNo;
+    /** SV azimuth (radians) */
+    double azim;
+    /** SV elevation (radians) */
+    double elev;
+} GnssSvResidualInfo;
+
+
+/** Validity mask for GnssSvAvailableUsedInfo fields */
+typedef uint32_t GnssSvAvailableUsedInfoValidityMask;
+typedef enum {
+    /** gpsNumSvMeas is valid */
+    GNSS_SV_AVAIL_GPS_NUM_SV_MEAS_VALID_BIT      = (1 << 0),
+    /** gpsNumSvPosFix is valid */
+    GNSS_SV_AVAIL_GPS_NUM_SV_POS_FIX_VALID_BIT   = (1 << 1),
+    /** gpsNumSvVelFix is valid */
+    GNSS_SV_AVAIL_GPS_NUM_SV_VEL_FIX_VALID_BIT   = (1 << 2),
+    /** gpsSvMaskUsed is valid */
+    GNSS_SV_AVAIL_GPS_SV_MASK_USED_VALID_BIT     = (1 << 3),
+
+    /** gloNumSvMeas is valid */
+    GNSS_SV_AVAIL_GLO_NUM_SV_MEAS_VALID_BIT      = (1 << 4),
+    /** gloNumSvPosFix is valid */
+    GNSS_SV_AVAIL_GLO_NUM_SV_POS_FIX_VALID_BIT   = (1 << 5),
+    /** gloNumSvVelFix is valid */
+    GNSS_SV_AVAIL_GLO_NUM_SV_VEL_FIX_VALID_BIT   = (1 << 6),
+    /** gloSvMaskUsed is valid */
+    GNSS_SV_AVAIL_GLO_SV_MASK_USED_VALID_BIT     = (1 << 7),
+
+    /** bdsNumSvMeas is valid */
+    GNSS_SV_AVAIL_BDS_NUM_SV_MEAS_VALID_BIT      = (1 << 8),
+    /** bdsNumSvPosFix is valid */
+    GNSS_SV_AVAIL_BDS_NUM_SV_POS_FIX_VALID_BIT   = (1 << 9),
+    /** bdsNumSvVelFix is valid */
+    GNSS_SV_AVAIL_BDS_NUM_SV_VEL_FIX_VALID_BIT   = (1 << 10),
+    /** bdsSvMaskUsed is valid */
+    GNSS_SV_AVAIL_BDS_SV_MASK_USED_VALID_BIT     = (1 << 11),
+
+    /** galNumSvMeas is valid */
+    GNSS_SV_AVAIL_GAL_NUM_SV_MEAS_VALID_BIT      = (1 << 12),
+    /** galNumSvPosFix is valid */
+    GNSS_SV_AVAIL_GAL_NUM_SV_POS_FIX_VALID_BIT   = (1 << 13),
+    /** galNumSvVelFix is valid */
+    GNSS_SV_AVAIL_GAL_NUM_SV_VEL_FIX_VALID_BIT   = (1 << 14),
+    /** galSvMaskUsed is valid */
+    GNSS_SV_AVAIL_GAL_SV_MASK_USED_VALID_BIT     = (1 << 15),
+
+    /** qzssNumSvMeas is valid */
+    GNSS_SV_AVAIL_QZSS_NUM_SV_MEAS_VALID_BIT     = (1 << 16),
+    /** qzssNumSvPosFix is valid */
+    GNSS_SV_AVAIL_QZSS_NUM_SV_POS_FIX_VALID_BIT  = (1 << 17),
+    /** qzssNumSvVelFix is valid */
+    GNSS_SV_AVAIL_QZSS_NUM_SV_VEL_FIX_VALID_BIT  = (1 << 18),
+    /** qzssSvMaskUsed is valid */
+    GNSS_SV_AVAIL_QZSS_SV_MASK_USED_VALID_BIT    = (1 << 19),
+
+    /** navicNumSvMeas is valid */
+    GNSS_SV_AVAIL_NAVIC_NUM_SV_MEAS_VALID_BIT    = (1 << 20),
+    /** navicNumSvPosFix is valid */
+    GNSS_SV_AVAIL_NAVIC_NUM_SV_POS_FIX_VALID_BIT = (1 << 21),
+    /** navicNumSvVelFix is valid */
+    GNSS_SV_AVAIL_NAVIC_NUM_SV_VEL_FIX_VALID_BIT = (1 << 22),
+    /** navicSvMaskUsed is valid */
+    GNSS_SV_AVAIL_NAVIC_SV_MASK_USED_VALID_BIT   = (1 << 23)
+} GnssSvAvailableUsedInfoValidityBits;
+
+/**
+ * SV available/used info for all constellations.
+ */
+typedef struct {
+    /** Bitwise OR of GnssSvAvailableUsedInfoValidityBits indicating which fields are valid */
+    GnssSvAvailableUsedInfoValidityMask validityMask;
+
+    /** Number of GPS SVs with valid measurement (detected by searcher) */
+    uint8_t  gpsNumSvMeas;
+    /** Number of GPS SVs used in Position Fix */
+    uint8_t  gpsNumSvPosFix;
+    /** Number of GPS SVs used in Velocity Fix */
+    uint8_t  gpsNumSvVelFix;
+    /** Bitmask for GPS SVs used for calculating position fix */
+    uint32_t gpsSvMaskUsed;
+
+    /** Number of GLONASS SVs with valid measurement */
+    uint8_t  gloNumSvMeas;
+    /** Number of GLONASS SVs used in Position Fix */
+    uint8_t  gloNumSvPosFix;
+    /** Number of GLONASS SVs used in Velocity Fix */
+    uint8_t  gloNumSvVelFix;
+    /** Bitmask for GLONASS SVs used for calculating position fix */
+    uint32_t gloSvMaskUsed;
+
+    /** Number of BEIDOU SVs with valid measurement */
+    uint8_t  bdsNumSvMeas;
+    /** Number of BEIDOU SVs used in Position Fix */
+    uint8_t  bdsNumSvPosFix;
+    /** Number of BEIDOU SVs used in Velocity Fix */
+    uint8_t  bdsNumSvVelFix;
+    /** Bitmask for BEIDOU SVs used for calculating position fix */
+    uint64_t bdsSvMaskUsed;
+
+    /** Number of GALILEO SVs with valid measurement */
+    uint8_t  galNumSvMeas;
+    /** Number of GALILEO SVs used in Position Fix */
+    uint8_t  galNumSvPosFix;
+    /** Number of GALILEO SVs used in Velocity Fix */
+    uint8_t  galNumSvVelFix;
+    /** Bitmask for GALILEO SVs used for calculating position fix */
+    uint64_t galSvMaskUsed;
+
+    /** Number of QZSS SVs with valid measurement */
+    uint8_t  qzssNumSvMeas;
+    /** Number of QZSS SVs used in Position Fix */
+    uint8_t  qzssNumSvPosFix;
+    /** Number of QZSS SVs used in Velocity Fix */
+    uint8_t  qzssNumSvVelFix;
+    /** Bitmask for QZSS SVs used for calculating position fix */
+    uint16_t qzssSvMaskUsed;
+
+    /** Number of NAVIC SVs with valid measurement */
+    uint8_t  navicNumSvMeas;
+    /** Number of NAVIC SVs used in Position Fix */
+    uint8_t  navicNumSvPosFix;
+    /** Number of NAVIC SVs used in Velocity Fix */
+    uint8_t  navicNumSvVelFix;
+    /** Bitmask for NAVIC SVs used for calculating position fix */
+    uint16_t navicSvMaskUsed;
+} GnssSvAvailableUsedInfo;
+
+
+/** Validity mask for GnssResidualPVTData fields */
+typedef uint32_t GnssResidualPVTDataValidityMask;
+typedef enum {
+    /** posLla is valid (Lat, Long, Alt) */
+    GNSS_RESIDUAL_POS_LLA_VALID_BIT             = (1 << 0),
+    /** velEnu is valid (East, North, Up velocity) */
+    GNSS_RESIDUAL_POS_VEL_ENU_VALID_BIT         = (1 << 1),
+    /** headingRad is valid */
+    GNSS_RESIDUAL_POS_HEADING_VALID_BIT         = (1 << 2),
+    /** headingUncRad is valid */
+    GNSS_RESIDUAL_POS_HEADING_UNC_VALID_BIT     = (1 << 3),
+    /** puncLatLonMeters is valid */
+    GNSS_RESIDUAL_POS_PUNC_LAT_LON_VALID_BIT    = (1 << 4),
+    /** puncVertMeters is valid */
+    GNSS_RESIDUAL_POS_PUNC_VERT_VALID_BIT       = (1 << 5),
+    /** vuncEastNorthMps is valid */
+    GNSS_RESIDUAL_POS_VUNC_EAST_NORTH_VALID_BIT = (1 << 6),
+    /** vuncVertMps is valid */
+    GNSS_RESIDUAL_POS_VUNC_VERT_VALID_BIT       = (1 << 7),
+    /** clockBias is valid */
+    GNSS_RESIDUAL_POS_CLOCK_BIAS_VALID_BIT      = (1 << 8),
+    /** clockBiasUncMs is valid */
+    GNSS_RESIDUAL_POS_CLOCK_BIAS_UNC_VALID_BIT  = (1 << 9),
+    /** clockDriftRate is valid */
+    GNSS_RESIDUAL_POS_CLOCK_DRIFT_VALID_BIT     = (1 << 10),
+    /** clockDriftRateUncMps is valid */
+    GNSS_RESIDUAL_POS_CLOCK_DRIFT_UNC_VALID_BIT = (1 << 11),
+    /** pdop is valid */
+    GNSS_RESIDUAL_POS_PDOP_VALID_BIT            = (1 << 12)
+} GnssResidualPVTDataValidityBits;
+
+/**
+ * Reference position for SV residuals.
+ */
+typedef struct {
+    /** Bitwise OR of GnssResidualPVTDataValidityBits indicating which fields are valid */
+    GnssResidualPVTDataValidityMask validityMask;
+
+    /** Lat (radians), Long (radians), Alt (meters) */
+    double posLla[3];
+
+    /** East, North, Up velocity (m/s) */
+    float velEnu[3];
+
+    /** Heading angle, [0, 2*pi] (rad). Referenced to North (0 rad) */
+    float headingRad;
+
+    /** Heading uncertainty (rad) */
+    float headingUncRad;
+
+    /** Position (Lat, Long) uncertainty (m): [0] Lat, [1] Lon */
+    float puncLatLonMeters[2];
+
+    /** Vertical position uncertainty (m) */
+    float puncVertMeters;
+
+    /** East, North velocity uncertainty (m/s): [0] East, [1] North */
+    float vuncEastNorthMps[2];
+
+    /** Vertical velocity uncertainty (m/s) */
+    float vuncVertMps;
+
+    /** Receiver's clock bias (meters) */
+    float clockBias;
+
+    /** Receiver's clock uncertainty (meters) */
+    float clockBiasUncMs;
+
+    /** Receiver's clock drift rate (m/s) */
+    float clockDriftRate;
+
+    /** Receiver's clock frequency bias uncertainty (m/s) */
+    float clockDriftRateUncMps;
+
+    /** Position Dilution of Precision (unitless) */
+    float pdop;
+} GnssResidualPVTData;
+
+
+/**
+ * GNSS SV Residual Report for all satellites in an epoch.
+ */
+typedef struct {
+    /** set to sizeof(GnssSvResidualReport) */
+    uint32_t size;
+
+    /* Engine Producing Residual report */
+    LocOutputEngineType locOutputEngType;
+
+    /** GNSS system time information for the report. */
+    GnssSystemTime gnssSystemTime;
+
+    /** Reference position for SV residuals */
+    GnssResidualPVTData residualPvtData;
+
+    /** Number of satellites populated in svResidualInfo
+     *  Range: 0 to GNSS_MEASUREMENTS_MAX
+     *  Consumers MUST validate numSvs <= GNSS_MEASUREMENTS_MAX before accessing svResidualInfo.
+     */
+    uint16_t numSvs;
+
+    /** Array of satellite residual info. Valid entries: [0 .. numSvs-1] */
+    GnssSvResidualInfo svResidualInfo[GNSS_MEASUREMENTS_MAX];
+
+    /** SV count information for all constellations (check validityMask before use) */
+    GnssSvAvailableUsedInfo svAvailableUsedInfo;
+} GnssSvResidualReport;
+
+
 typedef struct {
     uint32_t size;         // set to sizeof(GnssNmeaNotification)
     uint64_t timestamp;  // timestamp
@@ -2708,6 +3023,12 @@ typedef std::function<void(
 typedef std::function<void(
 )> locationApiDestroyCompleteCallback;
 
+/* gnssResidualDataCallback is for receiving Residual information from engines
+ */
+typedef std::function<void(
+    const GnssSvResidualReport &svResReport
+)> gnssResidualDataCallback;
+
 typedef uint16_t LocationAdapterTypeMask;
 typedef enum {
     LOCATION_ADAPTER_GNSS_TYPE_BIT      = (1<<0), // adapter type is GNSS
@@ -2779,7 +3100,8 @@ typedef struct {
     locationSystemInfoCallback locationSystemInfoCb; // optional
     engineLocationsInfoCallback engineLocationsInfoCb; // optional
     gnssDcReportCallback gnssDcReportCb;               // optional
-    gnssSignalTypesCallback gnssSignalTypesCb;          // optional
+    gnssSignalTypesCallback gnssSignalTypesCb;         // optional
+    gnssResidualDataCallback svResidualDataCb;         // optional
 } LocationCallbacks;
 
 typedef struct {
