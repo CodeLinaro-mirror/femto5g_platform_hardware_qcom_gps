@@ -3419,7 +3419,7 @@ GnssAdapter::hasCallbacksToStartTracking(LocationAPI* client)
                 it->second.gnssNHzMeasurementsCb || it->second.gnssDataCb ||
                 it->second.gnssSvCb || it->second.gnssNmeaCb || it->second.gnssDcReportCb ||
                 it->second.engineNmeaCb || it->second.gnssSignalTypesCb ||
-                it->second.svEphemerisCb) {
+                it->second.svEphemerisCb || it->second.svResidualDataCb) {
             allowed = true;
         } else {
             LOC_LOGi("missing right callback to start tracking")
@@ -6173,6 +6173,18 @@ bool GnssAdapter::reportQwesCapabilities(
     return true;
 }
 
+bool GnssAdapter::reportSvResidualData(const GnssSvResidualReport &svResReport)
+{
+    LOC_LOGi("numSvs %d", svResReport.numSvs);
+     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
+
+        if (nullptr != it->second.svResidualDataCb) {
+            it->second.svResidualDataCb(svResReport);
+        }
+    }
+    return true;
+}
+
 void GnssAdapter::initOdcpiCommand(const odcpiRequestCallback& callback,
                                    OdcpiPrioritytype priority,
                                    OdcpiCallbackTypeMask typeMask)
@@ -8588,6 +8600,10 @@ GnssAdapter::initEngHubProxy() {
             handleQesdkQwesStatusFromEHub(featureMap);
             reportQwesCapabilities(featureMap);
         };
+        GnssAdapterSvResidualReportCb svResidualReportCb =
+            [this] (const GnssSvResidualReport &svResReport) {
+            reportSvResidualData(svResReport);
+        };
 
         getEngHubProxyFn* getter = (getEngHubProxyFn*) dlsym(handle, "getEngHubProxy");
         if (getter != nullptr) {
@@ -8596,7 +8612,8 @@ GnssAdapter::initEngHubProxy() {
             EngineHubProxyBase* hubProxy = (*getter) (mMsgTask, mSystemStatus->getOsObserver(),
                       mEngServiceInfo, reportPositionEventCb, reqAidingDataCb,
                       updateNHzRequirementCb, updateQwesFeatureStatusCb,
-                      [ this ] { return isEngineServiceEnable(); });
+                      [ this ] { return isEngineServiceEnable(); },
+                      svResidualReportCb);
             if (hubProxy != nullptr) {
                 mEngHubProxy = hubProxy;
                 mEngHubLoadSuccessful = true;
