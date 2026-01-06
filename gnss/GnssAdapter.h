@@ -433,6 +433,7 @@ public:
             const TrackingOptions& updatedOptions, const TrackingOptions& oldOptions);
     bool checkAndSetSPEToRunforNHz(TrackingOptions & out);
 
+#ifdef USE_GLIB
     void setConstrainedTunc(bool enable, float tuncConstraint,
                             uint32_t energyBudget, uint32_t sessionId);
     void setPositionAssistedClockEstimator(bool enable, uint32_t sessionId);
@@ -443,12 +444,17 @@ public:
     void gnssUpdateSecondaryBandConfig(
         uint32_t sessionId, const GnssSvTypeConfig& secondaryBandConfig);
     void gnssGetSecondaryBandConfig(uint32_t sessionId);
+#endif
     void resetSvConfig(uint32_t sessionId);
+#ifdef USE_GLIB
     void configLeverArm(uint32_t sessionId, const LeverArmConfigInfo& configInfo);
+#endif
     void initRobustLocationConfig(); // Initial RL Config
     void configRobustLocation(bool enable, bool enableForE911); // Command based config
     void configRobustLocation(); // Session based config
+#ifdef USE_GLIB
     void configMinGpsWeek(uint32_t sessionId, uint16_t minGpsWeek);
+#endif
     void injectMmfData(uint32_t sessionId, const GnssMapMatchedData& mapData);
 
     /* ==== CONTROL CLIENT ================================================================= */
@@ -464,7 +470,9 @@ public:
     uint32_t* gnssGetConfigCommand(GnssConfigFlagsMask mask);
     uint32_t gnssDeleteAidingDataCommand(const GnssAidingData& data);
     void deleteAidingData(const GnssAidingData &data, uint32_t sessionId);
+#ifdef _ANDROID_
     void gnssUpdateXtraThrottleCommand(const bool enabled);
+#endif
     std::vector<LocationError> gnssUpdateConfig(const std::string& oldMoServerUrl,
             const std::string& moServerUrl,
             const std::string& serverUrl,
@@ -484,20 +492,27 @@ public:
     GnssSvTypeConfig gnssCombineSvTypeConfigs();
     void setConfig();
     void gnssSecondaryBandConfigUpdate(LocApiResponse* locApiResponse= nullptr);
+#ifdef _ANDROID_
     uint32_t getNfwControlBits(const std::vector<std::string>& enabledNfws);
+#endif
     void readNfwLockConfig();
 
     /* ========= AGPS ====================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
     void initDefaultAgpsCommand();
     void initAgpsCommand(const AgpsCbInfo& cbInfo);
+#ifdef _ANDROID_
     void initNfwCommand(const NfwCbInfo& cbInfo);
+#endif
     void dataConnOpenCommand(AGpsExtType agpsType,
             const char* apnName, int apnLen, AGpsBearerType bearerType);
     void dataConnClosedCommand(AGpsExtType agpsType);
     void dataConnFailedCommand(AGpsExtType agpsType);
     void getGnssEnergyConsumedCommand(GnssEnergyConsumedCallback energyConsumedCb);
+#ifdef _ANDROID_
     void nfwControlCommand(const std::vector<std::string>& enabledNfws);
+#endif
+#ifdef USE_GLIB
     uint32_t setConstrainedTuncCommand (bool enable, float tuncConstraint,
                                         uint32_t energyBudget);
     uint32_t setPositionAssistedClockEstimatorCommand (bool enable);
@@ -507,11 +522,17 @@ public:
                                        const GnssSvTypeConfig& secondaryBandConfig);
     uint32_t gnssGetSecondaryBandConfigCommand();
     uint32_t configLeverArmCommand(const LeverArmConfigInfo& configInfo);
+#endif
     uint32_t configRobustLocationCommand(bool enable, bool enableForE911);
+#ifdef _ANDROID_
     bool openMeasCorrCommand(const measCorrSetCapabilitiesCallback setCapabilitiesCb);
     bool measCorrSetCorrectionsCommand(const GnssMeasurementCorrections& gnssMeasCorr);
+#endif
     inline void closeMeasCorrCommand() { mIsMeasCorrInterfaceOpen = false; }
+#ifdef _ANDROID_
     uint32_t getAntennaeInfoCommand(AntennaInfoCallback* antennaInfoCallback);
+#endif
+#ifdef USE_GLIB
     uint32_t configMinGpsWeekCommand(uint16_t minGpsWeek);
     uint32_t configDeadReckoningEngineParamsCommand(const DeadReckoningEngineConfig& dreConfig);
     uint32_t configEngineRunStateCommand(PositioningEngineMask engType,
@@ -519,14 +540,19 @@ public:
     uint32_t configOutputNmeaTypesCommand(GnssNmeaTypesMask enabledNmeaTypes,
                                           GnssGeodeticDatumType nmeaDatumType,
                                           LocReqEngineTypeMask nmeaReqEngTypeMask);
+#endif
     inline void setNmeaReqEngTypeMask (LocReqEngineTypeMask nmeaReqEngTypeMask) {
         mNmeaReqEngTypeMask = nmeaReqEngTypeMask;
     }
+#ifdef _ANDROID_
     void powerIndicationInitCommand(const powerIndicationCb powerIndicationCallback);
     void powerIndicationRequestCommand();
+#endif
+#ifdef USE_GLIB
     uint32_t configEngineIntegrityRiskCommand(PositioningEngineMask engType,
                                               uint32_t integrityRisk);
     uint32_t configXtraParamsCommand(bool enable, const XtraConfigParams& xtraParams);
+#endif
     uint32_t getXtraStatusCommand();
     uint32_t registerXtraStatusUpdateCommand(bool registerUpdate);
     void configPrecisePositioningCommand(uint32_t featureId, bool enable,
@@ -534,13 +560,17 @@ public:
     void setPreciseSessionConfig(PreciseType preciseType);
     uint32_t configMerkleTreeCommand(const char * merkleTreeConfigBuffer, int bufferLength);
     uint32_t configOsnmaEnablementCommand(bool enable);
+#ifdef USE_GLIB
     uint32_t gnssInjectMmfDataCommand(const GnssMapMatchedData& data);
+#endif
     uint32_t gnssInjectXtraUserConsentCommand(const bool xtraUserConsent);
+#ifdef _ANDROID_
     void set3rdPartyNtnCapabilityCommand(bool isCapable);
     void getNtnConfigSignalMaskCommand();
     void setNtnConfigSignalMaskCommand(GnssSignalTypeMask gpsSignalTypeConfigMask);
     void injectSuplCertCommand(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
     void setPreferredConstellationCommand(Gnss_LocSvSystemEnumType type);
+#endif
 
     /* ========= ODCPI ===================================================================== */
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
@@ -549,8 +579,10 @@ public:
                           OdcpiCallbackTypeMask typeMask);
     void deRegisterOdcpiCommand(OdcpiPrioritytype priority, OdcpiCallbackTypeMask typeMask);
     void injectOdcpiCommand(const Location& location);
+#ifdef _ANDROID_
     void setAddressRequestCbCommand(const std::function<void(const Location&)>& addressRequestCb);
     void injectLocationAndAddrCommand(const Location& location, const GnssCivicAddress& addr);
+#endif
     /* ======== RESPONSES ================================================================== */
     void reportResponse(LocationError err, uint32_t sessionId);
     void reportResponse(size_t count, LocationError* errs, uint32_t* ids);
@@ -694,14 +726,18 @@ public:
     void updateSystemPowerState(PowerStateType systemPowerState);
     void reportSvPolynomial(const GnssSvPolynomial &svPolynomial);
 
+#ifdef _ANDROID_
     std::vector<double> parseDoublesString(char* dString);
     void reportGnssAntennaInformation(AntennaInfoCallback* cb);
+#endif
     inline void setPowerIndicationCb(const powerIndicationCb powerIndicationCallback) {
         mPowerIndicationCb = powerIndicationCallback;
     }
     void initGnssPowerStatistics();
     /*======== GNSSDEBUG ================================================================*/
+#ifdef _ANDROID_
     bool getDebugReport(GnssDebugReport& report);
+#endif
     /* get AGC information from system status and fill it */
     void getAgcInformation(GnssMeasurementsNotification& measurements, int msInWeek);
     /* get Data information from system status and fill it */
@@ -719,9 +755,11 @@ public:
     static uint32_t convertLppeUp(const GnssConfigLppeUserPlaneMask lppeUserPlaneMask);
     static uint32_t convertAGloProt(const GnssConfigAGlonassPositionProtocolMask);
     static uint32_t convertSuplMode(const GnssConfigSuplModeMask suplModeMask);
+#ifdef _ANDROID_
     static void convertSatelliteInfo(std::vector<GnssDebugSatelliteInfo>& out,
                                      const GnssSvType& in_constellation,
                                      const SystemStatusReports& in);
+#endif
     static bool convertToGnssSvIdConfig(
             const std::vector<GnssSvIdSource>& blacklistedSvIds, GnssSvIdConfig& config);
     static void convertFromGnssSvIdConfig(
@@ -744,7 +782,9 @@ public:
 
     /* ======== COMMANDS ====(Called from Client Thread)==================================== */
     void updateSystemPowerStateCommand(PowerStateType systemPowerState);
+#ifdef _ANDROID_
     void updatePowerConnectStateCommand(bool connected);
+#endif
     void setTribandState();
     /*==== DGnss Usable Report Flag ====================================================*/
     inline void setDGnssUsableFLag(bool dGnssNeedReport) { mDGnssNeedReport = dGnssNeedReport;}
@@ -753,20 +793,24 @@ public:
     }
 
     /*==== DGnss Ntrip Source ==========================================================*/
+#ifdef _ANDROID_
     void updateNTRIPGGAConsentCommand(bool consentAccepted) { mSendNmeaConsent = consentAccepted; }
     void enablePPENtripStreamCommand(const GnssNtripConnectionParams& params, bool enableRTKEngine);
     void disablePPENtripStreamCommand();
     void handleEnablePPENtrip(const GnssNtripConnectionParams& params, bool enableRTKEngine);
     void handleDisablePPENtrip();
+#endif
     inline bool isDgnssNmeaRequired() { return mSendNmeaConsent &&
             mStartDgnssNtripParams.ntripParams.requiresNmeaLocation;}
     void readPPENtripConfig();
 
     void handleFeatureStatusUpdateFromEHub(
             const std::unordered_map<LocationQwesFeatureType, bool> &featureMap);
+#ifdef USE_GLIB
     void restoreConfigFromNvm();
     LeverArmConfigInfo readVrpDataFromNvm();
     bool storeVrpData2Nvm(const LeverArmConfigInfo& configInfo);
+#endif
 
 };
 

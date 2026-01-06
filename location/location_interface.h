@@ -55,6 +55,7 @@ typedef std::function<void(
 typedef void (*removeClientCompleteCallback)(LocationAPI* client);
 
 struct GnssInterface {
+    // Both LE and Android
     void (*initialize)(void);
     void (*addClient)(LocationAPI* client, const LocationCallbacks& callbacks);
     void (*removeClient)(LocationAPI* client, removeClientCompleteCallback rmClientCb);
@@ -68,40 +69,32 @@ struct GnssInterface {
     uint32_t* (*gnssUpdateConfig)(const GnssConfig& config);
     uint32_t* (*gnssGetConfig)(GnssConfigFlagsMask config);
     uint32_t (*gnssDeleteAidingData)(const GnssAidingData& data);
-    void (*gnssUpdateXtraThrottle)(const bool enabled);
     void (*injectLocation)(double latitude, double longitude, float accuracy);
-    void (*injectTime)(int64_t time, int64_t timeReference, int32_t uncertainty);
     void (*agpsInit)(const AgpsCbInfo& cbInfo);
-    void (*agpsDataConnOpen)(AGpsExtType agpsType, const char* apnName, int apnLen, int ipType);
-    void (*agpsDataConnClosed)(AGpsExtType agpsType);
-    void (*agpsDataConnFailed)(AGpsExtType agpsType);
-    void (*getDebugReport)(GnssDebugReport& report);
     void (*updateConnectionStatus)(bool connected, int8_t type, bool roaming,
                                    NetworkHandle networkHandle, const std::string& apn);
     void (*odcpiInit)(const odcpiRequestCallback& callback, OdcpiPrioritytype priority,
            OdcpiCallbackTypeMask typeMask);
     void (*deRegisterOdcpi)(OdcpiPrioritytype priority, OdcpiCallbackTypeMask typeMask);
     void (*odcpiInject)(const Location& location);
+    uint32_t (*configRobustLocation)(bool enable, bool enableForE911);
+    uint32_t (*gnssGetXtraStatus)();
+    uint32_t (*configMerkleTree) (const char * merkleTreeConfigBuffer, int bufferLength);
+    uint32_t (*configOsnmaEnablement) (bool enable);
     void (*getGnssEnergyConsumed)(GnssEnergyConsumedCallback energyConsumedCb);
-    void (*enableNfwLocationAccess)(const std::vector<std::string>& enabledNfws);
-    void (*nfwInit)(const NfwCbInfo& cbInfo);
-    void (*updateBatteryStatus)(bool charging);
     void (*updateSystemPowerState)(PowerStateType systemPowerState);
+    uint32_t (*gnssRegisterXtraStatusUpdate)(bool registerUpdate);
+    uint32_t (*configureUserConsentForXtra) (const bool xtraUserConsent);
+
+#ifdef USE_GLIB
+    // Only LE
     uint32_t (*setConstrainedTunc) (bool enable, float tuncConstraint, uint32_t energyBudget);
     uint32_t (*setPositionAssistedClockEstimator) (bool enable);
     uint32_t (*gnssUpdateSvConfig)(const GnssSvTypeConfig& constellationEnablementConfig,
                                    const GnssSvIdConfig&   blacklistSvConfig);
     uint32_t (*configLeverArm)(const LeverArmConfigInfo& configInfo);
-    bool (*measCorrInit)(const measCorrSetCapabilitiesCallback setCapabilitiesCb);
-    bool (*measCorrSetCorrections)(const GnssMeasurementCorrections& gnssMeasCorr);
-    void (*measCorrClose)();
-    uint32_t (*getAntennaInfo)(AntennaInfoCallback* antennaInfoCallback);
-    uint32_t (*configRobustLocation)(bool enable, bool enableForE911);
     uint32_t (*configMinGpsWeek)(uint16_t minGpsWeek);
     uint32_t (*configDeadReckoningEngineParams)(const DeadReckoningEngineConfig& dreConfig);
-    void (*updateNTRIPGGAConsent)(bool consentAccepted);
-    void (*enablePPENtripStream)(const GnssNtripConnectionParams& params, bool enableRTKEngine);
-    void (*disablePPENtripStream)();
     uint32_t (*gnssUpdateSecondaryBandConfig)(const GnssSvTypeConfig& secondaryBandConfig);
     uint32_t (*gnssGetSecondaryBandConfig)();
     uint32_t (*configEngineRunState)(PositioningEngineMask engType,
@@ -109,27 +102,37 @@ struct GnssInterface {
     uint32_t (*configOutputNmeaTypes)(GnssNmeaTypesMask enabledNmeaTypes,
                                       GnssGeodeticDatumType nmeaDatumType,
                                       LocReqEngineTypeMask locReqEngTypeMask);
+    uint32_t (*setOptInStatus)(bool userConsent);
+    uint32_t (*configEngineIntegrityRisk)(PositioningEngineMask engineType, uint32_t integrityRisk);
+    uint32_t (*configXtraParams) (bool enable, const XtraConfigParams& configParams);
+    uint32_t (*gnssInjectMmfData) (const GnssMapMatchedData& data);
+    void     (*updateMccMnc)(std::string& mccmncCountry);
+#elif defined(_ANDROID_) // ANDROID
+    // Only Android
+    void (*nfwInit)(const NfwCbInfo& cbInfo);
+    bool (*measCorrInit)(const measCorrSetCapabilitiesCallback setCapabilitiesCb);
+    void (*gnssUpdateXtraThrottle)(const bool enabled);
+    void (*agpsDataConnOpen)(AGpsExtType agpsType, const char* apnName, int apnLen, int ipType);
+    void (*agpsDataConnClosed)(AGpsExtType agpsType);
+    void (*agpsDataConnFailed)(AGpsExtType agpsType);
+    void (*getDebugReport)(GnssDebugReport& report);
+    void (*enableNfwLocationAccess)(const std::vector<std::string>& enabledNfws);
+    void (*updateBatteryStatus)(bool charging);
+    bool (*measCorrSetCorrections)(const GnssMeasurementCorrections& gnssMeasCorr);
+    uint32_t (*getAntennaInfo)(AntennaInfoCallback* antennaInfoCallback);
+    void (*updateNTRIPGGAConsent)(bool consentAccepted);
+    void (*enablePPENtripStream)(const GnssNtripConnectionParams& params, bool enableRTKEngine);
+    void (*disablePPENtripStream)();
     void (*powerIndicationInit)(const powerIndicationCb powerIndicationCallback);
     void (*powerIndicationRequest)();
     void (*setAddressRequestCb)(std::function<void(const Location&)> addressRequestCb);
     void (*injectLocationAndAddr)(const Location& location, const GnssCivicAddress& addr);
-#ifdef USE_GLIB
-    uint32_t (*setOptInStatus)(bool userConsent);
-#endif
-    uint32_t (*configEngineIntegrityRisk)(PositioningEngineMask engineType, uint32_t integrityRisk);
-    uint32_t (*configXtraParams) (bool enable, const XtraConfigParams& configParams);
-    uint32_t (*gnssGetXtraStatus)();
-    uint32_t (*gnssRegisterXtraStatusUpdate)(bool registerUpdate);
-    uint32_t (*configMerkleTree) (const char * merkleTreeConfigBuffer, int bufferLength);
-    uint32_t (*configOsnmaEnablement) (bool enable);
-    uint32_t (*gnssInjectMmfData) (const GnssMapMatchedData& data);
-    uint32_t (*configureUserConsentForXtra) (const bool xtraUserConsent);
     void (*set3rdPartyNtnCapability)(bool isCapable);
     void (*getNtnConfigSignalMask)();
     void (*setNtnConfigSignalMask)(GnssSignalTypeMask gpsSignalTypeConfigMask);
     void (*injectSuplCert)(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
-    void (*updateMccMnc)(std::string& mccmncCountry);
     void (*setPreferredConstellation)(Gnss_LocSvSystemEnumType type);
+#endif // USE_GLIB
 };
 
 struct BatchingInterface {

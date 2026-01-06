@@ -19,7 +19,9 @@ cc_library_shared {
         "LocationAPIClientBase.cpp",
     ],
 
-    cflags: ["-fno-short-enums"] + GNSS_CFLAGS,
+    cflags: ["-fno-short-enums",
+             "-D_ANDROID_",
+    ] + GNSS_CFLAGS,
 
     header_libs: [
         "libloc_pla_headers",

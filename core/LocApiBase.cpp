@@ -613,9 +613,11 @@ LocationError LocApiBase::setEmergencyExtensionWindowSync(
         const uint32_t /*emergencyExtensionSeconds*/)
 DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
 
+#ifdef _ANDROID_
 void LocApiBase::setMeasurementCorrections(
         const GnssMeasurementCorrections& /*gnssMeasurementCorrections*/)
 DEFAULT_IMPL()
+#endif
 
 bool LocApiBase::
    getBestAvailableZppFixSync(LocGpsLocation &zppLoc, LocPosTechMask &tech_mask, float* vertUnc)
@@ -726,10 +728,12 @@ void LocApiBase::
     getRobustLocationConfig(uint32_t /*sessionId*/, LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
+#ifdef USE_GLIB
 void LocApiBase::
     configMinGpsWeek(uint16_t /*minGpsWeek*/,
                      LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
+#endif
 
 void LocApiBase::
     getMinGpsWeek(uint32_t /*sessionId*/, LocApiResponse* /*adapterResponse*/)
@@ -768,13 +772,16 @@ DEFAULT_IMPL()
 void LocApiBase::configOsnmaEnablement(bool /*enable*/, LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
+#ifdef _ANDROID_
 void LocApiBase::getNtnConfigSignalMask(LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
+#endif
 
 void LocApiBase::setNtnConfigSignalMask(GnssSignalTypeMask /*gpsSignalTypeConfigMask*/,
             LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
+#ifdef _ANDROID_
 void LocApiBase::injectSuplCert(int32_t /*suplCertId*/,
         const std::vector<uint8_t>& /*suplCertData*/, LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
@@ -782,6 +789,7 @@ DEFAULT_IMPL()
 void LocApiBase::setPreferredConstellation(Gnss_LocSvSystemEnumType /*type*/,
         LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
+#endif
 
 void RealtimeEstimator::reset() {
     memset(&mTimePairPVTReport, 0, sizeof(mTimePairPVTReport));

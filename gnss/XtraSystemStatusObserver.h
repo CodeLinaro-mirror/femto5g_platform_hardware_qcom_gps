@@ -92,7 +92,9 @@ public:
     bool updateConnections(uint64_t allConnections,
             uint64_t networkHandle, NetworkType type, bool roaming);
     bool updateMccMnc(const string& mccmncCountry);
+#ifdef _ANDROID_
     bool updateXtraThrottle(const bool enabled);
+#endif
     bool updatePowerState(const PowerStateType powerState);
     inline const MsgTask* getMsgTask() { return mMsgTask; }
     void subscribe(bool yes);
@@ -102,13 +104,16 @@ public:
     void restartDgnssSource();
     void stopDgnssSource();
     void updateNmeaToDgnssServer(const string& nmea);
-
+#ifdef USE_GLIB
     bool updateXtraConfig(bool enabled, const XtraConfigParams& configParams);
+#endif
     bool getXtraStatus(uint32_t sessionId);
     bool registerXtraStatusUpdate(uint32_t sessionId, bool registerUpdate);
     bool updateXtraDataDeletion();
     bool updateXtraUserConsent(bool userConsent);
+#ifdef _ANDROID_
     bool set3rdPartyNtnCapability(bool enabled);
+#endif
 
 private:
     GnssAdapter*   mAdapter;

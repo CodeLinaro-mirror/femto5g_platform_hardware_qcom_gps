@@ -237,8 +237,10 @@ public:
     virtual GnssConfigLppeControlPlaneMask convertLppeCp(const uint32_t lppeControlPlaneMask);
     virtual GnssConfigLppeUserPlaneMask convertLppeUp(const uint32_t lppeUserPlaneMask);
     virtual LocationError setEmergencyExtensionWindowSync(const uint32_t emergencyExtensionSeconds);
+#ifdef _ANDROID_
     virtual void setMeasurementCorrections(
             const GnssMeasurementCorrections& gnssMeasurementCorrections);
+#endif
 
     virtual bool getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
             LocPosTechMask &tech_mask, float* vertUnc = nullptr);
@@ -289,8 +291,10 @@ public:
                                       LocApiResponse* adapterResponse = nullptr,
                                       bool enableForE911Valid = false);
     virtual void getRobustLocationConfig(uint32_t sessionId, LocApiResponse* adapterResponse);
+#ifdef USE_GLIB
     virtual void configMinGpsWeek(uint16_t minGpsWeek,
                                   LocApiResponse* adapterResponse=nullptr);
+#endif
     virtual void getMinGpsWeek(uint32_t sessionId, LocApiResponse* adapterResponse);
 
     virtual LocationError setParameterSync(const GnssConfig & gnssConfig);
@@ -315,13 +319,17 @@ public:
     virtual void configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* merkleTree,
             LocApiResponse* adapterResponse=nullptr);
     virtual void configOsnmaEnablement(bool enable, LocApiResponse* adapterResponse=nullptr);
+#ifdef _ANDROID_
     virtual void getNtnConfigSignalMask(LocApiResponse* adapterResponse = nullptr);
+#endif
     virtual void setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask,
             LocApiResponse* adapterResponse = nullptr);
+#ifdef _ANDROID_
     virtual void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData,
             LocApiResponse* adapterResponse=nullptr);
     virtual void setPreferredConstellation(Gnss_LocSvSystemEnumType type,
             LocApiResponse* adapterResponse=nullptr);
+#endif
 };
 
 class RealtimeEstimator {
