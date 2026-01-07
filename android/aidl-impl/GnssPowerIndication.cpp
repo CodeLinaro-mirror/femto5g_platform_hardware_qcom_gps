@@ -58,6 +58,7 @@ ScopedAStatus GnssPowerIndication::setCallback(
         return ScopedAStatus::fromExceptionCode(STATUS_INVALID_OPERATION);
     }
 
+    AIBinder_DeathRecipient_setOnUnlinked(mDeathRecipient, [](void* cookie) {});
     AIBinder_linkToDeath(callback->asBinder().get(), mDeathRecipient, this);
     gSharedMtx.lock();
     mGnssPowerIndicationCb = callback;

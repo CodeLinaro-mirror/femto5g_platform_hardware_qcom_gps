@@ -39,6 +39,7 @@ ScopedAStatus GnssGeofence::setCallback(const shared_ptr<IGnssGeofenceCallback>&
     }
     mGnssGeofencingCbIface = callback;
     if (mGnssGeofencingCbIface != nullptr) {
+        AIBinder_DeathRecipient_setOnUnlinked(mDeathRecipient, [](void* cookie) {});
         AIBinder_linkToDeath(mGnssGeofencingCbIface->asBinder().get(), mDeathRecipient, this);
     }
     gSharedMtx.unlock();

@@ -110,6 +110,7 @@ ScopedAStatus GnssAntennaInfo::setCallback(
 
     mGnssAntennaInfoCbIface = callback;
     if (mGnssAntennaInfoCbIface != nullptr) {
+        AIBinder_DeathRecipient_setOnUnlinked(mDeathRecipient, [](void* cookie) {});
         AIBinder_linkToDeath(mGnssAntennaInfoCbIface->asBinder().get(), mDeathRecipient, this);
     }
     gSharedMtx.unlock();

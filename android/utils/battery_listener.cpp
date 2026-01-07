@@ -166,6 +166,7 @@ status_t AidlBatteryListenerImpl::init()
         return NO_INIT;
     }
 
+    AIBinder_DeathRecipient_setOnUnlinked(mDeathRecipient.get(), [](void* cookie) {});
     binder_status_t binder_status = AIBinder_linkToDeath(
         mHealth->asBinder().get(), mDeathRecipient.get(), this);
     if (binder_status != STATUS_OK) {

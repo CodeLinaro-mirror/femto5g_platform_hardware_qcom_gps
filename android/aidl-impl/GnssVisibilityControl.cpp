@@ -124,6 +124,7 @@ ScopedAStatus GnssVisibilityControl::setCallback(
     }
     mGnssVisibilityControlCbIface = callback;
     if (mGnssVisibilityControlCbIface != nullptr) {
+        AIBinder_DeathRecipient_setOnUnlinked(mDeathRecipient, [](void* cookie) {});
         AIBinder_linkToDeath(mGnssVisibilityControlCbIface->asBinder().get(), mDeathRecipient,
                 this);
     }

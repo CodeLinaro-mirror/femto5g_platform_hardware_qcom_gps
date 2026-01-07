@@ -45,6 +45,7 @@ ScopedAStatus GnssBatching::init(const shared_ptr<IGnssBatchingCallback>& callba
 
     mGnssBatchingCbIface = callback;
     if (mGnssBatchingCbIface != nullptr) {
+        AIBinder_DeathRecipient_setOnUnlinked(mDeathRecipient, [](void* cookie) {});
         AIBinder_linkToDeath(mGnssBatchingCbIface->asBinder().get(), mDeathRecipient, this);
     }
     gSharedMtx.unlock();
