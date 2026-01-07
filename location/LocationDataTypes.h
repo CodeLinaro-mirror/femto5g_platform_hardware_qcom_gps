@@ -908,6 +908,8 @@ enum GnssSignalTypeBits {
     GNSS_SIGNAL_BEIDOU_B2BQ         = (1<<23),
     /** NAVIC L1 RF Band */
     GNSS_SIGNAL_NAVIC_L1            = (1<<24),
+    /** QZSS L1CB RF Band */
+    GNSS_SIGNAL_QZSS_L1CB           = (1<<25),
 };
 
 #define GNSS_SIGNAL_TYPE_MASK_ALL\
@@ -918,7 +920,7 @@ enum GnssSignalTypeBits {
      GNSS_SIGNAL_BEIDOU_B2AI | GNSS_SIGNAL_QZSS_L1CA | GNSS_SIGNAL_QZSS_L1S |\
      GNSS_SIGNAL_QZSS_L2| GNSS_SIGNAL_QZSS_L5 | GNSS_SIGNAL_SBAS_L1 |\
      GNSS_SIGNAL_NAVIC_L5 | GNSS_SIGNAL_BEIDOU_B2AQ | GNSS_SIGNAL_BEIDOU_B2BI |\
-     GNSS_SIGNAL_BEIDOU_B2BQ | GNSS_SIGNAL_NAVIC_L1)
+     GNSS_SIGNAL_BEIDOU_B2BQ | GNSS_SIGNAL_NAVIC_L1 | GNSS_SIGNAL_QZSS_L1CB)
 
 enum Gnss_LocSvSystemEnumType {
     GNSS_LOC_SV_SYSTEM_UNKNOWN                = 0,
@@ -967,7 +969,8 @@ enum Gnss_LocSignalEnumType {
     GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2B_I = 20,     /**<  BeiDou B2B_I RF band (data) */
     GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2B_Q = 21,     /**< BeiDou B2B_Q RF band (Pilot)*/
     GNSS_LOC_SIGNAL_TYPE_NAVIC_L1 = 22,         /**<  NAVIC L1 RF Band */
-    GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES = 23    /**<  Maximum number of signal types */
+    GNSS_LOC_SIGNAL_TYPE_QZSS_L1CB = 23,        /**<  QZSS L1CA RF Band */
+    GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES         /**<  Maximum number of signal types */
 };
 
 typedef uint32_t PositioningEngineMask;
@@ -1673,6 +1676,7 @@ struct GnssNiNotification {
 #define BEIDOU_B2B_I_CARRIER_FREQUENCY  (1207140000.0)
 #define BEIDOU_B2B_Q_CARRIER_FREQUENCY  (1207140000.0)
 #define QZSS_L1CA_CARRIER_FREQUENCY     (1575420000.0)
+#define QZSS_L1CB_CARRIER_FREQUENCY     (1575420000.0)
 #define QZSS_L1S_CARRIER_FREQUENCY      (1575420000.0)
 #define QZSS_L2C_L_CARRIER_FREQUENCY    (1227600000.0)
 #define QZSS_L5_Q_CARRIER_FREQUENCY     (1176450000.0)
@@ -1686,7 +1690,7 @@ struct GnssSv {
     //    - For GPS:     1 to 32
     //    - For GLONASS: 65 to 96
     //    - For SBAS:    120 to 158 and 183 to 191
-    //    - For QZSS:    193 to 197
+    //    - For QZSS:    193 to 202
     //    - For BDS:     201 to 263
     //    - For GAL:     301 to 336
     //    - For NAVIC:   401 to 420
@@ -2852,10 +2856,7 @@ struct GpsExtendedEphemeris {
     /**<   GNSS SV ID. \n
        Range:\n
        - GPS --     1 to 32 \n
-       - QZSS --    193 to 197 \n
-       - BDS --     201 to 263 \n
-       - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 420 \n
+       - QZSS --    193 to 202 \n
     */
 
     uint32_t validityMask;
@@ -3109,11 +3110,7 @@ struct BdsExtendedEphemeris {
     uint16_t gnssSvId;
     /**<   GNSS SV ID. \n
        Range:\
-       - GPS --     1 to 32 \n
-       - QZSS --    193 to 197 \n
        - BDS --     201 to 263 \n
-       - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 420 \n
     */
 
     uint32_t validityMask;

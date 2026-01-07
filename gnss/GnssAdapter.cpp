@@ -4700,6 +4700,9 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify) {
                         case GNSS_SIGNAL_QZSS_L1CA:
                             svUsedIdMask = mGnssMbSvIdUsedInPosition.qzss_l1ca_sv_used_ids_mask;
                             break;
+                        case GNSS_SIGNAL_QZSS_L1CB:
+                            svUsedIdMask = mGnssMbSvIdUsedInPosition.qzss_l1cb_sv_used_ids_mask;
+                            break;
                         case GNSS_SIGNAL_QZSS_L1S:
                             svUsedIdMask = mGnssMbSvIdUsedInPosition.qzss_l1s_sv_used_ids_mask;
                             break;

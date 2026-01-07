@@ -53,14 +53,14 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 //  Per QMI Loc API: qmiLocNavDataStructT_v02
 #define GPS_SV_ID_MIN    (1)   //1-32
 #define GLO_SV_ID_MIN    (65)  //65-96
-#define QZSS_SV_ID_MIN   (193) //193-197
+#define QZSS_SV_ID_MIN   (193) //193-202
 #define BDS_SV_ID_MIN    (201) //201-263
 #define GAL_SV_ID_MIN    (301) //301-336
 #define NAVIC_SV_ID_MIN  (401) //401-420
 
 #define GPS_SV_ID_MAX    (32)   //1-32
 #define GLO_SV_ID_MAX    (96)  //65-96
-#define QZSS_SV_ID_MAX   (197) //193-197
+#define QZSS_SV_ID_MAX   (202) //193-202
 #define BDS_SV_ID_MAX    (263) //201-263
 #define GAL_SV_ID_MAX    (336) //301-336
 #define NAVIC_SV_ID_MAX  (420) //401-420
