@@ -124,6 +124,7 @@ static void set3rdPartyNtnCapability(bool isCapable);
 static void getNtnConfigSignalMask();
 static void setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask);
 static void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
+static void updateMccMnc(std::string& mccmncCountry);
 
 static const GnssInterface gGnssInterface = {
     initialize,
@@ -195,6 +196,7 @@ static const GnssInterface gGnssInterface = {
     getNtnConfigSignalMask,
     setNtnConfigSignalMask,
     injectSuplCert,
+    updateMccMnc,
 };
 
 #ifndef DEBUG_X86
@@ -714,5 +716,11 @@ static void setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask) {
 static void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->injectSuplCertCommand(suplCertId, suplCertData);
+    }
+}
+
+static void updateMccMnc(std::string& mccmncCountry) {
+    if (NULL != gGnssAdapter) {
+        gGnssAdapter->getSystemStatus()->getOsObserver()->eventMccmnc(mccmncCountry);
     }
 }
