@@ -385,6 +385,7 @@ int32_t LocationAPIClientBase::locAPIGetBatchSize() {
 uint32_t LocationAPIClientBase::locAPIStartSession(
         uint32_t id, uint32_t sessionMode, TrackingOptions&& options) {
     uint32_t retVal = LOCATION_ERROR_GENERAL_FAILURE;
+    LOC_LOGd("locAPIStartSession %d,", id);
     pthread_mutex_lock(&mMutex);
     if (mLocationAPI) {
 
@@ -442,6 +443,7 @@ uint32_t LocationAPIClientBase::locAPIStartSession(
 
 uint32_t LocationAPIClientBase::locAPIStopSession(uint32_t id) {
     uint32_t retVal = LOCATION_ERROR_GENERAL_FAILURE;
+    LOC_LOGd("locAPIStopSession %d", id);
     pthread_mutex_lock(&mMutex);
     if (mLocationAPI) {
 
@@ -453,13 +455,14 @@ uint32_t LocationAPIClientBase::locAPIStopSession(uint32_t id) {
             uint32_t sMode = entity.sessionMode;
 
             if (sMode == SESSION_MODE_ON_FIX) {
-                mRequestQueues[REQUEST_SESSION].push(new StopTrackingRequest(*this));
                 mLocationAPI->stopTracking(trackingSession);
+                removeSession(trackingSession);
+                onStopTrackingCb(LOCATION_ERROR_SUCCESS);
             } else {
-                mRequestQueues[REQUEST_SESSION].push(new StopBatchingRequest(*this));
                 mLocationAPI->stopBatching(batchingSession);
+                removeSession(batchingSession);
+                onStopBatchingCb(LOCATION_ERROR_SUCCESS);
             }
-
             retVal = LOCATION_ERROR_SUCCESS;
         } else {
             retVal = LOCATION_ERROR_ID_UNKNOWN;
@@ -864,6 +867,7 @@ void LocationAPIClientBase::onCollectiveResponseCb(
 }
 
 void LocationAPIClientBase::removeSession(uint32_t session) {
+    LOC_LOGd("LocationAPIClientBase remove session %d", session);
     if (mSessionBiDict.hasSession(session)) {
         mSessionBiDict.rmBySession(session);
     }
