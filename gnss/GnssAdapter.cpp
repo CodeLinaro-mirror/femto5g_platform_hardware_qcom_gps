@@ -3259,7 +3259,7 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                     }
                     LOC_LOGd("Updated UNKNOWN SUPL mode to %d", mOptions.mode);
                 }
-                LOC_LOGd("Updated min Interval: %u, nHzEnabled: %s, emergency: %d mode: %u, "
+                LOC_LOGd("Updated min Interval: %u, emergency: %d mode: %u, "
                         "agps : %d, SUPL_MODE: %d",
                         mOptions.minInterval, mAdapter.mInEmergency,
                         mOptions.mode, mAdapter.isAssistedGpsEnabled(),
