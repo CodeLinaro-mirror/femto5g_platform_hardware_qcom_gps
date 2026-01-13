@@ -107,7 +107,7 @@ GnssAPIClient::GnssAPIClient(const shared_ptr<IGnssCallback>& gpsCb) :
     LocationAPIClientBase(),
     mControlClient(new LocationAPIControlClient()),
     mTracking(false),
-    mReportSpeOnly(true),
+    mReportSpeOnly(false),
     mLocationCapabilitiesMask(0),
     mLocationCapabilitiesCached(false),
     mSvStatusEnabled(false),
