@@ -17,7 +17,7 @@ namespace implementation {
 using ::aidl::android::hardware::gnss::GnssConstellationType;
 
 void measurementCorrectionsInterfaceDied(void* cookie) {
-    LOC_LOGe("IGnssAntennaInfo AIDL service died");
+    LOC_LOGe("MeasurementCorrectionsInterface AIDL service died");
     MeasurementCorrectionsInterface* iface = static_cast<MeasurementCorrectionsInterface*>(cookie);
     if (iface != nullptr) {
         iface->setCallback(nullptr);
@@ -128,6 +128,7 @@ ScopedAStatus MeasurementCorrectionsInterface::setCallback(
     }
     mMeasurementCorrectionsCbIface = callback;
     if (mMeasurementCorrectionsCbIface != nullptr) {
+        AIBinder_DeathRecipient_setOnUnlinked(mDeathRecipient, [](void* cookie) {});
         AIBinder_linkToDeath(mMeasurementCorrectionsCbIface->asBinder().get(), mDeathRecipient,
                 this);
     }

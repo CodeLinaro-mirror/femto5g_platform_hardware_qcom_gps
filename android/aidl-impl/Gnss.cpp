@@ -78,6 +78,7 @@ ScopedAStatus Gnss::setCallback(const shared_ptr<IGnssCallback>& callback) {
     mGnssCallback = callback;
 
     if (mGnssCallback != nullptr) {
+        AIBinder_DeathRecipient_setOnUnlinked(mDeathRecipient, [](void* cookie) {});
         AIBinder_linkToDeath(callback->asBinder().get(), mDeathRecipient, this);
     }
     gSharedMtx.unlock();

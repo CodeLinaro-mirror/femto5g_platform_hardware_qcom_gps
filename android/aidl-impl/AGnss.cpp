@@ -115,6 +115,7 @@ ScopedAStatus AGnss::setCallback(const shared_ptr<IAGnssCallback>& callback) {
     mAGnssCbIface = callback;
     gSharedMtx.unlock();
     if (mAGnssCbIface != nullptr) {
+        AIBinder_DeathRecipient_setOnUnlinked(mDeathRecipient, [](void* cookie) {});
         AIBinder_linkToDeath(mAGnssCbIface->asBinder().get(), mDeathRecipient, this);
     }
 
