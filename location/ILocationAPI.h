@@ -178,14 +178,6 @@ public:
     virtual void resumeGeofences(size_t count, uint32_t* ids) = 0;
 
     /* ================================== GNSS ====================================== */
-
-     /** @brief gnssNiResponse is called in response to a gnssNiCallback.
-        responseCallback returns:
-                LOCATION_ERROR_SUCCESS if session was successful
-                LOCATION_ERROR_INVALID_PARAMETER if any parameters in GnssNiResponse are invalid
-                LOCATION_ERROR_ID_UNKNOWN if id does not match a gnssNiCallback */
-    virtual void gnssNiResponse(uint32_t id, GnssNiResponse response) = 0;
-
     /** @brief Get energy consumed info of modem GNSS engine */
     virtual void getGnssEnergyConsumed(gnssEnergyConsumedCallback gnssEnergyConsumedCb,
             responseCallback responseCb) {}

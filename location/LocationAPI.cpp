@@ -113,8 +113,7 @@ static void loadLibGeofencing() {
 
 static bool isGnssClient(LocationCallbacks& locationCallbacks)
 {
-    return (locationCallbacks.gnssNiCb != nullptr ||
-            locationCallbacks.trackingCb != nullptr ||
+    return (locationCallbacks.trackingCb != nullptr ||
             locationCallbacks.gnssLocationInfoCb != nullptr ||
             locationCallbacks.engineLocationsInfoCb != nullptr ||
             locationCallbacks.gnssSvCb != nullptr ||
@@ -616,21 +615,6 @@ LocationAPI::resumeGeofences(size_t count, uint32_t* ids)
         gData.geofenceInterface->resumeGeofences(this, count, ids);
     } else {
         LOC_LOGE("%s:%d]: No geofence interface available for Location API client %p ",
-                 __func__, __LINE__, this);
-    }
-
-    pthread_mutex_unlock(&gDataMutex);
-}
-
-void
-LocationAPI::gnssNiResponse(uint32_t id, GnssNiResponse response)
-{
-    pthread_mutex_lock(&gDataMutex);
-
-    if (gData.gnssInterface != NULL) {
-        gData.gnssInterface->gnssNiResponse(this, id, response);
-    } else {
-        LOC_LOGE("%s:%d]: No gnss interface available for Location API client %p ",
                  __func__, __LINE__, this);
     }
 

@@ -62,7 +62,6 @@ struct GnssInterface {
     uint32_t (*startTracking)(LocationAPI* client, const TrackingOptions&);
     void (*updateTrackingOptions)(LocationAPI* client, uint32_t id, const TrackingOptions&);
     void (*stopTracking)(LocationAPI* client, uint32_t id);
-    void (*gnssNiResponse)(LocationAPI* client, uint32_t id, GnssNiResponse response);
     void (*setControlCallbacks)(LocationControlCallbacks& controlCallbacks);
     uint32_t (*enable)(LocationTechnologyType techType);
     void (*disable)(uint32_t id);

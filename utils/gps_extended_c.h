@@ -80,10 +80,6 @@ typedef uint32_t LocSvInfoSource;
 /** Raw SVinfo from GNSS */
 #define ULP_SVINFO_IS_FROM_DR         ((LocSvInfoSource)0x0002)
 
-
-/*Emergency SUPL*/
-#define LOC_GPS_NI_TYPE_EMERGENCY_SUPL    4
-
 #define LOC_AGPS_CERTIFICATE_MAX_LENGTH 2000
 #define LOC_AGPS_CERTIFICATE_MAX_SLOTS 10
 
@@ -452,12 +448,6 @@ typedef enum {
     LOC_RELIABILITY_MEDIUM = 3,
     LOC_RELIABILITY_HIGH = 4
 }LocReliability;
-
-typedef enum {
-    LOC_IN_EMERGENCY_UNKNOWN = 0,
-    LOC_IN_EMERGENCY_SET = 1,
-    LOC_IN_EMERGENCY_NOT_SET = 2
-}LocInEmergency;
 
 typedef struct {
     /** Y2038-Compliant */

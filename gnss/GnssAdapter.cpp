@@ -152,7 +152,6 @@ GnssAdapter::GnssAdapter() :
     mGnssSvIdConfig(),
     mGnssSeconaryBandConfig(),
     mLocConfigInfo{},
-    mNiData(),
     mAgpsManager(mMsgTask),
     mQDgnssListenerHDL(nullptr),
     mCdfwInterface(nullptr),
@@ -209,13 +208,6 @@ GnssAdapter::GnssAdapter() :
     LOC_LOGd("Constructor %p", this);
     mLocPositionMode.mode = LOC_POSITION_MODE_INVALID;
     memset(mGnssSvTypeConfigs, 0, sizeof(mGnssSvTypeConfigs));
-
-    pthread_condattr_t condAttr;
-    pthread_condattr_init(&condAttr);
-    pthread_condattr_setclock(&condAttr, CLOCK_REALTIME);
-    pthread_cond_init(&mNiData.session.tCond, &condAttr);
-    pthread_cond_init(&mNiData.sessionEs.tCond, &condAttr);
-    pthread_condattr_destroy(&condAttr);
 
     /* Set ATL open/close callbacks */
     AgpsAtlOpenStatusCb atlOpenStatusCb =
@@ -1133,17 +1125,6 @@ GnssAdapter::convertEP4ES(const GnssConfigEmergencyPdnForEmergencySupl emergency
        case GNSS_CONFIG_EMERGENCY_PDN_FOR_EMERGENCY_SUPL_YES:
            return 1;
        case GNSS_CONFIG_EMERGENCY_PDN_FOR_EMERGENCY_SUPL_NO:
-       default:
-           return 0;
-    }
-}
-
-uint32_t
-GnssAdapter::convertSuplEs(const GnssConfigSuplEmergencyServices suplEmergencyServices) {
-    switch (suplEmergencyServices) {
-       case GNSS_CONFIG_SUPL_EMERGENCY_SERVICES_YES:
-           return 1;
-       case GNSS_CONFIG_SUPL_EMERGENCY_SERVICES_NO:
        default:
            return 0;
     }
@@ -2915,7 +2896,6 @@ GnssAdapter::updateClientsEventMask() {
     if (nullptr != mControlCallbacks.odcpiReqCb) {
         mask |= LOC_API_ADAPTER_BIT_REQUEST_WIFI;
     }
-
     // always register for NI NOTIFY VERIFY to handle internally in HAL
     mask |= LOC_API_ADAPTER_BIT_NI_NOTIFY_VERIFY_REQUEST;
     // register for engine lock state
@@ -3688,107 +3668,6 @@ GnssAdapter::stopTracking(LocationAPI* client, uint32_t id) {
     mPositionElapsedRealTimeCal.reset();
 
     mSPEAlreadyRunningAtHighestInterval = false;
-}
-
-bool
-GnssAdapter::hasNiNotifyCallback(LocationAPI* client) {
-    auto it = mClientData.find(client);
-    return (it != mClientData.end() && it->second.gnssNiCb);
-}
-
-void
-GnssAdapter::gnssNiResponseCommand(LocationAPI* client,
-                                   uint32_t id,
-                                   GnssNiResponse response) {
-    LOC_LOGd("client %p id %u response %u", client, id, response);
-
-    struct MsgGnssNiResponse : public LocMsg {
-        GnssAdapter& mAdapter;
-        LocationAPI* mClient;
-        uint32_t mSessionId;
-        GnssNiResponse mResponse;
-        inline MsgGnssNiResponse(GnssAdapter& adapter,
-                                 LocationAPI* client,
-                                 uint32_t sessionId,
-                                 GnssNiResponse response) :
-            LocMsg(),
-            mAdapter(adapter),
-            mClient(client),
-            mSessionId(sessionId),
-            mResponse(response) {}
-        inline virtual void proc() const {
-            NiData& niData = mAdapter.getNiData();
-            LocationError err = LOCATION_ERROR_SUCCESS;
-            if (!mAdapter.hasNiNotifyCallback(mClient)) {
-                err = LOCATION_ERROR_ID_UNKNOWN;
-            } else {
-                NiSession* pSession = NULL;
-                if (mSessionId == niData.sessionEs.reqID &&
-                    NULL != niData.sessionEs.rawRequest) {
-                    pSession = &niData.sessionEs;
-                    // ignore any SUPL NI non-Es session if a SUPL NI ES is accepted
-                    if (mResponse == GNSS_NI_RESPONSE_ACCEPT &&
-                        NULL != niData.session.rawRequest) {
-                            pthread_mutex_lock(&niData.session.tLock);
-                            niData.session.resp = GNSS_NI_RESPONSE_IGNORE;
-                            niData.session.respRecvd = true;
-                            pthread_cond_signal(&niData.session.tCond);
-                            pthread_mutex_unlock(&niData.session.tLock);
-                    }
-                } else if (mSessionId == niData.session.reqID &&
-                    NULL != niData.session.rawRequest) {
-                    pSession = &niData.session;
-                }
-
-                if (pSession) {
-                    LOC_LOGI("MsgGnssNiResponse: send user mResponse %u for id %u",
-                             mResponse, mSessionId);
-                    pthread_mutex_lock(&pSession->tLock);
-                    pSession->resp = mResponse;
-                    pSession->respRecvd = true;
-                    pthread_cond_signal(&pSession->tCond);
-                    pthread_mutex_unlock(&pSession->tLock);
-                } else {
-                    err = LOCATION_ERROR_ID_UNKNOWN;
-                    LOC_LOGE("MsgGnssNiResponse: id %u not an active session",
-                             mSessionId);
-                }
-            }
-            mAdapter.reportResponse(mClient, err, mSessionId);
-        }
-    };
-
-    sendMsg(new MsgGnssNiResponse(*this, client, id, response));
-
-}
-
-void
-GnssAdapter::gnssNiResponseCommand(GnssNiResponse response, void* rawRequest) {
-    LOC_LOGd("response %u", response);
-
-    struct MsgGnssNiResponse : public LocMsg {
-        GnssAdapter& mAdapter;
-        LocApiBase& mApi;
-        const GnssNiResponse mResponse;
-        const void* mPayload;
-        inline MsgGnssNiResponse(GnssAdapter& adapter,
-                                 LocApiBase& api,
-                                 const GnssNiResponse response,
-                                 const void* rawRequest) :
-            LocMsg(),
-            mAdapter(adapter),
-            mApi(api),
-            mResponse(response),
-            mPayload(rawRequest) {}
-        inline virtual ~MsgGnssNiResponse() {
-        }
-        inline virtual void proc() const {
-            mApi.informNiResponse(mResponse, mPayload);
-        }
-    };
-
-    sendMsg(new MsgGnssNiResponse(*this, *mLocApi, response, rawRequest));
-
 }
 
 uint32_t
@@ -4819,86 +4698,6 @@ GnssAdapter::reportData(GnssDataNotification& dataNotify) {
     }
 }
 
-bool
-GnssAdapter::requestNiNotifyEvent(const GnssNiNotification &notify, const void* data,
-                                  const LocInEmergency emergencyState)
-{
-    LOC_LOGi("notif_type: %d, notify options %d, timeout: %d, default_resp: %d"
-             "requestor_id: %s (encoding: %d) text: %s text (encoding: %d) extras: %s "
-             "emergencyState = %d",
-             notify.type, notify.options, notify.timeout, notify.timeoutResponse,
-             notify.requestor, notify.requestorEncoding,
-             notify.message, notify.messageEncoding, notify.extras,
-             emergencyState);
-
-    struct MsgReportNiNotify : public LocMsg {
-        GnssAdapter& mAdapter;
-        LocApiBase& mApi;
-        const GnssNiNotification mNotify;
-        const void* mData;
-        const LocInEmergency mEmergencyState;
-        inline MsgReportNiNotify(GnssAdapter& adapter,
-                                 LocApiBase& api,
-                                 const GnssNiNotification& notify,
-                                 const void* data,
-                                 const LocInEmergency emergencyState) :
-            LocMsg(),
-            mAdapter(adapter),
-            mApi(api),
-            mNotify(notify),
-            mData(data),
-            mEmergencyState(emergencyState) {}
-        inline virtual void proc() const {
-            bool bIsInEmergency = false;
-            bool bInformNiAccept = false;
-
-            bIsInEmergency = ((LOC_IN_EMERGENCY_UNKNOWN == mEmergencyState) && // older modems
-                    (mAdapter.getE911State(mNotify.type))) ||
-                    (LOC_IN_EMERGENCY_SET == mEmergencyState); // newer modems
-
-            if ((mAdapter.mSupportNfwControl || 0 == mAdapter.getAfwControlId()) &&
-                (GNSS_NI_TYPE_SUPL == mNotify.type || GNSS_NI_TYPE_EMERGENCY_SUPL == mNotify.type)
-                && !bIsInEmergency &&
-                !(GNSS_NI_OPTIONS_PRIVACY_OVERRIDE_BIT & mNotify.options) &&
-                (GNSS_CONFIG_GPS_LOCK_NFW_SUPL & ContextBase::mGps_conf.GPS_LOCK) &&
-                1 == ContextBase::mGps_conf.NI_SUPL_DENY_ON_NFW_LOCKED) {
-                /* If all these conditions are TRUE, then deny the NI Request:
-                -'Q' Lock behavior OR 'P' Lock behavior and GNSS is Locked
-                -NI SUPL Request type or NI SUPL Emergency Request type
-                -NOT in an Emergency Call Session
-                -NOT Privacy Override option
-                -NFW is locked and config item NI_SUPL_DENY_ON_NFW_LOCKED = 1 */
-                mApi.informNiResponse(GNSS_NI_RESPONSE_DENY, mData);
-            } else if ((GNSS_NI_TYPE_SUPL == mNotify.type ||
-                        GNSS_NI_TYPE_EMERGENCY_SUPL == mNotify.type)
-                      && (GNSS_NI_OPTIONS_PRIVACY_OVERRIDE_BIT & mNotify.options)) {
-                mApi.informNiResponse(GNSS_NI_RESPONSE_ACCEPT, mData);
-            } else if (GNSS_NI_TYPE_EMERGENCY_SUPL == mNotify.type) {
-                bInformNiAccept = bIsInEmergency ||
-                        (GNSS_CONFIG_SUPL_EMERGENCY_SERVICES_NO == ContextBase::mGps_conf.SUPL_ES);
-
-                if (bInformNiAccept) {
-                    mAdapter.requestNiNotify(mNotify, mData, bInformNiAccept);
-                } else {
-                    mApi.informNiResponse(GNSS_NI_RESPONSE_DENY, mData);
-                }
-            } else if (GNSS_NI_TYPE_CONTROL_PLANE == mNotify.type) {
-                if (bIsInEmergency && (1 == ContextBase::mGps_conf.CP_MTLR_ES)) {
-                    mApi.informNiResponse(GNSS_NI_RESPONSE_ACCEPT, mData);
-                } else {
-                    mAdapter.requestNiNotify(mNotify, mData, false);
-                }
-            } else {
-                mAdapter.requestNiNotify(mNotify, mData, false);
-            }
-        }
-    };
-
-    sendMsg(new MsgReportNiNotify(*this, *mLocApi, notify, data, emergencyState));
-
-    return true;
-}
-
 void
 GnssAdapter::reportLocationSystemInfoEvent(const LocationSystemInfo & locationSystemInfo) {
 
@@ -5011,153 +4810,6 @@ GnssAdapter::reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapab
     };
 
     sendMsg(new MsgSignalTypeReport(*this, gnssCapabNotification));
-}
-
-static void* niThreadProc(void *args) {
-    NiSession* pSession = (NiSession*)args;
-    int rc = 0;          /* return code from pthread calls */
-
-    struct timespec present_time = {};
-    struct timespec expire_time = {};
-
-    pthread_mutex_lock(&pSession->tLock);
-    /* Calculate absolute expire time */
-    clock_gettime(CLOCK_REALTIME, &present_time);
-    expire_time.tv_sec  = present_time.tv_sec + pSession->respTimeLeft;
-    expire_time.tv_nsec = present_time.tv_nsec;
-    LOC_LOGd("time out set for abs time %ld with delay %d sec",
-             (long)expire_time.tv_sec, pSession->respTimeLeft);
-
-    while (!pSession->respRecvd) {
-        rc = pthread_cond_timedwait(&pSession->tCond,
-                                    &pSession->tLock,
-                                    &expire_time);
-        if (rc == ETIMEDOUT) {
-            pSession->resp = GNSS_NI_RESPONSE_NO_RESPONSE;
-            LOC_LOGd("time out after valting for specified time. Ret Val %d", rc);
-            break;
-        }
-    }
-    LOC_LOGd("Java layer has sent us a user response and return value from "
-             "pthread_cond_timedwait = %d pSession->resp is %u", rc, pSession->resp);
-    pSession->respRecvd = false; /* Reset the user response flag for the next session*/
-
-    // adding this check to support modem restart, in which case, we need the thread
-    // to exit without calling sending data. We made sure that rawRequest is NULL in
-    // loc_eng_ni_reset_on_engine_restart()
-    GnssAdapter* adapter = pSession->adapter;
-    GnssNiResponse resp;
-    void* rawRequest = NULL;
-    bool sendResponse = false;
-
-    if (NULL != pSession->rawRequest) {
-        if (pSession->resp != GNSS_NI_RESPONSE_IGNORE) {
-            resp = pSession->resp;
-            rawRequest = pSession->rawRequest;
-            sendResponse = true;
-        } else {
-            free(pSession->rawRequest);
-        }
-        pSession->rawRequest = NULL;
-    }
-    pthread_mutex_unlock(&pSession->tLock);
-
-    pSession->respTimeLeft = 0;
-    pSession->reqID = 0;
-
-    if (sendResponse) {
-        adapter->gnssNiResponseCommand(resp, rawRequest);
-    }
-
-    return NULL;
-}
-
-bool
-GnssAdapter::requestNiNotify(const GnssNiNotification& notify, const void* data,
-                             const bool bInformNiAccept) {
-    NiSession* pSession = NULL;
-    gnssNiCallback gnssNiCb = nullptr;
-
-    for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
-        if (nullptr != it->second.gnssNiCb) {
-            gnssNiCb = it->second.gnssNiCb;
-            break;
-        }
-    }
-    if (nullptr == gnssNiCb) {
-        if (GNSS_NI_TYPE_EMERGENCY_SUPL == notify.type) {
-            if (bInformNiAccept) {
-                mLocApi->informNiResponse(GNSS_NI_RESPONSE_ACCEPT, data);
-                NiData& niData = getNiData();
-                // ignore any SUPL NI non-Es session if a SUPL NI ES is accepted
-                if (NULL != niData.session.rawRequest) {
-                    pthread_mutex_lock(&niData.session.tLock);
-                    niData.session.resp = GNSS_NI_RESPONSE_IGNORE;
-                    niData.session.respRecvd = true;
-                    pthread_cond_signal(&niData.session.tCond);
-                    pthread_mutex_unlock(&niData.session.tLock);
-                }
-            }
-        }
-        EXIT_LOG(%s, "no clients with gnssNiCb.");
-        return false;
-    }
-
-    if (notify.type == GNSS_NI_TYPE_EMERGENCY_SUPL) {
-        if (NULL != mNiData.sessionEs.rawRequest) {
-            LOC_LOGi("supl es NI in progress, new supl es NI ignored, type: %d",
-                     notify.type);
-            if (NULL != data) {
-                free((void*)data);
-            }
-        } else {
-            pSession = &mNiData.sessionEs;
-        }
-    } else {
-        if (NULL != mNiData.session.rawRequest ||
-            NULL != mNiData.sessionEs.rawRequest) {
-            LOC_LOGi("supl NI in progress, new supl NI ignored, type: %d",
-                     notify.type);
-            if (NULL != data) {
-                free((void*)data);
-            }
-        } else {
-            pSession = &mNiData.session;
-        }
-    }
-
-    if (pSession) {
-        /* Save request */
-        pSession->rawRequest = (void*)data;
-        pSession->reqID = ++mNiData.reqIDCounter;
-        pSession->adapter = this;
-
-        int sessionId = pSession->reqID;
-
-        /* For robustness, spawn a thread at this point to timeout to clear up the notification
-         * status, even though the OEM layer in java does not do so.
-         **/
-        pSession->respTimeLeft =
-             5 + (notify.timeout != 0 ? notify.timeout : LOC_NI_NO_RESPONSE_TIME);
-
-        int rc = 0;
-        rc = pthread_create(&pSession->thread, NULL, niThreadProc, pSession);
-        if (rc) {
-            LOC_LOGe("Loc NI thread is not created.");
-        }
-        pthread_setname_np(pSession->thread, "NiThread");
-
-        rc = pthread_detach(pSession->thread);
-        if (rc) {
-            LOC_LOGe("Loc NI thread is not detached.");
-        }
-
-        if (nullptr != gnssNiCb) {
-            gnssNiCb(sessionId, notify);
-        }
-    }
-
-    return true;
 }
 
 void

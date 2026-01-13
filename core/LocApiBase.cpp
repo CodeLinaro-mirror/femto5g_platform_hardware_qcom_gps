@@ -56,51 +56,6 @@ namespace loc_core {
 #define TO_ALL_LOCADAPTERS(call) TO_ALL_ADAPTERS(mLocAdapters, (call))
 #define TO_1ST_HANDLING_LOCADAPTERS(call) TO_1ST_HANDLING_ADAPTER(mLocAdapters, (call))
 
-int hexcode(char *hexstring, int string_size,
-            const char *data, int data_size)
-{
-   int i;
-   for (i = 0; i < data_size; i++)
-   {
-      char ch = data[i];
-      if (i*2 + 3 <= string_size)
-      {
-         snprintf(&hexstring[i*2], 3, "%02X", ch);
-      }
-      else {
-         break;
-      }
-   }
-   return i;
-}
-
-int decodeAddress(char *addr_string, int string_size,
-                   const char *data, int data_size)
-{
-    const char addr_prefix = 0x91;
-    int i, idxOutput = 0;
-
-    if (!data || !addr_string) { return 0; }
-
-    if (data[0] != addr_prefix)
-    {
-        LOC_LOGW("decodeAddress: address prefix is not 0x%x but 0x%x", addr_prefix, data[0]);
-        addr_string[0] = '\0';
-        return 0; // prefix not correct
-    }
-
-    for (i = 1; i < data_size; i++)
-    {
-        unsigned char ch = data[i], low = ch & 0x0F, hi = ch >> 4;
-        if (low <= 9 && idxOutput < string_size - 1) { addr_string[idxOutput++] = low + '0'; }
-        if (hi <= 9 && idxOutput < string_size - 1) { addr_string[idxOutput++] = hi + '0'; }
-    }
-
-    addr_string[idxOutput] = '\0'; // Terminates the string
-
-    return idxOutput;
-}
-
 struct LocSsrMsg : public LocMsg {
     LocApiBase* mLocApi;
     inline LocSsrMsg(LocApiBase* locApi) :
@@ -485,16 +440,6 @@ void LocApiBase::releaseATL(int connHandle, uint32_t timeout)
     TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->releaseATL(connHandle, timeout));
 }
 
-void LocApiBase::requestNiNotify(GnssNiNotification &notify, const void* data,
-                                 const LocInEmergency emergencyState)
-{
-    // loop through adapters, and deliver to the first handling adapter.
-    TO_1ST_HANDLING_LOCADAPTERS(
-            mLocAdapters[i]->requestNiNotifyEvent(notify,
-                                                  data,
-                                                  emergencyState));
-}
-
 void* LocApiBase :: getSibling()
     DEFAULT_IMPL(NULL)
 
@@ -607,10 +552,6 @@ DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
 LocationError LocApiBase::
     setServerSync(unsigned int /*ip*/, int /*port*/, LocServerType /*type*/)
 DEFAULT_IMPL(LOCATION_ERROR_SUCCESS)
-
-void LocApiBase::
-    informNiResponse(GnssNiResponse /*userResponse*/, const void* /*passThroughData*/)
-DEFAULT_IMPL()
 
 LocationError LocApiBase::
     setSUPLVersionSync(GnssConfigSuplVersion /*version*/)
