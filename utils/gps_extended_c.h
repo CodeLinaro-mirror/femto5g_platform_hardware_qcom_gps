@@ -422,7 +422,7 @@ typedef uint32_t GnssAdditionalSystemInfoMask;
 #define SBAS_SV_PRN_MIN     120
 #define SBAS_SV_PRN_MAX     191
 #define QZSS_SV_PRN_MIN     193
-#define QZSS_SV_PRN_MAX     197
+#define QZSS_SV_PRN_MAX     202
 #define BDS_SV_PRN_MIN      201
 #define BDS_SV_PRN_MAX      263
 #define GAL_SV_PRN_MIN      301
@@ -474,6 +474,7 @@ typedef struct {
     uint64_t bds_b2bi_sv_used_ids_mask;     // BDS B2BI
     uint64_t bds_b2bq_sv_used_ids_mask;     // BDS B2BQ
     uint64_t qzss_l1ca_sv_used_ids_mask;    // QZSS L1CA
+    uint64_t qzss_l1cb_sv_used_ids_mask;    // QZSS L1CB
     uint64_t qzss_l1s_sv_used_ids_mask;     // QZSS L1S
     uint64_t qzss_l2_sv_used_ids_mask;      // QZSS L2
     uint64_t qzss_l5_sv_used_ids_mask;      // QZSS L5
@@ -615,7 +616,7 @@ typedef struct {
      *    - For GPS:     1 to 32
      *    - For GLONASS: 65 to 96
      *    - For SBAS:    120 to 158 and 183 to 191
-     *    - For QZSS:    193 to 197
+     *    - For QZSS:    193 to 202
      *    - For BDS:     201 to 263
      *    - For GAL:     301 to 336
      *    - For NAVIC:   401 to 414 */

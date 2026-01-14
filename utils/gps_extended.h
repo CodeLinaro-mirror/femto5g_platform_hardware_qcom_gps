@@ -122,14 +122,13 @@ struct ModemProfileDetails {
 /* Engine Debug data Information */
 
 #define GNSS_MAX_SV_INFO_LIST_SIZE 176
-
 typedef struct {
     uint16_t gnssSvId;
     /**<   GNSS SV ID. Range:
       - GPS --     1 to 32
       - GLONASS -- 65 to 96
       - SBAS --    120 to 158 and 183 to 191
-      - QZSS --    193 to 197
+      - QZSS --    193 to 202
       - BDS --     201 to 263
       - Galileo -- 301 to 336
       - NavIC --   401 to 414 */
