@@ -110,6 +110,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define SIGNAL_ID_QZSS_L5Q     8
 #define SIGNAL_ID_QZSS_L6D     9
 #define SIGNAL_ID_QZSS_L6E     0xA
+#define SIGNAL_ID_QZSS_L1CB    0xB
 
 #define SIGNAL_ID_NAVIC_L5SPS  1
 #define SIGNAL_ID_NAVIC_SSPS   2
@@ -333,6 +334,9 @@ static uint32_t convert_signalType_to_signalId(GnssSignalTypeMask signalType)
         case GNSS_SIGNAL_QZSS_L1CA:
             signalId = SIGNAL_ID_QZSS_L1CA;
             break;
+        case GNSS_SIGNAL_QZSS_L1CB:
+            signalId = SIGNAL_ID_QZSS_L1CB;
+            break;
         case GNSS_SIGNAL_QZSS_L2:
             signalId = SIGNAL_ID_QZSS_L2CL;
             break;
@@ -487,7 +491,7 @@ static loc_nmea_sv_meta* loc_nmea_sv_meta_init(loc_nmea_sv_meta& sv_meta,
             sv_meta.talker[0] = 'G';
             sv_meta.talker[1] = 'Q';
             sv_meta.mask = sv_cache_info.qzss_used_mask;
-            // QZSS SV ids are from 193-199. So keep svIdOffset 192
+            // QZSS SV ids are from 193-202. So keep svIdOffset 192
             sv_meta.svIdOffset = QZSS_SV_ID_OFFSET;
             sv_meta.systemId = SYSTEM_ID_QZSS;
             switch (signalType) {
