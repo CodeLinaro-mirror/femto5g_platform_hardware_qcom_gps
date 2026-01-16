@@ -50,8 +50,9 @@ typedef const BatchingInterface* (getBatchingInterface)();
 // GTP services
 typedef void (enableProviderGetter)();
 typedef void (disableProviderGetter)();
-typedef void (getSingleNetworkLocationGetter)(trackingCallback* callback);
-typedef void (stopNetworkLocationGetter)(trackingCallback* callback);
+typedef void(getSingleNetworkLocationGetter)(trackingCallback*   callback,
+                                             TerrestrialTechMask techMask);
+typedef void (stopNetworkLocationGetter)(trackingCallback* callback, TerrestrialTechMask techMask);
 
 typedef ILocationAPI* (*getLocationClientApiImpl)(capabilitiesCallback capabitiescb);
 typedef ILocationControlAPI* (*getLocationIntegrationApiImpl) ();
@@ -718,25 +719,25 @@ void LocationAPI::disableNetworkProvider() {
     }
 }
 
-void LocationAPI::startNetworkLocation(trackingCallback* callback) {
+void LocationAPI::startNetworkLocation(trackingCallback* callback, TerrestrialTechMask techMask) {
     void* libHandle = nullptr;
     getSingleNetworkLocationGetter* setter =
             (getSingleNetworkLocationGetter*)dlGetSymFromLib(libHandle,
             "liblocationservice_glue.so", "startNetworkLocation");
     if (setter != nullptr) {
-        (*setter)(callback);
+        (*setter)(callback, techMask);
     } else {
         LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
     }
 }
 
-void LocationAPI::stopNetworkLocation(trackingCallback* callback) {
+void LocationAPI::stopNetworkLocation(trackingCallback* callback, TerrestrialTechMask techMask) {
     void* libHandle = nullptr;
     stopNetworkLocationGetter* setter = (stopNetworkLocationGetter*)dlGetSymFromLib(libHandle,
             "liblocationservice_glue.so", "stopNetworkLocation");
     if (setter != nullptr) {
-        LOC_LOGe("called");
-        (*setter)(callback);
+        LOC_LOGd("stopNetworkLocation called");
+        (*setter)(callback, techMask);
     } else {
         LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
     }
