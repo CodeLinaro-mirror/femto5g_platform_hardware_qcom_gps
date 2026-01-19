@@ -116,7 +116,6 @@ static uint32_t configMerkleTree(const char * merkleTreeConfigBuffer, int buffer
 static uint32_t configOsnmaEnablement(bool enable);
 static uint32_t getXtraStatus();
 static uint32_t registerXtraStatusUpdate(bool registerUpdate);
-static void configPrecisePositioning(uint32_t featureId, bool enable, const std::string& appHash);
 static uint32_t gnssInjectMmfData(const GnssMapMatchedData& data);
 static uint32_t configureUserConsentForXtra(const bool xtraUserConsent);
 static void set3rdPartyNtnCapability(bool isCapable);
@@ -185,7 +184,6 @@ static const GnssInterface gGnssInterface = {
     configXtraParams,
     getXtraStatus,
     registerXtraStatusUpdate,
-    configPrecisePositioning,
     configMerkleTree,
     configOsnmaEnablement,
     gnssInjectMmfData,
@@ -646,12 +644,6 @@ static uint32_t registerXtraStatusUpdate(bool registerUpdate) {
         return gGnssAdapter->registerXtraStatusUpdateCommand(registerUpdate);
     } else {
         return 0;
-    }
-}
-
-static void configPrecisePositioning(uint32_t featureId, bool enable, const std::string& appHash) {
-    if (NULL != gGnssAdapter) {
-        gGnssAdapter->configPrecisePositioningCommand(featureId, enable, appHash);
     }
 }
 

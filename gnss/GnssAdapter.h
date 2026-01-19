@@ -350,9 +350,6 @@ class GnssAdapter : public LocAdapterBase {
     /*==== Signal type capabilities ====================================================*/
     GnssCapabNotification mGnssCapabNotification;
 
-    /*==== Qesdk Feature Status ========================================================*/
-    std::string mAppHash;
-
     /*==== 3rd party NTN status ========================================================*/
     bool mIsNtnStatusValid;
     GnssSignalTypeMask mNtnSignalTypeConfigMask;
@@ -551,8 +548,7 @@ public:
     bool initEngineHub();
     inline bool isPreciseEnabled() {
         return (mPpFeatureStatusMask &
-                  (DLP_FEATURE_ENABLED_BY_DEFAULT | DLP_FEATURE_ENABLED_BY_QESDK |
-                   WOCS_FEATURE_ENABLED_BY_DEFAULT));
+                  (DLP_FEATURE_ENABLED_BY_DEFAULT | WOCS_FEATURE_ENABLED_BY_DEFAULT));
     }
     inline bool isQppeEnabled() {
         return (ContextBase::mIzat_process_conf.engineServiceInfo.ppeIntEnabled &&
@@ -563,8 +559,7 @@ public:
                 isPreciseEnabled());
     }
     inline bool isMlpEnabled() {
-        return mPpFeatureStatusMask &
-            (MLP_FEATURE_ENABLED_BY_DEFAULT | MLP_FEATURE_ENABLED_BY_QESDK);
+        return mPpFeatureStatusMask & (MLP_FEATURE_ENABLED_BY_DEFAULT);
     }
     inline bool isNtripSourceNeeded () {
         return (mPreciseType == PRECISE_TYPE_EDGNSS || mPreciseType == PRECISE_TYPE_RTK) &&
@@ -603,7 +598,6 @@ public:
     virtual void reportLocationSystemInfoEvent(const LocationSystemInfo& locationSystemInfo);
     virtual void reportDcMessage(const GnssDcReportInfo& dcReport);
     virtual void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
-    virtual void reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask);
     virtual bool requestATL(int connHandle, LocAGpsType agps_type,
                             LocApnTypeMask apn_type_mask, LocSubId sub_id, uint32_t timeout);
     virtual bool releaseATL(int connHandle, uint32_t timeout);
@@ -741,9 +735,7 @@ public:
             mStartDgnssNtripParams.ntripParams.requiresNmeaLocation;}
     void readPPENtripConfig();
 
-    // QESDK feature manange related
-    // This function can only be called from Engine Hub
-    void handleQesdkQwesStatusFromEHub(
+    void handleFeatureStatusUpdateFromEHub(
             const std::unordered_map<LocationQwesFeatureType, bool> &featureMap);
     void restoreConfigFromNvm();
     LeverArmConfigInfo readVrpDataFromNvm();

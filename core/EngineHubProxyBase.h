@@ -140,9 +140,6 @@ public:
         return false;
     }
 
-    inline virtual bool configPrecisePositioning(uint32_t featureId,
-            bool enable, const std::string& appHash) { return false;}
-
     inline virtual bool sendPowerStateInfo(uint8_t powerState) {
        (void)powerState;
        return false;
