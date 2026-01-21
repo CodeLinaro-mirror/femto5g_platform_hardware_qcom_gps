@@ -134,14 +134,6 @@ public:
         return mEvtMask;
     }
 
-    inline void sendMsg(const LocMsg* msg) const {
-        mMsgTask->sendMsg(msg);
-    }
-
-    inline void sendMsg(const LocMsg* msg) {
-        mMsgTask->sendMsg(msg);
-    }
-
     inline void sendMsg(const LocMsg* msg, uint32_t delayInMs = 0) const {
         mMsgTask->sendMsg(msg, delayInMs);
     }

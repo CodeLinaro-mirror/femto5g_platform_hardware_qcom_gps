@@ -279,6 +279,7 @@ enum GeofenceStatusAvailable {
     GEOFENCE_STATUS_AVAILABILE_YES,
 };
 
+// Note: matched with qmiLocGeofenceConfidenceEnumT_v02. DO NOT MODIFY
 enum GeofenceConfidence {
     GEOFENCE_CONFIDENCE_LOW = 1,
     GEOFENCE_CONFIDENCE_MEDIUM,
@@ -507,6 +508,7 @@ enum {
 typedef uint32_t GnssConfigGpsLock;
 
 // SUPL version
+// Note: matched with qmiLocSuplVersionEnumT_v02. DO NOT MODIFY
 enum GnssConfigSuplVersion {
     GNSS_CONFIG_SUPL_VERSION_1_0_0 = 1,
     GNSS_CONFIG_SUPL_VERSION_2_0_0,
@@ -667,6 +669,7 @@ enum GnssMeasurementsAdrStateBits {
     GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT = (1<<3),
 };
 
+// Note: matched with qmiLocMeasurementCodeTypeEnumT_v02. DO NOT MODIFY
 enum GnssMeasurementsCodeType {
     GNSS_MEASUREMENTS_CODE_TYPE_A       = 0,
     GNSS_MEASUREMENTS_CODE_TYPE_B       = 1,
@@ -1000,6 +1003,7 @@ enum GnssDataValidity {
 };
 
 /** Indicate RF Automatic Gain Control Status <br/>   */
+// Note: matched with qmiLocAgcStatusEnumT_v02. DO NOT MODIFY
 enum AgcStatus {
     /**< AGC status is unknown <br/> */
     AGC_STATUS_UNKNOWN                              = 0,
@@ -1202,6 +1206,7 @@ enum SpecialReqType {
     SPECIAL_REQ_SHORT_CODE,   /* Short code */
 };
 
+// Note: matched with qmiLocPreciseSessionTypeEnumT_v02. DO NOT MODIFY
 enum PreciseType {
     PRECISE_TYPE_UNKNOWN = 0,
     PRECISE_TYPE_EDGNSS = 1,
@@ -2632,6 +2637,7 @@ enum XtraStatusUpdateType {
 /** Specifies the Source of ephemeris and action to be performed on
  *  receipt of the ephemeris (Update/Delete) Action shall be
  *  performed on GnssEphSource specified */
+// Note: matched with qmiLocEphUpdateActionEnumT_v02. DO NOT MODIFY
 enum GnssEphAction {
     /**<Update ephemeris. Source of ephemeris is unknown  */
     GNSS_EPH_ACTION_UPDATE_SRC_UNKNOWN_V02 = 0,
@@ -2651,6 +2657,7 @@ enum GnssEphAction {
     GNSS_EPH_ACTION_DELETE_MAX_V02         = 1999,
 };
 
+// Note: matched with qmiLocGalEphSourceSignal_v02. DO NOT MODIFY
 enum GalEphSignalSource {
     /** GALILEO signal is unknown  */
     GAL_EPH_SIGNAL_SRC_UNKNOWN_V02 = 0,

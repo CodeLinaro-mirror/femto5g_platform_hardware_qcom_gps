@@ -416,6 +416,7 @@ typedef uint32_t GnssAdditionalSystemInfoMask;
 #define SBAS_SV_PRN_MIN     120
 #define SBAS_SV_PRN_MAX     191
 #define QZSS_SV_PRN_MIN     193
+#define QZSS_SV_PRN_MAX_LEGACY  197
 #define QZSS_SV_PRN_MAX     202
 #define BDS_SV_PRN_MIN      201
 #define BDS_SV_PRN_MAX      263
@@ -434,7 +435,7 @@ typedef uint32_t GnssAdditionalSystemInfoMask;
 
 #define isValInRangeInclusive(val, min, max) ((val) >= (min) && (val) <= (max))
 #define isGloSlotUnknown(val) ((val) == GLO_SV_PRN_SLOT_UNKNOWN)
-
+// Note: matched with qmiLocReliabilityEnumT_v02. DO NOT MODIFY
 typedef enum {
     LOC_RELIABILITY_NOT_SET = 0,
     LOC_RELIABILITY_VERY_LOW = 1,
