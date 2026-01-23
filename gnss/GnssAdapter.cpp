@@ -5921,9 +5921,6 @@ void GnssAdapter::dataConnOpenCommand(
            } else {
                mAgpsManager->reportAtlOpenSuccess(mAgpsType, mApnName, apn.length(), mBearerType);
            }
-           if (libHandle != nullptr) {
-               dlclose(libHandle);
-           }
         }
     };
     // Added inital length checks for apnlen check to avoid security issues
