@@ -5238,16 +5238,6 @@ void GnssAdapter::handleFeatureStatusUpdateFromEHub(
             LOC_LOGD("MsgReportQwesStatusFromEHub: before mPpFeatureStatusMask: 0x%x",
                      mAdapter.mPpFeatureStatusMask);
             auto cdParserInFeatureMap = mFeatureMap.find(LOCATION_FEATURE_TYPE_CORR_DATA_PARSER);
-
-            //QESDK feature status call back handling logic:
-            //1, DLP_FEATURE_ENABLED_BY_DEFAULT bit is set in reportQwesCapabilities
-            //   according to PPE and QFE feature status during GNSS HAL process
-            //   boot up
-            //2, If LOCATION_QWES_FEATURE_TYPE_DLP_QESDK is presented in feature map,
-            //   It means Qwes status callback is triggered when Engine hub recieves
-            //   configPreciseLocation command from GnssAdapter, and already checked
-            //   QESDK feature status via QWES call checkInstalledLicense, set
-            //   DLP_FEATURE_ENABLED_BY_QESDK bit according to QESDK feature status.
             if (cdParserInFeatureMap != mFeatureMap.end()) {
                 // If EngineHubMgr calls this cb, QPPE is loaded as 3GPP SSR2OSR
                 // correction data parser, so set QDGNSS_3GPP_EP_PARSER_AVAIL
