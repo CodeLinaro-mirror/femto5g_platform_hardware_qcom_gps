@@ -703,6 +703,7 @@ enum loc_api_adapter_event_index {
     LOC_API_ADAPTER_REQUEST_ASSISTANCE_TIME,           // NTP time download request
     LOC_API_ADAPTER_GNSS_BANDS_SUPPORTED,              // GNSS bands supported
     LOC_API_ADAPTER_NTN_CONFIG_UPDATE,                 // NTN config update
+    LOC_API_ADAPTER_GNSS_AIDING_CONFIG_STATUS_EVENT_INFO,   // Config status event from GNSSAIDING
     LOC_API_ADAPTER_EVENT_MAX
 };
 
@@ -740,7 +741,8 @@ enum loc_api_adapter_event_index {
         (1ULL<<LOC_API_ADAPTER_GNSS_BANDS_SUPPORTED)
 #define LOC_API_ADAPTER_BIT_NTN_CONFIG_UPDATE \
         (1ULL<<LOC_API_ADAPTER_NTN_CONFIG_UPDATE)
-
+#define LOC_API_ADAPTER_BIT_GNSS_AIDING_CONFIG_STATUS \
+        (1ULL << LOC_API_ADAPTER_GNSS_AIDING_CONFIG_STATUS_EVENT_INFO)
 typedef uint64_t LOC_API_ADAPTER_EVENT_MASK_T;
 
 typedef int IzatDevId_t;
