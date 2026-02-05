@@ -27,39 +27,9 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef LOCATIONDATATYPES_H
@@ -86,6 +56,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define GNSS_BUGREPORT_BDS_MIN    (1)
 #define GNSS_BUGREPORT_GAL_MIN    (1)
 #define GNSS_BUGREPORT_NAVIC_MIN  (1)
+
+#define UNKNOWN_GPS_WEEK_NUM    (65535)
+#define REAL_TIME_ESTIMATOR_TIME_UNC_THRESHOLD_MSEC (20.0f)
 
 typedef enum {
     LOCATION_ERROR_SUCCESS = 0,
@@ -1052,6 +1025,23 @@ typedef struct {
     uint32_t refFCount;
     /** Number of clock resets/discontinuities detected, affecting the local hardware counter value. */
     uint32_t numClockResets;
+
+    inline bool hasAccurateTime() const {
+        bool retVal = false;
+        if ((validityMask & GNSS_SYSTEM_TIME_WEEK_VALID) &&
+                // 65535 GPS week from modem means unknown
+                (systemWeek != UNKNOWN_GPS_WEEK_NUM) &&
+                (validityMask & GNSS_SYSTEM_TIME_WEEK_MS_VALID) &&
+                (validityMask & GNSS_SYSTEM_CLK_TIME_BIAS_VALID) &&
+                (systemClkTimeBias != 0.0f) &&
+                (systemClkTimeBias < REAL_TIME_ESTIMATOR_TIME_UNC_THRESHOLD_MSEC) &&
+                (validityMask & GNSS_SYSTEM_CLK_TIME_BIAS_UNC_VALID) &&
+                (systemClkTimeUncMs != 0.0f) &&
+                (systemClkTimeUncMs < REAL_TIME_ESTIMATOR_TIME_UNC_THRESHOLD_MSEC)) {
+            retVal = true;
+        }
+        return retVal;
+    }
 } GnssSystemTimeStructType;
 
 typedef struct {
@@ -1093,6 +1083,7 @@ typedef union {
     GnssGloTimeStructType    gloSystemTime;
     GnssSystemTimeStructType navicSystemTime;
 } SystemTimeStructUnion;
+
     /** Time applicability of PVT report */
 typedef struct {
     /** Specifies GNSS system time reported. Mandatory field */
@@ -1103,6 +1094,16 @@ typedef struct {
       Mandatory field
      */
     SystemTimeStructUnion u;
+
+    inline bool hasAccurateGpsTime() const {
+        bool retVal = false;
+        if ((gnssSystemTimeSrc == GNSS_LOC_SV_SYSTEM_GPS) &&
+                (u.gpsSystemTime.hasAccurateTime() == true)) {
+            retVal = true;
+        }
+        return retVal;
+    }
+
 } GnssSystemTime;
 
 typedef uint32_t DrSolutionStatusMask;
