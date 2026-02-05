@@ -94,7 +94,9 @@ void LocAdapterBase::
     reportPositionEvent(const UlpLocation& location,
                         const GpsLocationExtended& locationExtended,
                         enum loc_sess_status status,
-                        LocPosTechMask loc_technology_mask)
+                        LocPosTechMask loc_technology_mask,
+                        GnssDataNotification* pDataNotify,
+                        int msInWeek)
 {
     if (mLocAdapterProxyBase != NULL) {
         mLocAdapterProxyBase->reportPositionEvent(location, locationExtended, status,
@@ -121,7 +123,8 @@ void LocAdapterBase::
 DEFAULT_IMPL()
 
 void LocAdapterBase::
-    reportDataEvent(const GnssDataNotification& /*dataNotify*/)
+    reportDataEvent(const GnssDataNotification& /*dataNotify*/,
+                    int /*msInWeek*/)
 DEFAULT_IMPL()
 
 void LocAdapterBase::
@@ -153,7 +156,8 @@ bool LocAdapterBase::
 DEFAULT_IMPL(false)
 
 void LocAdapterBase::
-reportGnssMeasurementsEvent(const GnssMeasurements& /*gnssMeasurements*/)
+reportGnssMeasurementsEvent(const GnssMeasurements& /*gnssMeasurements*/,
+                                   int /*msInWeek*/)
 DEFAULT_IMPL()
 
 

@@ -128,6 +128,7 @@ protected:
         close();
     LOC_API_ADAPTER_EVENT_MASK_T getEvtMask();
     LOC_API_ADAPTER_EVENT_MASK_T mMask;
+    uint32_t mNmeaMask;
 
     LocApiBase(LOC_API_ADAPTER_EVENT_MASK_T excludedMask,
                ContextBase* context = NULL);
@@ -174,12 +175,16 @@ public:
                         GpsLocationExtended& locationExtended,
                         enum loc_sess_status status,
                         LocPosTechMask loc_technology_mask =
-                                  LOC_POS_TECH_MASK_DEFAULT);
+                                  LOC_POS_TECH_MASK_DEFAULT,
+                        GnssDataNotification* pDataNotify = nullptr,
+                        int msInWeek = -1);
     void reportSv(GnssSvNotification& svNotify);
     void reportSvPolynomial(GnssSvPolynomial &svPolynomial);
     void reportSvEphemeris(GnssSvEphemerisReport &svEphemeris);
     void reportNmea(const char* nmea, int length);
-    void reportData(GnssDataNotification& dataNotify);
+    void reportData(GnssDataNotification& dataNotify, int msInWeek);
+    void reportXtraServer(const char* url1, const char* url2,
+                          const char* url3, const int maxlength);
     void reportLocationSystemInfo(const LocationSystemInfo& locationSystemInfo);
     void reportDcMessage(const GnssDcReportInfo& dcReport);
     void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
@@ -190,7 +195,7 @@ public:
     void releaseATL(int connHandle, uint32_t timeout=ATL_CLOSE_DEFAULT_TIMEOUT_MSEC);
     void requestNiNotify(GnssNiNotification &notify, const void* data,
                          const LocInEmergency emergencyState);
-    void reportGnssMeasurements(GnssMeasurements& gnssMeasurements);
+    void reportGnssMeasurements(GnssMeasurements& gnssMeasurements, int msInWeek);
     void reportGnssSvIdConfig(const GnssSvIdConfig& config);
     void requestOdcpi(OdcpiRequestInfo& request);
     void reportGnssEngEnergyConsumedEvent(uint64_t energyConsumedSinceFirstBoot);
@@ -299,6 +304,7 @@ public:
     virtual void addToCallQueue(LocApiResponse* adapterResponse);
 
     void updateEvtMask();
+    void updateNmeaMask(uint32_t mask);
 
     virtual void updateSystemPowerState(PowerStateType systemPowerState);
     virtual void updatePowerConnectState(bool connected);

@@ -165,6 +165,11 @@ public:
         mLocApi->updateEvtMask();
     }
 
+    inline void updateNmeaMask(uint32_t mask)
+    {
+        mLocApi->updateNmeaMask(mask);
+    }
+
     inline bool isFeatureSupported(uint8_t featureVal) {
         return ContextBase::isFeatureSupported(featureVal);
     }
@@ -191,9 +196,11 @@ public:
     virtual void reportPositionEvent(const UlpLocation& location,
                                      const GpsLocationExtended& locationExtended,
                                      enum loc_sess_status status,
-                                     LocPosTechMask loc_technology_mask);
+                                     LocPosTechMask loc_technology_mask,
+                                     GnssDataNotification* pDataNotify = nullptr,
+                                     int msInWeek = -1);
     virtual void reportSvEvent(const GnssSvNotification& svNotify);
-    virtual void reportDataEvent(const GnssDataNotification& dataNotify);
+    virtual void reportDataEvent(const GnssDataNotification& dataNotify, int msInWeek);
     virtual void reportNmeaEvent(const char* nmea, size_t length);
     virtual void reportSvPolynomialEvent(GnssSvPolynomial &svPolynomial);
     virtual void reportSvEphemerisEvent(GnssSvEphemerisReport &svEphemeris);
@@ -207,7 +214,8 @@ public:
                                       const LocInEmergency emergencyState);
     inline virtual bool isInSession() { return false; }
     ContextBase* getContext() const { return mContext; }
-    virtual void reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurements);
+    virtual void reportGnssMeasurementsEvent(const GnssMeasurements& gnssMeasurements,
+                                                int msInWeek);
     virtual void reportGnssSvIdConfigEvent(const GnssSvIdConfig& config);
     virtual void reportGnssConfigEvent(uint32_t sessionId, const GnssConfig& gnssConfig);
     virtual bool requestOdcpiEvent(OdcpiRequestInfo& request);
