@@ -27,8 +27,8 @@
  */
 
 /*
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #ifndef LOCATION_INTERFACE_H
@@ -136,6 +136,7 @@ struct GnssInterface {
     void (*setNtnConfigSignalMask)(GnssSignalTypeMask gpsSignalTypeConfigMask);
     void (*injectSuplCert)(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
     void (*updateMccMnc)(std::string& mccmncCountry);
+    void (*setDebugSessionStatus)(bool debugSessionStatus);
 };
 
 struct BatchingInterface {

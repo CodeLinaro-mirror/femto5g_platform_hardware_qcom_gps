@@ -27,8 +27,8 @@
  *
  */
 /*
-Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-Copyright (c) 2022, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -57,9 +57,12 @@ void loc_get_target_baseband(char *baseband, int array_length);
 /*The character array passed to this function should have length
   of atleast PROPERTY_VALUE_MAX*/
 void loc_get_auto_platform_name(char *platform_name, int array_length);
-/*The character array passed to this function should have length
-  of atleast PROPERTY_VALUE_MAX*/
-void loc_get_device_soc_id(char *soc_id_value, int array_length);
+
+int loc_get_device_soc_id();
+
+#ifdef USE_GLIB
+bool isLEAPQTarget(int soc_id);
+#endif
 
 /* Please remember to update 'target_name' in loc_log.cpp,
    if do any changes to this enum. */

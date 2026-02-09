@@ -64,10 +64,10 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /*
-Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
-SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #include "GnssAdapter.h"
 #include "location_interface.h"
@@ -166,6 +166,7 @@ static void getNtnConfigSignalMask();
 static void setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask);
 static void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
 static void updateMccMnc(std::string& mccmncCountry);
+static void setDebugSessionStatus(bool debugSessionStatus);
 
 static const GnssInterface gGnssInterface = {
     sizeof(GnssInterface),
@@ -242,6 +243,7 @@ static const GnssInterface gGnssInterface = {
     setNtnConfigSignalMask,
     injectSuplCert,
     updateMccMnc,
+    setDebugSessionStatus
 };
 
 #ifndef DEBUG_X86
@@ -823,5 +825,11 @@ static void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplC
 static void updateMccMnc(std::string& mccmncCountry) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->getSystemStatus()->updateMccMnc(mccmncCountry);
+    }
+}
+
+static void setDebugSessionStatus(bool debugSessionStatus) {
+    if (NULL != gGnssAdapter) {
+        gGnssAdapter->setDebugSessionStatusCommand(debugSessionStatus);
     }
 }

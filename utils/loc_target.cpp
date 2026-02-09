@@ -27,8 +27,8 @@
  *
  */
 /*
-Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -47,15 +47,19 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "loc_log.h"
 #include <loc_pla.h>
 
-#define APQ8064_ID_1 "109"
-#define APQ8064_ID_2 "153"
-#define MPQ8064_ID_1 "130"
-#define MSM8930_ID_1 "142"
-#define MSM8930_ID_2 "116"
-#define APQ8030_ID_1 "157"
-#define APQ8074_ID_1 "184"
-#define SG8350P_ID_1 "682"
-#define SM8650Q_ID_1 "696"
+/* SOC_ID for various targets can be obtained from:
+ * https://ipcatalog.qualcomm.com/socinfo/chipinfo */
+#define APQ8064_ID_1 (109)
+#define APQ8064_ID_2 (153)
+#define MPQ8064_ID_1 (130)
+#define MSM8930_ID_1 (142)
+#define MSM8930_ID_2 (116)
+#define APQ8030_ID_1 (157)
+#define APQ8074_ID_1 (184)
+#define SG8350P_ID_1 (682)
+#define SM8650Q_ID_1 (696)
+
+#define DEFAULT_SOC_ID (-1)
 
 #define LINE_LEN 100
 #define STR_LIQUID      "Liquid"
@@ -73,6 +77,12 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define GPS_CHECK_NO_ERROR 0
 #define GPS_CHECK_NO_GPS_HW 1
 
+#ifdef USE_GLIB
+
+#define SM7750_CQ7790S_SOC_ID (732)
+
+static const int gLEAPQTargetList[] = {SM7750_CQ7790S_SOC_ID};
+#endif
 static unsigned int gTarget = (unsigned int)-1;
 
 static int read_a_line(const char * file_path, char * line, int line_size)
@@ -130,29 +140,48 @@ void loc_get_auto_platform_name(char *platform_name, int array_length)
     }
 }
 
-/*The character array passed to this function should have length
-  of atleast PROPERTY_VALUE_MAX*/
-/* Reads the soc_id node and return the soc_id value */
-void loc_get_device_soc_id(char *soc_id_value, int array_length)
+/* Reads the soc_id node and return the soc_id value, returns DEFAULT_SOC_ID if soc id cannot be
+ * fetched */
+int loc_get_device_soc_id()
 {
-    static const char soc_id[]     = "/sys/devices/soc0/soc_id";
-    static const char soc_id_dep[] = "/sys/devices/system/soc/soc0/id";
-    int return_val = 0;
+    const char *soc_id_paths[] = {"/sys/devices/soc0/soc_id", "/sys/devices/system/soc/soc0/id"};
+    int         file_read_res  = -1;
+    int         soc_id         = DEFAULT_SOC_ID;
+    char        soc_id_str[LINE_LEN] = {};
 
-    if (soc_id_value && (array_length >= PROPERTY_VALUE_MAX)) {
-        if (!access(soc_id, F_OK)) {
-            return_val = read_a_line(soc_id, soc_id_value, array_length);
+    for (size_t i = 0; i < sizeof(soc_id_paths) / sizeof(char *); i++) {
+        LOC_LOGd("Trying to read soc_id from path: %s", soc_id_paths[i]);
+
+        //Path should be accessible to other users also, but sepolicy rule would be needed.
+        if (!access(soc_id_paths[i], F_OK | R_OK)) {
+            file_read_res = read_a_line(soc_id_paths[i], soc_id_str, sizeof(soc_id_str));
+            if (0 == file_read_res) {
+                LOC_LOGd("soc_id read successful from path: %s", soc_id_paths[i]);
+                break;
+            }
         } else {
-            return_val = read_a_line(soc_id_dep, soc_id_value, array_length);
+            LOC_LOGe("access failed for path: %s, err: %s\n", soc_id_paths[i], strerror(errno));
         }
-        if (0 == return_val) {
-            LOC_LOGd("SOC Id value: %s\n", soc_id_value);
+    }
+
+    if (0 == file_read_res && soc_id_str[0] != '\0') {
+        LOC_LOGd("SOC Id str value: %s\n", soc_id_str);
+
+        char *endptr      = nullptr;
+        long  soc_id_long = strtol(soc_id_str, &endptr, 10);
+
+        // Check for conversion errors
+        if (endptr == soc_id_str || *endptr != '\0' || soc_id_long <= 0 ||
+            soc_id_long > INT32_MAX) {
+            LOC_LOGe("Invalid soc_id: %s", soc_id_str);
         } else {
-            LOC_LOGe("Unable to read the soc_id value\n");
+            soc_id = (int)soc_id_long;
+            LOC_LOGd("soc_id: %d", soc_id);
         }
     } else {
-        LOC_LOGe("Null parameter or array length less than PROPERTY_VALUE_MAX\n");
+        LOC_LOGe("Unable to read the soc_id value\n");
     }
+    return soc_id;
 }
 
 unsigned int loc_get_target(void)
@@ -166,10 +195,11 @@ unsigned int loc_get_target(void)
     static const char mdm[]              = "/target"; // mdm target we are using
 
     char rd_hw_platform[LINE_LEN];
-    char rd_id[LINE_LEN];
     char rd_mdm[LINE_LEN];
     char baseband[LINE_LEN];
     char rd_auto_platform[LINE_LEN];
+
+    int soc_id = DEFAULT_SOC_ID;
 
     loc_get_target_baseband(baseband, sizeof(baseband));
 
@@ -179,7 +209,7 @@ unsigned int loc_get_target(void)
         read_a_line(hw_platform_dep, rd_hw_platform, LINE_LEN);
     }
     // Get the soc-id for this device.
-    loc_get_device_soc_id(rd_id, sizeof(rd_id));
+    soc_id = loc_get_device_soc_id();
 
     /*check automotive platform*/
     loc_get_auto_platform_name(rd_auto_platform, sizeof(rd_auto_platform));
@@ -199,8 +229,7 @@ unsigned int loc_get_target(void)
         !memcmp(baseband, STR_SDC, LENGTH(STR_SDC)) ||
         !memcmp(baseband, STR_QCS, LENGTH(STR_QCS)) ) {
 
-        if( !memcmp(rd_id, MPQ8064_ID_1, LENGTH(MPQ8064_ID_1))
-            && IS_STR_END(rd_id[LENGTH(MPQ8064_ID_1)]) )
+        if (MPQ8064_ID_1 == soc_id)
             gTarget = TARGET_NO_GNSS;
         else
             gTarget = TARGET_APQ_SA;
@@ -212,19 +241,14 @@ unsigned int loc_get_target(void)
                  && IS_STR_END(rd_hw_platform[LENGTH(STR_MTP)]))) &&
                !read_a_line( mdm, rd_mdm, LINE_LEN)) {
         gTarget = TARGET_MDM;
-    } else if( (!memcmp(rd_id, MSM8930_ID_1, LENGTH(MSM8930_ID_1))
-                && IS_STR_END(rd_id[LENGTH(MSM8930_ID_1)])) ||
-               (!memcmp(rd_id, MSM8930_ID_2, LENGTH(MSM8930_ID_2))
-                && IS_STR_END(rd_id[LENGTH(MSM8930_ID_2)])) ) {
+    } else if (MSM8930_ID_1 == soc_id || MSM8930_ID_2 == soc_id) {
         gTarget = TARGET_MSM_NO_SSC;
     } else if ( !memcmp(baseband, STR_MSM, LENGTH(STR_MSM)) ||
                 !memcmp(baseband, STR_SDM, LENGTH(STR_SDM)) ) {
         gTarget = TARGET_DEFAULT;
-    } else if (!memcmp(rd_id, SG8350P_ID_1, LENGTH(SG8350P_ID_1))
-                && IS_STR_END(rd_id[LENGTH(SG8350P_ID_1)])) {
+    } else if (SG8350P_ID_1 == soc_id) {
         gTarget = TARGET_NO_GNSS;
-    } else if (!memcmp(rd_id, SM8650Q_ID_1, LENGTH(SM8650Q_ID_1))
-                && IS_STR_END(rd_id[LENGTH(SM8650Q_ID_1)])) {
+    } else if (SM8650Q_ID_1 == soc_id) {
         gTarget = TARGET_NO_GNSS;
     } else {
         gTarget = TARGET_UNKNOWN;
@@ -234,3 +258,19 @@ detected:
     LOC_LOGW("HAL: %s returned %d", __FUNCTION__, gTarget);
     return gTarget;
 }
+
+#ifdef USE_GLIB
+bool isLEAPQTarget(int soc_id) {
+    if (soc_id <= 0) {
+        return false;
+    }
+    const size_t targetListSize = sizeof(gLEAPQTargetList) / sizeof(gLEAPQTargetList[0]);
+    for (size_t i = 0; i < targetListSize; i++) {
+        if (gLEAPQTargetList[i] == soc_id)
+            return true;
+    }
+
+    //no match found
+    return false;
+}
+#endif
