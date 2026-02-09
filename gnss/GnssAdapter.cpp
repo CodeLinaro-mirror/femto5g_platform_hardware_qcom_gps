@@ -7947,12 +7947,18 @@ uint32_t GnssAdapter::configEngineRunStateCommand(
             mEngState(engState) {}
         inline virtual void proc() const {
             LocationError err = LOCATION_ERROR_NOT_SUPPORTED;
-            // Currently, only DR engine supports pause/resume request
-            if ((mEngType == DEAD_RECKONING_ENGINE) &&
-                (mAdapter.mEngServiceInfo.dreIntEnabled == true)) {
+            // Only DR and PPE engines supports pause/resume request
+            if (((mEngType == DEAD_RECKONING_ENGINE) &&
+                (mAdapter.mEngServiceInfo.dreIntEnabled == true)) ||
+                ((mEngType == PRECISE_POSITIONING_ENGINE) &&
+                (mAdapter.mEngServiceInfo.ppeEnabled == true))) {
                 if (true == mAdapter.mEngHubProxy->configEngineRunState(mEngType, mEngState)) {
                     err = LOCATION_ERROR_SUCCESS;
                 }
+            } else {
+                LOC_LOGe("Not supported for EngType %d (%d, %d)", mEngType,
+                        mAdapter.mEngServiceInfo.dreIntEnabled,
+                        mAdapter.mEngServiceInfo.ppeEnabled);
             }
             if (LOC_ENGINE_RUN_STATE_PAUSE_RETAIN == mEngState ||
                     LOC_ENGINE_RUN_STATE_PAUSE == mEngState) {
