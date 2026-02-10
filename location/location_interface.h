@@ -129,6 +129,7 @@ struct GnssInterface {
     void (*setNtnConfigSignalMask)(GnssSignalTypeMask gpsSignalTypeConfigMask);
     void (*injectSuplCert)(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
     void (*updateMccMnc)(std::string& mccmncCountry);
+    void (*setPreferredConstellation)(Gnss_LocSvSystemEnumType type);
 };
 
 struct BatchingInterface {

@@ -123,6 +123,7 @@ static void getNtnConfigSignalMask();
 static void setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask);
 static void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
 static void updateMccMnc(std::string& mccmncCountry);
+static void setPreferredConstellation(Gnss_LocSvSystemEnumType type);
 
 static const GnssInterface gGnssInterface = {
     initialize,
@@ -193,6 +194,7 @@ static const GnssInterface gGnssInterface = {
     setNtnConfigSignalMask,
     injectSuplCert,
     updateMccMnc,
+    setPreferredConstellation,
 };
 
 #ifndef DEBUG_X86
@@ -706,5 +708,11 @@ static void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplC
 static void updateMccMnc(std::string& mccmncCountry) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->getSystemStatus()->getOsObserver()->eventMccmnc(mccmncCountry);
+    }
+}
+
+static void setPreferredConstellation(Gnss_LocSvSystemEnumType type) {
+    if (NULL != gGnssAdapter) {
+        gGnssAdapter->setPreferredConstellationCommand(type);
     }
 }

@@ -320,6 +320,8 @@ public:
             LocApiResponse* adapterResponse = nullptr);
     virtual void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData,
             LocApiResponse* adapterResponse=nullptr);
+    virtual void setPreferredConstellation(Gnss_LocSvSystemEnumType type,
+            LocApiResponse* adapterResponse=nullptr);
 };
 
 class RealtimeEstimator {

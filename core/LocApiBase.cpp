@@ -779,6 +779,10 @@ void LocApiBase::injectSuplCert(int32_t /*suplCertId*/,
         const std::vector<uint8_t>& /*suplCertData*/, LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
+void LocApiBase::setPreferredConstellation(Gnss_LocSvSystemEnumType /*type*/,
+        LocApiResponse* /*adapterResponse*/)
+DEFAULT_IMPL()
+
 void RealtimeEstimator::reset() {
     memset(&mTimePairPVTReport, 0, sizeof(mTimePairPVTReport));
     memset(&mTimePairMeasReport, 0, sizeof(mTimePairMeasReport));
