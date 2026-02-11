@@ -108,7 +108,7 @@ enum LocationFlagsBits {
     LOCATION_HAS_ALTITUDE_REF_TYPE_BIT = (1<<18), // location has altitude ref type
 };
 
-typedef uint16_t LocationTechnologyMask;
+typedef uint32_t LocationTechnologyMask;
 // mask indicating location calculations including...
 enum LocationTechnologyBits{
     LOCATION_TECHNOLOGY_GNSS_BIT                     = (1<<0), // using GNSS
