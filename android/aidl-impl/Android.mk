@@ -44,7 +44,7 @@ endif
 LOCAL_SHARED_LIBRARIES := \
     libbase \
     libbinder_ndk \
-    android.hardware.gnss-V4-ndk \
+    android.hardware.gnss-V7-ndk \
     android.hardware.health-V1-ndk \
     liblog \
     libcutils \
@@ -84,7 +84,7 @@ LOCAL_SHARED_LIBRARIES := \
     libbinder_ndk
 
 LOCAL_SHARED_LIBRARIES += \
-    android.hardware.gnss-V4-ndk \
+    android.hardware.gnss-V7-ndk \
     android.hardware.gnss-aidl-impl-qti
 
 LOCAL_CFLAGS += $(GNSS_CFLAGS)

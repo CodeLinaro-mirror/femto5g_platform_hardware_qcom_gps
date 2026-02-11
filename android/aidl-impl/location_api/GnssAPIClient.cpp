@@ -45,13 +45,13 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #define META_INFO_FILE "/vendor/firmware_mnt/verinfo/ver_info.txt"
 #define DELIMITER ";"
-
 std::recursive_mutex gSharedMtx;
 namespace android {
 namespace hardware {
 namespace gnss {
 namespace aidl {
 namespace implementation {
+using ::aidl::android::hardware::gnss::ElapsedRealtime;
 static std::string getVersionString() {
     static std::string version;
     if (!version.empty()) {
@@ -98,18 +98,82 @@ static void convertGnssSvStatus(const GnssSvNotification& in,
         out[i].azimuthDegrees = in.gnssSvs[i].azimuth;
         out[i].carrierFrequencyHz = in.gnssSvs[i].carrierFrequencyHz;
         out[i].svFlag = static_cast<int>(IGnssCallback::GnssSvFlags::NONE);
+        out[i].signalType.emplace();
         if (in.gnssSvs[i].gnssSvOptionsMask & GNSS_SV_OPTIONS_HAS_EPHEMER_BIT)
             out[i].svFlag |= (int)IGnssCallback::GnssSvFlags::HAS_EPHEMERIS_DATA;
         if (in.gnssSvs[i].gnssSvOptionsMask & GNSS_SV_OPTIONS_HAS_ALMANAC_BIT)
             out[i].svFlag |= (int)IGnssCallback::GnssSvFlags::HAS_ALMANAC_DATA;
         if (in.gnssSvs[i].gnssSvOptionsMask & GNSS_SV_OPTIONS_USED_IN_FIX_BIT)
             out[i].svFlag |= (int)IGnssCallback::GnssSvFlags::USED_IN_FIX;
-        if (in.gnssSvs[i].gnssSvOptionsMask & GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT)
+        if (in.gnssSvs[i].gnssSvOptionsMask & GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT) {
             out[i].svFlag |= (int)IGnssCallback::GnssSvFlags::HAS_CARRIER_FREQUENCY;
+            out[i].signalType->carrierFrequencyHz = in.gnssSvs[i].carrierFrequencyHz;
+        }
 
         gnss::aidl::implementation::convertGnssConstellationType(in.gnssSvs[i].type,
                 out[i].constellation);
         out[i].basebandCN0DbHz = in.gnssSvs[i].basebandCarrierToNoiseDbHz;
+        out[i].signalType->constellation = out[i].constellation;
+        if (in.gnssSvs[i].gnssSvOptionsMask & GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT) {
+            switch (in.gnssSvs[i].gnssSignalTypeMask) {
+                case GNSS_SIGNAL_GPS_L1CA:
+                case GNSS_SIGNAL_GLONASS_G1:
+                case GNSS_SIGNAL_GLONASS_G2:
+                case GNSS_SIGNAL_GALILEO_E1:
+                case GNSS_SIGNAL_QZSS_L1CA:
+                case GNSS_SIGNAL_SBAS_L1:
+                case GNSS_SIGNAL_NAVIC_L5:
+                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_C;
+                    break;
+                case GNSS_SIGNAL_QZSS_L1S:
+                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_Z;
+                    break;
+                case GNSS_SIGNAL_GPS_L2:
+                case GNSS_SIGNAL_QZSS_L2:
+                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_L;
+                    break;
+                case GNSS_SIGNAL_GPS_L5:
+                case GNSS_SIGNAL_GALILEO_E5A:
+                case GNSS_SIGNAL_GALILEO_E5B:
+                case GNSS_SIGNAL_QZSS_L5:
+                case GNSS_SIGNAL_BEIDOU_B2BQ:
+                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_Q;
+                    break;
+                case GNSS_SIGNAL_BEIDOU_B2BI:
+                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_D;
+                    break;
+                case GNSS_SIGNAL_BEIDOU_B1I:
+                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_I;
+                    break;
+                case GNSS_SIGNAL_BEIDOU_B1C:
+                case GNSS_SIGNAL_BEIDOU_B2AQ:
+                    // this one is not yet supported
+                case GNSS_SIGNAL_GPS_L1C:
+                case GNSS_SIGNAL_NAVIC_L1:
+                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_P;
+                    break;
+                    /* no plan to support  */
+                case GNSS_SIGNAL_BEIDOU_B2I:
+                case GNSS_SIGNAL_BEIDOU_B2AI:
+                default:
+                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_UNKNOWN;
+            }
+        }
+        if (in.gnssSvs[i].gnssSvOptionsMask & GNSS_SV_OPTIONS_HAS_ELAPSED_REAL_TIME_BIT) {
+            out[i].elapsedRealtime.emplace();
+            out[i].elapsedRealtime->flags |= ElapsedRealtime::HAS_TIMESTAMP_NS;
+            out[i].elapsedRealtime->timestampNs = in.gnssSvs[i].elapsedRealTime;
+            out[i].elapsedRealtime->flags |= ElapsedRealtime::HAS_TIME_UNCERTAINTY_NS;
+            out[i].elapsedRealtime->timeUncertaintyNs = in.gnssSvs[i].elapsedRealTimeUnc;
+        }
+        LOC_LOGv("GnssSvInfo.elapsedRealtime.flags: 0x%08X"
+             " GnssSvInfo.elapsedRealtime.timestampNs: %" PRId64", "
+             " GnssSvInfo.elapsedRealtime.timeUncertaintyNs: %.2f, signal type constellation: %d, "
+             "carrierFrequencyHz: %d, svFlag: 0x%X",
+             out[i].elapsedRealtime->flags,
+             out[i].elapsedRealtime->timestampNs,
+             out[i].elapsedRealtime->timeUncertaintyNs, out[i].signalType->constellation,
+             out[i].signalType->carrierFrequencyHz, out[i].svFlag);
     }
 }
 
@@ -141,15 +205,13 @@ GnssAPIClient::GnssAPIClient(const shared_ptr<IGnssCallback>& gpsCb) :
     mSignalTypeCbExpected(false),
     mReportSpeOnly(true),
     mGnssCbIface(gpsCb) {
-
     const loc_param_s_type gps_conf_table[] =
     {
-       {"ANDROID_REPORT_SPE_ONLY", &mReportSpeOnly, NULL, 'n'},
+        {"ANDROID_REPORT_SPE_ONLY", &mReportSpeOnly, NULL, 'n'},
     };
     // read configuration file
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_table);
     LOC_LOGd("ANDROID_REPORT_SPE_ONLY = %d", mReportSpeOnly);
-
     LOC_LOGd("]: (%p)", &gpsCb);
     initLocationOptions();
     getVersionString();
