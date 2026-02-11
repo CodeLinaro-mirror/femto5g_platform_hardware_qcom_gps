@@ -124,7 +124,7 @@ protected:
     /* ==== CLIENT ========================================================================= */
     typedef std::map<LocationAPI*, LocationCallbacks> ClientDataMap;
     ClientDataMap mClientData;
-    std::vector<LocMsg*> mPendingMsgs; // For temporal storage of msgs before Open is completed
+    std::vector<LocMsg*> mPendingMsgs{}; // For temporal storage of msgs before Open is completed
     /* ======== UTILITIES ================================================================== */
     void saveClient(LocationAPI* client, const LocationCallbacks& callbacks);
     void eraseClient(LocationAPI* client);
