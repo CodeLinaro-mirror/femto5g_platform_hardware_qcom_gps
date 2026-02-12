@@ -185,6 +185,7 @@ GnssAdapter::GnssAdapter() :
     mPositionElapsedRealTimeCal(30000000),
     mAddressRequestCb(nullptr),
     mHmacConfig(HMAC_CONFIG_UNKNOWN),
+    mPrecisePosConfigWaiter(),
     mGnssCapabNotification{},
     mAppHash(""),
     m3GppSourceMask(QDGNSS_3GPP_SOURCE_UNKNOWN),
@@ -2772,9 +2773,10 @@ GnssAdapter::setEsStatusCallbackCommand(std::function<void(bool)> esStatusCb)
 }
 
 void
-GnssAdapter::setTribandState() {
+GnssAdapter::setTribandState(bool sessionStartInProgress) {
     bool enabled = false;
-    if (isInSession() && mEngServiceInfo.ppeIntEnabled && isQppeEnabled()) {
+    if ((isInSession() || sessionStartInProgress) &&
+            mEngServiceInfo.ppeIntEnabled && isQppeEnabled()) {
         enabled = true;
     }
     LOC_LOGd("enabled:%d", enabled);
@@ -3404,6 +3406,9 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
              client, sessionId, options.minInterval, options.minDistance, options.mode,
              options.powerMode, options.tbm);
 
+    // Wait for precise positioning configuration to complete before proceeding
+    mPrecisePosConfigWaiter.wait(2000);
+
     struct MsgStartTracking : public LocMsg {
         GnssAdapter& mAdapter;
         LocApiBase& mApi;
@@ -3467,11 +3472,12 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                                 mOptions.tbm, TRACKING_TBM_THRESHOLD_MILLIS);
                         mOptions.powerMode = GNSS_POWER_MODE_M2;
                     }
+                    // Triband state request needs to be sent before session start request
+                    mAdapter.setTribandState(true);
                     // Api doesn't support multiple clients for time based tracking, so mutiplex
                     bool reportToClientWithNoWait =
                             mAdapter.startTimeBasedTrackingMultiplex(mClient, mSessionId, mOptions);
                     mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
-                    mAdapter.setTribandState();
 
                     if (reportToClientWithNoWait) {
                         mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
@@ -5949,8 +5955,7 @@ void GnssAdapter::handleQesdkQwesStatusFromEHub(
             mAdapter(adapter),
             mFeatureMap(featureMap) {}
         inline virtual void proc() const {
-            LOC_LOGD("MsgReportQwesStatusFromEHub: before mPpFeatureStatusMask: 0x%x",
-                     mAdapter.mPpFeatureStatusMask);
+            LOC_LOGd("before mPpFeatureStatusMask: 0x%x", mAdapter.mPpFeatureStatusMask);
             auto dlpQesdkInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_DLP_QESDK);
             auto cdParserInFeatureMap = mFeatureMap.find(LOCATION_FEATURE_TYPE_CORR_DATA_PARSER);
 
@@ -5987,15 +5992,17 @@ void GnssAdapter::handleQesdkQwesStatusFromEHub(
                 // If EngineHubMgr calls this cb, QPPE is loaded as 3GPP SSR2OSR
                 // correction data parser, so set QDGNSS_3GPP_EP_PARSER_AVAIL
                 mAdapter.m3GppSourceMask |= QDGNSS_3GPP_EP_PARSER_AVAIL;
-                LOC_LOGD("MsgReportQwesStatusFromEHub, set QDGNSS_3GPP_EP_PARSER_AVAIL");
+                LOC_LOGd("set QDGNSS_3GPP_EP_PARSER_AVAIL");
                 mAdapter.notifyPreciseLocation();
             }
 
-            LOC_LOGD("MsgReportQwesStatusFromEHub, after mPpFeatureStatusMask: 0x%x",
-                     mAdapter.mPpFeatureStatusMask);
+            LOC_LOGd("after mPpFeatureStatusMask: 0x%x", mAdapter.mPpFeatureStatusMask);
+            mAdapter.mPrecisePosConfigWaiter.signal();
+            mAdapter.mPrecisePosConfigWaiter.deinit();
         }
     };
 
+    LOC_LOGv("Qwes status from EHub");
     sendMsg(new MsgReportQwesStatusFromEHub(*this, featureMap));
 }
 
@@ -7602,7 +7609,7 @@ bool GnssAdapter::measCorrSetCorrectionsCommand(const GnssMeasurementCorrections
                     break;
                 }
             }
-            char mapDataTestMode[LOC_MAX_PARAM_STRING];
+            char mapDataTestMode[LOC_MAX_PARAM_STRING] = {};
             loc_param_s_type izatMapDataTable[] =
             {
                 { "MAP_DATA_TEST_MODE", &mapDataTestMode, NULL, 's' },
@@ -8075,7 +8082,8 @@ void GnssAdapter::configPrecisePositioningCommand(
             mAppHash(appHash),
             mFeatureId(featureId) {}
         inline virtual void proc() const {
-            LOC_LOGD("ConfigPrecisePositioning: enable: %d, appHash: %s, featureId: %d", mEnable,
+
+            LOC_LOGd("ConfigPrecisePositioning: enable: %d, appHash: %s, featureId: %d", mEnable,
                     mAppHash.c_str(), mFeatureId);
             if (QESDK_FEATURE_ID_EDGNSS == mFeatureId || QESDK_FEATURE_ID_RTK == mFeatureId) {
                 mAdapter.mEngHubProxy->configPrecisePositioning(mFeatureId, mEnable, mAppHash);
@@ -8088,6 +8096,10 @@ void GnssAdapter::configPrecisePositioningCommand(
             }
         }
     };
+
+    // Initialize the waiter to ensure that tracking session waits for this config completion
+    mPrecisePosConfigWaiter.init();
+
     sendMsg(new MsgConfigPrecisePositioning(*this, enable, appHash, featureId));
 }
 
@@ -8127,7 +8139,7 @@ uint32_t GnssAdapter::configMerkleTreeCommand(const char * merkleTreeConfigBuffe
                 mAdapter.reportResponse(LOCATION_ERROR_INVALID_PARAMETER, mSessionId);
                 LOC_LOGE("MsgConfigMerkleTreeParams: Merkle tree config file parse failed");
                 if (treeParam != nullptr) {
-                    delete treeParam;
+                    delete[] treeParam;
                 }
                 return;
             }
@@ -8145,7 +8157,7 @@ uint32_t GnssAdapter::configMerkleTreeCommand(const char * merkleTreeConfigBuffe
                         mAdapter.reportResponse(err, mSessionId);
                         // clean treeParam when response for the last public key reports
                         if (treeParam != nullptr) {
-                            delete treeParam;
+                            delete[] treeParam;
                             treeParam = nullptr;
                         }
                     });
@@ -8153,7 +8165,7 @@ uint32_t GnssAdapter::configMerkleTreeCommand(const char * merkleTreeConfigBuffe
                         LOC_LOGE("MsgConfigMerkleTreeParams: memory alloc failed");
                         mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
                         if (treeParam != nullptr) {
-                            delete treeParam;
+                            delete[] treeParam;
                             treeParam = nullptr;
                         }
                     } else {
@@ -8163,7 +8175,7 @@ uint32_t GnssAdapter::configMerkleTreeCommand(const char * merkleTreeConfigBuffe
                     mAdapter.reportResponse(err, mSessionId);
                     // clean treeParam after response for the only injection reports
                     if (treeParam != nullptr) {
-                        delete treeParam;
+                        delete[] treeParam;
                         treeParam = nullptr;
                     }
                 }
@@ -8172,7 +8184,7 @@ uint32_t GnssAdapter::configMerkleTreeCommand(const char * merkleTreeConfigBuffe
                 LOC_LOGE("MsgConfigMerkleTreeParams: memory alloc failed");
                 mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
                 if (treeParam != nullptr) {
-                    delete treeParam;
+                    delete[] treeParam;
                     treeParam = nullptr;
                 }
             } else {
