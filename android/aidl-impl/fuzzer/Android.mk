@@ -34,7 +34,6 @@ else
 endif
 
 LOCAL_SHARED_LIBRARIES += \
-    libhidlbase \
     android.hardware.gnss-V4-ndk \
     android.hardware.gnss-aidl-impl-qti \
     libclang_rt.ubsan_standalone
