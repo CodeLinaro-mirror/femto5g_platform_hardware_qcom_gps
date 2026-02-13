@@ -288,6 +288,8 @@ class GnssAdapter : public LocAdapterBase {
 
     /* ==== ODCPI ========================================================================== */
     bool mInEmergency;
+    LocGpsLocation mInjectedWifiFix;
+    bool mInjectedWifiFixUsed;
     typedef uint8_t OdcpiStateMask;
     OdcpiStateMask mOdcpiStateMask;
     typedef enum {
@@ -320,6 +322,7 @@ class GnssAdapter : public LocAdapterBase {
     std::vector<GnssSvIdSource> mBlacklistedSvIds;
     PowerStateType mSystemPowerState;
     PowerConnectState mPowerConnectState;
+    bool mInDebugDataSession;
 
     /* === Misc ===================================================================== */
     BlockCPIInfo mBlockCPIInfo;
@@ -829,6 +832,8 @@ public:
     LeverArmConfigInfo readVrpDataFromNvm();
     bool storeVrpData2Nvm(const LeverArmConfigInfo& configInfo);
 
+    // Debug Report init/deinit calls from LocAidl
+    void setDebugSessionStatusCommand(bool debugSessionStatus);
 };
 
 #endif //GNSS_ADAPTER_H
