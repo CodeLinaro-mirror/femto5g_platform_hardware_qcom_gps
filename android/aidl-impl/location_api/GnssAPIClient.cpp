@@ -223,7 +223,6 @@ GnssAPIClient::GnssAPIClient(const shared_ptr<IGnssCallback>& gpsCb) :
     // read configuration file
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_table);
     LOC_LOGd("ANDROID_REPORT_SPE_ONLY = %d", mReportSpeOnly);
-    LOC_LOGd("]: (%p)", &gpsCb);
     initLocationOptions();
     getVersionString();
 }
@@ -254,8 +253,7 @@ void GnssAPIClient::setFlpCallbacks() {
 }
 
 void GnssAPIClient::setCallbacks() {
-    LOC_LOGd("sv status enabled %d, nmea enabled %d",
-             mSvStatusEnabled, mNmeaEnabled);
+    LOC_LOGd("sv status enabled %d, nmea enabled %d", mSvStatusEnabled, mNmeaEnabled);
     LocationCallbacks locationCallbacks;
     memset(&locationCallbacks, 0, sizeof(LocationCallbacks));
     mTrackingOptions.qualityLevelAccepted = QUALITY_HIGH_ACCU_FIX_ONLY;
@@ -286,6 +284,7 @@ void GnssAPIClient::gnssUpdateCallbacks(const shared_ptr<IGnssCallback>& gpsCb) 
     if (gpsCb != nullptr) {
         gSharedMtx.lock();
         LOC_LOGd("mSignalTypeCbExpected = %d, set to true", mSignalTypeCbExpected);
+        mGnssCbIface = gpsCb;
         mSignalTypeCbExpected = true;
         gSharedMtx.unlock();
         setCallbacks();

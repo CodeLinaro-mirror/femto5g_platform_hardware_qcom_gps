@@ -38,7 +38,9 @@ GnssDebug::GnssDebug(Gnss* gnss) : mGnss(gnss) {}
 
     // get debug report snapshot via hal interface
     GnssDebugReport reports = { };
-    mGnss->getApi().locAPIGetDebugReport(reports);
+    if (mGnss->getApi() != nullptr) {
+        mGnss->getApi()->locAPIGetDebugReport(reports);
+    }
 
     // location block
     if (reports.mLocation.mValid) {

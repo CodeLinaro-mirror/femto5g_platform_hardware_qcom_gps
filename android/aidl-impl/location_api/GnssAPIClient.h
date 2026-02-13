@@ -113,7 +113,7 @@ private:
     bool mIsNlpActive;
     bool mSignalTypeCbExpected;
     bool mReportSpeOnly;
-    const shared_ptr<IGnssCallback>& mGnssCbIface;
+    shared_ptr<IGnssCallback> mGnssCbIface = nullptr;
 };
 
 }  // namespace implementation

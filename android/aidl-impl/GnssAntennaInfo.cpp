@@ -115,7 +115,9 @@ ScopedAStatus GnssAntennaInfo::setCallback(
     }
     gSharedMtx.unlock();
 
-    mGnss->getApi().locAPIGetAntennaInfo(&mAntennaInfoCb);
+    if (mGnss->getApi() != nullptr) {
+        mGnss->getApi()->locAPIGetAntennaInfo(&mAntennaInfoCb);
+    }
     return ScopedAStatus::ok();
 }
 ScopedAStatus GnssAntennaInfo::close() {

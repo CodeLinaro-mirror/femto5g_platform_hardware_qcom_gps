@@ -66,6 +66,12 @@ void gnssServiceDied(void* cookie) {
     }
 }
 ScopedAStatus Gnss::setCallback(const shared_ptr<IGnssCallback>& callback) {
+    if (mApi != nullptr) {
+        mApi->gnssUpdateCallbacks(callback);
+    } else {
+        mApi = new GnssAPIClient(callback);
+    }
+
     if (callback == nullptr) {
         LOC_LOGe("Null callback ignored");
         return ScopedAStatus::fromExceptionCode(STATUS_INVALID_OPERATION);
@@ -75,6 +81,7 @@ ScopedAStatus Gnss::setCallback(const shared_ptr<IGnssCallback>& callback) {
     if (mGnssCallback != nullptr) {
         AIBinder_unlinkToDeath(mGnssCallback->asBinder().get(), mDeathRecipient, this);
     }
+    ENTRY_LOG_CALLFLOW();
     mGnssCallback = callback;
 
     if (mGnssCallback != nullptr) {
@@ -83,15 +90,16 @@ ScopedAStatus Gnss::setCallback(const shared_ptr<IGnssCallback>& callback) {
     }
     gSharedMtx.unlock();
 
-    mApi.gnssUpdateCallbacks(callback);
-    mApi.gnssEnable(LOCATION_TECHNOLOGY_TYPE_GNSS);
-    mApi.requestCapabilities();
+    mApi->gnssEnable(LOCATION_TECHNOLOGY_TYPE_GNSS);
+    mApi->requestCapabilities();
     return ScopedAStatus::ok();
 }
 
 ScopedAStatus Gnss::close() {
-    mApi.gnssStop();
-    mApi.gnssDisable();
+    if (mApi != nullptr) {
+        mApi->gnssStop();
+        mApi->gnssDisable();
+    }
     LOC_LOGv("IGnss::close triggering IGnssMeasurement::close");
     if (mGnssMeasurementInterface != nullptr) {
         mGnssMeasurementInterface->close();
@@ -108,8 +116,7 @@ void location_on_battery_status_changed(bool charging) {
 }
 #endif
 
-Gnss::Gnss(): mApi(mGnssCallback), mGnssCallback(nullptr),
-    mDeathRecipient(AIBinder_DeathRecipient_new(&gnssServiceDied)) {
+Gnss::Gnss(): mDeathRecipient(AIBinder_DeathRecipient_new(&gnssServiceDied)) {
     ENTRY_LOG_CALLFLOW();
     if (sGnss == nullptr) {
         sGnss = this;
@@ -125,7 +132,8 @@ Gnss::Gnss(): mApi(mGnssCallback), mGnssCallback(nullptr),
 Gnss::~Gnss() {
     ENTRY_LOG_CALLFLOW();
     handleAidlClientSsr();
-    mApi.destroy();
+    if (mApi != nullptr)
+        mApi->destroy();
     sGnss = nullptr;
 }
 
@@ -134,7 +142,8 @@ void Gnss::handleAidlClientSsr() {
         AIBinder_unlinkToDeath(mGnssCallback->asBinder().get(), mDeathRecipient, this);
         mGnssCallback = nullptr;
     }
-    mApi.gnssStop();
+    if (mApi != nullptr)
+        mApi->gnssStop();
 }
 
 ILocationControlAPI* Gnss::getLocationControlApi() {
@@ -155,10 +164,10 @@ ILocationControlAPI* Gnss::getLocationControlApi() {
     return mLocationControlApi;
 }
 
-
 ScopedAStatus Gnss::updateConfiguration(GnssConfig& gnssConfig) {
     ENTRY_LOG_CALLFLOW();
-    mApi.gnssConfigurationUpdate(gnssConfig);
+    if (mApi != nullptr)
+        mApi->gnssConfigurationUpdate(gnssConfig);
     return ScopedAStatus::ok();
 }
 
@@ -213,33 +222,39 @@ ScopedAStatus Gnss::getExtensionGnssVisibilityControl(
 }
 ScopedAStatus Gnss::start() {
     ENTRY_LOG_CALLFLOW();
-    mApi.gnssStart();
+    if (mApi != nullptr)
+        mApi->gnssStart();
     return ScopedAStatus::ok();
 }
 
 ScopedAStatus Gnss::stop()  {
     ENTRY_LOG_CALLFLOW();
-    mApi.gnssStop();
+    if (mApi != nullptr)
+        mApi->gnssStop();
     return ScopedAStatus::ok();
  }
 ScopedAStatus Gnss::startSvStatus() {
     ENTRY_LOG_CALLFLOW();
-    mApi.configSvStatus(true);
+    if (mApi != nullptr)
+        mApi->configSvStatus(true);
     return ScopedAStatus::ok();
 }
 ScopedAStatus Gnss::stopSvStatus() {
     ENTRY_LOG_CALLFLOW();
-    mApi.configSvStatus(false);
+    if (mApi != nullptr)
+        mApi->configSvStatus(false);
     return ScopedAStatus::ok();
 }
 ScopedAStatus Gnss::startNmea() {
     ENTRY_LOG_CALLFLOW();
-    mApi.configNmea(true);
+    if (mApi != nullptr)
+        mApi->configNmea(true);
     return ScopedAStatus::ok();
 }
 ScopedAStatus Gnss::stopNmea() {
     ENTRY_LOG_CALLFLOW();
-    mApi.configNmea(false);
+    if (mApi != nullptr)
+        mApi->configNmea(false);
     return ScopedAStatus::ok();
 }
 ScopedAStatus Gnss::injectTime(int64_t timeMs, int64_t timeReferenceMs,
@@ -268,7 +283,8 @@ ScopedAStatus Gnss::injectBestLocation(const GnssLocation& gnssLocation) {
 }
 ScopedAStatus Gnss::deleteAidingData(IGnss::GnssAidingData aidingDataFlags) {
     ENTRY_LOG_CALLFLOW();
-    mApi.gnssDeleteAidingData(aidingDataFlags);
+    if (mApi != nullptr)
+        mApi->gnssDeleteAidingData(aidingDataFlags);
     return ScopedAStatus::ok();
 }
 
@@ -300,9 +316,10 @@ void Gnss::odcpiRequestCb(const OdcpiRequestInfo& request) {
 ScopedAStatus Gnss::setPositionMode(const IGnss::PositionModeOptions& options) {
     ENTRY_LOG_CALLFLOW();
     GnssPowerMode powerMode = options.lowPowerMode? GNSS_POWER_MODE_M4 : GNSS_POWER_MODE_M2;
-    mApi.gnssSetPositionMode(options.mode, options.recurrence, options.minIntervalMs,
-            options.preferredAccuracyMeters, options.preferredTimeMs, powerMode,
-            options.minIntervalMs);
+    if (mApi != nullptr)
+        mApi->gnssSetPositionMode(options.mode, options.recurrence, options.minIntervalMs,
+                options.preferredAccuracyMeters, options.preferredTimeMs, powerMode,
+                options.minIntervalMs);
     return ScopedAStatus::ok();
 }
 ScopedAStatus Gnss::getExtensionGnssAntennaInfo(shared_ptr<IGnssAntennaInfo>* _aidl_return) {
