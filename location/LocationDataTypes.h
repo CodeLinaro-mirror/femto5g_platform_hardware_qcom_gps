@@ -634,6 +634,7 @@ enum GnssSvOptionsBits {
     GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT = (1<<5),
     GNSS_SV_OPTIONS_HAS_ELEVATION_BIT           = (1<<6),
     GNSS_SV_OPTIONS_HAS_AZIMUTH_BIT             = (1<<7),
+    GNSS_SV_OPTIONS_HAS_ELAPSED_REAL_TIME_BIT   = (1<<8),
 };
 
 enum GnssAssistanceType {
@@ -1665,6 +1666,8 @@ struct GnssSv {
     GnssSignalTypeMask gnssSignalTypeMask; // Specifies GNSS signal type
     double basebandCarrierToNoiseDbHz; // baseband signal strength
     uint16_t  gloFrequency; // GLONASS Frequency channel number
+    uint64_t elapsedRealTime;    // in ns
+    uint64_t elapsedRealTimeUnc; // in ns
 };
 
 struct GnssConfigSetAssistanceServer {

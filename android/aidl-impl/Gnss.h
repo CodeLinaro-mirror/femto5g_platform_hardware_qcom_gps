@@ -54,6 +54,7 @@ using ::aidl::android::hardware::gnss::IGnssDebug;
 using ::aidl::android::hardware::gnss::IGnssAntennaInfo;
 using ::aidl::android::hardware::gnss::visibility_control::IGnssVisibilityControl;
 using ::aidl::android::hardware::gnss::measurement_corrections::IMeasurementCorrectionsInterface;
+using ::aidl::android::hardware::gnss::gnss_assistance::IGnssAssistanceInterface;
 struct Gnss : public BnGnss {
     Gnss();
     ~Gnss();
@@ -92,6 +93,10 @@ struct Gnss : public BnGnss {
     ScopedAStatus getExtensionGnssAntennaInfo(shared_ptr<IGnssAntennaInfo>* _aidl_return) override;
     ScopedAStatus getExtensionMeasurementCorrections(
             shared_ptr<IMeasurementCorrectionsInterface>* _aidl_return) override;
+    ScopedAStatus getExtensionGnssAssistanceInterface(
+            shared_ptr<IGnssAssistanceInterface>* _aidl_return) {
+        return ScopedAStatus(AStatus_fromExceptionCode(EX_UNSUPPORTED_OPERATION));
+    }
     ScopedAStatus startSvStatus() override;
     ScopedAStatus stopSvStatus() override;
     ScopedAStatus startNmea() override;
