@@ -460,33 +460,25 @@ SystemStatusNavData::SystemStatusNavData(const GnssEngineDebugDataInfo& info)
 {
    memset(mNav, 0, sizeof(mNav));
    for (int i = 0; i < info.navDataLen; i++) {
-        GnssNavDataInfo navInfo  = info.navData[i];
         int offset = 0;
+        GnssNavDataInfo navInfo  = info.navData[i];
+
         if (0 == navInfo.gnssSvId) continue;
-        // GPS
-        if (navInfo.gnssSvId >= GPS_SV_ID_MIN && navInfo.gnssSvId <= GPS_SV_ID_MAX) {
+        if (navInfo.gnssSvType == GNSS_SV_TYPE_GPS) {
             offset = GPS_SV_INDEX_OFFSET + navInfo.gnssSvId - GPS_SV_ID_MIN;
-        }
-        // GLO
-        if (navInfo.gnssSvId >= GLO_SV_ID_MIN && navInfo.gnssSvId <= GLO_SV_ID_MAX) {
+        } else if (navInfo.gnssSvType == GNSS_SV_TYPE_GLONASS) {
             offset = GLO_SV_INDEX_OFFSET + navInfo.gnssSvId - GLO_SV_ID_MIN;
-        }
-        // BDS
-        if (navInfo.gnssSvId >= BDS_SV_ID_MIN && navInfo.gnssSvId <= BDS_SV_ID_MAX) {
+        } else if (navInfo.gnssSvType == GNSS_SV_TYPE_BEIDOU) {
             offset = BDS_SV_INDEX_OFFSET + navInfo.gnssSvId - BDS_SV_ID_MIN;
-        }
-        // GAL
-        if (navInfo.gnssSvId >= GAL_SV_ID_MIN && navInfo.gnssSvId <= GAL_SV_ID_MAX) {
+        } else if (navInfo.gnssSvType == GNSS_SV_TYPE_GALILEO) {
             offset = GAL_SV_INDEX_OFFSET + navInfo.gnssSvId - GAL_SV_ID_MIN;
-        }
-        // QZSS
-        if (navInfo.gnssSvId >= QZSS_SV_ID_MIN && navInfo.gnssSvId <= QZSS_SV_ID_MAX) {
+        } else if (navInfo.gnssSvType == GNSS_SV_TYPE_QZSS) {
             offset = QZSS_SV_INDEX_OFFSET + navInfo.gnssSvId - QZSS_SV_ID_MIN;
-        }
-        // Navic
-        if (navInfo.gnssSvId >= NAVIC_SV_ID_MIN && navInfo.gnssSvId <= NAVIC_SV_ID_MAX) {
+        } else if (navInfo.gnssSvType ==GNSS_SV_TYPE_NAVIC) {
             offset = NAVIC_SV_INDEX_OFFSET + navInfo.gnssSvId - NAVIC_SV_ID_MIN;
         }
+        mNav[offset].mSvType = navInfo.gnssSvType;
+        mNav[offset].mSvId   = navInfo.gnssSvId;
         mNav[offset].mType   = GnssEphemerisType(navInfo.type);
         mNav[offset].mSource = GnssEphemerisSource(navInfo.src);
         mNav[offset].mAgeSec = navInfo.age;
@@ -494,14 +486,7 @@ SystemStatusNavData::SystemStatusNavData(const GnssEngineDebugDataInfo& info)
 }
 
 bool SystemStatusNavData::equals(const SystemStatusItemBase& peer) {
-    for (uint32_t i=0; i<SV_ALL_NUM; i++) {
-        if ((mNav[i].mType != ((const SystemStatusNavData&)peer).mNav[i].mType) ||
-            (mNav[i].mSource != ((const SystemStatusNavData&)peer).mNav[i].mSource) ||
-            (mNav[i].mAgeSec != ((const SystemStatusNavData&)peer).mNav[i].mAgeSec)) {
-            return false;
-        }
-    }
-    return true;
+    return !memcmp (&mNav, &((const SystemStatusNavData&)peer).mNav, sizeof(mNav));
 }
 
 void SystemStatusNavData::dump()
@@ -509,8 +494,9 @@ void SystemStatusNavData::dump()
     LOC_LOGV("NavData: u=%ld:%ld",
             mUtcTime.tv_sec, mUtcTime.tv_nsec);
     for (uint32_t i=0; i<SV_ALL_NUM; i++) {
-        LOC_LOGV("i=%d type=%d src=%d age=%d",
-            i, mNav[i].mType, mNav[i].mSource, mNav[i].mAgeSec);
+        LOC_LOGV("i=%d system=%d id=%d type=%d src=%d age=%d",
+            i, mNav[i].mSvType, mNav[i].mSvId, mNav[i].mType,
+            mNav[i].mSource, mNav[i].mAgeSec);
     }
 }
 

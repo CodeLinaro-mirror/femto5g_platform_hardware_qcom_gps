@@ -1319,6 +1319,8 @@ typedef enum {
 } Gnss_SvPolyStatusMaskType;
 
 typedef struct {
+    Gnss_LocSvSystemEnumType gnssConstellation;
+    /** gnss constellation type */
     uint16_t     gnssSvId;
     /** Unique SV Identifier.
      *  For SV Range of supported constellation, please refer to the

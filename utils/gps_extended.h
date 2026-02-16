@@ -123,6 +123,9 @@ struct ModemProfileDetails {
 
 #define GNSS_MAX_SV_INFO_LIST_SIZE 176
 typedef struct {
+    GnssSvType  gnssSvType;
+    /**<   GNSS constellation type */
+
     uint16_t gnssSvId;
     /**<   GNSS SV ID. Range:
       - GPS --     1 to 32
@@ -138,6 +141,7 @@ typedef struct {
 
     uint8_t src;
     /**<   Navigation data source.*/
+
     int32_t age;
     /**<   Age of navigation data.
       - Units: Seconds */

@@ -138,71 +138,56 @@ void convertGnssConstellationType(const GnssSvType& in, GnssConstellationType& o
     }
 }
 
-void convertGnssSvid(const GnssSv& in, int& out)
+void convertGnssSvid(GnssSvType type, uint16_t svId,  uint16_t gloFrequency, int& out)
 {
-    switch (in.type) {
+    switch (type) {
         case GNSS_SV_TYPE_GPS:
-            out = in.svId;
+            out = svId;
             break;
         case GNSS_SV_TYPE_SBAS:
-            out = in.svId;
+            out = svId;
             break;
         case GNSS_SV_TYPE_GLONASS:
-            if (!isGloSlotUnknown(in.svId)) { // OSN is known
-                out = in.svId - GLO_SV_PRN_MIN + 1;
+            if (!isGloSlotUnknown(svId)) { // OSN is known
+                out = svId - GLO_SV_PRN_MIN + 1;
             } else { // OSN is not known, report FCN
-                out = in.gloFrequency + 92;
+                out = gloFrequency + 92;
             }
             break;
         case GNSS_SV_TYPE_QZSS:
-            out = in.svId;
+            out = svId;
             break;
         case GNSS_SV_TYPE_BEIDOU:
-            out = in.svId - BDS_SV_PRN_MIN + 1;
+            out = svId - BDS_SV_PRN_MIN + 1;
             break;
         case GNSS_SV_TYPE_GALILEO:
-            out = in.svId - GAL_SV_PRN_MIN + 1;
+            out = svId - GAL_SV_PRN_MIN + 1;
             break;
         case GNSS_SV_TYPE_NAVIC:
-            out = in.svId - NAVIC_SV_PRN_MIN + 1;
+            out = svId - NAVIC_SV_PRN_MIN + 1;
             break;
         default:
-            out = in.svId;
+            out = svId;
             break;
     }
 }
 
-void convertGnssSvid(const GnssMeasurementsData& in, int16_t& out)
-{
-    switch (in.svType) {
-        case GNSS_SV_TYPE_GPS:
-            out = in.svId;
-            break;
-        case GNSS_SV_TYPE_SBAS:
-            out = in.svId;
-            break;
-        case GNSS_SV_TYPE_GLONASS:
-            if (!isGloSlotUnknown(in.svId)) { // OSN is known
-                out = in.svId - GLO_SV_PRN_MIN + 1;
-            } else { // OSN is not known, report FCN
-                out = in.gloFrequency + 92;
-            }
-            break;
-        case GNSS_SV_TYPE_QZSS:
-            out = in.svId;
-            break;
-        case GNSS_SV_TYPE_BEIDOU:
-            out = in.svId - BDS_SV_PRN_MIN + 1;
-            break;
-        case GNSS_SV_TYPE_GALILEO:
-            out = in.svId - GAL_SV_PRN_MIN + 1;
-            break;
-        case GNSS_SV_TYPE_NAVIC:
-            out = in.svId - NAVIC_SV_PRN_MIN + 1;
-            break;
-        default:
-            out = in.svId;
-            break;
+void convertQzssSvid(GnssSignalTypeMask signalType, uint16_t svId, int& out) {
+    out = svId;
+    if (signalType == GNSS_SIGNAL_QZSS_L1CB) {
+        if (svId == 196) {
+            out = 203;
+        } else if (svId == 197) {
+            out = 204;
+        } else if (svId == 198) {
+            out = 198;
+        } else if (svId == 200) {
+            out = 205;
+        } else if (svId == 201) {
+            out = 206;
+        } else if (svId == 202) {
+            out = 202;
+        }
     }
 }
 

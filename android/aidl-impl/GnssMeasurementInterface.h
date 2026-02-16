@@ -77,7 +77,6 @@ private:
     void convertGnssData(const GnssMeasurementsNotification& in, GnssData& out);
     void convertGnssMeasurement(const GnssMeasurementsData& in, GnssMeasurement& out);
     void convertGnssFlags(const GnssMeasurementsData& in, GnssMeasurement& out);
-    static void convertGnssSvId(const GnssMeasurementsData& in, int& out);
     void convertGnssSignalType(const GnssMeasurementsData& in, GnssSignalType& out);
     static void convertGnssConstellationType(const GnssSvType& in, GnssConstellationType& out);
     void convertGnssState(const GnssMeasurementsData& in, GnssMeasurement& out);

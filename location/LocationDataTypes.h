@@ -594,13 +594,13 @@ enum GnssConfigFlagsBits {
 
 enum GnssSvType {
     GNSS_SV_TYPE_UNKNOWN = 0,
-    GNSS_SV_TYPE_GPS,
-    GNSS_SV_TYPE_SBAS,
-    GNSS_SV_TYPE_GLONASS,
-    GNSS_SV_TYPE_QZSS,
-    GNSS_SV_TYPE_BEIDOU,
-    GNSS_SV_TYPE_GALILEO,
-    GNSS_SV_TYPE_NAVIC,
+    GNSS_SV_TYPE_GPS     = 1,
+    GNSS_SV_TYPE_SBAS    = 2,
+    GNSS_SV_TYPE_GLONASS = 3,
+    GNSS_SV_TYPE_QZSS    = 4,
+    GNSS_SV_TYPE_BEIDOU  = 5,
+    GNSS_SV_TYPE_GALILEO = 6,
+    GNSS_SV_TYPE_NAVIC   = 7,
 };
 
 enum GnssEphemerisType {

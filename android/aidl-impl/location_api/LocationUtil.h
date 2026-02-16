@@ -30,8 +30,8 @@ using ::aidl::android::hardware::gnss::GnssSignalType;
 void convertGnssLocation(const GnssLocation& in, Location& out);
 void convertGnssLocation(const Location& in, GnssLocation& out);
 void convertGnssConstellationType(const GnssSvType& in, GnssConstellationType& out);
-void convertGnssSvid(const GnssSv& in, int& out);
-void convertGnssSvid(const GnssMeasurementsData& in, int16_t& out);
+void convertGnssSvid(GnssSvType type, uint16_t svId, uint16_t gloFrequency, int& out);
+void convertQzssSvid(GnssSignalTypeMask signalType, uint16_t svId, int& out);
 void convertGnssEphemerisType(const GnssEphemerisType& in, IGnssDebug::SatelliteEphemerisType& out);
 void convertGnssEphemerisSource(const GnssEphemerisSource& in,
         SatellitePvt::SatelliteEphemerisSource& out);

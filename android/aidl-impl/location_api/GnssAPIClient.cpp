@@ -92,7 +92,15 @@ static void convertGnssSvStatus(const GnssSvNotification& in,
         std::vector<IGnssCallback::GnssSvInfo>& out) {
     out.resize(in.count);
     for (size_t i = 0; i < in.count; i++) {
-        gnss::aidl::implementation::convertGnssSvid(in.gnssSvs[i], out[i].svid);
+        if (in.gnssSvs[i].type == GNSS_SV_TYPE_QZSS) {
+            gnss::aidl::implementation::convertQzssSvid(
+                    in.gnssSvs[i].gnssSignalTypeMask, in.gnssSvs[i].svId, out[i].svid);
+        } else {
+            gnss::aidl::implementation::convertGnssSvid(
+                    in.gnssSvs[i].type, in.gnssSvs[i].svId,
+                    in.gnssSvs[i].gloFrequency, out[i].svid);
+        }
+
         out[i].cN0Dbhz = in.gnssSvs[i].cN0Dbhz;
         out[i].elevationDegrees = in.gnssSvs[i].elevation;
         out[i].azimuthDegrees = in.gnssSvs[i].azimuth;
@@ -144,6 +152,9 @@ static void convertGnssSvStatus(const GnssSvNotification& in,
                     break;
                 case GNSS_SIGNAL_BEIDOU_B1I:
                     out[i].signalType->codeType = out[i].signalType->CODE_TYPE_I;
+                    break;
+                case GNSS_SIGNAL_QZSS_L1CB:
+                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_E;
                     break;
                 case GNSS_SIGNAL_BEIDOU_B1C:
                 case GNSS_SIGNAL_BEIDOU_B2AQ:

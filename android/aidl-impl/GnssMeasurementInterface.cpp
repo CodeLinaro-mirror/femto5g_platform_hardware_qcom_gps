@@ -203,7 +203,11 @@ void GnssMeasurementInterface::convertGnssMeasurement(
     // flags
     convertGnssFlags(in, out);
     // svid
-    convertGnssSvId(in, out.svid);
+    if (in.svType == GNSS_SV_TYPE_QZSS) {
+        gnss::aidl::implementation::convertQzssSvid(in.gnssSignalType, in.svId, out.svid);
+    } else {
+        gnss::aidl::implementation::convertGnssSvid(in.svType, in.svId, in.gloFrequency, out.svid);
+    }
     // signalType
     convertGnssSignalType(in, out.signalType);
     // timeOffsetNs
@@ -281,40 +285,6 @@ void GnssMeasurementInterface::convertGnssFlags(
         out.flags |= out.HAS_SATELLITE_PVT;
     if (in.flags & GNSS_MEASUREMENTS_DATA_CORRELATION_VECTOR_BIT)
         out.flags |= out.HAS_CORRELATION_VECTOR;
-}
-
-void GnssMeasurementInterface::convertGnssSvId(const GnssMeasurementsData& in, int& out) {
-
-    switch (in.svType) {
-    case GNSS_SV_TYPE_GPS:
-        out = in.svId;
-        break;
-    case GNSS_SV_TYPE_SBAS:
-        out = in.svId;
-        break;
-    case GNSS_SV_TYPE_GLONASS:
-        if (in.svId != 255) { // OSN is known
-            out = in.svId - GLO_SV_PRN_MIN + 1;
-        } else { // OSN is not known, report FCN
-            out = in.gloFrequency + 92;
-        }
-        break;
-    case GNSS_SV_TYPE_QZSS:
-        out = in.svId;
-        break;
-    case GNSS_SV_TYPE_BEIDOU:
-        out = in.svId - BDS_SV_PRN_MIN + 1;
-        break;
-    case GNSS_SV_TYPE_GALILEO:
-        out = in.svId - GAL_SV_PRN_MIN + 1;
-        break;
-    case GNSS_SV_TYPE_NAVIC:
-        out = in.svId - NAVIC_SV_PRN_MIN + 1;
-        break;
-    default:
-        out = in.svId;
-        break;
-    }
 }
 
 void GnssMeasurementInterface::convertGnssSignalType(

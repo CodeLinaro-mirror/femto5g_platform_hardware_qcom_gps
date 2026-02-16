@@ -381,6 +381,8 @@ public:
 
 struct SystemStatusNav
 {
+    GnssSvType          mSvType;
+    uint16_t            mSvId;
     GnssEphemerisType   mType;
     GnssEphemerisSource mSource;
     int32_t             mAgeSec;
