@@ -1292,10 +1292,16 @@ std::vector<LocationError> GnssAdapter::gnssUpdateConfig(const std::string& oldM
     size_t index = 0;
     LocationError err = LOCATION_ERROR_SUCCESS;
     std::vector<LocationError> errsList = {err};
+    // Initialize errsList with proper size to handle all configuration flags
+    // Each configuration flag increments index, so we need enough space
+    // GPS_LOCK, ASSISTANCE_DATA, SUPL_VERSION, LPP_PROFILE, LPPE_CONTROL_PLANE,
+    // LPPE_USER_PLANE, AGLONASS, BLACKLISTED_SV_IDS, EMERGENCY_EXTENSION, MIN_SV_ELEVATION
+    size_t maxPossibleConfigs = 10;
     if (count > 0) {
         errsList.insert(errsList.begin(), count, LOCATION_ERROR_SUCCESS);
+    } else {
+        errsList.insert(errsList.begin(), maxPossibleConfigs, LOCATION_ERROR_SUCCESS);
     }
-
     int serverUrlLen = serverUrl.length();
     int moServerUrlLen = moServerUrl.length();
 
