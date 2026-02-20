@@ -340,7 +340,7 @@ public:
             return;
         }
         memset(&mP1, 0, sizeof(mP1));
-        mP1.mEpiValidity = strtol(mField[eEpiValidity].c_str(), NULL, 16);
+        mP1.mEpiValidity = strtoull(mField[eEpiValidity].c_str(), NULL, 16);
         mP1.mEpiLat = atof(mField[eEpiLat].c_str());
         mP1.mEpiLon = atof(mField[eEpiLon].c_str());
         mP1.mEpiAlt = atof(mField[eEpiAlt].c_str());
@@ -501,17 +501,18 @@ public:
         }
         memset(&mP3, 0, sizeof(mP3));
         // todo: update for navic once available
-        mP3.mXtraValidMask = strtol(mField[eXtraValidMask].c_str(), NULL, 16);
+        mP3.mXtraValidMask = strtoull(mField[eXtraValidMask].c_str(), NULL, 16);
         mP3.mGpsXtraAge = atoi(mField[eGpsXtraAge].c_str());
         mP3.mGloXtraAge = atoi(mField[eGloXtraAge].c_str());
         mP3.mBdsXtraAge = atoi(mField[eBdsXtraAge].c_str());
         mP3.mGalXtraAge = atoi(mField[eGalXtraAge].c_str());
         mP3.mQzssXtraAge = atoi(mField[eQzssXtraAge].c_str());
-        mP3.mGpsXtraValid = strtol(mField[eGpsXtraValid].c_str(), NULL, 16);
-        mP3.mGloXtraValid = strtol(mField[eGloXtraValid].c_str(), NULL, 16);
-        mP3.mBdsXtraValid = strtol(mField[eBdsXtraValid].c_str(), NULL, 16);
-        mP3.mGalXtraValid = strtol(mField[eGalXtraValid].c_str(), NULL, 16);
-        mP3.mQzssXtraValid = strtol(mField[eQzssXtraValid].c_str(), NULL, 16);
+
+        mP3.mGpsXtraValid = strtoull(mField[eGpsXtraValid].c_str(), NULL, 16);
+        mP3.mGloXtraValid = strtoull(mField[eGloXtraValid].c_str(), NULL, 16);
+        mP3.mBdsXtraValid = strtoull(mField[eBdsXtraValid].c_str(), NULL, 16);
+        mP3.mGalXtraValid = strtoull(mField[eGalXtraValid].c_str(), NULL, 16);
+        mP3.mQzssXtraValid = strtoull(mField[eQzssXtraValid].c_str(), NULL, 16);
     }
 
     inline SystemStatusPQWP3& get() { return mP3;}
@@ -573,11 +574,11 @@ public:
             return;
         }
         memset(&mP4, 0, sizeof(mP4));
-        mP4.mGpsEpheValid = strtol(mField[eGpsEpheValid].c_str(), NULL, 16);
-        mP4.mGloEpheValid = strtol(mField[eGloEpheValid].c_str(), NULL, 16);
-        mP4.mBdsEpheValid = strtol(mField[eBdsEpheValid].c_str(), NULL, 16);
-        mP4.mGalEpheValid = strtol(mField[eGalEpheValid].c_str(), NULL, 16);
-        mP4.mQzssEpheValid = strtol(mField[eQzssEpheValid].c_str(), NULL, 16);
+        mP4.mGpsEpheValid = strtoull(mField[eGpsEpheValid].c_str(), NULL, 16);
+        mP4.mGloEpheValid = strtoull(mField[eGloEpheValid].c_str(), NULL, 16);
+        mP4.mBdsEpheValid = strtoull(mField[eBdsEpheValid].c_str(), NULL, 16);
+        mP4.mGalEpheValid = strtoull(mField[eGalEpheValid].c_str(), NULL, 16);
+        mP4.mQzssEpheValid = strtoull(mField[eQzssEpheValid].c_str(), NULL, 16);
     }
 
     inline SystemStatusPQWP4& get() { return mP4;}
@@ -688,21 +689,21 @@ public:
         }
         memset(&mP5, 0, sizeof(mP5));
         // todo: update for navic once available
-        mP5.mGpsUnknownMask = strtol(mField[eGpsUnknownMask].c_str(), NULL, 16);
-        mP5.mGloUnknownMask = strtol(mField[eGloUnknownMask].c_str(), NULL, 16);
-        mP5.mBdsUnknownMask = strtol(mField[eBdsUnknownMask].c_str(), NULL, 16);
-        mP5.mGalUnknownMask = strtol(mField[eGalUnknownMask].c_str(), NULL, 16);
-        mP5.mQzssUnknownMask = strtol(mField[eQzssUnknownMask].c_str(), NULL, 16);
-        mP5.mGpsGoodMask = strtol(mField[eGpsGoodMask].c_str(), NULL, 16);
-        mP5.mGloGoodMask = strtol(mField[eGloGoodMask].c_str(), NULL, 16);
-        mP5.mBdsGoodMask = strtol(mField[eBdsGoodMask].c_str(), NULL, 16);
-        mP5.mGalGoodMask = strtol(mField[eGalGoodMask].c_str(), NULL, 16);
-        mP5.mQzssGoodMask = strtol(mField[eQzssGoodMask].c_str(), NULL, 16);
-        mP5.mGpsBadMask = strtol(mField[eGpsBadMask].c_str(), NULL, 16);
-        mP5.mGloBadMask = strtol(mField[eGloBadMask].c_str(), NULL, 16);
-        mP5.mBdsBadMask = strtol(mField[eBdsBadMask].c_str(), NULL, 16);
-        mP5.mGalBadMask = strtol(mField[eGalBadMask].c_str(), NULL, 16);
-        mP5.mQzssBadMask = strtol(mField[eQzssBadMask].c_str(), NULL, 16);
+        mP5.mGpsUnknownMask = strtoull(mField[eGpsUnknownMask].c_str(), NULL, 16);
+        mP5.mGloUnknownMask = strtoull(mField[eGloUnknownMask].c_str(), NULL, 16);
+        mP5.mBdsUnknownMask = strtoull(mField[eBdsUnknownMask].c_str(), NULL, 16);
+        mP5.mGalUnknownMask = strtoull(mField[eGalUnknownMask].c_str(), NULL, 16);
+        mP5.mQzssUnknownMask = strtoull(mField[eQzssUnknownMask].c_str(), NULL, 16);
+        mP5.mGpsGoodMask = strtoull(mField[eGpsGoodMask].c_str(), NULL, 16);
+        mP5.mGloGoodMask = strtoull(mField[eGloGoodMask].c_str(), NULL, 16);
+        mP5.mBdsGoodMask = strtoull(mField[eBdsGoodMask].c_str(), NULL, 16);
+        mP5.mGalGoodMask = strtoull(mField[eGalGoodMask].c_str(), NULL, 16);
+        mP5.mQzssGoodMask = strtoull(mField[eQzssGoodMask].c_str(), NULL, 16);
+        mP5.mGpsBadMask = strtoull(mField[eGpsBadMask].c_str(), NULL, 16);
+        mP5.mGloBadMask = strtoull(mField[eGloBadMask].c_str(), NULL, 16);
+        mP5.mBdsBadMask = strtoull(mField[eBdsBadMask].c_str(), NULL, 16);
+        mP5.mGalBadMask = strtoull(mField[eGalBadMask].c_str(), NULL, 16);
+        mP5.mQzssBadMask = strtoull(mField[eQzssBadMask].c_str(), NULL, 16);
     }
 
     inline SystemStatusPQWP5& get() { return mP5;}
@@ -743,7 +744,7 @@ public:
             return;
         }
         memset(&mP6, 0, sizeof(mP6));
-        mP6.mFixInfoMask = strtol(mField[eFixInfoMask].c_str(), NULL, 16);
+        mP6.mFixInfoMask = strtoull(mField[eFixInfoMask].c_str(), NULL, 16);
     }
 
     inline SystemStatusPQWP6& get() { return mP6;}
