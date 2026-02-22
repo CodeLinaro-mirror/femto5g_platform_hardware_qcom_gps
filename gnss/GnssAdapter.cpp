@@ -5344,8 +5344,8 @@ static void* niThreadProc(void *args)
     clock_gettime(CLOCK_REALTIME, &present_time);
     expire_time.tv_sec  = present_time.tv_sec + pSession->respTimeLeft;
     expire_time.tv_nsec = present_time.tv_nsec;
-    LOC_LOGd("time out set for abs time %" PRId64 "with delay %d sec",
-             expire_time.tv_sec, pSession->respTimeLeft);
+    LOC_LOGd("time out set for abs time %" PRId64 " with delay %d sec",
+             (int64_t)expire_time.tv_sec, pSession->respTimeLeft);
 
     while (!pSession->respRecvd) {
         rc = pthread_cond_timedwait(&pSession->tCond,
