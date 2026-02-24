@@ -190,6 +190,9 @@ typedef std::function<void(bool nHzNeeded, bool nHzMeasNeeded)>
 typedef std::function<void(const std::unordered_map<LocationQwesFeatureType, bool> &featureMap)>
         GnssAdapterUpdateQwesFeatureStatusCb;
 
+typedef std::function<void(const GnssSvResidualReport &svResReport)>
+        GnssAdapterSvResidualReportCb;
+
 // potential parameters: message queue: MsgTask * msgTask;
 // callback function to report back dr and ppe position and sv report
 typedef EngineHubProxyBase* (getEngHubProxyFn)(
@@ -199,7 +202,8 @@ typedef EngineHubProxyBase* (getEngHubProxyFn)(
         GnssAdapterReportEnginePositionsEventCb positionEventCb,
         GnssAdapterReqAidingDataCb reqAidingDataCb,
         GnssAdapterUpdateNHzRequirementCb updateNHzRequirementCb,
-        GnssAdapterUpdateQwesFeatureStatusCb updateQwesFeatureStatusCb);
+        GnssAdapterUpdateQwesFeatureStatusCb updateQwesFeatureStatusCb,
+        GnssAdapterSvResidualReportCb residualReportCb);
 
 } // namespace loc_core
 
