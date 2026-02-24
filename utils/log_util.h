@@ -138,6 +138,7 @@ typedef struct loc_logger_s
   unsigned long  TIMESTAMP;
   bool           LOG_BUFFER_ENABLE;
   QxdmF3         QXDMF3;
+  bool           LOC_ENABLE_DLT_LOG;
 } loc_logger_s_type;
 
 
@@ -203,6 +204,11 @@ inline static void loc_logger_init(unsigned long debug, unsigned long timestamp,
 inline static void log_buffer_init(bool enabled) {
     loc_logger.LOG_BUFFER_ENABLE = enabled;
 }
+
+inline static void loc_dlt_log_init(bool dltEnabled) {
+    loc_logger.LOC_ENABLE_DLT_LOG = dltEnabled;
+}
+
 extern void log_tag_level_map_init();
 extern int get_tag_log_level(const char* tag);
 extern char* get_timestamp(char* str, unsigned long buf_size);
@@ -231,6 +237,103 @@ extern void log_buffer_insert(char *str, unsigned long buf_size, int level);
         }                                                                                     \
     }                                                                                         \
 }
+
+#define IF_LOC_DLT_LOG_ENABLE if (loc_logger.LOC_ENABLE_DLT_LOG)
+
+// Ensure a reasonable buffer if not set elsewhere
+#ifndef DLT_MAX_BUF
+#define DLT_MAX_BUF 1024
+#endif
+
+#if defined(LOC_USE_DLT)
+#include <dlt/dlt.h>
+#include <dlt/dlt_user_macros.h>
+#include <dlt/dlt_user.h>
+#include <dlt/dlt_types.h>
+
+// Map your numeric level (0..5) to DLT levels.
+// Tune this mapping if your numeric levels differ.
+static inline DltLogLevelType loc_level_to_dlt(int level) {
+    switch (level) {
+        case 0: return DLT_LOG_ERROR;   // Error
+        case 1: return DLT_LOG_WARN;    // Warn
+        case 2: return DLT_LOG_INFO;    // Info
+        case 3: return DLT_LOG_DEBUG;   // Debug
+        case 4: return DLT_LOG_VERBOSE; // Verbose/Trace
+        case 5: return DLT_LOG_VERBOSE; // Verbose/Trace
+        default: return DLT_LOG_INFO;
+    }
+}
+
+#define LOG_DLT_PRINT(level, format, x...)                                \
+do {                                                                      \
+    IF_LOC_DLT_LOG_ENABLE {                                               \
+        DltContext* dltCtx = getDltContextForTag(LOG_TAG);                \
+        if (dltCtx) {                                                     \
+            DltLogLevelType dltLvl = loc_level_to_dlt((int)(level));      \
+            if (DLT_IS_LOG_LEVEL_ENABLED(*dltCtx, dltLvl)) {              \
+                char buf[DLT_MAX_BUF];                                    \
+                memset(buf, 0, sizeof(buf));                              \
+                /* Format once; safe truncate on overflow */              \
+                snprintf(buf, sizeof(buf), format, ##x);                  \
+                DLT_LOG_STRING(*dltCtx, dltLvl, buf);                     \
+            }                                                             \
+        }                                                                 \
+    }                                                                     \
+} while (0)
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// ---------------- DLT section start ----------------
+typedef struct ContextEntry {
+    DltContext ctx;
+    char ctxid[5];
+    //string desc;
+    const char* desc;
+} ContextEntry;
+
+extern void registerDltApp(const char* appName, const char* desp);
+extern void registerDltContexts(ContextEntry* entries, size_t count);
+extern void deregisterDltContexts(ContextEntry* entries, size_t count);
+extern void deregisterDltApp(void);
+extern DltContext* getDltContextForTag(const char* tagOrDesc);
+
+// Expose DLT context array and count
+
+// Location hal daemon
+extern ContextEntry LHD_CONTEXTS[];
+extern const size_t LHD_CONTEXTS_COUNT;
+
+//XTRA-daemon
+extern ContextEntry XD_CONTEXTS[];
+extern const size_t XD_CONTEXTS_COUNT;
+
+//EDGNSS Daemon
+extern ContextEntry EDGNSS_CONTEXTS[];
+extern const size_t EDGNSS_CONTEXTS_COUNT;
+
+// Engine Service
+extern ContextEntry ENGINE_SERVICE_CONTEXTS[];
+extern const size_t ENGINE_SERVICE_CONTEXTS_COUNT;
+
+// Process launcher
+extern ContextEntry LOC_LAUNCHER_CONTEXTS[];
+extern const size_t LOC_LAUNCHER_CONTEXTS_COUNT;
+
+// LCA test app
+extern ContextEntry LCA_CONTEXTS[];
+extern const size_t LCA_CONTEXTS_COUNT;
+
+// ---------------- DLT section end ------------------
+
+#ifdef __cplusplus
+}
+#endif
+#else
+#define LOG_DLT_PRINT(level, format, x...)
+#endif // LOC_USE_DLT
 
 #define MSG_QXDM_LOW    0
 #define MSG_QXDM_MED    1
@@ -272,6 +375,7 @@ static int LOCAL_LOG_LEVEL = -1;
 #define IF_LOC_LOGA IF_LOC_LOG(6)
 
 #define LOC_LOGE(...)                                                   \
+    LOG_DLT_PRINT(0, __VA_ARGS__);                                      \
     IF_LOC_LOGE {                                                       \
         ALOGE(__VA_ARGS__);                                             \
         INSERT_BUFFER(LOG_NDEBUG, 0, __VA_ARGS__);                      \
@@ -283,6 +387,7 @@ static int LOCAL_LOG_LEVEL = -1;
     }
 
 #define LOC_LOGW(...)                                                   \
+    LOG_DLT_PRINT(1, __VA_ARGS__);                                      \
     IF_LOC_LOGW {                                                       \
         ALOGW(__VA_ARGS__);                                             \
         INSERT_BUFFER(LOG_NDEBUG, 1, __VA_ARGS__);                      \
@@ -294,6 +399,7 @@ static int LOCAL_LOG_LEVEL = -1;
     }
 
 #define LOC_LOGI(...)                                                   \
+    LOG_DLT_PRINT(2, __VA_ARGS__);                                      \
     IF_LOC_LOGI {                                                       \
         ALOGI(__VA_ARGS__);                                             \
         INSERT_BUFFER(LOG_NDEBUG, 2, __VA_ARGS__);                      \
@@ -305,6 +411,7 @@ static int LOCAL_LOG_LEVEL = -1;
     }
 
 #define LOC_LOGD(...)                                                   \
+    LOG_DLT_PRINT(3, __VA_ARGS__);                                      \
     IF_LOC_LOGD {                                                       \
         ALOGD(__VA_ARGS__);                                             \
         INSERT_BUFFER(LOG_NDEBUG, 3, __VA_ARGS__);                      \
@@ -316,6 +423,7 @@ static int LOCAL_LOG_LEVEL = -1;
     }
 
 #define LOC_LOGV(...)                                                   \
+    LOG_DLT_PRINT(4, __VA_ARGS__);                                      \
     IF_LOC_LOGV {                                                       \
         ALOGV(__VA_ARGS__);                                             \
         INSERT_BUFFER(LOG_NDEBUG, 4, __VA_ARGS__);                      \
@@ -327,6 +435,7 @@ static int LOCAL_LOG_LEVEL = -1;
     }
 
 #define LOC_LOGA(...)                                                   \
+    LOG_DLT_PRINT(5, __VA_ARGS__);                                      \
     IF_LOC_LOGA {                                                       \
         ALOGV(__VA_ARGS__);                                             \
         INSERT_BUFFER(LOG_NDEBUG, 5, __VA_ARGS__);                      \
@@ -340,6 +449,7 @@ static int LOCAL_LOG_LEVEL = -1;
 #else /* DEBUG_DMN_LOC_API */
 
 #define LOC_LOGE(...)                                                   \
+    LOG_DLT_PRINT(0, __VA_ARGS__);                                      \
     IF_LOC_LOGE {                                                       \
         ALOGE(__VA_ARGS__);                                             \
         IF_QXDM_LOG_ENABLE {                                            \
@@ -350,6 +460,7 @@ static int LOCAL_LOG_LEVEL = -1;
     }
 
 #define LOC_LOGW(...)                                                   \
+    LOG_DLT_PRINT(1, __VA_ARGS__);                                      \
     IF_LOC_LOGW {                                                       \
         ALOGW(__VA_ARGS__);                                             \
         IF_QXDM_LOG_ENABLE {                                            \
@@ -360,6 +471,7 @@ static int LOCAL_LOG_LEVEL = -1;
     }
 
 #define LOC_LOGI(...)                                                   \
+    LOG_DLT_PRINT(2, __VA_ARGS__);                                      \
     IF_LOC_LOGI {                                                       \
         ALOGI(__VA_ARGS__);                                             \
         IF_QXDM_LOG_ENABLE {                                            \
@@ -370,6 +482,7 @@ static int LOCAL_LOG_LEVEL = -1;
     }
 
 #define LOC_LOGD(...)                                                   \
+    LOG_DLT_PRINT(3, __VA_ARGS__);                                      \
     IF_LOC_LOGD {                                                       \
         ALOGD(__VA_ARGS__);                                             \
         IF_QXDM_LOG_ENABLE {                                            \
@@ -380,6 +493,7 @@ static int LOCAL_LOG_LEVEL = -1;
     }
 
 #define LOC_LOGV(...)                                                   \
+    LOG_DLT_PRINT(4, __VA_ARGS__);                                      \
     IF_LOC_LOGV {                                                       \
         ALOGV(__VA_ARGS__);                                             \
         IF_QXDM_LOG_ENABLE {                                            \
@@ -390,6 +504,7 @@ static int LOCAL_LOG_LEVEL = -1;
     }
 
 #define LOC_LOGA(...)                                                   \
+    LOG_DLT_PRINT(5, __VA_ARGS__);                                      \
     IF_LOC_LOGA {                                                       \
         ALOGV(__VA_ARGS__);                                             \
         IF_QXDM_LOG_ENABLE {                                            \
