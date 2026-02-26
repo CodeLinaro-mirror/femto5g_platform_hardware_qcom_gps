@@ -1769,7 +1769,7 @@ struct GnssMeasurementsData {
 struct GnssMeasurementsSignalType {
     GnssSvType svType;
     double carrierFrequencyHz;
-    GnssMeasurementsCodeType codeType;
+    GnssSignalTypeMask signalType;
     char otherCodeTypeName[GNSS_MAX_NAME_LENGTH];
 };
 

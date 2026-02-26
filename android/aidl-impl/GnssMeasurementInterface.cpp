@@ -292,7 +292,7 @@ void GnssMeasurementInterface::convertGnssSignalType(
 
     convertGnssConstellationType(in.svType, out.constellation);
     out.carrierFrequencyHz = in.carrierFrequencyHz;
-    convertGnssMeasurementsCodeType(in.codeType, in.otherCodeTypeName, out);
+    convertGnssCodeType(in.codeType, out);
 }
 
 void GnssMeasurementInterface::convertGnssConstellationType(
@@ -503,9 +503,7 @@ void GnssMeasurementInterface::convertGnssClock(
             out.referenceSignalTypeForIsb.constellation);
     out.referenceSignalTypeForIsb.carrierFrequencyHz =
             in.referenceSignalTypeForIsb.carrierFrequencyHz;
-    convertGnssMeasurementsCodeType(in.referenceSignalTypeForIsb.codeType,
-            in.referenceSignalTypeForIsb.otherCodeTypeName,
-            out.referenceSignalTypeForIsb);
+    convertGnssCodeType(in.referenceSignalTypeForIsb.signalType, out.referenceSignalTypeForIsb);
 }
 
 void GnssMeasurementInterface::convertElapsedRealtimeNanos(

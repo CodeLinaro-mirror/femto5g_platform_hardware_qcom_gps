@@ -123,52 +123,7 @@ static void convertGnssSvStatus(const GnssSvNotification& in,
         out[i].basebandCN0DbHz = in.gnssSvs[i].basebandCarrierToNoiseDbHz;
         out[i].signalType->constellation = out[i].constellation;
         if (in.gnssSvs[i].gnssSvOptionsMask & GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT) {
-            switch (in.gnssSvs[i].gnssSignalTypeMask) {
-                case GNSS_SIGNAL_GPS_L1CA:
-                case GNSS_SIGNAL_GLONASS_G1:
-                case GNSS_SIGNAL_GLONASS_G2:
-                case GNSS_SIGNAL_GALILEO_E1:
-                case GNSS_SIGNAL_QZSS_L1CA:
-                case GNSS_SIGNAL_SBAS_L1:
-                case GNSS_SIGNAL_NAVIC_L5:
-                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_C;
-                    break;
-                case GNSS_SIGNAL_QZSS_L1S:
-                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_Z;
-                    break;
-                case GNSS_SIGNAL_GPS_L2:
-                case GNSS_SIGNAL_QZSS_L2:
-                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_L;
-                    break;
-                case GNSS_SIGNAL_GPS_L5:
-                case GNSS_SIGNAL_GALILEO_E5A:
-                case GNSS_SIGNAL_GALILEO_E5B:
-                case GNSS_SIGNAL_QZSS_L5:
-                case GNSS_SIGNAL_BEIDOU_B2BQ:
-                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_Q;
-                    break;
-                case GNSS_SIGNAL_BEIDOU_B2BI:
-                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_D;
-                    break;
-                case GNSS_SIGNAL_BEIDOU_B1I:
-                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_I;
-                    break;
-                case GNSS_SIGNAL_QZSS_L1CB:
-                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_E;
-                    break;
-                case GNSS_SIGNAL_BEIDOU_B1C:
-                case GNSS_SIGNAL_BEIDOU_B2AQ:
-                    // this one is not yet supported
-                case GNSS_SIGNAL_GPS_L1C:
-                case GNSS_SIGNAL_NAVIC_L1:
-                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_P;
-                    break;
-                    /* no plan to support  */
-                case GNSS_SIGNAL_BEIDOU_B2I:
-                case GNSS_SIGNAL_BEIDOU_B2AI:
-                default:
-                    out[i].signalType->codeType = out[i].signalType->CODE_TYPE_UNKNOWN;
-            }
+            convertGnssCodeType(in.gnssSvs[i].gnssSignalTypeMask, *(out[i].signalType));
         }
         if (in.gnssSvs[i].gnssSvOptionsMask & GNSS_SV_OPTIONS_HAS_ELAPSED_REAL_TIME_BIT) {
             out[i].elapsedRealtime.emplace();
@@ -195,8 +150,7 @@ static void convertGnssSignalType(const GnssCapabNotification& in,
         gnss::aidl::implementation::convertGnssConstellationType(in.gnssSignalType[i].svType,
                 out[i].constellation);
         out[i].carrierFrequencyHz = in.gnssSignalType[i].carrierFrequencyHz;
-        gnss::aidl::implementation::convertGnssMeasurementsCodeType(in.gnssSignalType[i].codeType,
-                in.gnssSignalType[i].otherCodeTypeName, out[i]);
+        convertGnssCodeType(in.gnssSignalType[i].signalType, out[i]);
     }
 }
 
