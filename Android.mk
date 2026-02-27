@@ -22,7 +22,8 @@ GNSS_CFLAGS := \
     -Wno-error=parentheses-equality \
     -Wno-error=undefined-bool-conversion \
     -Wno-error=tautological-compare \
-    -Wno-error=switch
+    -Wno-error=switch \
+    -D_ANDROID_
 
 GNSS_HIDL_LEGACY_MEASURMENTS_TARGET_LIST += msm8937
 GNSS_HIDL_LEGACY_MEASURMENTS_TARGET_LIST += msm8953
