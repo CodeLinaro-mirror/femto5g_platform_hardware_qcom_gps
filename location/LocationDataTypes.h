@@ -894,29 +894,6 @@ enum GnssSignalTypeBits {
      GNSS_SIGNAL_NAVIC_L5 | GNSS_SIGNAL_BEIDOU_B2AQ | GNSS_SIGNAL_BEIDOU_B2BI |\
      GNSS_SIGNAL_BEIDOU_B2BQ | GNSS_SIGNAL_NAVIC_L1 | GNSS_SIGNAL_QZSS_L1CB)
 
-enum Gnss_LocSvSystemEnumType {
-    GNSS_LOC_SV_SYSTEM_UNKNOWN                = 0,
-    /** unknown sv system. */
-    GNSS_LOC_SV_SYSTEM_MIN                    = 1,
-    /**< Min enum of valid SV system. */
-    GNSS_LOC_SV_SYSTEM_GPS                    = 1,
-    /**< GPS satellite. */
-    GNSS_LOC_SV_SYSTEM_GALILEO                = 2,
-    /**< GALILEO satellite. */
-    GNSS_LOC_SV_SYSTEM_SBAS                   = 3,
-    /**< SBAS satellite. */
-    GNSS_LOC_SV_SYSTEM_GLONASS                = 4,
-    /**< GLONASS satellite. */
-    GNSS_LOC_SV_SYSTEM_BDS                    = 5,
-    /**< BDS satellite. */
-    GNSS_LOC_SV_SYSTEM_QZSS                   = 6,
-    /**< QZSS satellite. */
-    GNSS_LOC_SV_SYSTEM_NAVIC                  = 7,
-    /**< NAVIC satellite. */
-    GNSS_LOC_SV_SYSTEM_MAX                    = 7,
-    /**< Max enum of valid SV system. */
-};
-
 enum Gnss_LocSignalEnumType {
     GNSS_LOC_SIGNAL_TYPE_GPS_L1CA = 0,          /**<  GPS L1CA Signal  */
     GNSS_LOC_SIGNAL_TYPE_GPS_L1C = 1,           /**<  GPS L1C Signal  */
@@ -1308,7 +1285,7 @@ struct GnssMeasUsageInfo {
     /** GnssSignalType mask */
     GnssSignalTypeMask gnssSignalType;
    /** Specifies GNSS Constellation Type */
-    Gnss_LocSvSystemEnumType gnssConstellation;
+    GnssSvType gnssConstellation;
     /** Unique SV Identifier.
      *  For SV Range of supported constellation, please refer to
      *  the comment section of svId in GnssSv.
@@ -1452,7 +1429,7 @@ typedef union {
     /** Time applicability of PVT report */
 struct GnssSystemTime {
     /** Specifies GNSS system time reported. Mandatory field */
-    Gnss_LocSvSystemEnumType gnssSystemTimeSrc;
+    GnssSvType gnssSystemTimeSrc;
     /** Reporting of GPS system time is recommended.
       If GPS time is unknown & other satellite system time is known,
       it should be reported.
@@ -1462,7 +1439,7 @@ struct GnssSystemTime {
 
     inline bool hasAccurateGpsTime() const {
         bool retVal = false;
-        if ((gnssSystemTimeSrc == GNSS_LOC_SV_SYSTEM_GPS) &&
+        if ((gnssSystemTimeSrc == GNSS_SV_TYPE_GPS) &&
                 (u.gpsSystemTime.hasAccurateTime() == true)) {
             retVal = true;
         }
@@ -3307,7 +3284,7 @@ struct NavicEphemerisResponse {
 struct GnssSvEphemerisReport {
     /** Indicates GNSS Constellation Type
      *   Mandatory field */
-    Gnss_LocSvSystemEnumType gnssConstellation;
+    GnssSvType gnssConstellation;
 
     /** GPS System Time of the ephemeris report */
     bool isSystemTimeValid;

@@ -120,7 +120,7 @@ static void set3rdPartyNtnCapability(bool isCapable);
 static void getNtnConfigSignalMask();
 static void setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask);
 static void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
-static void setPreferredConstellation(Gnss_LocSvSystemEnumType type);
+static void setPreferredConstellation(GnssSvType type);
 #endif // USE_GLIB
 
 static const GnssInterface gGnssInterface = {
@@ -692,7 +692,7 @@ static void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplC
     }
 }
 
-static void setPreferredConstellation(Gnss_LocSvSystemEnumType type) {
+static void setPreferredConstellation(GnssSvType type) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->setPreferredConstellationCommand(type);
     }

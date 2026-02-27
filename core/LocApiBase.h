@@ -327,7 +327,7 @@ public:
 #ifdef _ANDROID_
     virtual void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData,
             LocApiResponse* adapterResponse=nullptr);
-    virtual void setPreferredConstellation(Gnss_LocSvSystemEnumType type,
+    virtual void setPreferredConstellation(GnssSvType type,
             LocApiResponse* adapterResponse=nullptr);
 #endif
 };

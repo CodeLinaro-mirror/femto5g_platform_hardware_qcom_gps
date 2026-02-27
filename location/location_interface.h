@@ -131,7 +131,7 @@ struct GnssInterface {
     void (*getNtnConfigSignalMask)();
     void (*setNtnConfigSignalMask)(GnssSignalTypeMask gpsSignalTypeConfigMask);
     void (*injectSuplCert)(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
-    void (*setPreferredConstellation)(Gnss_LocSvSystemEnumType type);
+    void (*setPreferredConstellation)(GnssSvType type);
 #endif // USE_GLIB
 };
 
