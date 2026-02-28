@@ -246,6 +246,7 @@ LocationAPI::createInstance (LocationCallbacks& locationCallbacks)
     return locationApiObj;
 }
 
+#ifdef USE_GLIB
 uint32_t
 LocationControlAPI::gnssInjectMmfData(const GnssMapMatchedData& data)
 {
@@ -261,7 +262,9 @@ LocationControlAPI::gnssInjectMmfData(const GnssMapMatchedData& data)
     pthread_mutex_unlock(&gDataMutex);
     return id;
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t
 LocationControlAPI::configureUserConsentForXtra(const bool userConsent)
 {
@@ -277,6 +280,7 @@ LocationControlAPI::configureUserConsentForXtra(const bool userConsent)
     pthread_mutex_unlock(&gDataMutex);
     return id;
 }
+#endif
 
 void
 LocationAPI::destroy(locationApiDestroyCompleteCallback destroyCompleteCb)
@@ -648,6 +652,7 @@ void LocationAPI::stopNetworkLocation(trackingCallback* callback, TerrestrialTec
 }
 #endif
 
+#ifdef _ANDROID_
 void LocationAPI::getDebugReport(GnssDebugReport& report) {
     if (gData.gnssInterface != NULL) {
         pthread_mutex_lock(&gDataMutex);
@@ -657,7 +662,9 @@ void LocationAPI::getDebugReport(GnssDebugReport& report) {
         LOC_LOGe("No gnss interface available for Location API");
     }
 }
+#endif
 
+#ifdef _ANDROID_
 uint32_t LocationAPI::getAntennaInfo(AntennaInfoCallback* cb) {
     if (gData.gnssInterface != NULL) {
         return gData.gnssInterface->getAntennaInfo(cb);
@@ -666,6 +673,7 @@ uint32_t LocationAPI::getAntennaInfo(AntennaInfoCallback* cb) {
         return LOCATION_ERROR_GENERAL_FAILURE;
     }
 }
+#endif
 
 ILocationControlAPI*
 LocationControlAPI::getInstance(LocationControlCallbacks& locationControlCallbacks)
@@ -811,6 +819,7 @@ LocationControlAPI::gnssDeleteAidingData(const GnssAidingData& data)
     return id;
 }
 
+#ifdef USE_GLIB
 uint32_t LocationControlAPI::configConstellations(
         const GnssSvTypeConfig& constellationEnablementConfig,
         const GnssSvIdConfig&   blacklistSvConfig) {
@@ -827,7 +836,9 @@ uint32_t LocationControlAPI::configConstellations(
     pthread_mutex_unlock(&gDataMutex);
     return id;
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t LocationControlAPI::configConstellationSecondaryBand(
         const GnssSvTypeConfig& secondaryBandConfig) {
     uint32_t id = 0;
@@ -842,7 +853,9 @@ uint32_t LocationControlAPI::configConstellationSecondaryBand(
     pthread_mutex_unlock(&gDataMutex);
     return id;
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t LocationControlAPI::configConstrainedTimeUncertainty(
             bool enable, float tuncThreshold, uint32_t energyBudget) {
     uint32_t id = 0;
@@ -859,7 +872,9 @@ uint32_t LocationControlAPI::configConstrainedTimeUncertainty(
     pthread_mutex_unlock(&gDataMutex);
     return id;
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t LocationControlAPI::configPositionAssistedClockEstimator(bool enable) {
     uint32_t id = 0;
     pthread_mutex_lock(&gDataMutex);
@@ -873,7 +888,9 @@ uint32_t LocationControlAPI::configPositionAssistedClockEstimator(bool enable) {
     pthread_mutex_unlock(&gDataMutex);
     return id;
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t LocationControlAPI::configLeverArm(const LeverArmConfigInfo& configInfo) {
     uint32_t id = 0;
     pthread_mutex_lock(&gDataMutex);
@@ -887,6 +904,7 @@ uint32_t LocationControlAPI::configLeverArm(const LeverArmConfigInfo& configInfo
     pthread_mutex_unlock(&gDataMutex);
     return id;
 }
+#endif
 
 uint32_t LocationControlAPI::configRobustLocation(bool enable, bool enableForE911) {
     uint32_t id = 0;
@@ -902,6 +920,7 @@ uint32_t LocationControlAPI::configRobustLocation(bool enable, bool enableForE91
     return id;
 }
 
+#ifdef USE_GLIB
 uint32_t LocationControlAPI::configMinGpsWeek(uint16_t minGpsWeek) {
     uint32_t id = 0;
     pthread_mutex_lock(&gDataMutex);
@@ -915,7 +934,9 @@ uint32_t LocationControlAPI::configMinGpsWeek(uint16_t minGpsWeek) {
     pthread_mutex_unlock(&gDataMutex);
     return id;
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t LocationControlAPI::configDeadReckoningEngineParams(
         const DeadReckoningEngineConfig& dreConfig) {
     uint32_t id = 0;
@@ -930,7 +951,9 @@ uint32_t LocationControlAPI::configDeadReckoningEngineParams(
     pthread_mutex_unlock(&gDataMutex);
     return id;
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t LocationControlAPI::configEngineRunState(
         PositioningEngineMask engType, LocEngineRunState engState) {
     uint32_t id = 0;
@@ -945,6 +968,7 @@ uint32_t LocationControlAPI::configEngineRunState(
     pthread_mutex_unlock(&gDataMutex);
     return id;
 }
+#endif
 
 #ifdef USE_GLIB
 uint32_t LocationControlAPI::setOptInStatus(bool userConsent) {
@@ -962,6 +986,7 @@ uint32_t LocationControlAPI::setOptInStatus(bool userConsent) {
 }
 #endif
 
+#ifdef USE_GLIB
 uint32_t LocationControlAPI::configOutputNmeaTypes(
             GnssNmeaTypesMask enabledNmeaTypes,
             GnssGeodeticDatumType nmeaDatumType,
@@ -981,6 +1006,7 @@ uint32_t LocationControlAPI::configOutputNmeaTypes(
     pthread_mutex_unlock(&gDataMutex);
     return id;
 }
+#endif
 
 void LocationControlAPI::powerStateEvent(PowerStateType powerState) {
     pthread_mutex_lock(&gDataMutex);
@@ -1027,12 +1053,15 @@ uint32_t LocationControlAPI::updateCallbacks(LocationControlCallbacks& callbacks
         AgpsCbInfo cbInfo {callbacks.agpsStatusIpV4Cb,
                            AGPS_ATL_TYPE_SUPL | AGPS_ATL_TYPE_SUPL_ES, AGPS_CB_PRIORITY_LOW};
         gData.gnssInterface->agpsInit(cbInfo);
-    } else if (callbacks.measCorrSetCapabilitiesCb) {
+    }
+#ifdef _ANDROID_
+    else if (callbacks.measCorrSetCapabilitiesCb) {
         retVal = gData.gnssInterface->measCorrInit(callbacks.measCorrSetCapabilitiesCb);
     } else if ((callbacks.nfwStatusCb) || (callbacks.isInEmergencyStatusCb)) {
         NfwCbInfo cbInfo {callbacks.nfwStatusCb, callbacks.isInEmergencyStatusCb};
         gData.gnssInterface->nfwInit(cbInfo);
     }
+#endif
 
     pthread_mutex_unlock(&gDataMutex);
     return retVal;
@@ -1051,6 +1080,7 @@ void LocationControlAPI::odcpiInject(const ::Location& location) {
     pthread_mutex_unlock(&gDataMutex);
 }
 
+#ifdef _ANDROID_
 void LocationControlAPI::updateBatteryStatus(bool charging) {
     pthread_mutex_lock(&gDataMutex);
 
@@ -1063,6 +1093,7 @@ void LocationControlAPI::updateBatteryStatus(bool charging) {
 
     pthread_mutex_unlock(&gDataMutex);
 }
+#endif
 
 void LocationControlAPI::injectLocation(double latitude, double longitude, float accuracy) {
     pthread_mutex_lock(&gDataMutex);
@@ -1077,6 +1108,7 @@ void LocationControlAPI::injectLocation(double latitude, double longitude, float
     pthread_mutex_unlock(&gDataMutex);
 }
 
+#ifdef _ANDROID_
 void LocationControlAPI::agpsDataConnOpen(AGpsType agpsType, const char* apnName,
         int apnLen, int ipType) {
 
@@ -1091,7 +1123,9 @@ void LocationControlAPI::agpsDataConnOpen(AGpsType agpsType, const char* apnName
 
     pthread_mutex_unlock(&gDataMutex);
 }
+#endif
 
+#ifdef _ANDROID_
 void LocationControlAPI::agpsDataConnClosed(AGpsType agpsType) {
     pthread_mutex_lock(&gDataMutex);
 
@@ -1104,7 +1138,9 @@ void LocationControlAPI::agpsDataConnClosed(AGpsType agpsType) {
 
     pthread_mutex_unlock(&gDataMutex);
     }
+#endif
 
+#ifdef _ANDROID_
 void LocationControlAPI::agpsDataConnFailed(AGpsType agpsType) {
     pthread_mutex_lock(&gDataMutex);
 
@@ -1117,6 +1153,7 @@ void LocationControlAPI::agpsDataConnFailed(AGpsType agpsType) {
 
     pthread_mutex_unlock(&gDataMutex);
 }
+#endif
 
 void LocationControlAPI::updateConnectionStatus(bool connected, int8_t type, bool roaming,
         NetworkHandle networkHandle, const std::string& apn) {
@@ -1133,6 +1170,7 @@ void LocationControlAPI::updateConnectionStatus(bool connected, int8_t type, boo
     pthread_mutex_unlock(&gDataMutex);
 }
 
+#ifdef _ANDROID_
 bool LocationControlAPI::measCorrSetCorrections(
         const GnssMeasurementCorrections& gnssMeasCorr) {
     pthread_mutex_lock(&gDataMutex);
@@ -1148,21 +1186,9 @@ bool LocationControlAPI::measCorrSetCorrections(
     pthread_mutex_unlock(&gDataMutex);
     return retVal;
 }
+#endif
 
-void LocationControlAPI::measCorrClose() {
-    pthread_mutex_lock(&gDataMutex);
-
-    if (gData.gnssInterface != NULL) {
-        gData.gnssInterface->measCorrClose();
-    }
-    else {
-        LOC_LOGe("No gnss interface available for Location Control API");
-    }
-
-    pthread_mutex_unlock(&gDataMutex);
-
-}
-
+#ifdef _ANDROID_
 void LocationControlAPI::enableNfwLocationAccess(const std::vector<std::string>& enabledNfws) {
     pthread_mutex_lock(&gDataMutex);
 
@@ -1175,7 +1201,9 @@ void LocationControlAPI::enableNfwLocationAccess(const std::vector<std::string>&
 
     pthread_mutex_unlock(&gDataMutex);
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t LocationControlAPI::configEngineIntegrityRisk(
             PositioningEngineMask engType, uint32_t integrityRisk) {
     uint32_t id = 0;
@@ -1190,7 +1218,9 @@ uint32_t LocationControlAPI::configEngineIntegrityRisk(
     pthread_mutex_unlock(&gDataMutex);
     return id;
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t LocationControlAPI::configXtraParams(
         bool enable, const XtraConfigParams& xtraParams) {
     uint32_t id = 0;
@@ -1205,6 +1235,7 @@ uint32_t LocationControlAPI::configXtraParams(
     pthread_mutex_unlock(&gDataMutex);
     return id;
 }
+#endif
 
 uint32_t LocationControlAPI::configMerkleTree(const char * merkleTreeXml, int xmlSize) {
     uint32_t id = 0;

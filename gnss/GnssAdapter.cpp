@@ -240,7 +240,9 @@ GnssAdapter::GnssAdapter() :
     initEngineHubCommand();
     initLocGlinkCommand();
     mXtraObserver.init();
+#ifdef USE_GLIB
     restoreConfigFromNvm();
+#endif
 
     // at last step, let us inform adapater base that we are done
     // with initialization, e.g.: ready to process handleEngineUpEvent
@@ -262,6 +264,7 @@ GnssAdapter::GnssAdapter() :
 #endif
 }
 
+#ifdef USE_GLIB
 void GnssAdapter::restoreConfigFromNvm() {
 
     LOC_LOGd("restoreConfigFromNvm");
@@ -353,6 +356,7 @@ bool GnssAdapter::storeVrpData2Nvm(const LeverArmConfigInfo& configInfo) {
     }
     return retVal;
 }
+#endif
 
 void
 GnssAdapter::setControlCallbacksCommand(LocationControlCallbacks& controlCallbacks) {
@@ -2529,6 +2533,7 @@ GnssAdapter::gnssDeleteAidingDataCommand(const GnssAidingData& data) {
     return sessionId;
 }
 
+#ifdef _ANDROID_
 void
 GnssAdapter::gnssUpdateXtraThrottleCommand(const bool enabled) {
     LOC_LOGd("enabled:%d", enabled);
@@ -2547,6 +2552,7 @@ GnssAdapter::gnssUpdateXtraThrottleCommand(const bool enabled) {
 
     sendMsg(new UpdateXtraThrottleMsg(*this, enabled));
 }
+#endif
 
 void
 GnssAdapter::injectLocationCommand(double latitude, double longitude, float accuracy) {
@@ -2725,6 +2731,7 @@ GnssAdapter::updateSystemPowerStateCommand(PowerStateType systemPowerState) {
     sendMsg(new MsgUpdatePowerState(*this, systemPowerState));
 }
 
+#ifdef _ANDROID_
 void
 GnssAdapter::updatePowerConnectStateCommand(bool connected) {
     LOC_LOGd("power connected %d", connected);
@@ -2747,6 +2754,7 @@ GnssAdapter::updatePowerConnectStateCommand(bool connected) {
 
     sendMsg(new MsgUpdatePowerConnectState(*this, connected));
 }
+#endif
 
 void
 GnssAdapter::addClientCommand(LocationAPI* client, const LocationCallbacks& callbacks) {
@@ -5574,6 +5582,7 @@ void GnssAdapter::injectOdcpi(const Location& location) {
     mLocApi->injectPosition(location, mOdcpiTimer.isActive());
 }
 
+#ifdef _ANDROID_
 void GnssAdapter::setAddressRequestCbCommand(
         const std::function<void(const Location&)>& addressRequestCb) {
     struct MsgSetAddrReqCb : public LocMsg {
@@ -5590,7 +5599,9 @@ void GnssAdapter::setAddressRequestCbCommand(
     };
     sendMsg(new MsgSetAddrReqCb(*this, addressRequestCb));
 }
+#endif
 
+#ifdef _ANDROID_
 void GnssAdapter::injectLocationAndAddrCommand(
         const Location& location, const GnssCivicAddress& addr) {
     struct MsgInjectLocAndAddr : public LocMsg {
@@ -5623,6 +5634,7 @@ void GnssAdapter::injectLocationAndAddrCommand(
     };
     sendMsg(new MsgInjectLocAndAddr(*this, location, addr));
 }
+#endif
 
 // Called in the context of LocTimer thread
 void OdcpiTimer::timeOutCallback() {
@@ -5839,6 +5851,7 @@ void GnssAdapter::initAgpsCommand(const AgpsCbInfo& cbInfo){
     sendMsg(new AgpsMsgInit(cbInfo, *this));
 }
 
+#ifdef _ANDROID_
 void GnssAdapter::initNfwCommand(const NfwCbInfo& cbInfo) {
     LOC_LOGi("GnssAdapter::initNfwCommand");
 
@@ -5861,6 +5874,7 @@ void GnssAdapter::initNfwCommand(const NfwCbInfo& cbInfo) {
     /* Send message to initialize NFW */
     sendMsg(new MsgInitNfw(cbInfo, *this));
 }
+#endif
 
 void GnssAdapter::reportNfwNotificationEvent(GnssNfwNotification& notification) {
     LOC_LOGi("GnssAdapter::reportNfwNotificationEvent");
@@ -5993,7 +6007,6 @@ void GnssAdapter::reportPdnTypeFromWds(int pdnType, AGpsExtType agpsType, std::s
                 agpsType, apnName, bearerType));
 }
 
-
 void GnssAdapter::dataConnOpenCommand(
         AGpsExtType agpsType,
         const char* apnName, int apnLen, AGpsBearerType bearerType){
@@ -6104,6 +6117,7 @@ void GnssAdapter::dataConnFailedCommand(AGpsExtType agpsType){
     sendMsg( new AgpsMsgAtlOpenFailed(&mAgpsManager, (AGpsExtType)agpsType));
 }
 
+#ifdef _ANDROID_
 void GnssAdapter::convertSatelliteInfo(std::vector<GnssDebugSatelliteInfo>& out,
                                        const GnssSvType& in_constellation,
                                        const SystemStatusReports& in) {
@@ -6257,7 +6271,9 @@ void GnssAdapter::convertSatelliteInfo(std::vector<GnssDebugSatelliteInfo>& out,
 
     return;
 }
+#endif
 
+#ifdef _ANDROID_
 bool GnssAdapter::getDebugReport(GnssDebugReport& r) {
     SystemStatus* systemstatus = getSystemStatus();
     if (nullptr == systemstatus) {
@@ -6359,6 +6375,7 @@ bool GnssAdapter::getDebugReport(GnssDebugReport& r) {
 
     return true;
 }
+#endif
 
 /* Callbacks registered with loc_net_iface library */
 static void agpsOpenResultCb (bool isSuccess, AGpsExtType agpsType, const char* apn,
@@ -6422,6 +6439,7 @@ GnssAdapter::getGnssEnergyConsumedCommand(GnssEnergyConsumedCallback energyConsu
     sendMsg(new MsgGetGnssEnergyConsumed(*this, *mLocApi, energyConsumedCb));
 }
 
+#ifdef _ANDROID_
 uint32_t GnssAdapter::getNfwControlBits(const std::vector<std::string>& enabledNfws) {
     uint32_t nfwControlBits = 0;
 
@@ -6436,7 +6454,9 @@ uint32_t GnssAdapter::getNfwControlBits(const std::vector<std::string>& enabledN
     LOC_LOGd("nfwControlBits=0x%X", nfwControlBits);
     return nfwControlBits;
 }
+#endif
 
+#ifdef _ANDROID_
 void
 GnssAdapter::nfwControlCommand(const std::vector<std::string>& enabledNfws) {
     struct MsgControlNfwLocationAccess : public LocMsg {
@@ -6481,7 +6501,9 @@ GnssAdapter::nfwControlCommand(const std::vector<std::string>& enabledNfws) {
     sendMsg(new MsgControlNfwLocationAccess(*this, *mLocApi, enabledNfws));
 
 }
+#endif
 
+#ifdef USE_GLIB
 // Set tunc constrained mode, use 0 session id to indicate
 // that no callback is needed. Session id 0 is used for calls that
 // are not invoked from the integration api, e.g.: initial configuration
@@ -6508,7 +6530,9 @@ GnssAdapter::setConstrainedTunc(bool enable, float tuncConstraint,
     mLocApi->setConstrainedTuncMode(
             enable, tuncConstraint, energyBudget, locApiResponse);
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t
 GnssAdapter::setConstrainedTuncCommand (bool enable, float tuncConstraint,
                                         uint32_t energyBudget) {
@@ -6545,7 +6569,9 @@ GnssAdapter::setConstrainedTuncCommand (bool enable, float tuncConstraint,
 
     return sessionId;
 }
+#endif
 
+#ifdef USE_GLIB
 // Set position assisted clock estimator, use 0 session id to indicate
 // that no callback is needed. Session id 0 is used for calls that are
 // not invoked from the integration api, e.g.: initial configuration
@@ -6568,7 +6594,9 @@ GnssAdapter::setPositionAssistedClockEstimator(bool enable,
     }
     mLocApi->setPositionAssistedClockEstimatorMode(enable, locApiResponse);
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t
 GnssAdapter::setPositionAssistedClockEstimatorCommand(bool enable) {
     // generated session id will be none-zero
@@ -6593,7 +6621,9 @@ GnssAdapter::setPositionAssistedClockEstimatorCommand(bool enable) {
     sendMsg(new MsgEnablePACE(*this, sessionId, enable));
     return sessionId;
 }
+#endif
 
+#ifdef USE_GLIB
 void GnssAdapter::gnssUpdateSvConfig(
         uint32_t sessionId, const GnssSvTypeConfig& constellationEnablementConfig,
         const GnssSvIdConfig&   blacklistSvConfig) {
@@ -6638,7 +6668,9 @@ void GnssAdapter::gnssUpdateSvConfig(
     // resume all tracking sessions after the constellation config has been applied
     restartSessions(false);
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t
 GnssAdapter::gnssUpdateSvConfigCommand(
         const GnssSvTypeConfig& constellationEnablementConfig,
@@ -6675,7 +6707,9 @@ GnssAdapter::gnssUpdateSvConfigCommand(
     }
     return sessionId;
 }
+#endif
 
+#ifdef USE_GLIB
 void GnssAdapter::gnssUpdateSecondaryBandConfig(
         uint32_t sessionId, const GnssSvTypeConfig& secondaryBandConfig) {
 
@@ -6690,7 +6724,9 @@ void GnssAdapter::gnssUpdateSecondaryBandConfig(
     mGnssSeconaryBandConfig = secondaryBandConfig;
     gnssSecondaryBandConfigUpdate(locApiResponse);
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t
 GnssAdapter::gnssUpdateSecondaryBandConfigCommand(
         const GnssSvTypeConfig& secondaryBandConfig) {
@@ -6721,7 +6757,9 @@ GnssAdapter::gnssUpdateSecondaryBandConfigCommand(
     }
     return sessionId;
 }
+#endif
 
+#ifdef USE_GLIB
 // This function currently retrieves secondary band configuration
 // for constellation enablement/disablement.
 void
@@ -6736,7 +6774,9 @@ GnssAdapter::gnssGetSecondaryBandConfig(uint32_t sessionId) {
 
     mLocApi->getConstellationMultiBandConfig(sessionId, locApiResponse);
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t
 GnssAdapter::gnssGetSecondaryBandConfigCommand() {
 
@@ -6762,7 +6802,9 @@ GnssAdapter::gnssGetSecondaryBandConfigCommand() {
     }
     return sessionId;
 }
+#endif
 
+#ifdef USE_GLIB
 void
 GnssAdapter::configLeverArm(uint32_t sessionId,
                             const LeverArmConfigInfo& configInfo) {
@@ -6788,7 +6830,9 @@ GnssAdapter::configLeverArm(uint32_t sessionId,
 
     reportResponse(err, sessionId);
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t
 GnssAdapter::configLeverArmCommand(const LeverArmConfigInfo& configInfo) {
 
@@ -6818,6 +6862,7 @@ GnssAdapter::configLeverArmCommand(const LeverArmConfigInfo& configInfo) {
     sendMsg(new MsgConfigLeverArm(*this, sessionId, configInfo));
     return sessionId;
 }
+#endif
 
 bool GnssAdapter::initMeasCorr(bool bSendCbWhenNotSupported) {
     LOC_LOGv("GnssAdapter::initMeasCorr");
@@ -6850,6 +6895,7 @@ bool GnssAdapter::initMeasCorr(bool bSendCbWhenNotSupported) {
     }
 }
 
+#ifdef _ANDROID_
 bool GnssAdapter::openMeasCorrCommand(const measCorrSetCapabilitiesCallback setCapabilitiesCb) {
     LOC_LOGi("GnssAdapter::openMeasCorrCommand");
 
@@ -6864,7 +6910,9 @@ bool GnssAdapter::openMeasCorrCommand(const measCorrSetCapabilitiesCallback setC
             return true;
         }
 }
+#endif
 
+#ifdef _ANDROID_
 bool GnssAdapter::measCorrSetCorrectionsCommand(const GnssMeasurementCorrections& gnssMeasCorr) {
     LOC_LOGi("GnssAdapter::measCorrSetCorrectionsCommand");
 
@@ -6898,7 +6946,9 @@ bool GnssAdapter::measCorrSetCorrectionsCommand(const GnssMeasurementCorrections
         return false;
     }
 }
+#endif
 
+#ifdef _ANDROID_
 uint32_t GnssAdapter::getAntennaeInfoCommand(AntennaInfoCallback* antennaInfoCallback) {
     /* Message to get Antenna Information */
     struct MsgReportAi : public LocMsg {
@@ -6921,6 +6971,7 @@ uint32_t GnssAdapter::getAntennaeInfoCommand(AntennaInfoCallback* antennaInfoCal
     sendMsg(new MsgReportAi(*this, antennaInfoCallback));
     return LOCATION_ERROR_SUCCESS;
 }
+#endif
 
 void GnssAdapter::initRobustLocationConfig() {
 
@@ -7008,6 +7059,7 @@ uint32_t GnssAdapter::configRobustLocationCommand(
     return sessionId;
 }
 
+#ifdef USE_GLIB
 void
 GnssAdapter::configMinGpsWeek(uint32_t sessionId, uint16_t minGpsWeek) {
     // suspend all sessions for modem to take the min GPS week config
@@ -7029,7 +7081,9 @@ GnssAdapter::configMinGpsWeek(uint32_t sessionId, uint16_t minGpsWeek) {
     // has been changed
     restartSessions(false);
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t GnssAdapter::configMinGpsWeekCommand(uint16_t minGpsWeek) {
     // generated session id will be none-zero
     uint32_t sessionId = generateSessionId();
@@ -7055,7 +7109,9 @@ uint32_t GnssAdapter::configMinGpsWeekCommand(uint16_t minGpsWeek) {
     sendMsg(new MsgConfigMinGpsWeek(*this, sessionId, minGpsWeek));
     return sessionId;
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t GnssAdapter::configDeadReckoningEngineParamsCommand(
         const DeadReckoningEngineConfig& dreConfig) {
 
@@ -7087,11 +7143,13 @@ uint32_t GnssAdapter::configDeadReckoningEngineParamsCommand(
     sendMsg(new MsgConfigDrEngine(*this, sessionId, dreConfig));
     return sessionId;
 }
+#endif
 
 void halResponseTimer:: timeOutCallback() {
     mHal->reportResponse(mErr, mSessionID);
 }
 
+#ifdef USE_GLIB
 uint32_t GnssAdapter::configEngineRunStateCommand(
     PositioningEngineMask engType, LocEngineRunState engState) {
 
@@ -7141,7 +7199,9 @@ uint32_t GnssAdapter::configEngineRunStateCommand(
 
     return sessionId;
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t GnssAdapter::configOutputNmeaTypesCommand(GnssNmeaTypesMask enabledNmeaTypes,
                                                    GnssGeodeticDatumType nmeaDatumType,
                                                    LocReqEngineTypeMask nmeaReqEngTypeMask) {
@@ -7179,7 +7239,9 @@ uint32_t GnssAdapter::configOutputNmeaTypesCommand(GnssNmeaTypesMask enabledNmea
 
     return sessionId;
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t GnssAdapter::gnssInjectMmfDataCommand(const GnssMapMatchedData& data) {
 
     // generated session id will be none-zero
@@ -7211,6 +7273,9 @@ uint32_t GnssAdapter::gnssInjectMmfDataCommand(const GnssMapMatchedData& data) {
     return sessionId;
 
 }
+#endif
+
+#ifdef _ANDROID_
 void GnssAdapter::powerIndicationInitCommand(const powerIndicationCb powerIndicationCallback) {
     LOC_LOGi("GnssAdapter::powerIndicationInitCommand");
 
@@ -7230,7 +7295,9 @@ void GnssAdapter::powerIndicationInitCommand(const powerIndicationCb powerIndica
     };
     sendMsg(new MsgPowerIndicationInit(powerIndicationCallback, *this));
 }
+#endif
 
+#ifdef _ANDROID_
 void GnssAdapter::powerIndicationRequestCommand() {
     LOC_LOGi("GnssAdapter::powerIndicationRequestCommand");
 
@@ -7248,7 +7315,9 @@ void GnssAdapter::powerIndicationRequestCommand() {
     };
     sendMsg(new MsgPowerIndicationRequest(*mLocApi));
 }
+#endif
 
+#ifdef USE_GLIB
 uint32_t GnssAdapter::configEngineIntegrityRiskCommand(
         PositioningEngineMask engType, uint32_t integrityRisk) {
 
@@ -7291,6 +7360,7 @@ uint32_t GnssAdapter::configEngineIntegrityRiskCommand(
 
     return sessionId;
 }
+#endif
 
 void GnssAdapter::reportXtraMpDisabledEvent() {
     struct MsgReportXtraMpDisabled : public LocMsg {
@@ -7353,6 +7423,7 @@ void GnssAdapter::reportNtnConfigUpdateEvent(const GnssSignalTypeMask& gpsSignal
     sendMsg(new MsgReportNtnConfigUpdate(*this, gpsSignalTypeConfigMask));
 }
 
+#ifdef USE_GLIB
 uint32_t GnssAdapter::configXtraParamsCommand(bool enable,
                                               const XtraConfigParams& xtraParams) {
     // generated session id will be none-zero
@@ -7388,6 +7459,7 @@ uint32_t GnssAdapter::configXtraParamsCommand(bool enable,
 
     return sessionId;
 }
+#endif
 
 uint32_t GnssAdapter::getXtraStatusCommand() {
     // generated session id will be none-zero
@@ -7618,6 +7690,7 @@ uint32_t GnssAdapter::configOsnmaEnablementCommand(bool enable) {
     return sessionId;
 }
 
+#ifdef _ANDROID_
 void GnssAdapter::set3rdPartyNtnCapabilityCommand(bool isCapable) {
     struct MsgSet3rdPartyNtnCapability : public LocMsg {
         GnssAdapter& mAdapter;
@@ -7633,7 +7706,9 @@ void GnssAdapter::set3rdPartyNtnCapabilityCommand(bool isCapable) {
     };
     sendMsg(new MsgSet3rdPartyNtnCapability(*this, isCapable));
 }
+#endif
 
+#ifdef _ANDROID_
 void GnssAdapter::getNtnConfigSignalMaskCommand() {
     // generated session id will be none-zero
     uint32_t sessionId = generateSessionId();
@@ -7663,7 +7738,9 @@ void GnssAdapter::getNtnConfigSignalMaskCommand() {
 
     sendMsg(new MsgGetNtnConfig(*this, *mLocApi, sessionId));
 }
+#endif
 
+#ifdef _ANDROID_
 void GnssAdapter::setNtnConfigSignalMaskCommand(GnssSignalTypeMask gpsSignalTypeConfigMask) {
     // generated session id will be none-zero
     uint32_t sessionId = generateSessionId();
@@ -7696,7 +7773,9 @@ void GnssAdapter::setNtnConfigSignalMaskCommand(GnssSignalTypeMask gpsSignalType
 
     sendMsg(new MsgSetNtnConfig(*this, *mLocApi, sessionId, gpsSignalTypeConfigMask));
 }
+#endif
 
+#ifdef _ANDROID_
 void GnssAdapter::injectSuplCertCommand(int32_t suplCertId,
         const std::vector<uint8_t>& suplCertData) {
     // generated session id will be none-zero
@@ -7730,7 +7809,9 @@ void GnssAdapter::injectSuplCertCommand(int32_t suplCertId,
     };
     sendMsg(new MsgInjectSuplCert(*this, *mLocApi, sessionId, suplCertId, suplCertData));
 }
+#endif
 
+#ifdef _ANDROID_
 void GnssAdapter::setPreferredConstellationCommand(Gnss_LocSvSystemEnumType type) {
     uint32_t sessionId = generateSessionId();
     LOC_LOGd("Gnss Constellation Type  %u", type);
@@ -7763,6 +7844,7 @@ void GnssAdapter::setPreferredConstellationCommand(Gnss_LocSvSystemEnumType type
     };
     sendMsg(new MsgSetPreferredConstellation(*this, *mLocApi, sessionId, type));
 }
+#endif
 
 void GnssAdapter::reportGnssConfigEvent(uint32_t sessionId, const GnssConfig& gnssConfig)
 {
@@ -8029,6 +8111,7 @@ GnssAdapter::initEngineHub() {
     return retVal;
 }
 
+#ifdef _ANDROID_
 std::vector<double>
 GnssAdapter::parseDoublesString(char* dString) {
     std::vector<double> dVector;
@@ -8043,6 +8126,7 @@ GnssAdapter::parseDoublesString(char* dString) {
     }
     return dVector;
 }
+#endif
 
 void GnssAdapter::initGnssPowerStatistics() {
     if (!mGnssPowerStatisticsInit) {
@@ -8050,6 +8134,7 @@ void GnssAdapter::initGnssPowerStatistics() {
     }
 }
 
+#ifdef _ANDROID_
 void
 GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb) {
 #define MAX_TEXT_WIDTH      50
@@ -8165,7 +8250,9 @@ GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb) {
     if (ContextBase::getAntennaInfoVectorSize() > 0 && cb) {
         (*cb)(gnssAntennaInformations);
     }
+
 }
+#endif
 
 bool GnssAdapter::isStandAloneCDParserPELib() {
     bool standAloneCDParserPELib = false;
@@ -8264,6 +8351,7 @@ void GnssAdapter::updateModme3GppSourceStatus(QDgnss3GppSourceBitMask modem3GppS
     sendMsg(new updateModme3GppAvailMsg(*this, modem3GppSourceMask));
 }
 
+#ifdef _ANDROID_
 /*==== DGnss Ntrip Source ==========================================================*/
 void GnssAdapter::enablePPENtripStreamCommand(const GnssNtripConnectionParams& params,
                                               bool enableRTKEngine) {
@@ -8293,7 +8381,9 @@ void GnssAdapter::enablePPENtripStreamCommand(const GnssNtripConnectionParams& p
     };
     sendMsg(new enableNtripMsg(*this, params, enableRTKEngine));
 }
+#endif
 
+#ifdef _ANDROID_
 void GnssAdapter::handleEnablePPENtrip(const GnssNtripConnectionParams& params,
         bool enableRTKEngine) {
     uint32_t nmeaUpdateInterval = params.nmeaUpdateInterval ? params.nmeaUpdateInterval :
@@ -8338,7 +8428,9 @@ void GnssAdapter::handleEnablePPENtrip(const GnssNtripConnectionParams& params,
 
     checkUpdateDgnssNtrip(false);
 }
+#endif
 
+#ifdef _ANDROID_
 void GnssAdapter::disablePPENtripStreamCommand() {
     struct disableNtripMsg : public LocMsg {
         GnssAdapter& mAdapter;
@@ -8352,13 +8444,16 @@ void GnssAdapter::disablePPENtripStreamCommand() {
     };
     sendMsg(new disableNtripMsg(*this));
 }
+#endif
 
+#ifdef _ANDROID_
 void GnssAdapter::handleDisablePPENtrip() {
     mDgnssState &= ~DGNSS_STATE_ENABLE_NTRIP_COMMAND;
     mDgnssState |= DGNSS_STATE_NO_NMEA_PENDING;
     stopDgnssNtrip();
     getSystemStatus()->getOsObserver()->eventNtripStarted(false);
 }
+#endif
 
 void GnssAdapter::checkUpdateDgnssNtrip(bool isLocationValid) {
     LOC_LOGd("isInSession %d mDgnssState 0x%x isLocationValid %d isMlpEnabled %d "

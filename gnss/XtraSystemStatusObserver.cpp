@@ -235,6 +235,7 @@ bool XtraSystemStatusObserver::updateMccMnc(const string& mccmncCountry) {
     return ( LocIpc::send(*mXtraSender, (const uint8_t*)s.data(), s.size()) );
 }
 
+#ifdef _ANDROID_
 bool XtraSystemStatusObserver::updateXtraThrottle(const bool enabled) {
     mXtraThrottle = enabled;
 
@@ -248,6 +249,7 @@ bool XtraSystemStatusObserver::updateXtraThrottle(const bool enabled) {
     string s = ss.str();
     return ( LocIpc::send(*mXtraSender, (const uint8_t*)s.data(), s.size()) );
 }
+#endif
 
 bool XtraSystemStatusObserver::notifySessionStart() {
     if (!mReqStatusReceived) {
@@ -370,6 +372,7 @@ void XtraSystemStatusObserver::updateNmeaToDgnssServer(const string& nmea)
     LocIpc::send(*mDgnssSender, (const uint8_t*)s.data(), s.size());
 }
 
+#ifdef USE_GLIB
 bool XtraSystemStatusObserver::updateXtraConfig(bool enable, const XtraConfigParams& configParams) {
     if (!mReqStatusReceived) {
         return false;
@@ -429,6 +432,7 @@ bool XtraSystemStatusObserver::updateXtraConfig(bool enable, const XtraConfigPar
     LOC_LOGd("config params: %s", s.c_str());
     return ( LocIpc::send(*mXtraSender, (const uint8_t*)s.data(), s.size()) );
 }
+#endif
 
 bool XtraSystemStatusObserver::getXtraStatus(uint32_t sessionId) {
     if (!mReqStatusReceived) {
@@ -472,6 +476,7 @@ bool XtraSystemStatusObserver::updateXtraDataDeletion() {
     return ( LocIpc::send(*mXtraSender, (const uint8_t*)s.data(), s.size()) );
 }
 
+#ifdef _ANDROID_
 bool XtraSystemStatusObserver::set3rdPartyNtnCapability(bool enabled) {
     if (!mReqStatusReceived) {
         return false;
@@ -483,6 +488,7 @@ bool XtraSystemStatusObserver::set3rdPartyNtnCapability(bool enabled) {
     string s = ss.str();
     return ( LocIpc::send(*mXtraSender, (const uint8_t*)s.data(), s.size()) );
 }
+#endif
 
 void XtraSystemStatusObserver::subscribe(bool yes)
 {

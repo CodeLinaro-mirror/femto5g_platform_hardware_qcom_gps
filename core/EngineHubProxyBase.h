@@ -120,6 +120,7 @@ public:
         return false;
     }
 
+#ifdef USE_GLIB
     inline virtual bool configDeadReckoningEngineParams(
             const DeadReckoningEngineConfig& dreConfig) {
         (void) dreConfig;
@@ -140,13 +141,14 @@ public:
         return false;
     }
 
-    inline virtual bool sendPowerStateInfo(uint8_t powerState) {
-       (void)powerState;
-       return false;
-    }
-
     inline virtual bool gnssInjectMmfData(const GnssMapMatchedData& mapData) {
        (void)mapData;
+       return false;
+    }
+#endif
+
+    inline virtual bool sendPowerStateInfo(uint8_t powerState) {
+       (void)powerState;
        return false;
     }
 };

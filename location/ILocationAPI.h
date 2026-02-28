@@ -196,6 +196,7 @@ public:
             locationSystemInfoCallback locationSystemInfoCb,
             responseCallback responseCb) {}
 
+#ifdef _ANDROID_
     /** @brief
         Get Debug Report
 
@@ -203,13 +204,16 @@ public:
         report: GnssDebugReport structure
     */
     virtual void getDebugReport(GnssDebugReport& report) {}
+#endif
 
+#ifdef _ANDROID_
     /** @brief
         Set callback and receive antenna info
     */
     virtual uint32_t getAntennaInfo(AntennaInfoCallback* cb) {
         return 0;
     }
+#endif
 
 #ifdef USE_GLIB
     /** @brief startNetworkLocation starts tracking session for
@@ -311,6 +315,7 @@ public:
                 LOCATION_ERROR_NOT_SUPPORTED if build is not userdebug */
     virtual uint32_t gnssDeleteAidingData(const GnssAidingData& data) = 0;
 
+#ifdef USE_GLIB
     /** @brief
         Configure the constellation and SVs to be used by the GNSS engine on
         modem.
@@ -334,7 +339,9 @@ public:
     virtual uint32_t configConstellations(
             const GnssSvTypeConfig& constellationEnablementConfig,
             const GnssSvIdConfig&   blacklistSvConfig) = 0;
+#endif
 
+#ifdef USE_GLIB
     /** @brief
         Configure the secondary band of constellations to be used by
         the GNSS engine on modem.
@@ -352,7 +359,9 @@ public:
     */
     virtual uint32_t configConstellationSecondaryBand(
             const GnssSvTypeConfig& secondaryBandConfig) = 0;
+#endif
 
+#ifdef USE_GLIB
     /** @brief
         Enable or disable the constrained time uncertainty feature.
 
@@ -388,7 +397,9 @@ public:
     virtual uint32_t configConstrainedTimeUncertainty(
             bool enable, float tuncThreshold = 0.0,
             uint32_t energyBudget = 0) = 0;
+#endif
 
+#ifdef USE_GLIB
     /** @brief
         Enable or disable position assisted clock estimator feature.
 
@@ -405,7 +416,9 @@ public:
                 LOCATION_ERROR_INVALID_PARAMETER if any parameters are invalid
     */
     virtual uint32_t configPositionAssistedClockEstimator(bool enable) = 0;
+#endif
 
+#ifdef USE_GLIB
     /** @brief
         Sets the lever arm parameters for the vehicle.
 
@@ -431,6 +444,7 @@ public:
                 LOCATION_ERROR_INVALID_PARAMETER if any parameters are invalid
     */
     virtual uint32_t configLeverArm(const LeverArmConfigInfo& configInfo) = 0;
+#endif
 
     /** @brief
         Configure the robust location setting.
@@ -453,6 +467,7 @@ public:
     */
     virtual uint32_t configRobustLocation(bool enable, bool enableForE911) = 0;
 
+#ifdef USE_GLIB
     /** @brief
         Config the minimum GPS week used by modem GNSS engine.
 
@@ -467,7 +482,9 @@ public:
                 LOCATION_ERROR_INVALID_PARAMETER if any parameters are invalid
     */
     virtual uint32_t configMinGpsWeek(uint16_t minGpsWeek) = 0;
+#endif
 
+#ifdef USE_GLIB
     /** @brief
         Configure the vehicle body-to-Sensor mount parameters and
         other parameters for dead reckoning position engine.
@@ -485,7 +502,9 @@ public:
     */
     virtual uint32_t configDeadReckoningEngineParams(
             const DeadReckoningEngineConfig& dreConfig)=0;
+#endif
 
+#ifdef USE_GLIB
     /** @brief
         This API is used to instruct the specified engine to be in
         the pause/resume state. <br/>
@@ -523,7 +542,9 @@ public:
     */
     virtual uint32_t configEngineRunState(PositioningEngineMask engType,
                                           LocEngineRunState engState) = 0;
+#endif
 
+#ifdef USE_GLIB
      /** @brief
         This API is used to config the NMEA sentence types.
 
@@ -563,6 +584,7 @@ public:
             GnssNmeaTypesMask enabledNmeaTypes,
             GnssGeodeticDatumType nmeaDatumType = GEODETIC_TYPE_WGS_84,
             LocReqEngineTypeMask locReqEngTypeMask = LOC_REQ_ENGINE_FUSED_BIT) = 0;
+#endif
 
   /** @brief
         This API is used to send platform power events to GNSS adapters in order
@@ -586,6 +608,7 @@ public:
     */
     virtual void odcpiInject(const ::Location& location) {}
 
+#ifdef _ANDROID_
     /** @brief
         Updates battery status in HAL as indicated by framework
 
@@ -593,6 +616,7 @@ public:
         charging: Battery charging status
     */
     virtual void updateBatteryStatus(bool charging) {};
+#endif
 
     /** @brief
         Inject location
@@ -604,6 +628,7 @@ public:
     */
     virtual void injectLocation(double latitude, double longitude, float accuracy) {};
 
+#ifdef _ANDROID_
     /** @brief
         Request to open AGPS Data Connection
 
@@ -631,6 +656,7 @@ public:
         apgpsType: Type of agps data connection that failed
     */
     virtual void agpsDataConnFailed(AGpsType agpsType) {}
+#endif
 
     /** @brief
         Update connection status
@@ -646,6 +672,7 @@ public:
     virtual void updateConnectionStatus(bool connected, int8_t type, bool roaming,
                                    NetworkHandle networkHandle, const std::string& apn) {}
 
+#ifdef _ANDROID_
     /** @brief
         Set measurement correction
 
@@ -655,12 +682,9 @@ public:
     virtual bool measCorrSetCorrections(const GnssMeasurementCorrections& gnssMeasCorr) {
         return false;
     }
+#endif
 
-    /** @brief
-        Close measurement corrections interface
-    */
-    virtual void measCorrClose() {}
-
+#ifdef _ANDROID_
     /** @brief
         Enables/disables permissions to non-framework application use of GNSS
 
@@ -668,7 +692,9 @@ public:
         enable: true/false to enable / disable permission
     */
     virtual void enableNfwLocationAccess(const std::vector<std::string>& enabledNfws) {}
+#endif
 
+#ifdef USE_GLIB
     /** @brief
         This API is used to instruct the specified engine to use
         the provided integrity risk level for protection level
@@ -715,7 +741,9 @@ public:
     */
     virtual uint32_t configEngineIntegrityRisk(
             PositioningEngineMask engType, uint32_t integrityRisk) = 0;
+#endif
 
+#ifdef USE_GLIB
     /** @brief
         This API is used to enable/disable the XTRA (Predicted GNSS
         Satellite Orbit Data) feature on device. If XTRA feature is
@@ -755,6 +783,7 @@ public:
     */
     virtual uint32_t configXtraParams(
             bool enable, const XtraConfigParams& configParams) = 0;
+#endif
 
     /** @brief
         Inject Merkle tree configure buffer which reads from a .xml configure file.
@@ -783,6 +812,7 @@ public:
     */
     virtual uint32_t configOsnmaEnablement(bool IsEnabled) = 0;
 
+#ifdef USE_GLIB
     /** @brief
         API to support passing map-matched Feedback data to the DRE engine.
         Clients should use the below API to pass Map-matched data that will
@@ -798,7 +828,9 @@ public:
     */
 
     virtual uint32_t gnssInjectMmfData(const GnssMapMatchedData& data) = 0;
+#endif
 
+#ifdef USE_GLIB
     /** @brief
         API to support passing of End user consent to use XTRA services.
         Clients should use the below API to pass End user intent.<br/>
@@ -812,7 +844,6 @@ public:
     */
     virtual uint32_t configureUserConsentForXtra(const bool xtraUserConsent) = 0;
 
-#ifdef USE_GLIB
     /** @brief
         Set the EULA opt-in status from system user. This is used as consent to
         use network-based positioning.
