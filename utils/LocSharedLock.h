@@ -26,6 +26,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 #ifndef __LOC_SHARED_LOCK__
 #define __LOC_SHARED_LOCK__
 
@@ -34,6 +39,7 @@
 #include <cutils/atomic.h>
 #endif /* FEATURE_EXTERNAL_AP */
 #include <pthread.h>
+#include <time.h>
 
 #ifdef FEATURE_EXTERNAL_AP
 #include <atomic>
@@ -75,6 +81,83 @@ public:
     // unlocking the lock to leave the critical section
     inline void unlock() { pthread_mutex_unlock(&mMutex); }
 };
+
+// Utility class to facilitate signal wait based synchronization across threads
+class LocSignalWaiter {
+public:
+    inline LocSignalWaiter() : mInitialized(false), mSignalSet(false) {
+        pthread_mutex_init(&mMutex, NULL);
+        pthread_cond_init(&mCond, NULL);
+    }
+
+    inline ~LocSignalWaiter() {
+        pthread_mutex_destroy(&mMutex);
+        pthread_cond_destroy(&mCond);
+    }
+
+    inline void init() {
+        pthread_mutex_lock(&mMutex);
+        mInitialized = true;
+        mSignalSet = false;
+        pthread_mutex_unlock(&mMutex);
+    }
+
+    inline void deinit() {
+        pthread_mutex_lock(&mMutex);
+        mInitialized = false;
+        mSignalSet = false;
+        pthread_cond_broadcast(&mCond); // Using broadcast to notify all
+        pthread_mutex_unlock(&mMutex);
+    }
+
+    inline bool wait(long timeout_ms = 0) {
+        pthread_mutex_lock(&mMutex);
+        bool ret = false; // Default to false, set to true only on successful signal
+        if (mInitialized) { // Only wait if initialized
+            if (timeout_ms == 0) {
+                while (!mSignalSet && mInitialized) { // Check mInitialized here too
+                    pthread_cond_wait(&mCond, &mMutex);
+                }
+            } else {
+                struct timespec ts;
+                clock_gettime(CLOCK_REALTIME, &ts);
+                ts.tv_sec += timeout_ms / 1000;
+                ts.tv_nsec += (timeout_ms % 1000) * 1000000;
+                if (ts.tv_nsec >= 1000000000) {
+                    ts.tv_sec++;
+                    ts.tv_nsec -= 1000000000;
+                }
+                while (!mSignalSet && mInitialized) { // Check mInitialized here too
+                    if (pthread_cond_timedwait(&mCond, &mMutex, &ts) == ETIMEDOUT) {
+                        break; // Timeout, ret remains false
+                    }
+                }
+            }
+            // If mSignalSet is true AND mInitialized is true,
+            // meaning it was signaled, not de-initialized
+            if (mSignalSet && mInitialized) {
+                ret = true;
+            }
+            mSignalSet = false; // Reset signal flag
+        }
+        pthread_mutex_unlock(&mMutex);
+        return ret;
+    }
+
+    inline void signal() {
+        pthread_mutex_lock(&mMutex);
+        mSignalSet = true;
+        pthread_cond_signal(&mCond);
+        pthread_mutex_unlock(&mMutex);
+    }
+
+private:
+    pthread_mutex_t mMutex;
+    pthread_cond_t mCond;
+    bool mSignalSet; // Keep original mSignalSet for signal logic
+    bool mInitialized; // New flag for initialization
+};
+
 
 } //namespace loc_util
 
