@@ -4122,6 +4122,10 @@ GnssAdapter::reportEnginePositionsEvent(unsigned int count,
 }
 
 bool GnssAdapter::needReportForClient(LocationAPI* client, enum loc_sess_status status) {
+    // allow to report fix for passive listener, like IzatMgr
+    if (LOC_SESS_SUCCESS == status) {
+        return true;
+    }
     for (auto it = mTimeBasedTrackingSessions.begin();
             it != mTimeBasedTrackingSessions.end(); ++it) {
         // report intermediate fix when TBT session allows, like flp;
@@ -4131,7 +4135,6 @@ bool GnssAdapter::needReportForClient(LocationAPI* client, enum loc_sess_status 
             return true;
         }
     }
-    LOC_LOGd("either inactive client or status unaccept, NOT allow to report ");
     return false;
 }
 
