@@ -107,6 +107,55 @@ void convertGnssLocation(const GnssLocation& in, Location& out)
     out.timestamp = static_cast<uint64_t>(in.timestampMillis);
 }
 
+void convertGnssCodeType(const GnssSignalTypeMask& in, GnssSignalType& out) {
+    switch (in) {
+        case GNSS_SIGNAL_GPS_L1CA:
+        case GNSS_SIGNAL_GLONASS_G1:
+        case GNSS_SIGNAL_GLONASS_G2:
+        case GNSS_SIGNAL_GALILEO_E1:
+        case GNSS_SIGNAL_QZSS_L1CA:
+        case GNSS_SIGNAL_SBAS_L1:
+        case GNSS_SIGNAL_NAVIC_L5:
+            out.codeType = out.CODE_TYPE_C;
+            break;
+        case GNSS_SIGNAL_QZSS_L1S:
+            out.codeType = out.CODE_TYPE_Z;
+            break;
+        case GNSS_SIGNAL_GPS_L2:
+        case GNSS_SIGNAL_QZSS_L2:
+            out.codeType = out.CODE_TYPE_L;
+            break;
+        case GNSS_SIGNAL_GPS_L5:
+        case GNSS_SIGNAL_GALILEO_E5A:
+        case GNSS_SIGNAL_GALILEO_E5B:
+        case GNSS_SIGNAL_QZSS_L5:
+        case GNSS_SIGNAL_BEIDOU_B2BQ:
+            out.codeType = out.CODE_TYPE_Q;
+            break;
+        case GNSS_SIGNAL_BEIDOU_B2BI:
+            out.codeType = out.CODE_TYPE_D;
+            break;
+        case GNSS_SIGNAL_BEIDOU_B1I:
+            out.codeType = out.CODE_TYPE_I;
+            break;
+        case GNSS_SIGNAL_QZSS_L1CB:
+            out.codeType = out.CODE_TYPE_E;
+            break;
+        case GNSS_SIGNAL_BEIDOU_B1C:
+        case GNSS_SIGNAL_BEIDOU_B2AQ:
+            // this one is not yet supported
+        case GNSS_SIGNAL_GPS_L1C:
+        case GNSS_SIGNAL_NAVIC_L1:
+            out.codeType = out.CODE_TYPE_P;
+            break;
+            /* no plan to support  */
+        case GNSS_SIGNAL_BEIDOU_B2I:
+        case GNSS_SIGNAL_BEIDOU_B2AI:
+        default:
+            out.codeType = out.CODE_TYPE_UNKNOWN;
+    }
+}
+
 void convertGnssConstellationType(const GnssSvType& in, GnssConstellationType& out)
 {
     switch (in) {
@@ -312,67 +361,6 @@ void convertMeasurementCorrections(const MeasurementCorrections& in,
         out.satCorrections.push_back(gnssSingleSatCorrection);
     }
 }
-
-void convertGnssMeasurementsCodeType(
-    const GnssMeasurementsCodeType& inCodeType,
-    const char* inOtherCodeTypeName, GnssSignalType& out) {
-
-    switch (inCodeType) {
-    case GNSS_MEASUREMENTS_CODE_TYPE_A:
-        out.codeType = out.CODE_TYPE_A;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_B:
-        out.codeType = out.CODE_TYPE_B;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_C:
-        out.codeType = out.CODE_TYPE_C;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_I:
-        out.codeType = out.CODE_TYPE_I;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_L:
-        out.codeType = out.CODE_TYPE_L;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_M:
-        out.codeType = out.CODE_TYPE_M;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_N:
-        out.codeType = out.CODE_TYPE_N;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_P:
-        out.codeType = out.CODE_TYPE_P;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_Q:
-        out.codeType = out.CODE_TYPE_Q;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_S:
-        out.codeType = out.CODE_TYPE_S;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_W:
-        out.codeType = out.CODE_TYPE_W;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_X:
-        out.codeType = out.CODE_TYPE_X;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_Y:
-        out.codeType = out.CODE_TYPE_Y;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_Z:
-        out.codeType = out.CODE_TYPE_Z;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_D:
-        out.codeType = out.CODE_TYPE_D;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_E:
-        out.codeType = out.CODE_TYPE_E;
-        break;
-    case GNSS_MEASUREMENTS_CODE_TYPE_OTHER:
-    default:
-        out.codeType = inOtherCodeTypeName;
-        break;
-    }
-}
-
 }  // namespace implementation
 }  // namespace aidl
 }  // namespace gnss
