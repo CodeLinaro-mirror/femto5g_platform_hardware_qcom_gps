@@ -300,6 +300,9 @@ LocAdapterBase::getCapabilities()
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_GNSS_BANDS_SUPPORTED)) {
             mask |= LOCATION_CAPABILITIES_GNSS_BANDS_BIT;
         }
+        if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_POWER_MODE_SESSION_CONTINUITY)) {
+            mask |= LOCATION_CAPABILITIES_POWER_MODE_SESSION_CONTINUITY_BIT;
+        }
     } else {
         LOC_LOGe("attempt to get capabilities before they are known.");
     }

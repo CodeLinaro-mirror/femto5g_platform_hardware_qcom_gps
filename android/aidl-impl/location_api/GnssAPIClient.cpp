@@ -517,6 +517,9 @@ void GnssAPIClient::updateCapabilities(LocationCapabilitiesMask capabilitiesMask
     if (capabilitiesMask & LOCATION_CAPABILITIES_QWES_CARRIER_PHASE_BIT) {
         data |= IGnssCallback::CAPABILITY_ACCUMULATED_DELTA_RANGE;
     }
+    if (capabilitiesMask & LOCATION_CAPABILITIES_POWER_MODE_SESSION_CONTINUITY_BIT) {
+        data |= IGnssCallback::CAPABILITY_ENGINE_RESTART_AFTER_POWER_MODE_CHANGE;
+    }
 
     IGnssCallback::GnssSystemInfo gnssInfo = { .yearOfHw = 2015, getVersionString() };
 

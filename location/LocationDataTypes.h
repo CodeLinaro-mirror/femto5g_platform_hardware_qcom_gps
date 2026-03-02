@@ -381,6 +381,8 @@ typedef uint64_t LocationCapabilitiesMask;
 #define   LOCATION_CAPABILITIES_QWES_WOCS                             (1ULL<<40)
 // This mask indicates SBAS is supported.
 #define   LOCATION_CAPABILITIES_QWES_SBAS                             (1ULL<<41)
+// This mask indicates power mode session continuity is supported.
+#define   LOCATION_CAPABILITIES_POWER_MODE_SESSION_CONTINUITY_BIT     (1ULL<<42)
 
 /** GPS supports MS-Based AGPS mode */
 #define LOC_GPS_CAPABILITY_MSB              (1 << 1)

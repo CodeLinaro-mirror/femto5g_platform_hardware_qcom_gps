@@ -157,6 +157,11 @@ typedef enum {
     LOC_SUPPORTED_FEATURE_GNSS_BANDS_SUPPORTED = 20,
     /**<  Support the feature to disable constellation */
     LOC_SUPPORTED_FEATURE_CONSTELLATION_DISABLEMENT,
+    /**<  Supports session continuity between power modes M1 and M2 */
+    LOC_SUPPORTED_FEATURE_POWER_MODE_SESSION_CONTINUITY,
+    /**<  Supports BlueSky feature */
+    LOC_SUPPORTED_FEATURE_BLUESKY_ENABLEMENT,
+
 } loc_supported_feature_enum;
 
 typedef struct {
