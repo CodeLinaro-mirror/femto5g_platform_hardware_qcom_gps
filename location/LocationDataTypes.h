@@ -1849,7 +1849,7 @@ struct GnssDataNotification {
     AgcStatus    agcStatusL5;                      // RF Automatic gain control status for L5 band.
     GnssSystemTimeStructType gpsSystemTime;        // GPS System time.
     uint64_t                 systemTickAtGpsTime;  // System Tick at GPS Time
-    uint32_t                 hwClkFreqCorrection;  // Hardware clock frequency correction
+    int32_t                  hwClkFreqCorrection;  // Hardware clock frequency correction
 };
 
 struct GnssMeasurementsAgc {
