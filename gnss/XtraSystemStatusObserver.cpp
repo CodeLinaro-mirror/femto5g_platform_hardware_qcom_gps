@@ -123,11 +123,12 @@ public:
             XtraStatusUpdateType updateType = XTRA_STATUS_UPDATE_UNDEFINED;
             GnssConfig gnssConfig = {};
             gnssConfig.flags = GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT;
-            sscanf(data, "%*s %d %d %d %d %d %63s %d", &sessionId, &updateType,
+            sscanf(data, "%*s %d %d %d %d %d %d %63s", &sessionId, &updateType,
                    (int *)&gnssConfig.xtraStatus.featureEnabled,
                    &gnssConfig.xtraStatus.xtraDataStatus,
                    &gnssConfig.xtraStatus.xtraValidForHours,
-                   &downloadReason[0], (int *)&gnssConfig.xtraStatus.userConsentStatus);
+                   (int *)&gnssConfig.xtraStatus.userConsentStatus,
+                   &downloadReason[0]);
             std::string lastDownloadReason((char *) &downloadReason[0]);
             gnssConfig.xtraStatus.lastDownloadReasonCode = lastDownloadReason;
             mXSSO.mAdapter->reportGnssConfigEvent(sessionId, gnssConfig);
