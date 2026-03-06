@@ -102,7 +102,7 @@ GnssAPIClient::GnssAPIClient(const sp<V1_0::IGnssCallback>& gpsCb,
     mLocationCapabilitiesMask(0),
     mLocationCapabilitiesCached(false),
     mTracking(false),
-    mReportSpeOnly(true),
+    mReportSpeOnly(false),
     mGnssCbIface_2_0(nullptr)
 {
     const loc_param_s_type gps_conf_table[] =
@@ -127,7 +127,7 @@ GnssAPIClient::GnssAPIClient(const sp<V2_0::IGnssCallback>& gpsCb) :
     mLocationCapabilitiesMask(0),
     mLocationCapabilitiesCached(false),
     mTracking(false),
-    mReportSpeOnly(true),
+    mReportSpeOnly(false),
     mGnssCbIface_2_0(nullptr)
 {
     const loc_param_s_type gps_conf_table[] =
@@ -152,7 +152,7 @@ GnssAPIClient::GnssAPIClient(const sp<V2_1::IGnssCallback>& gpsCb) :
     mLocationCapabilitiesMask(0),
     mLocationCapabilitiesCached(false),
     mTracking(false),
-    mReportSpeOnly(true),
+    mReportSpeOnly(false),
     mGnssCbIface_2_1(nullptr)
 {
     const loc_param_s_type gps_conf_table[] =

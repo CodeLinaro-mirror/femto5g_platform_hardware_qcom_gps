@@ -111,8 +111,7 @@ GnssAPIClient::GnssAPIClient(const shared_ptr<IGnssCallback>& gpsCb) :
     mLocationCapabilitiesCached(false),
     mSvStatusEnabled(false),
     mNmeaEnabled(false),
-    mReportSpeOnly(true),
-
+    mReportSpeOnly(false),
     mGnssCbIface(gpsCb) {
 
     const loc_param_s_type gps_conf_table[] =
