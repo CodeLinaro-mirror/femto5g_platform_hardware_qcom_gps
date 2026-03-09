@@ -497,16 +497,16 @@ void ContextBase::setQwesFeatureStatus(
         switch (itr->first) {
             case LOCATION_QWES_FEATURE_TYPE_CARRIER_PHASE:
                 if (itr->second) {
-                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_CARRIER_PHASE_BIT;
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_CARRIER_PHASE;
                 } else {
-                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_CARRIER_PHASE_BIT;
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_CARRIER_PHASE;
                 }
                 break;
             case LOCATION_QWES_FEATURE_TYPE_SV_POLYNOMIAL:
                 if (itr->second) {
-                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT;
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL;
                 } else {
-                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT;
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL;
                 }
                 break;
             case LOCATION_QWES_FEATURE_TYPE_GNSS_SINGLE_FREQUENCY:
@@ -518,9 +518,9 @@ void ContextBase::setQwesFeatureStatus(
                 break;
             case LOCATION_QWES_FEATURE_TYPE_SV_EPH:
                 if (itr->second) {
-                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
+                    sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS;
                 } else {
-                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
+                    sQwesFeatureMask &= ~LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS;
                 }
                 break;
             case LOCATION_QWES_FEATURE_TYPE_GNSS_MULTI_FREQUENCY:
