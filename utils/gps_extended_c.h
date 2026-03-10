@@ -610,7 +610,7 @@ typedef struct {
     GnssSignalTypeMask gnssSignalType;
     /** Specifies GNSS Constellation Type
         Mandatory Field*/
-    Gnss_LocSvSystemEnumType gnssConstellation;
+    GnssSvType gnssConstellation;
     /**  Unique SV Identifier.
      *   SV Range for supported constellation is specified as below:
      *    - For GPS:     1 to 32
@@ -1034,7 +1034,7 @@ typedef struct {
 } Gnss_MlInferSVMeasurementStruct;
 
 typedef struct {
-    Gnss_LocSvSystemEnumType        gnssSystem;
+    GnssSvType        gnssSystem;
     // 0 signal type mask indicates invalid value
     GnssSignalTypeMask              gnssSignalTypeMask;
     uint16_t                        gnssSvId;
@@ -1324,7 +1324,7 @@ typedef enum {
 } Gnss_SvPolyStatusMaskType;
 
 typedef struct {
-    Gnss_LocSvSystemEnumType gnssConstellation;
+    GnssSvType gnssConstellation;
     /** gnss constellation type */
     uint16_t     gnssSvId;
     /** Unique SV Identifier.
@@ -1477,7 +1477,7 @@ typedef struct {
     GnssSystemTimeStructType systemTime;
 
     /** Indicates GNSS Constellation Type */
-    Gnss_LocSvSystemEnumType gnssConstellation;
+    GnssSvType gnssConstellation;
 
     float alpha0;
     /**<   Klobuchar Model Parameter Alpha 0.

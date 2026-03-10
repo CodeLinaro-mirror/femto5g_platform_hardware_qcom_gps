@@ -786,7 +786,7 @@ void LocApiBase::injectSuplCert(int32_t /*suplCertId*/,
         const std::vector<uint8_t>& /*suplCertData*/, LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
-void LocApiBase::setPreferredConstellation(Gnss_LocSvSystemEnumType /*type*/,
+void LocApiBase::setPreferredConstellation(GnssSvType /*type*/,
         LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 #endif

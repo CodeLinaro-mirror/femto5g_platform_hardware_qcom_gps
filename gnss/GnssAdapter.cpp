@@ -5156,48 +5156,48 @@ GnssAdapter::convertEphReportInfo(const GnssSvEphemerisReport& svEphemeris,
             GnssSvEphemerisReport& ephReport, bool& needToReportEph) {
 
     switch (svEphemeris.gnssConstellation) {
-        case GNSS_LOC_SV_SYSTEM_GPS:
-            ephReport.gnssConstellation = GNSS_LOC_SV_SYSTEM_GPS;
+        case GNSS_SV_TYPE_GPS:
+            ephReport.gnssConstellation = GNSS_SV_TYPE_GPS;
                 convertGpsEphemeris(svEphemeris.ephInfo.gpsEphemeris,
                     ephReport.ephInfo.gpsEphemeris);
             if (!ephReport.ephInfo.gpsEphemeris.numOfEphemeris) {
                 needToReportEph = false;
             }
             break;
-        case GNSS_LOC_SV_SYSTEM_GALILEO:
-            ephReport.gnssConstellation = GNSS_LOC_SV_SYSTEM_GALILEO;
+        case GNSS_SV_TYPE_GALILEO:
+            ephReport.gnssConstellation = GNSS_SV_TYPE_GALILEO;
             convertGalEphemeris(svEphemeris.ephInfo.galileoEphemeris,
                     ephReport.ephInfo.galileoEphemeris);
             if (!ephReport.ephInfo.galileoEphemeris.numOfEphemeris) {
                 needToReportEph = false;
             }
             break;
-        case GNSS_LOC_SV_SYSTEM_GLONASS:
-            ephReport.gnssConstellation = GNSS_LOC_SV_SYSTEM_GLONASS;
+        case GNSS_SV_TYPE_GLONASS:
+            ephReport.gnssConstellation = GNSS_SV_TYPE_GLONASS;
             convertGloEphemeris(svEphemeris.ephInfo.glonassEphemeris,
                     ephReport.ephInfo.glonassEphemeris);
             if (!ephReport.ephInfo.glonassEphemeris.numOfEphemeris) {
                 needToReportEph = false;
             }
             break;
-        case GNSS_LOC_SV_SYSTEM_BDS:
-            ephReport.gnssConstellation = GNSS_LOC_SV_SYSTEM_BDS;
+        case GNSS_SV_TYPE_BEIDOU:
+            ephReport.gnssConstellation = GNSS_SV_TYPE_BEIDOU;
             convertBdsEphemeris(svEphemeris.ephInfo.bdsEphemeris,
                     ephReport.ephInfo.bdsEphemeris);
             if (!ephReport.ephInfo.bdsEphemeris.numOfEphemeris) {
                 needToReportEph = false;
             }
             break;
-        case GNSS_LOC_SV_SYSTEM_QZSS:
-            ephReport.gnssConstellation = GNSS_LOC_SV_SYSTEM_QZSS;
+        case GNSS_SV_TYPE_QZSS:
+            ephReport.gnssConstellation = GNSS_SV_TYPE_QZSS;
             convertQzssEphemeris(svEphemeris.ephInfo.qzssEphemeris,
                     ephReport.ephInfo.qzssEphemeris);
             if (!ephReport.ephInfo.qzssEphemeris.numOfEphemeris) {
                 needToReportEph = false;
             }
             break;
-        case GNSS_LOC_SV_SYSTEM_NAVIC:
-            ephReport.gnssConstellation = GNSS_LOC_SV_SYSTEM_NAVIC;
+        case GNSS_SV_TYPE_NAVIC:
+            ephReport.gnssConstellation = GNSS_SV_TYPE_NAVIC;
             convertNavicEphemeris(svEphemeris.ephInfo.navicEphemeris,
                     ephReport.ephInfo.navicEphemeris);
             if (!ephReport.ephInfo.navicEphemeris.numOfEphemeris) {
@@ -7794,17 +7794,17 @@ void GnssAdapter::injectSuplCertCommand(int32_t suplCertId,
 #endif
 
 #ifdef _ANDROID_
-void GnssAdapter::setPreferredConstellationCommand(Gnss_LocSvSystemEnumType type) {
+void GnssAdapter::setPreferredConstellationCommand(GnssSvType type) {
     uint32_t sessionId = generateSessionId();
     LOC_LOGd("Gnss Constellation Type  %u", type);
     struct MsgSetPreferredConstellation : public LocMsg {
         GnssAdapter&        mAdapter;
         LocApiBase&         mApi;
         uint32_t            mSessionId;
-        Gnss_LocSvSystemEnumType mType;
+        GnssSvType mType;
 
         inline MsgSetPreferredConstellation(GnssAdapter& adapter, LocApiBase& api,
-                uint32_t sessionId, Gnss_LocSvSystemEnumType type) :
+                uint32_t sessionId, GnssSvType type) :
             LocMsg(),
             mAdapter(adapter),
             mApi(api),
