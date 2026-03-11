@@ -417,9 +417,6 @@ private:
         StopTrackingRequest(LocationAPIClientBase& API) : mAPI(API) {}
         inline void onResponse(LocationError error, uint32_t id) {
             mAPI.onStopTrackingCb(error);
-            if (error == LOCATION_ERROR_SUCCESS) {
-                mAPI.removeSession(id);
-            }
         }
         LocationAPIClientBase& mAPI;
     };
@@ -450,9 +447,6 @@ private:
         StopBatchingRequest(LocationAPIClientBase& API) : mAPI(API) {}
         inline void onResponse(LocationError error, uint32_t id) {
             mAPI.onStopBatchingCb(error);
-            if (error == LOCATION_ERROR_SUCCESS) {
-                mAPI.removeSession(id);
-            }
         }
         LocationAPIClientBase& mAPI;
     };
