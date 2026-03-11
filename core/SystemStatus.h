@@ -282,29 +282,6 @@ public:
     void dump(void) override;
 };
 
-class SystemStatusEphemeris : public SystemStatusItemBase
-{
-public:
-    uint32_t  mGpsEpheValid;
-    uint32_t  mGloEpheValid;
-    uint64_t  mBdsEpheValid;
-    uint64_t  mGalEpheValid;
-    uint8_t   mQzssEpheValid;
-    uint32_t  mNavicEpheValid;
-
-    inline SystemStatusEphemeris() :
-        mGpsEpheValid(0),
-        mGloEpheValid(0),
-        mBdsEpheValid(0ULL),
-        mGalEpheValid(0ULL),
-        mQzssEpheValid(0),
-        mNavicEpheValid(0) {}
-
-    inline SystemStatusEphemeris(const GnssEngineDebugDataInfo& info);
-    bool equals(const SystemStatusItemBase& peer) override;
-    void dump(void) override;
-};
-
 class SystemStatusSvHealth : public SystemStatusItemBase
 {
 public:
@@ -414,7 +391,6 @@ public:
     std::vector<SystemStatusInjectedPosition> mInjectedPosition;
     std::vector<SystemStatusBestPosition>     mBestPosition;
     std::vector<SystemStatusXtra>             mXtra;
-    std::vector<SystemStatusEphemeris>        mEphemeris;
     std::vector<SystemStatusSvHealth>         mSvHealth;
     std::vector<SystemStatusPdr>              mPdr;
     std::vector<SystemStatusNavData>          mNavData;

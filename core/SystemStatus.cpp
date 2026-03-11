@@ -318,42 +318,6 @@ void SystemStatusXtra::dump()
              mQzssXtraValid);
 }
 
-/******************************************************************************
- SystemStatusEphemeris
-******************************************************************************/
-SystemStatusEphemeris::SystemStatusEphemeris(const GnssEngineDebugDataInfo& info) :
-    mGpsEpheValid(info.gpsEphMask),
-    mGloEpheValid(info.gloEphMask),
-    mBdsEpheValid(info.bdsEphMask),
-    mGalEpheValid(info.galEphMask),
-    mQzssEpheValid(info.qzssEphMask),
-    mNavicEpheValid(info.navicEphMask)
-{
-}
-
-bool SystemStatusEphemeris::equals(const SystemStatusItemBase& peer) {
-    if ((mGpsEpheValid != ((const SystemStatusEphemeris&)peer).mGpsEpheValid) ||
-        (mGloEpheValid != ((const SystemStatusEphemeris&)peer).mGloEpheValid) ||
-        (mBdsEpheValid != ((const SystemStatusEphemeris&)peer).mBdsEpheValid) ||
-        (mGalEpheValid != ((const SystemStatusEphemeris&)peer).mGalEpheValid) ||
-        (mQzssEpheValid != ((const SystemStatusEphemeris&)peer).mQzssEpheValid) ||
-        (mNavicEpheValid != ((const SystemStatusEphemeris&)peer).mNavicEpheValid)) {
-        return false;
-    }
-    return true;
-}
-
-void SystemStatusEphemeris::dump()
-{
-    LOC_LOGV("Ephemeris: u=%ld:%ld ev=%x:%x:%" PRIx64 ":%" PRIx64 ":%x%x",
-             mUtcTime.tv_sec, mUtcTime.tv_nsec,
-             mGpsEpheValid,
-             mGloEpheValid,
-             mBdsEpheValid,
-             mGalEpheValid,
-             mQzssEpheValid,
-             mNavicEpheValid);
-}
 
 /******************************************************************************
  SystemStatusSvHealth
@@ -573,7 +537,6 @@ SystemStatus::SystemStatus(const MsgTask* msgTask) :
     mCache.mInjectedPosition.clear();
     mCache.mBestPosition.clear();
     mCache.mXtra.clear();
-    mCache.mEphemeris.clear();
     mCache.mSvHealth.clear();
     mCache.mPdr.clear();
     mCache.mNavData.clear();
@@ -636,7 +599,6 @@ void SystemStatus::setEngineDebugDataInfo(const GnssEngineDebugDataInfo& gnssEng
                     SystemStatusInjectedPosition(gnssEngineDebugDataInfo));
     setIteminReport(mCache.mBestPosition, SystemStatusBestPosition(gnssEngineDebugDataInfo));
     setIteminReport(mCache.mXtra, SystemStatusXtra(gnssEngineDebugDataInfo));
-    setIteminReport(mCache.mEphemeris, SystemStatusEphemeris(gnssEngineDebugDataInfo));
     setIteminReport(mCache.mSvHealth, SystemStatusSvHealth(gnssEngineDebugDataInfo));
     setIteminReport(mCache.mPdr, SystemStatusPdr(gnssEngineDebugDataInfo));
     setIteminReport(mCache.mNavData, SystemStatusNavData(gnssEngineDebugDataInfo));
@@ -670,7 +632,6 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly,
         getIteminReport(report.mInjectedPosition, mCache.mInjectedPosition);
         getIteminReport(report.mBestPosition, mCache.mBestPosition);
         getIteminReport(report.mXtra, mCache.mXtra);
-        getIteminReport(report.mEphemeris, mCache.mEphemeris);
         getIteminReport(report.mSvHealth, mCache.mSvHealth);
         getIteminReport(report.mPdr, mCache.mPdr);
         getIteminReport(report.mNavData, mCache.mNavData);
@@ -688,7 +649,6 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly,
         report.mInjectedPosition.clear();
         report.mBestPosition.clear();
         report.mXtra.clear();
-        report.mEphemeris.clear();
         report.mSvHealth.clear();
         report.mPdr.clear();
         report.mNavData.clear();
@@ -720,7 +680,6 @@ bool SystemStatus::setDefaultGnssEngineStates(void)
     setDefaultIteminReport(mCache.mInjectedPosition, SystemStatusInjectedPosition());
     setDefaultIteminReport(mCache.mBestPosition, SystemStatusBestPosition());
     setDefaultIteminReport(mCache.mXtra, SystemStatusXtra());
-    setDefaultIteminReport(mCache.mEphemeris, SystemStatusEphemeris());
     setDefaultIteminReport(mCache.mSvHealth, SystemStatusSvHealth());
     setDefaultIteminReport(mCache.mPdr, SystemStatusPdr());
     setDefaultIteminReport(mCache.mNavData, SystemStatusNavData());
