@@ -8370,10 +8370,6 @@ void GnssAdapter::handleEnablePPENtrip(const GnssNtripConnectionParams& params,
         bool enableRTKEngine) {
     uint32_t nmeaUpdateInterval = params.nmeaUpdateInterval ? params.nmeaUpdateInterval :
             DGNSS_RANGE_UPDATE_TIME_10MIN_IN_SEC;
-    LOC_LOGd("%d %s %d %s %s %s %d %d mSendNmeaConsent %d",
-             params.useSSL, params.hostNameOrIp.data(), params.port,
-             params.mountPoint.data(), params.username.data(), params.password.data(),
-             params.requiresNmeaLocation, nmeaUpdateInterval, mSendNmeaConsent);
 
     GnssNtripConnectionParams* pNtripParams = &(mStartDgnssNtripParams.ntripParams);
 
@@ -8494,7 +8490,6 @@ void GnssAdapter::readPPENtripConfig() {
         {"Ntrip_Params", &NtripParamsString, nullptr, 's'}
     };
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, gpsConfParamTable);
-    LOC_LOGd("Ntrip_Params=%s", NtripParamsString);
 
     if (0 == strlen(NtripParamsString)) {
         return;
@@ -8505,8 +8500,7 @@ void GnssAdapter::readPPENtripConfig() {
     string next(NtripParamsString);
     stringstream ss(next);
 
-#define GET_NEXT() getline(ss, next, ' '); \
-        LOC_LOGd("%s", next.c_str());
+#define GET_NEXT() getline(ss, next, ' ');
 
     GET_NEXT();
     pNtripParams->hostNameOrIp = std::move(next);
@@ -8527,12 +8521,6 @@ void GnssAdapter::readPPENtripConfig() {
     GET_NEXT();
     pNtripParams->nmeaUpdateInterval = std::stoi(next) ? std::stoi(next) :
             DGNSS_RANGE_UPDATE_TIME_10MIN_IN_SEC;
-
-    LOC_LOGd("%d %s %d %s %s %s %d %d",
-             pNtripParams->useSSL, pNtripParams->hostNameOrIp.data(), pNtripParams->port,
-             pNtripParams->mountPoint.data(), pNtripParams->username.data(),
-             pNtripParams->password.data(), pNtripParams->requiresNmeaLocation,
-             pNtripParams->nmeaUpdateInterval);
 
     /* set up state*/
     mDgnssState |= DGNSS_STATE_ENABLE_NTRIP_COMMAND;
