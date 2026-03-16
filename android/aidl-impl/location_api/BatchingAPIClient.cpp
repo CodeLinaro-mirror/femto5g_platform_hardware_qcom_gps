@@ -201,9 +201,9 @@ static void convertBatchOption(const IGnssBatching::Options& in, LocationOptions
     memset(&out, 0, sizeof(LocationOptions));
     out.minInterval = (uint32_t)(in.periodNanos / 1000000L);
     out.mode = GNSS_SUPL_MODE_STANDALONE;
-    if (mask & LOCATION_CAPABILITIES_GNSS_MSA_BIT)
+    if (mask & LOCATION_CAPABILITIES_GNSS_MSA)
         out.mode = GNSS_SUPL_MODE_MSA;
-    if (mask & LOCATION_CAPABILITIES_GNSS_MSB_BIT)
+    if (mask & LOCATION_CAPABILITIES_GNSS_MSB)
         out.mode = GNSS_SUPL_MODE_MSB;
 }
 

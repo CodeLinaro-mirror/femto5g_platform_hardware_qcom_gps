@@ -251,42 +251,42 @@ LocAdapterBase::getCapabilities()
 
     if (isEngineCapabilitiesKnown()) {
         // time based tracking always supported
-        mask |= LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT;
-        mask |= LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT;
+        mask |= LOCATION_CAPABILITIES_TIME_BASED_TRACKING;
+        mask |= LOCATION_CAPABILITIES_TIME_BASED_BATCHING;
         // geofence always supported
-        mask |= LOCATION_CAPABILITIES_GEOFENCE_BIT;
+        mask |= LOCATION_CAPABILITIES_GEOFENCE;
         if (ContextBase::gnssConstellationConfig()) {
-            mask |= LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT;
+            mask |= LOCATION_CAPABILITIES_GNSS_MEASUREMENTS;
         }
         uint32_t carrierCapabilities = ContextBase::getCarrierCapabilities();
         if (carrierCapabilities & LOC_GPS_CAPABILITY_MSB) {
-            mask |= LOCATION_CAPABILITIES_GNSS_MSB_BIT;
+            mask |= LOCATION_CAPABILITIES_GNSS_MSB;
         }
         if (LOC_GPS_CAPABILITY_MSA & carrierCapabilities) {
-            mask |= LOCATION_CAPABILITIES_GNSS_MSA_BIT;
+            mask |= LOCATION_CAPABILITIES_GNSS_MSA;
         }
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_DEBUG_NMEA_V02) ||
             ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_ENGINE_DEBUG_DATA)) {
-            mask |= LOCATION_CAPABILITIES_DEBUG_DATA_BIT;
+            mask |= LOCATION_CAPABILITIES_DEBUG_DATA;
         }
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_CONSTELLATION_ENABLEMENT_V02)) {
-            mask |= LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT;
+            mask |= LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT;
         }
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_AGPM_V02)) {
-            mask |= LOCATION_CAPABILITIES_AGPM_BIT;
+            mask |= LOCATION_CAPABILITIES_AGPM;
         }
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_LOCATION_PRIVACY)) {
-            mask |= LOCATION_CAPABILITIES_PRIVACY_BIT;
+            mask |= LOCATION_CAPABILITIES_PRIVACY;
         }
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_MEASUREMENTS_CORRECTION)) {
-            mask |= LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT;
+            mask |= LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION;
         }
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_ROBUST_LOCATION)) {
-            mask |= LOCATION_CAPABILITIES_CONFORMITY_INDEX_BIT;
+            mask |= LOCATION_CAPABILITIES_CONFORMITY_INDEX;
         }
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_EDGNSS) ||
             (ContextBase::getQwesFeatureStatus() & LOCATION_CAPABILITIES_QWES_DGNSS)) {
-            mask |= LOCATION_CAPABILITIES_EDGNSS_BIT;
+            mask |= LOCATION_CAPABILITIES_EDGNSS;
         }
         //Get QWES feature status mask
         mask |= ContextBase::getQwesFeatureStatus();
@@ -298,10 +298,10 @@ LocAdapterBase::getCapabilities()
         }
 
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_GNSS_BANDS_SUPPORTED)) {
-            mask |= LOCATION_CAPABILITIES_GNSS_BANDS_BIT;
+            mask |= LOCATION_CAPABILITIES_GNSS_BANDS;
         }
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_POWER_MODE_SESSION_CONTINUITY)) {
-            mask |= LOCATION_CAPABILITIES_POWER_MODE_SESSION_CONTINUITY_BIT;
+            mask |= LOCATION_CAPABILITIES_POWER_MODE_SESSION_CONTINUITY;
         }
     } else {
         LOC_LOGe("attempt to get capabilities before they are known.");

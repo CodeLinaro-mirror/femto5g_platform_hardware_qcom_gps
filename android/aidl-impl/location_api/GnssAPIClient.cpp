@@ -481,60 +481,60 @@ void GnssAPIClient::updateCapabilities(LocationCapabilitiesMask capabilitiesMask
     gSharedMtx.unlock();
 
     uint32_t data = 0;
-    if ((capabilitiesMask & LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT) ||
-            (capabilitiesMask & LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT)) {
+    if ((capabilitiesMask & LOCATION_CAPABILITIES_TIME_BASED_TRACKING) ||
+            (capabilitiesMask & LOCATION_CAPABILITIES_TIME_BASED_BATCHING)) {
         data |= IGnssCallback::CAPABILITY_SCHEDULING;
     }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_GEOFENCE_BIT) {
+    if (capabilitiesMask & LOCATION_CAPABILITIES_GEOFENCE) {
         data |= IGnssCallback::CAPABILITY_GEOFENCING;
     }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT) {
+    if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_MEASUREMENTS) {
         data |= IGnssCallback::CAPABILITY_MEASUREMENTS;
     }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_MSB_BIT) {
+    if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_MSB) {
         data |= IGnssCallback::CAPABILITY_MSB;
     }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_MSA_BIT) {
+    if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_MSA) {
         data |= IGnssCallback::CAPABILITY_MSA;
     }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_AGPM_BIT) {
+    if (capabilitiesMask & LOCATION_CAPABILITIES_AGPM) {
         data |= IGnssCallback::CAPABILITY_LOW_POWER_MODE;
     }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT) {
+    if (capabilitiesMask & LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT) {
         data |= IGnssCallback::CAPABILITY_SATELLITE_BLOCKLIST;
     }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT) {
+    if (capabilitiesMask & LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION) {
         data |= IGnssCallback::CAPABILITY_MEASUREMENT_CORRECTIONS;
         data |= IGnssCallback::CAPABILITY_MEASUREMENT_CORRECTIONS_FOR_DRIVING;
     }
     if (capabilitiesMask & LOCATION_CAPABILITIES_ANTENNA_INFO) {
         data |= IGnssCallback::CAPABILITY_ANTENNA_INFO;
     }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT) {
+    if (capabilitiesMask & LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL) {
         data |= IGnssCallback::CAPABILITY_SATELLITE_PVT;
     }
 
-    if (capabilitiesMask & LOCATION_CAPABILITIES_QWES_CARRIER_PHASE_BIT) {
+    if (capabilitiesMask & LOCATION_CAPABILITIES_QWES_CARRIER_PHASE) {
         data |= IGnssCallback::CAPABILITY_ACCUMULATED_DELTA_RANGE;
     }
-    if (capabilitiesMask & LOCATION_CAPABILITIES_POWER_MODE_SESSION_CONTINUITY_BIT) {
+    if (capabilitiesMask & LOCATION_CAPABILITIES_POWER_MODE_SESSION_CONTINUITY) {
         data |= IGnssCallback::CAPABILITY_ENGINE_RESTART_AFTER_POWER_MODE_CHANGE;
     }
 
     IGnssCallback::GnssSystemInfo gnssInfo = { .yearOfHw = 2015, getVersionString() };
 
-    if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT) {
+    if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_MEASUREMENTS) {
         gnssInfo.yearOfHw++; // 2016
-        if (capabilitiesMask & LOCATION_CAPABILITIES_DEBUG_DATA_BIT) {
+        if (capabilitiesMask & LOCATION_CAPABILITIES_DEBUG_DATA) {
             gnssInfo.yearOfHw++; // 2017
-            if (capabilitiesMask & LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT ||
-                capabilitiesMask & LOCATION_CAPABILITIES_AGPM_BIT) {
+            if (capabilitiesMask & LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT ||
+                capabilitiesMask & LOCATION_CAPABILITIES_AGPM) {
                 gnssInfo.yearOfHw++; // 2018
-                if (capabilitiesMask & LOCATION_CAPABILITIES_PRIVACY_BIT) {
+                if (capabilitiesMask & LOCATION_CAPABILITIES_PRIVACY) {
                     gnssInfo.yearOfHw++; // 2019
-                    if (capabilitiesMask & LOCATION_CAPABILITIES_CONFORMITY_INDEX_BIT) {
+                    if (capabilitiesMask & LOCATION_CAPABILITIES_CONFORMITY_INDEX) {
                         gnssInfo.yearOfHw += 3; // 2022
-                        if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_BANDS_BIT) {
+                        if (capabilitiesMask & LOCATION_CAPABILITIES_GNSS_BANDS) {
                             gnssInfo.yearOfHw++; // 2023
                         }
                     }

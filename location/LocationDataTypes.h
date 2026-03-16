@@ -289,40 +289,40 @@ enum GeofenceConfidence {
 // Set of masks for Modem and QWES capabilities.
 typedef uint64_t LocationCapabilitiesMask;
 // supports startTracking API with minInterval param
-#define   LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT           (1<<0)
+#define   LOCATION_CAPABILITIES_TIME_BASED_TRACKING           (1<<0)
 // supports startBatching API with minInterval param
-#define   LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT           (1<<1)
+#define   LOCATION_CAPABILITIES_TIME_BASED_BATCHING           (1<<1)
 // supports addGeofences API
-#define   LOCATION_CAPABILITIES_GEOFENCE_BIT                      (1<<4)
+#define   LOCATION_CAPABILITIES_GEOFENCE                      (1<<4)
 // supports GnssMeasurementsCallback
-#define   LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT             (1<<5)
+#define   LOCATION_CAPABILITIES_GNSS_MEASUREMENTS             (1<<5)
 // supports startTracking/startBatching API with LocationOptions.mode of MSB (Ms Based)
-#define   LOCATION_CAPABILITIES_GNSS_MSB_BIT                      (1<<6)
+#define   LOCATION_CAPABILITIES_GNSS_MSB                      (1<<6)
 // supports startTracking/startBatching API with LocationOptions.mode of MSA (MS Assisted)
-#define   LOCATION_CAPABILITIES_GNSS_MSA_BIT                      (1<<7)
+#define   LOCATION_CAPABILITIES_GNSS_MSA                      (1<<7)
 // supports debug nmea sentences in the debugNmeaCallback
-#define   LOCATION_CAPABILITIES_DEBUG_DATA_BIT                    (1<<8)
+#define   LOCATION_CAPABILITIES_DEBUG_DATA                    (1<<8)
 // support constellation enablement
-#define   LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT      (1<<10)
+#define   LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT      (1<<10)
 // support agpm
-#define   LOCATION_CAPABILITIES_AGPM_BIT                          (1<<11)
+#define   LOCATION_CAPABILITIES_AGPM                          (1<<11)
 // support location privacy
-#define   LOCATION_CAPABILITIES_PRIVACY_BIT                       (1<<12)
+#define   LOCATION_CAPABILITIES_PRIVACY                       (1<<12)
 // support measurement corrections
-#define   LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT       (1<<13)
+#define   LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION       (1<<13)
 // support Robust Location
-#define   LOCATION_CAPABILITIES_CONFORMITY_INDEX_BIT              (1<<14)
+#define   LOCATION_CAPABILITIES_CONFORMITY_INDEX              (1<<14)
 // support precise location edgnss
-#define   LOCATION_CAPABILITIES_EDGNSS_BIT                        (1<<15)
+#define   LOCATION_CAPABILITIES_EDGNSS                        (1<<15)
 // Modem supports Carrier Phase for Precise Positioning
 // Measurement Engine (PPME).
-#define   LOCATION_CAPABILITIES_QWES_CARRIER_PHASE_BIT            (1<<16)
+#define   LOCATION_CAPABILITIES_QWES_CARRIER_PHASE            (1<<16)
 // Modem supports SV Polynomial for tightly coupled external
 // DR support. This is a Standalone Feature.
-#define   LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT            (1<<17)
+#define   LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL            (1<<17)
 // Modem supports SV Ephemeris for tightly coupled external
 // PPE engines. This is a Standalone Feature.
-#define   LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT            (1<<18)
+#define   LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS             (1<<18)
 // Modem supports GNSS Single Frequency feature. This is a
 // Standalone Feature.
 #define   LOCATION_CAPABILITIES_QWES_GNSS_SINGLE_FREQUENCY       (1<<19)
@@ -364,7 +364,7 @@ typedef uint64_t LocationCapabilitiesMask;
 // enabled by QWES license.
 #define   LOCATION_CAPABILITIES_QWES_WIFI_PREMIUM_POSITIONING         (1ULL<<31)
 // support GNSS bands
-#define   LOCATION_CAPABILITIES_GNSS_BANDS_BIT                        (1ULL<<34)
+#define   LOCATION_CAPABILITIES_GNSS_BANDS                            (1ULL<<34)
 // This mask indicates modem 3GPP source is available.
 #define   LOCATION_CAPABILITIES_MODEM_3GPP_AVAIL                      (1ULL<<35)
 // This mask indicates PR ML inference is present
@@ -382,7 +382,7 @@ typedef uint64_t LocationCapabilitiesMask;
 // This mask indicates SBAS is supported.
 #define   LOCATION_CAPABILITIES_QWES_SBAS                             (1ULL<<41)
 // This mask indicates power mode session continuity is supported.
-#define   LOCATION_CAPABILITIES_POWER_MODE_SESSION_CONTINUITY_BIT     (1ULL<<42)
+#define   LOCATION_CAPABILITIES_POWER_MODE_SESSION_CONTINUITY         (1ULL<<42)
 
 /** GPS supports MS-Based AGPS mode */
 #define LOC_GPS_CAPABILITY_MSB              (1 << 1)
