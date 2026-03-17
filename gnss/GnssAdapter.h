@@ -194,6 +194,8 @@ class GnssAdapter : public LocAdapterBase {
     LocPosMode mLocPositionMode;
     PreciseType mPreciseType;
     CorrectionType mCorrectionType;
+    // Boolean flag passed last time to setTribandState.
+    bool mLastTribandState = false;
     // new members for SV/PVT pairing
     bool mSpePvtRegistered;
     bool mSpeSvRegistered;
