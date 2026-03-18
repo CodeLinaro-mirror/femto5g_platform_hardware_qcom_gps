@@ -153,11 +153,14 @@ public:
         mName = NETWORKINFO_CARD;
         mNetInfo.mType = type;
         mNetInfo.networkType = (NetworkType)type;
-        mNetInfo.mAllTypes = typeToAllTypes(mNetInfo.networkType);
         mNetInfo.networkHandle = networkHandle;
         mNetInfo.mConnected = connected;
         mNetInfo.mAvailable = available;
         mNetInfo.mRoaming = roaming;
+        //mAllTypes:
+        //Bit 0: 1 - Mobile network connected, 0 - disconnected.
+        //Bit 1: 1 - WiFi network connected, 0 - disconnected.
+        mNetInfo.mAllTypes = connected ? (1<<type) : 0;
         copyStringToCharArray(apn, mNetInfo.mApn, sizeof(mNetInfo.mApn));
         setBlobPtr((void*)(&mNetInfo), sizeof(LocNetworkInfo));
     }
@@ -177,9 +180,6 @@ public:
                 break;
         }
         return typeout;
-   }
-   inline uint64_t typeToAllTypes(NetworkType type) {
-       return (type >= TYPE_UNKNOWN || type < TYPE_MOBILE) ?  0 : (1<<type);
    }
 
 //Data members

@@ -154,6 +154,13 @@ private:
 
     unordered_map<DataItemId, unordered_set<IDataItemObserver*>> mClientMap;
     unordered_map<DataItemId, IDataItemCore*> mCachedDataItemMap;
+    // Per-network info stored in mConnectedNetworks
+    struct NetworkConnInfo {
+        int8_t  type;
+        bool    roaming;
+        string  apn;
+    };
+    std::vector<std::pair<NetworkHandle, NetworkConnInfo>> mConnectedNetworks;
     std::vector<std::pair<updateDataitemIdListFunc, unordered_set<DataItemId>>> mSubscriptionVec;
 #ifdef USE_GLIB
     // Cache the framework action request for connect/disconnect
@@ -167,4 +174,3 @@ private:
 } // namespace loc_core
 
 #endif //__SYSTEM_STATUS__
-

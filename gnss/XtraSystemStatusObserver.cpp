@@ -201,11 +201,11 @@ bool XtraSystemStatusObserver::updateConnections(uint64_t allConnections,
     mRoaming = roaming;
 
     LOC_LOGd("updateConnections mConnections:%" PRIx64 " mRoaming:%u",
-        mConnections, mRoaming);
+            mConnections, mRoaming);
     mNetworkHandle = networkHandle;
     mNetworkType = type;
-    LOC_LOGd("updateConnections networkHandle:%" PRIx64 " networkType:%u",
-        mNetworkHandle, mNetworkType);
+    LOC_LOGd("updateConnections connected:%d networkHandle:%" PRIx64 " networkType:%u",
+            (bool)(allConnections & (1 << type)), mNetworkHandle, mNetworkType);
 
     if (!mReqStatusReceived) {
         return true;
