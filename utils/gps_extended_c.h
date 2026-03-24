@@ -382,7 +382,9 @@ typedef uint32_t LocNavSolutionMask;
 /**<  Bitmask specifying whether only SBAS corrected SVs are used for the fix */
 #define LOC_NAV_MASK_ONLY_SBAS_CORRECTED_SV_USED ((LocNavSolutionMask)0x0100)
 /**<  Bitmask specifying whether MMF Aiding is used for the fix */
-#define LOC_NAV_MASK_MMF_AIDED_POSITION ((LocNavSolutionMask)0x0200)
+#define LOC_NAV_MASK_MMF ((LocNavSolutionMask)0x0200)
+/**<  Bitmask specifying WOCS Aiding is used for the fix */
+#define LOC_NAV_MASK_WOCS ((LocNavSolutionMask)0x0400)
 
 typedef uint32_t LocPosDataMask;
 /* Bitmask to specify whether Navigation data has Forward Acceleration  */
