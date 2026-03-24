@@ -682,6 +682,7 @@ public:
         return (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE) &&
                 (LOC_OUTPUT_ENGINE_FUSED == locationExtended.locOutputEngType);
     }
+    void populateNlpPosition(Location& location, double latitude, double longitude, float accuracy);
     /** Y2038- Compliant */
     bool needToGenerateNmeaReport(const uint32_t &gpsTimeOfWeekMs,
             const struct timespec64_t &apTimeStamp);
