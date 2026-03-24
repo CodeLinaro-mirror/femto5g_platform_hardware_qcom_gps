@@ -242,8 +242,7 @@ public:
             const GnssMeasurementCorrections& gnssMeasurementCorrections);
 #endif
 
-    virtual bool getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
-            LocPosTechMask &tech_mask, float* vertUnc = nullptr);
+    virtual bool getBestAvailableZppFixSync(LocGpsLocation &zppLoc, LocPosTechMask &tech_mask);
     virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);
     virtual void requestForAidingData(GnssAidingDataSvMask svDataMask);
     /* Requests for SV/Constellation Control */

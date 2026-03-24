@@ -526,30 +526,6 @@ void SystemStatusPositionFailure::dump()
 }
 
 /******************************************************************************
- SystemStatusLocation
-******************************************************************************/
-bool SystemStatusLocation::equals(const SystemStatusItemBase& peer) {
-    if ((mLocation.gpsLocation.latitude !=
-                ((const SystemStatusLocation&)peer).mLocation.gpsLocation.latitude) ||
-        (mLocation.gpsLocation.longitude !=
-                ((const SystemStatusLocation&)peer).mLocation.gpsLocation.longitude) ||
-        (mLocation.gpsLocation.altitude !=
-                ((const SystemStatusLocation&)peer).mLocation.gpsLocation.altitude)) {
-        return false;
-    }
-    return true;
-}
-
-void SystemStatusLocation::dump()
-{
-    LOC_LOGV("Location: lat=%f lon=%f alt=%f spd=%f",
-             mLocation.gpsLocation.latitude,
-             mLocation.gpsLocation.longitude,
-             mLocation.gpsLocation.altitude,
-             mLocation.gpsLocation.speed);
-}
-
-/******************************************************************************
  SystemStatus
 ******************************************************************************/
 pthread_mutex_t   SystemStatus::mMutexSystemStatus = PTHREAD_MUTEX_INITIALIZER;
@@ -589,8 +565,6 @@ SystemStatus::SystemStatus(const MsgTask* msgTask) :
     mSysStatusObsvr(SystemStatusOsObserver::getInstance(msgTask)), mTracking(false) {
     int result = 0;
     ENTRY_LOG ();
-    mCache.mLocation.clear();
-
     mCache.mTimeAndClock.clear();
     mCache.mXoState.clear();
     mCache.mRfAndParams.clear();
@@ -670,31 +644,6 @@ void SystemStatus::setEngineDebugDataInfo(const GnssEngineDebugDataInfo& gnssEng
     pthread_mutex_unlock(&mMutexSystemStatus);
 }
 
-
-/******************************************************************************
-@brief      API to set report position data into internal buffer
-
-@param[In]  UlpLocation
-
-@return     true when successfully done
-******************************************************************************/
-bool SystemStatus::eventPosition(const UlpLocation& location,
-                                 const GpsLocationExtended& locationEx)
-{
-    bool ret = false;
-    pthread_mutex_lock(&mMutexSystemStatus);
-
-    ret = setIteminReport(mCache.mLocation, SystemStatusLocation(location, locationEx));
-    LOC_LOGV("eventPosition - lat=%f lon=%f alt=%f speed=%f",
-             location.gpsLocation.latitude,
-             location.gpsLocation.longitude,
-             location.gpsLocation.altitude,
-             location.gpsLocation.speed);
-
-    pthread_mutex_unlock(&mMutexSystemStatus);
-    return ret;
-}
-
 /******************************************************************************
 @brief      API to get report data into a given buffer
 
@@ -713,8 +662,6 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly,
 
     if (isLatestOnly) {
         // push back only the latest report and return it
-        getIteminReport(report.mLocation, mCache.mLocation);
-
         getIteminReport(report.mTimeAndClock, mCache.mTimeAndClock);
         getIteminReport(report.mXoState, mCache.mXoState);
         getIteminReport(report.mRfAndParams, mCache.mRfAndParams);
@@ -733,8 +680,6 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly,
     }
     else {
         // copy entire reports and return them
-        report.mLocation.clear();
-
         report.mTimeAndClock.clear();
         report.mXoState.clear();
         report.mRfAndParams.clear();
@@ -766,8 +711,6 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly,
 bool SystemStatus::setDefaultGnssEngineStates(void)
 {
     pthread_mutex_lock(&mMutexSystemStatus);
-
-    setDefaultIteminReport(mCache.mLocation, SystemStatusLocation());
 
     setDefaultIteminReport(mCache.mTimeAndClock, SystemStatusTimeAndClock());
     setDefaultIteminReport(mCache.mXoState, SystemStatusXoState());
