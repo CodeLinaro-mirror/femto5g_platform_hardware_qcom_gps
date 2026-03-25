@@ -65,8 +65,8 @@ class LocAdapterProxyBase;
 
 typedef uint16_t PpFeatureStatusMask;
 #define DLP_FEATURE_ENABLED_BY_DEFAULT            0X01
-#define MLP_FEATURE_ENABLED_BY_DEFAULT            0X04
-#define WOCS_FEATURE_ENABLED_BY_DEFAULT           0X10
+#define MLP_FEATURE_ENABLED_BY_DEFAULT            0X02
+#define WOCS_FEATURE_ENABLED_BY_DEFAULT           0X04
 
 class LocAdapterBase {
 private:
@@ -81,7 +81,7 @@ protected:
     LocAdapterProxyBase* mLocAdapterProxyBase;
     const MsgTask* mMsgTask;
     bool mAdapterAdded;
-    /* === QESDK RTK feature status =================================================== */
+    /* === RTK feature status =================================================== */
     PpFeatureStatusMask mPpFeatureStatusMask;
 
     inline LocAdapterBase(const MsgTask* msgTask) :

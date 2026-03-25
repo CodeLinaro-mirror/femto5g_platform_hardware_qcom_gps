@@ -555,8 +555,6 @@ public:
 #endif
     uint32_t getXtraStatusCommand();
     uint32_t registerXtraStatusUpdateCommand(bool registerUpdate);
-    void configPrecisePositioningCommand(uint32_t featureId, bool enable,
-            const std::string& appHash);
     void setPreciseSessionConfig(PreciseType preciseType);
     uint32_t configMerkleTreeCommand(const char * merkleTreeConfigBuffer, int bufferLength);
     uint32_t configOsnmaEnablementCommand(bool enable);

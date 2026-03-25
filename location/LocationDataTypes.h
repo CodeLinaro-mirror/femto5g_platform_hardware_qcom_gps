@@ -430,39 +430,36 @@ enum LocationQwesFeatureTypes {
     LOCATION_QWES_FEATURE_TYPE_VPE                           = 12,
     // This indicates DGNSS license is enabled.
     LOCATION_QWES_FEATURE_TYPE_DGNSS                         = 13,
-    // This indicates DLP feature is enabled by QESDK APP
-    // license
-    LOCATION_QWES_FEATURE_TYPE_DLP_QESDK                     = 14,
     // This indicates EP can do SSR2OSR correction data
     // parseing
-    LOCATION_FEATURE_TYPE_CORR_DATA_PARSER                   = 15,
+    LOCATION_FEATURE_TYPE_CORR_DATA_PARSER                   = 14,
     // This indicates PR meas ML infernece is enabled
-    LOCATION_QWES_FEATURE_NLOS_ML20                          = 16,
+    LOCATION_QWES_FEATURE_NLOS_ML20                          = 15,
     // This indicates wifi RSSI positioning is
     // enabled by QWES license.
-    LOCATION_QWES_FEATURE_TYPE_WIFI_STANDARD_POSITIONING     = 17,
+    LOCATION_QWES_FEATURE_TYPE_WIFI_STANDARD_POSITIONING     = 16,
     // This indicates wifi RTT positioning is
     // enabled by QWES license.
-    LOCATION_QWES_FEATURE_TYPE_WIFI_PREMIUM_POSITIONING      = 18,
+    LOCATION_QWES_FEATURE_TYPE_WIFI_PREMIUM_POSITIONING      = 17,
     // This indicates if NHz feature is supported
-    LOCATION_QWES_FEATURE_STATUS_GNSS_NHZ                    = 19,
+    LOCATION_QWES_FEATURE_STATUS_GNSS_NHZ                    = 18,
     // This indicates wwan standard positioning is
     // enabled by QWES license.
-    LOCATION_QWES_FEATURE_TYPE_WWAN_STANDARD_POSITIONING     = 20,
+    LOCATION_QWES_FEATURE_TYPE_WWAN_STANDARD_POSITIONING     = 19,
     // This indicates wwan premium positioning is
     // enabled by QWES license.
-    LOCATION_QWES_FEATURE_TYPE_WWAN_PREMIUM_POSITIONING      = 21,
+    LOCATION_QWES_FEATURE_TYPE_WWAN_PREMIUM_POSITIONING      = 20,
     // This indicates mlp without correction service is
     // enabled by QWES license.
-    LOCATION_QWES_FEATURE_TYPE_WOCS                          = 22,
+    LOCATION_QWES_FEATURE_TYPE_WOCS                          = 21,
     // This indicates SBAS is
     // enabled by QWES license.
-    LOCATION_QWES_FEATURE_TYPE_SBAS                          = 23,
+    LOCATION_QWES_FEATURE_TYPE_SBAS                          = 22,
     // This indicates Robust Location is
     // enabled by QWES license.
-    LOCATION_QWES_FEATURE_TYPE_ROBUST_LOCATION               = 24,
+    LOCATION_QWES_FEATURE_TYPE_ROBUST_LOCATION               = 23,
     // Max value
-    LOCATION_QWES_FEATURE_TYPE_MAX                           = 25
+    LOCATION_QWES_FEATURE_TYPE_MAX                           = 24
 };
 
 enum LocationTechnologyType {
@@ -3581,13 +3578,6 @@ enum OdcpiCallbackTypeMaskBits {
 };
 
 typedef uint16_t OdcpiCallbackTypeMask;
-
-enum ModemGnssQesdkFeatureBits {
-    MODEM_QESDK_FEATURE_DGNSS             = (1<<0),
-    MODEM_QESDK_FEATURE_ROBUST_LOCATION   = (1<<1)
-};
-
-typedef uint64_t ModemGnssQesdkFeatureMask;
 
 /* enum OSNMA New Public Key Type (NPKT) */
 enum mgpOsnmaNpktEnumTypeVal {
