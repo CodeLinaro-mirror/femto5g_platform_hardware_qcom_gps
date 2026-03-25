@@ -117,7 +117,7 @@ extern "C" {
 #define BOOT_KPI_FILE "/sys/kernel/boot_kpi/kpi_values"
 
 // OpenWrt Musl C library supports strlcpy/strlcat
-#if !defined(OPENWRT_BUILD) && !defined(OFF_TARGET)
+#if !defined(OPENWRT_BUILD) && !defined(OFF_TARGET) && !defined(FEATURE_EXTERNAL_AP)
 #define strlcat g_strlcat
 #define strlcpy g_strlcpy
 #elif defined(OFF_TARGET)
