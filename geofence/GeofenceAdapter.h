@@ -159,7 +159,7 @@ public:
     void pauseGeofenceItem(uint32_t hwId);
     void resumeGeofenceItem(uint32_t hwId);
     void modifyGeofenceItem(uint32_t hwId, const GeofenceOption& options);
-    LocationError getHwIdFromClient(LocationAPI* client, uint32_t clientId, uint32_t& hwId);
+    LocationError getHwIdFromClient(LocationAPI* client, uint32_t clientId, uint32_t* hwId);
     LocationError getGeofenceKeyFromHwId(uint32_t hwId, GeofenceKey& key);
     void dump();
     /* ======== EVENTS ====(Called from QMI Thread)========================================= */
