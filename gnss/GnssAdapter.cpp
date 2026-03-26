@@ -6091,7 +6091,13 @@ void GnssAdapter::gnssUpdateSvConfig(
 
         // if the constellation config is valid, issue request to modem
         // to enable/disable constellation
-        mLocApi->setConstellationControl(mGnssSvTypeConfig);
+        if ((GNSS_SV_TYPES_MASK_BDS_BIT == currentEnabledMask)
+                && (newEnabledMask != GNSS_SV_TYPES_MASK_BDS_BIT)) {
+            LOC_LOGd("Previously BDS only mode.. need to reset !!");
+            mLocApi->setConstellationControl(constellationEnablementConfig, true);
+        } else {
+            mLocApi->setConstellationControl(constellationEnablementConfig);
+        }
     } else if (constellationEnablementConfig.size == 0) {
         // when the size is not set, meaning reset to modem default
         mLocApi->resetConstellationControl();
