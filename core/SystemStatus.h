@@ -118,23 +118,6 @@ public:
     virtual bool equals(const SystemStatusItemBase& peer) { return false; }
 };
 
-class SystemStatusLocation : public SystemStatusItemBase
-{
-public:
-    bool mValid;
-    UlpLocation mLocation;
-    GpsLocationExtended mLocationEx;
-    inline SystemStatusLocation() :
-        mValid(false) {}
-    inline SystemStatusLocation(const UlpLocation& location,
-                         const GpsLocationExtended& locationEx) :
-        mValid(true),
-        mLocation(location),
-        mLocationEx(locationEx) {}
-    bool equals(const SystemStatusItemBase& peer) override;
-    void dump(void) override;
-};
-
 class SystemStatusTimeAndClock : public SystemStatusItemBase
 {
 public:
@@ -421,9 +404,6 @@ public:
 class SystemStatusReports
 {
 public:
-    // from QMI_LOC indication
-    std::vector<SystemStatusLocation>         mLocation;
-
     // from ME debug info
     std::vector<SystemStatusTimeAndClock>     mTimeAndClock;
     std::vector<SystemStatusXoState>          mXoState;
@@ -483,7 +463,6 @@ public:
         mTracking = isInSession;
         getOsObserver()->eventSetTracking(isInSession);
     }
-    bool eventPosition(const UlpLocation& location,const GpsLocationExtended& locationEx);
     void setEngineDebugDataInfo(const GnssEngineDebugDataInfo& gnssEngineDebugDataInfo);
     bool getReport(SystemStatusReports& reports, bool isLatestonly = false,
             bool inSessionOnly = true) const;

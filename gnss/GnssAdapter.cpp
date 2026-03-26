@@ -3881,12 +3881,11 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
             // In E911-MSA case when Modem doesn't support concurrency, we will observe
             // fix failures. So, in this we need to use the best available zpp fix from Modem.
             if (mAdapter.mInEmergency && (LOC_SESS_FAILURE == mStatus)) {
-                float vertUnc = -1;
                 memset(&mLocationExtended, 0, sizeof(mLocationExtended));
                 LOC_LOGd("E911-MSA case");
 
                 if (mAdapter.mLocApi->getBestAvailableZppFixSync(mUlpLocation.gpsLocation,
-                                                        mTechMask, &vertUnc)) {
+                            mTechMask)) {
                     if ((mUlpLocation.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG) &&
                         (mUlpLocation.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ACCURACY)) {
 
@@ -3899,9 +3898,9 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
                         else {
                             mStatus = LOC_SESS_INTERMEDIATE;
                         }
-                        if (-1 != vertUnc) {
+                        if (-1 != mUlpLocation.gpsLocation.vertUncertainity) {
                             mLocationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_VERT_UNC;
-                            mLocationExtended.vert_unc = vertUnc;
+                            mLocationExtended.vert_unc = mUlpLocation.gpsLocation.vertUncertainity;
                         }
 
                         // Consider ZPP fix from modem as SPE fix
@@ -4002,12 +4001,6 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
             }
 
             if (!mAdapter.reportSpeAsEnginePosition(mUlpLocation, mLocationExtended, mStatus)) {
-                // extract bug report info - this returns true if consumed by systemstatus
-                SystemStatus* s = mAdapter.getSystemStatus();
-                if ((nullptr != s) &&
-                    ((LOC_SESS_SUCCESS == mStatus) || (LOC_SESS_INTERMEDIATE == mStatus))){
-                    s->eventPosition(mUlpLocation, mLocationExtended);
-                }
                 mAdapter.reportPosition(mUlpLocation, mLocationExtended, mStatus, mTechMask);
                 mAdapter.reportPositionNmea(mUlpLocation, mLocationExtended, mStatus, mTechMask);
             }
@@ -6269,32 +6262,7 @@ bool GnssAdapter::getDebugReport(GnssDebugReport& r) {
     systemstatus->getReport(reports, true, false);
 
     // location block
-    if (!reports.mLocation.empty() && reports.mLocation.back().mValid) {
-        r.mLocation.mValid = true;
-        r.mLocation.mLocation.latitude =
-            reports.mLocation.back().mLocation.gpsLocation.latitude;
-        r.mLocation.mLocation.longitude =
-            reports.mLocation.back().mLocation.gpsLocation.longitude;
-        r.mLocation.mLocation.altitude =
-            reports.mLocation.back().mLocation.gpsLocation.altitude;
-        r.mLocation.mLocation.speed =
-            (double)(reports.mLocation.back().mLocation.gpsLocation.speed);
-        r.mLocation.mLocation.bearing =
-            (double)(reports.mLocation.back().mLocation.gpsLocation.bearing);
-        r.mLocation.mLocation.accuracy =
-            (double)(reports.mLocation.back().mLocation.gpsLocation.accuracy);
-
-        r.mLocation.verticalAccuracyMeters =
-            reports.mLocation.back().mLocationEx.vert_unc;
-        r.mLocation.speedAccuracyMetersPerSecond =
-            reports.mLocation.back().mLocationEx.speed_unc;
-        r.mLocation.bearingAccuracyDegrees =
-            reports.mLocation.back().mLocationEx.bearing_unc;
-
-        r.mLocation.mUtcReported =
-            reports.mLocation.back().mUtcReported;
-    }
-    else if (!reports.mBestPosition.empty() && reports.mBestPosition.back().mValid) {
+    if (!reports.mBestPosition.empty() && reports.mBestPosition.back().mValid) {
         r.mLocation.mValid = true;
         r.mLocation.mLocation.latitude =
                 (double)(reports.mBestPosition.back().mBestLat) * RAD2DEG;
@@ -6305,8 +6273,7 @@ bool GnssAdapter::getDebugReport(GnssDebugReport& r) {
                 (double)(reports.mBestPosition.back().mBestHepe);
 
         r.mLocation.mUtcReported = reports.mBestPosition.back().mUtcReported;
-    }
-    else {
+    } else {
         r.mLocation.mValid = false;
     }
 
