@@ -1218,7 +1218,7 @@ struct TrackingOptions : LocationOptions {
     inline bool equalsInTimeBasedRequest(const TrackingOptions& other) const {
         return minInterval == other.minInterval && powerMode == other.powerMode &&
                qualityLevelAccepted == other.qualityLevelAccepted &&
-               preciseType == other.preciseType;
+               preciseType == other.preciseType && mode == other.mode;
     }
     inline void setLocationOptions(const LocationOptions& options) {
         minInterval = options.minInterval;
