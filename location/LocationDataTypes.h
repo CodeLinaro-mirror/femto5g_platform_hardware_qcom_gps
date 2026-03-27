@@ -126,7 +126,7 @@ enum LocationTechnologyBits{
     LOCATION_TECHNOLOGY_HYBRID_ALE_BIT               = (1<<12), // HYBRID using ALE POS
     LOCATION_TECHNOLOGY_PDR_BIT                      = (1<<13), // PED mode
     LOCATION_TECHNOLOGY_PROPAGATED_BIT               = (1<<14), //using cached measures
-    LOCATION_TECHNOLOGY_SBAS_BIT                     = (1<<15), //using SBAS
+    LOCATION_TECHNOLOGY_WOCS_BIT                     = (1<<15), //using WOCS
     LOCATION_TECHNOLOGY_WIFI_RTT_BIT                 = (1<<16), //using WiFi RTT
     LOCATION_TECHNOLOGY_WIFI_RTT_FTM_BIT             = (1<<17), //using WiFi RTT FTM
 };
