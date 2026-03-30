@@ -72,6 +72,10 @@
 #define DGNSS_RANGE_UPDATE_TIME_10MIN_IN_SEC  600
 #define GPS_LOCATION_DESIRED_FLAGS (LOC_GPS_LOCATION_HAS_LAT_LONG | LOC_GPS_LOCATION_HAS_ACCURACY)
 
+// Modem E-911 callflow will not accept CPI injection with horizontal unc
+// more than 200 meters of 90% confidence, which is 136.0 meters of 68% confidence
+#define E_911_LOC_ACCURACY_THRESHOLD_IN_METERS   136.0f
+
 using namespace loc_core;
 static int loadEngHubForExternalEngine = 0;
 static int loadLocSlatePUNCModel = 0;
@@ -156,6 +160,8 @@ GnssAdapter::GnssAdapter() :
     mDGnssNeedReport(false),
     mDGnssDataUsage(false),
     mInEmergency(false),
+    mInjectedWifiFix{},
+    mInjectedWifiFixUsed(true),
     mOdcpiStateMask(0),
     mCallbackPriority(OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_LOW),
     mOdcpiTimer(this),
@@ -2650,27 +2656,55 @@ GnssAdapter::injectLocationCommand(double latitude, double longitude, float accu
             mLongitude(longitude),
             mAccuracy(accuracy),
             mOnDemandCpi(onDemandCpi) {}
-        inline virtual void proc() const {
-            if ((uptimeMillis() <= mBlockCPI.blockedTillTsMs) &&
-                    (fabs(mLatitude-mBlockCPI.latitude) <= mBlockCPI.latLonDiffThreshold) &&
-                    (fabs(mLongitude-mBlockCPI.longitude) <= mBlockCPI.latLonDiffThreshold)) {
-                LOC_LOGD("MsgInjectLocation, pos injection blocked for "
-                         "lat: %f, lon: %f, accuracy: %f",
-                         mLatitude, mLongitude, mAccuracy);
-            } else {
-                if ((mAdapter.mOdcpiStateMask & CIVIC_ADDRESS_REQ_ACTIVE) &&
-                        mAdapter.mAddressRequestCb != nullptr) {
-                    Location location = {};
-                    location.flags |= LOCATION_HAS_LAT_LONG_BIT;
-                    location.latitude = mLatitude;
-                    location.longitude = mLongitude;
-                    location.flags |= LOCATION_HAS_ACCURACY_BIT;
-                    location.accuracy = mAccuracy;
-                    mAdapter.mAddressRequestCb(location);
-                }
 
-                mApi.injectPosition(mLatitude, mLongitude, mAccuracy, mOnDemandCpi);
+        inline virtual void proc() const {
+            if ((mAdapter.mOdcpiStateMask & CIVIC_ADDRESS_REQ_ACTIVE) &&
+                    mAdapter.mAddressRequestCb != nullptr) {
+                Location location = {};
+                location.flags |= LOCATION_HAS_LAT_LONG_BIT;
+                location.latitude = mLatitude;
+                location.longitude = mLongitude;
+                location.flags |= LOCATION_HAS_ACCURACY_BIT;
+                location.accuracy = mAccuracy;
+                mAdapter.mAddressRequestCb(location);
             }
+
+            // if device is in emergecny, we cache the location and
+            // use it if fused fix from modem can not be used for E-911
+            if (mAdapter.mInEmergency) {
+               mAdapter.mInjectedWifiFix = {};
+
+               mAdapter.mInjectedWifiFix.size = sizeof(mAdapter.mInjectedWifiFix);
+               mAdapter.mInjectedWifiFix.flags |=
+                     (LOC_GPS_LOCATION_HAS_LAT_LONG | LOC_GPS_LOCATION_HAS_ACCURACY);
+               mAdapter.mInjectedWifiFix.latitude = mLatitude;
+               mAdapter.mInjectedWifiFix.longitude = mLongitude;
+               mAdapter.mInjectedWifiFix.accuracy = mAccuracy;
+
+               // fill in timestamp and elapsed real time
+               struct timespec time_info_current = {};
+               if (clock_gettime(CLOCK_REALTIME, &time_info_current) == 0) {
+                   mAdapter.mInjectedWifiFix.timestamp = (time_info_current.tv_sec)*1e3 +
+                        (time_info_current.tv_nsec)/1e6;
+               }
+               mAdapter.mInjectedWifiFix.elapsedRealTime = getBootTimeMilliSec() * 1000000;
+               // hard code this to 1 sec (E-911 FLP session has 1 second tbf)
+               mAdapter.mInjectedWifiFix.elapsedRealTimeUnc = 1000000000;
+
+               // mark this wifi fix not used
+               mAdapter.mInjectedWifiFixUsed = false;
+            }
+
+            LOC_LOGd("Saving injected wifi fix, mInEmergency %d, used: %d, fix info: %f %f %f,"
+                     " %" PRIu64 " %" PRIu64 "",
+                     mAdapter.mInEmergency, mAdapter.mInjectedWifiFixUsed,
+                     mAdapter.mInjectedWifiFix.latitude,
+                     mAdapter.mInjectedWifiFix.longitude,
+                     mAdapter.mInjectedWifiFix.accuracy,
+                     mAdapter.mInjectedWifiFix.timestamp,
+                     mAdapter.mInjectedWifiFix.elapsedRealTime);
+
+            mApi.injectPosition(mLatitude, mLongitude, mAccuracy, mOnDemandCpi);
         }
     };
 
@@ -4121,8 +4155,8 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
         GnssAdapter& mAdapter;
         mutable UlpLocation mUlpLocation;
         mutable GpsLocationExtended mLocationExtended;
-        enum loc_sess_status mStatus;
-        LocPosTechMask mTechMask;
+        mutable enum loc_sess_status mStatus;
+        mutable LocPosTechMask mTechMask;
         mutable GnssDataNotification mDataNotify;
 
         inline MsgReportSPEPosition(GnssAdapter& adapter,
@@ -4145,8 +4179,110 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
                 return;
             }
 
+            // In E911-MSA case when Modem doesn't support concurrency, we will observe
+            // fix failures. So, in this we need to use the best available zpp fix from Modem.
+            if (mAdapter.mInEmergency && (LOC_SESS_FAILURE == mStatus)) {
+                float vertUnc = -1;
+                memset(&mLocationExtended, 0, sizeof(mLocationExtended));
+                mLocationExtended.size = sizeof(mLocationExtended);
+                LOC_LOGd("E911-MSA case");
+
+                if (mAdapter.mLocApi->getBestAvailableZppFixSync(mUlpLocation.gpsLocation,
+                                                        mTechMask, &vertUnc)) {
+                    if ((mUlpLocation.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG) &&
+                        (mUlpLocation.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ACCURACY)) {
+
+                        if ((mUlpLocation.gpsLocation.accuracy <=
+                                E_911_LOC_ACCURACY_THRESHOLD_IN_METERS) &&
+                            (mTechMask &
+                                (LOC_POS_TECH_MASK_SATELLITE | LOC_POS_TECH_MASK_SENSORS))) {
+                            mStatus = LOC_SESS_SUCCESS;
+                        }
+                        else {
+                            mStatus = LOC_SESS_INTERMEDIATE;
+                        }
+                        if (-1 != vertUnc) {
+                            mLocationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_VERT_UNC;
+                            mLocationExtended.vert_unc = vertUnc;
+                        }
+
+                        LOC_LOGd("zpp loc flags: %u, latitude: %f, longitude: %f, hor acc: %f,"
+                                 "altitude: %f, extended loc flags: %" PRIu64 ", vertUnc: %f,"
+                                 "techMask: %u, timestamp: %" PRId64,
+                                 mUlpLocation.gpsLocation.flags,
+                                 mUlpLocation.gpsLocation.latitude,
+                                 mUlpLocation.gpsLocation.longitude,
+                                 mUlpLocation.gpsLocation.accuracy,
+                                 mUlpLocation.gpsLocation.altitude,
+                                 mLocationExtended.flags, mLocationExtended.vert_unc,
+                                 mTechMask, mUlpLocation.gpsLocation.timestamp);
+                    }
+                    else {
+                        mStatus = LOC_SESS_FAILURE;
+                        LOC_LOGe("zpp fix doesn't have lat, long and accuracy fields");
+                    }
+                }
+                else {
+                    LOC_LOGe("Error getting best available zpp fix");
+                }
+            }
+
             if (mDataNotify.size != 0) {
                 mAdapter.reportData(mDataNotify);
+            }
+
+            if (mAdapter.mInEmergency) {
+               bool useCachedWifiFix = false;
+               const LocGpsLocation& gpsLoc = mUlpLocation.gpsLocation;
+
+               LOC_LOGd("E-911 case, sess status %d, flags 0x%x, tech mask 0x%x, lat %f, "
+                        "lon %f, accuracy %f",
+                        mStatus, gpsLoc.flags, mTechMask, gpsLoc.latitude,
+                        gpsLoc.longitude, gpsLoc.accuracy);
+
+               // modem reports out intermediate fix
+               // case 1: the reported fix is from injected wifi fix, e.g.: device is deep indoor,
+               //         use the injected wifi fix for E-911 once
+               // case 2: the reported fix is a combination of wifi fix and other technology,
+               //         if the accuracy exceeds E-911 threshold, use the injected wifi fix once
+               if (mStatus != LOC_SESS_SUCCESS) {
+                  LocPosTechMask otherMask = ~(LOC_POS_TECH_MASK_WIFI |
+                                               LOC_POS_TECH_MASK_INJECTED_COARSE_POSITION);
+                  // the reported fix is from injected wifi fix, e.g.: device is deep indoor
+                  if ((mTechMask & otherMask) == 0) {
+                     useCachedWifiFix = true;
+                  } else {
+                     if (!(gpsLoc.flags & LOC_GPS_LOCATION_HAS_ACCURACY) ||
+                          (gpsLoc.accuracy >= E_911_LOC_ACCURACY_THRESHOLD_IN_METERS)) {
+                        useCachedWifiFix = true;
+                     }
+                  }
+
+                  if (useCachedWifiFix) {
+                     // this fix has not yet used in E911 callflow
+                     if (false == mAdapter.mInjectedWifiFixUsed) {
+                        // copy the wifi fix into E-911 callflow
+                        mUlpLocation.gpsLocation = mAdapter.mInjectedWifiFix;
+                        mTechMask = LOC_POS_TECH_MASK_WIFI;
+                        mLocationExtended.flags &= ~GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA;
+                     } else {
+                        // this fix is already used in E-911 callflow and there is no new wifi fix
+                        // so mark session status as failure so we avoid duplicate reporting out
+                        // the same fix
+                        mStatus = LOC_SESS_FAILURE;
+                        mUlpLocation.gpsLocation = {};
+                     }
+                  }
+               }
+               // mark it used, so it will not be used again
+               mAdapter.mInjectedWifiFixUsed = true;
+
+               LOC_LOGd("E-911 case, useCachedWifiFix %d, fused fix to report out: "
+                        "sess status %d, tech mask 0x%x, flags 0x%x, lat %f, lon %f, accuracy %f, "
+                        "timestamp %" PRIu64 " msec",
+                        useCachedWifiFix, mStatus, mTechMask, mUlpLocation.gpsLocation.flags,
+                        mUlpLocation.gpsLocation.latitude, mUlpLocation.gpsLocation.longitude,
+                        mUlpLocation.gpsLocation.accuracy, mUlpLocation.gpsLocation.timestamp);
             }
 
             // save the association of GPS timestamp and qtimer tick cnt in PVT report
@@ -6034,6 +6170,9 @@ void GnssAdapter::odcpiTimerExpire()
         mOdcpiTimer.restart();
     } else {
         mInEmergency = false;
+        mInjectedWifiFix = {};
+        mInjectedWifiFixUsed = true;
+
         mOdcpiTimer.stop();
     }
 }
