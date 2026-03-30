@@ -51,6 +51,14 @@
 #define DGNSS_STATION_ID_MAX   (3)
 #define GNSS_UTC_TIME_OFFSET   (3657)
 
+#define GNSS_BUGREPORT_GPS_MIN    (1)
+#define GNSS_BUGREPORT_SBAS_MIN   (120)
+#define GNSS_BUGREPORT_GLO_MIN    (1)
+#define GNSS_BUGREPORT_QZSS_MIN   (193)
+#define GNSS_BUGREPORT_BDS_MIN    (1)
+#define GNSS_BUGREPORT_GAL_MIN    (1)
+#define GNSS_BUGREPORT_NAVIC_MIN  (1)
+
 #define GNSS_MAX_NAME_LENGTH    (8)
 #define XTRA_STATS_DL_REASON_CODE_MAX_LEN (64)
 
@@ -1965,7 +1973,7 @@ struct GnssDataNotification {
     AgcStatus    agcStatusL5;                      // RF Automatic gain control status for L5 band.
     GnssSystemTimeStructType gpsSystemTime;        // GPS System time.
     uint64_t                 systemTickAtGpsTime;  // System Tick at GPS Time
-    uint32_t                 hwClkFreqCorrection;  // Hardware clock frequency correction
+    int32_t                  hwClkFreqCorrection;  // Hardware clock frequency correction
 };
 
 struct GnssMeasurementsAgc {
