@@ -511,11 +511,6 @@ void LocApiBase::
 DEFAULT_IMPL()
 
 void LocApiBase::
-    injectPosition(double /*latitude*/, double /*longitude*/, float /*accuracy*/,
-                   bool /*onDemandCpi*/)
-DEFAULT_IMPL()
-
-void LocApiBase::
     injectPosition(const Location& /*location*/, bool /*onDemandCpi*/)
 DEFAULT_IMPL()
 

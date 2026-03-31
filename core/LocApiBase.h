@@ -203,10 +203,10 @@ public:
     virtual void* getSibling();
     virtual LocApiProxyBase* getLocApiProxy();
     virtual void deleteAidingData(const GnssAidingData& data, LocApiResponse* adapterResponse);
-    virtual void injectPosition(double latitude, double longitude, float accuracy,
-            bool onDemandCpi);
+    // inject position from izat statck
     virtual void injectPosition(const GnssLocationInfoNotification &locationInfo,
             bool onDemandCpi=false);
+    // inject position from AOSP
     virtual void injectPosition(const Location& location, bool onDemandCpi);
     virtual void injectPositionAndCivicAddress(const Location& location,
                                                const GnssCivicAddress& addr);
