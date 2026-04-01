@@ -140,6 +140,7 @@ GnssAdapter::GnssAdapter() :
     mNHzNeeded(false),
     mSPEAlreadyRunningAtHighestInterval(false),
     mLocPositionMode(),
+    mLastTribandState(false),
     mControlCallbacks(),
     mAfwControlId(0),
     mGnssSvIdConfig(),
@@ -2638,11 +2639,18 @@ void GnssAdapter::injectTimeCommand(int64_t time, int64_t timeReference, int32_t
 
 void GnssAdapter::setTribandState() {
     bool enabled = false;
-    if (isInSession() && (PRECISE_TYPE_RTK == mPreciseType) && isQppeEnabled()) {
+    if (isInSession() && isQppeEnabled() &&
+        (PRECISE_TYPE_RTK == mPreciseType || PRECISE_TYPE_WOCS == mPreciseType)) {
         enabled = true;
     }
-    LOC_LOGd("enabled:%d", enabled);
-    mLocApi->setTribandState(enabled);
+
+    if (enabled != mLastTribandState) {
+        LOC_LOGd("Triband state changed: %d -> %d", mLastTribandState, enabled);
+        mLocApi->setTribandState(enabled);
+        mLastTribandState = enabled;
+    } else {
+        LOC_LOGd("Triband state unchanged: %d", enabled);
+    }
 }
 
 void GnssAdapter::updateSystemPowerState(PowerStateType systemPowerState) {
