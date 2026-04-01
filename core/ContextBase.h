@@ -181,6 +181,12 @@ public:
     static bool isFeatureSupported(uint8_t featureVal);
 
     /*
+        update a feature supported list
+        enable: true, enable featureVal. flase, disable featureVal
+    */
+    static void updateFeatureSupported(uint8_t featureVal, bool enable);
+
+    /*
         Check if gnss measurement is supported
     */
     static bool gnssConstellationConfig();
