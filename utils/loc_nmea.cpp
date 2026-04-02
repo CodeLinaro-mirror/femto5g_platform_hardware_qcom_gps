@@ -1241,24 +1241,9 @@ static void loc_nmea_get_fix_quality(const UlpLocation & location,
                 if (locationExtended.gnss_sv_used_ids.navicSvUsedIdsMask ? 1 : 0)
                     gnsModeIndicator[5] = 'F'; // F means RTK float fix
                 break;
-            } else if (LOC_NAV_MASK_DGNSS_CORRECTION & locationExtended.navSolutionMask){
-                ggaGpsQuality = '2';    // 2 means DGPS fix
-                rmcModeIndicator = 'D'; // D means differential
-                vtgModeIndicator = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.gpsSvUsedIdsMask ? 1 : 0)
-                    gnsModeIndicator[0] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.gloSvUsedIdsMask ? 1 : 0)
-                    gnsModeIndicator[1] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.galSvUsedIdsMask ? 1 : 0)
-                    gnsModeIndicator[2] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.bdsSvUsedIdsMask ? 1 : 0)
-                    gnsModeIndicator[3] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.qzssSvUsedIdsMask ? 1 : 0)
-                    gnsModeIndicator[4] = 'D'; // D means differential
-                if (locationExtended.gnss_sv_used_ids.navicSvUsedIdsMask ? 1 : 0)
-                    gnsModeIndicator[5] = 'D'; // D means differential
-                break;
-            } else if (LOC_NAV_MASK_SBAS_CORRECTION_IONO & locationExtended.navSolutionMask){
+            } else if ((LOC_NAV_MASK_DGNSS_CORRECTION & locationExtended.navSolutionMask) ||
+                       (LOC_NAV_MASK_SBAS_CORRECTION_IONO & locationExtended.navSolutionMask) ||
+                       (LOC_NAV_MASK_WOCS & locationExtended.navSolutionMask)) {
                 ggaGpsQuality = '2';    // 2 means DGPS fix
                 rmcModeIndicator = 'D'; // D means differential
                 vtgModeIndicator = 'D'; // D means differential
