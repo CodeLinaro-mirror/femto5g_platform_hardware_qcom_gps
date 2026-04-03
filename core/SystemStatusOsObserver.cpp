@@ -320,8 +320,59 @@ void SystemStatusOsObserver::notify(IDataItemCore* di) {
 
 void SystemStatusOsObserver::eventConnectionStatus(bool connected, int8_t type,
                            bool roaming, NetworkHandle networkHandle, const string& apn) {
-    IDataItemCore* di = new NetworkInfoDataItem(type, connected && (!roaming),
-            connected, roaming, networkHandle, apn);
+    // Track all connected networks to correctly compute allTypes.
+    if (connected) {
+        NetworkConnInfo info = {type, roaming, apn};
+        bool found = false;
+        for (auto& entry : mConnectedNetworks) {
+            if (entry.first == networkHandle) {
+                entry.second = info;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            mConnectedNetworks.push_back({networkHandle, info});
+        }
+    } else {
+        for (auto it = mConnectedNetworks.begin(); it != mConnectedNetworks.end(); ++it) {
+            if (it->first == networkHandle) {
+                mConnectedNetworks.erase(it);
+                break;
+            }
+        }
+    }
+
+    // Compute allTypes as OR of all currently connected network type bits
+    uint64_t allTypes = 0;
+    int8_t activeType = type;
+    NetworkHandle activeHandle = networkHandle;
+    bool activeRoaming = roaming;
+    string activeApn = apn;
+
+    for (auto& entry : mConnectedNetworks) {
+        const NetworkConnInfo& info = entry.second;
+        allTypes |= (1 << info.type);
+        // Prefer WiFi as active network; otherwise take first connected
+        activeType = info.type;
+        activeHandle = entry.first;
+        activeRoaming = info.roaming;
+        activeApn = info.apn;
+        if (info.type == TYPE_WIFI) {
+            LOC_LOGv("Found WiFi connection in map, break");
+            break;
+        }
+    }
+
+    bool isConnected = (allTypes != 0);
+    bool isAvailable = isConnected && (!activeRoaming);
+
+    LOC_LOGd("eventConnectionStatus: connected=%d type=%d handle=%" PRIx64
+             " allTypes=%" PRIx64 " activeType=%d activeHandle=%" PRIx64,
+             connected, type, networkHandle, allTypes, activeType, activeHandle);
+
+    IDataItemCore* di = new NetworkInfoDataItem(activeType, isAvailable,
+            isConnected, activeRoaming, activeHandle, activeApn);
     notify(di);
 }
 
@@ -486,4 +537,3 @@ bool SystemStatusOsObserver::disconnectBackhaul(const BackhaulContext& ctx)
 /*****************  None Android specific end ***************************/
 
 } // namespace loc_core
-
