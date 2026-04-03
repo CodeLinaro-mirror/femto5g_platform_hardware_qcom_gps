@@ -57,6 +57,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define DELETE_AIDING_DATA_EXPECTED_TIME_MS 5000
 #define ONE_SECOND_IN_MS  1000
 #define LOC_WAIT_TIME_MILLI_SEC 400
+#define KEEP_WARM_RETRY_TIMEOUT_MS 60000
 
 class GnssAdapter;
 
@@ -89,6 +90,32 @@ private:
     // Override
     virtual void timeOutCallback() override;
 
+    GnssAdapter* mAdapter;
+    bool mActive;
+};
+
+// Timer to retry a keep-warm (M5/background) tracking session after a position failure.
+// Started when reportPositionEvent delivers LOC_SESS_FAILURE while the current
+// multiplexed session power-mode is GNSS_POWER_MODE_M5.
+class KeepWarmSessionRetryTimer : public LocTimer {
+public:
+    KeepWarmSessionRetryTimer(GnssAdapter* adapter) :
+            LocTimer("KeepWarmSessionRetryTimer"), mAdapter(adapter), mActive(false) {}
+
+    inline void start() {
+        mActive = true;
+        LocTimer::start(KEEP_WARM_RETRY_TIMEOUT_MS);
+    }
+    inline void stop() {
+        mActive = false;
+        LocTimer::stop();
+    }
+    inline bool isActive() {
+        return mActive;
+    }
+
+private:
+    virtual void timeOutCallback() override;
     GnssAdapter* mAdapter;
     bool mActive;
 };
@@ -376,6 +403,10 @@ class GnssAdapter : public LocAdapterBase {
     uint32_t mWakeLockEnableTbfThreshold;
     void acquireWakeLockBasedOnTBF(uint32_t tbfInMs);
 
+    /*==== Keep-warm session retry timer ==========================================*/
+    KeepWarmSessionRetryTimer* mKeepWarmRetryTimer;
+    bool isCurrentSessionKeepWarm();
+
 protected:
 
     /* ==== CLIENT ========================================================================= */
@@ -623,6 +654,7 @@ public:
     }
 
     void odcpiTimerExpireEvent();
+    void keepWarmRetryTimerExpireEvent();
 
     /* ==== REPORTS ======================================================================== */
     virtual void handleEngineLockStatusEvent(EngineLockState engineLockState);
