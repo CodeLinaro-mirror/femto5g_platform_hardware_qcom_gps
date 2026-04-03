@@ -170,6 +170,7 @@ GnssAdapter::GnssAdapter() :
     mOdcpiStateMask(0),
     mCallbackPriority(OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_LOW),
     mOdcpiTimer(this),
+    mKeepWarmRetryTimer(nullptr),
     mOdcpiRequest(),
     mSystemStatus(SystemStatus::getInstance(mMsgTask)),
     mServerUrl(":"),
@@ -4542,6 +4543,17 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
                 mAdapter.reportPosition(mUlpLocation, mLocationExtended, mStatus, mTechMask);
                 mAdapter.reportPositionNmea(mUlpLocation, mLocationExtended, mStatus, mTechMask);
             }
+            // If the current multiplexed session is M5 and position report indicates failure,
+            // start a keep-warm retry timer (if not already running).
+            if (LOC_SESS_FAILURE == mStatus && mAdapter.isCurrentSessionKeepWarm()) {
+                if (nullptr == mAdapter.mKeepWarmRetryTimer) {
+                    mAdapter.mKeepWarmRetryTimer = new KeepWarmSessionRetryTimer(&mAdapter);
+                }
+                if (!mAdapter.mKeepWarmRetryTimer->isActive()) {
+                    LOC_LOGd("M5 session failed, starting keep-warm retry timer");
+                    mAdapter.mKeepWarmRetryTimer->start();
+                }
+            }
         }
     };
 
@@ -6460,6 +6472,51 @@ void GnssAdapter::odcpiTimerExpire()
 
         mOdcpiTimer.stop();
     }
+}
+
+// Called in the context of LocTimer thread
+void KeepWarmSessionRetryTimer::timeOutCallback() {
+    if (nullptr != mAdapter) {
+        mAdapter->keepWarmRetryTimerExpireEvent();
+    }
+}
+
+void GnssAdapter::keepWarmRetryTimerExpireEvent() {
+    struct MsgKeepWarmRetryTimerExpire : public LocMsg {
+        GnssAdapter& mAdapter;
+        inline MsgKeepWarmRetryTimerExpire(GnssAdapter& adapter) :
+                LocMsg(), mAdapter(adapter) {}
+        inline virtual void proc() const {
+            LOC_LOGd("Keep-warm retry timer expired");
+            mAdapter.mKeepWarmRetryTimer->stop();
+            // Only retry if there are active sessions and the multiplexed mode is still M5
+            if (!mAdapter.mTimeBasedTrackingSessions.empty() &&
+                    mAdapter.isCurrentSessionKeepWarm()) {
+                LOC_LOGd("Retrying keep-warm tracking request to modem");
+                mAdapter.reStartTimeBasedTracking();
+            } else {
+                LOC_LOGd("No active keep-warm session, skip retry");
+            }
+        }
+    };
+    sendMsg(new MsgKeepWarmRetryTimerExpire(*this));
+}
+
+bool GnssAdapter::isCurrentSessionKeepWarm() {
+    if (mTimeBasedTrackingSessions.empty()) {
+        return false;
+    }
+    TrackingOptions multiplexedOptions;
+    bool optionSetOnce = false;
+    for (auto& it : mTimeBasedTrackingSessions) {
+        if (!optionSetOnce) {
+            multiplexedOptions = it.second;
+            optionSetOnce = true;
+        } else {
+            multiplexedOptions.multiplexWithForTimeBasedRequest(it.second);
+        }
+    }
+    return multiplexedOptions.powerMode == GNSS_POWER_MODE_M5;
 }
 
 void
