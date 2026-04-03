@@ -171,6 +171,7 @@ GnssAdapter::GnssAdapter() :
                    true, nullptr, true),
     mEngHubProxy(new EngineHubProxyBase()),
     mLocGlinkProxy(new LocGlinkBase()),
+    mTimeBasedTrackingRunning(false),
     mNHzNeeded(false),
     mSPEAlreadyRunningAtHighestInterval(false),
     mLocPositionMode(),
@@ -192,6 +193,8 @@ GnssAdapter::GnssAdapter() :
     mDGnssNeedReport(false),
     mDGnssDataUsage(false),
     mInEmergency(false),
+    mInjectedWifiFix{},
+    mInjectedWifiFixUsed(true),
     mOdcpiStateMask(0),
     mCallbackPriority(OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_LOW),
     mOdcpiTimer(this),
@@ -236,7 +239,6 @@ GnssAdapter::GnssAdapter() :
     mResponseTimer(this, (LocationError)0, (uint32_t)0),
     mIsNtnStatusValid(false),
     mNtnSignalTypeConfigMask(GNSS_SIGNAL_GPS_L1CA|GNSS_SIGNAL_GPS_L5),
-    mIsWakeLockActive(false),
 #ifdef _ANDROID_
     mWakeLockEnableTbfThreshold(10000)
 #else
@@ -2802,27 +2804,55 @@ GnssAdapter::injectLocationCommand(double latitude, double longitude, float accu
             mLongitude(longitude),
             mAccuracy(accuracy),
             mOnDemandCpi(onDemandCpi) {}
-        inline virtual void proc() const {
-            if ((uptimeMillis() <= mBlockCPI.blockedTillTsMs) &&
-                    (fabs(mLatitude-mBlockCPI.latitude) <= mBlockCPI.latLonDiffThreshold) &&
-                    (fabs(mLongitude-mBlockCPI.longitude) <= mBlockCPI.latLonDiffThreshold)) {
-                LOC_LOGD("MsgInjectLocation, pos injection blocked for "
-                         "lat: %f, lon: %f, accuracy: %f",
-                         mLatitude, mLongitude, mAccuracy);
-            } else {
-                if ((mAdapter.mOdcpiStateMask & CIVIC_ADDRESS_REQ_ACTIVE) &&
-                        mAdapter.mAddressRequestCb != nullptr) {
-                    Location location = {};
-                    location.flags |= LOCATION_HAS_LAT_LONG_BIT;
-                    location.latitude = mLatitude;
-                    location.longitude = mLongitude;
-                    location.flags |= LOCATION_HAS_ACCURACY_BIT;
-                    location.accuracy = mAccuracy;
-                    mAdapter.mAddressRequestCb(location);
-                }
 
-                mApi.injectPosition(mLatitude, mLongitude, mAccuracy, mOnDemandCpi);
+        inline virtual void proc() const {
+            if ((mAdapter.mOdcpiStateMask & CIVIC_ADDRESS_REQ_ACTIVE) &&
+                    mAdapter.mAddressRequestCb != nullptr) {
+                Location location = {};
+                location.flags |= LOCATION_HAS_LAT_LONG_BIT;
+                location.latitude = mLatitude;
+                location.longitude = mLongitude;
+                location.flags |= LOCATION_HAS_ACCURACY_BIT;
+                location.accuracy = mAccuracy;
+                mAdapter.mAddressRequestCb(location);
             }
+
+            // if device is in emergecny, we cache the location and
+            // use it if fused fix from modem can not be used for E-911
+            if (mAdapter.mInEmergency) {
+               mAdapter.mInjectedWifiFix = {};
+
+               mAdapter.mInjectedWifiFix.size = sizeof(mAdapter.mInjectedWifiFix);
+               mAdapter.mInjectedWifiFix.flags |=
+                     (LOC_GPS_LOCATION_HAS_LAT_LONG | LOC_GPS_LOCATION_HAS_ACCURACY);
+               mAdapter.mInjectedWifiFix.latitude = mLatitude;
+               mAdapter.mInjectedWifiFix.longitude = mLongitude;
+               mAdapter.mInjectedWifiFix.accuracy = mAccuracy;
+
+               // fill in timestamp and elapsed real time
+               struct timespec time_info_current = {};
+               if (clock_gettime(CLOCK_REALTIME, &time_info_current) == 0) {
+                   mAdapter.mInjectedWifiFix.timestamp = (time_info_current.tv_sec)*1e3 +
+                        (time_info_current.tv_nsec)/1e6;
+               }
+               mAdapter.mInjectedWifiFix.elapsedRealTime = getBootTimeMilliSec() * 1000000;
+               // hard code this to 1 sec (E-911 FLP session has 1 second tbf)
+               mAdapter.mInjectedWifiFix.elapsedRealTimeUnc = 1000000000;
+
+               // mark this wifi fix not used
+               mAdapter.mInjectedWifiFixUsed = false;
+            }
+
+            LOC_LOGd("Saving injected wifi fix, mInEmergency %d, used: %d, fix info: %f %f %f,"
+                     " %" PRIu64 " %" PRIu64 "",
+                     mAdapter.mInEmergency, mAdapter.mInjectedWifiFixUsed,
+                     mAdapter.mInjectedWifiFix.latitude,
+                     mAdapter.mInjectedWifiFix.longitude,
+                     mAdapter.mInjectedWifiFix.accuracy,
+                     mAdapter.mInjectedWifiFix.timestamp,
+                     mAdapter.mInjectedWifiFix.elapsedRealTime);
+
+            mApi.injectPosition(mLatitude, mLongitude, mAccuracy, mOnDemandCpi);
         }
     };
 
@@ -3312,9 +3342,10 @@ GnssAdapter::handleEngineUpEvent()
                 }
             }
 
-            //Release wake lock when modem SSR or GNSS HAL process SSR
+            // When modem SSR, reset mTimeBasedTrackingRunning to indicate that
+            // no timer based tracking session is running and also release the wakelock
+            mAdapter.mTimeBasedTrackingRunning = false;
             locReleaseWakeLock();
-            mAdapter.mIsWakeLockActive = false;
 
             mAdapter.gnssSecondaryBandConfigUpdate();
             //Reset data connection when modem SSR
@@ -3715,7 +3746,11 @@ GnssAdapter::startTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t sessi
         }
         TrackingOptions priorOptions = multiplexedOptions;
         multiplexedOptions.multiplexWithForTimeBasedRequest(options);
-        if (!priorOptions.equalsInTimeBasedRequest(multiplexedOptions)) {
+        // Start time based tracking session when:
+        // 1: the tracking option has been updated
+        // 2: no tracking session running in modem
+        if (!priorOptions.equalsInTimeBasedRequest(multiplexedOptions) ||
+                (false == mTimeBasedTrackingRunning)) {
             startTimeBasedTracking(client, sessionId, multiplexedOptions);
             // need to wait for QMI callback
             reportToClientWithNoWait = false;
@@ -3726,19 +3761,17 @@ GnssAdapter::startTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t sessi
 }
 
 void GnssAdapter::acquireWakeLockBasedOnTBF(uint32_t tbfInMs) {
-    LOC_LOGd("DEBUG: mIsWakeLockActive: %d, minInterval: %d, "
-            "mWakeLockEnableTbfThreshold: %d",
-            mIsWakeLockActive, tbfInMs,
-            mWakeLockEnableTbfThreshold);
-    if (mIsWakeLockActive) {
+    LOC_LOGd("minInterval: %d, mWakeLockEnableTbfThreshold: %d",
+             tbfInMs, mWakeLockEnableTbfThreshold);
+
+    if (mWakeLockEnableTbfThreshold != 0) {
         if (tbfInMs > mWakeLockEnableTbfThreshold) {
             locReleaseWakeLock();
-            mIsWakeLockActive = false;
-        }
-    } else if (tbfInMs <= mWakeLockEnableTbfThreshold) {
-        int ret = locAcquireWakeLock();
-        if (ret >= 0) {
-            mIsWakeLockActive = true;
+        } else {
+            int ret = locAcquireWakeLock();
+            if (ret < 0) {
+                LOC_LOGe("failed to acquire wake lock, ret value %d", ret);
+            }
         }
     }
 }
@@ -3781,11 +3814,11 @@ GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId,
                           [this, client, sessionId, tempOptions] (LocationError err) {
                 if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
                     LOCATION_ERROR_SUCCESS != err) {
-                    eraseTrackingSession(client, sessionId);
+                    mTimeBasedTrackingRunning = false;
                     locReleaseWakeLock();
-                    mIsWakeLockActive = false;
                 } else {
                     checkUpdateDgnssNtrip(false);
+                    mTimeBasedTrackingRunning = true;
                     acquireWakeLockBasedOnTBF(tempOptions.minInterval);
                 }
 
@@ -3824,12 +3857,11 @@ GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
                           [this, client, sessionId, oldOptions, tempOptions] (LocationError err) {
                 if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
                     LOCATION_ERROR_SUCCESS != err) {
-                    // restore the old LocationOptions
-                    saveTrackingSession(client, sessionId, oldOptions);
+                    mTimeBasedTrackingRunning = false;
                     //Release wakelock
                     locReleaseWakeLock();
-                    mIsWakeLockActive = false;
                 } else {
+                    mTimeBasedTrackingRunning = true;
                     acquireWakeLockBasedOnTBF(tempOptions.minInterval);
                 }
                 reportResponse(client, err, sessionId);
@@ -4000,9 +4032,10 @@ GnssAdapter::updateTrackingMultiplex(LocationAPI* client, uint32_t id,
         if (false == optionSetOnce) {
             // check whether client updates to the option or not
             bool sameOption = it->second.equalsInTimeBasedRequest(trackingOptions);
-            LOC_LOGd("same client, option same %d", sameOption);
-            if (false == sameOption) {
-                // restart time based tracking with the newly updated options
+            LOC_LOGd("same client, option same %d, session running %d",
+                     sameOption, mTimeBasedTrackingRunning);
+            if (false == sameOption || false == mTimeBasedTrackingRunning) {
+                // restart time based tracking regardless
                 updateTracking(client, id, trackingOptions, it->second);
                 // need to wait for QMI callback
                 reportToClientWithNoWait = false;
@@ -4011,7 +4044,8 @@ GnssAdapter::updateTrackingMultiplex(LocationAPI* client, uint32_t id,
             TrackingOptions priorOptions = multiplexedOptions;
             priorOptions.multiplexWithForTimeBasedRequest(it->second);
             multiplexedOptions.multiplexWithForTimeBasedRequest(trackingOptions);
-            if (false == priorOptions.equalsInTimeBasedRequest(multiplexedOptions)) {
+            if (false == priorOptions.equalsInTimeBasedRequest(multiplexedOptions) ||
+                    false == mTimeBasedTrackingRunning) {
                 // restart time based tracking with the newly updated options
                 updateTracking(client, id, multiplexedOptions, it->second);
                 // need to wait for QMI callback
@@ -4134,8 +4168,9 @@ GnssAdapter::stopTracking(LocationAPI* client, uint32_t id)
             new LocApiResponse(*getContext(),
                                [this, client, id] (LocationError err) {
         reportResponse(client, err, id);
+
+        mTimeBasedTrackingRunning = false;
         locReleaseWakeLock();
-        mIsWakeLockActive = false;
     }));
 
     if (isDgnssNmeaRequired()) {
@@ -4518,6 +4553,60 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
                                                 mMsInWeek);
                 }
                 mAdapter.reportData(mDataNotify);
+            }
+
+            if (mAdapter.mInEmergency) {
+               bool useCachedWifiFix = false;
+               const LocGpsLocation& gpsLoc = mUlpLocation.gpsLocation;
+
+               LOC_LOGd("E-911 case, sess status %d, flags 0x%x, tech mask 0x%x, lat %f, "
+                        "lon %f, accuracy %f",
+                        mStatus, gpsLoc.flags, mTechMask, gpsLoc.latitude,
+                        gpsLoc.longitude, gpsLoc.accuracy);
+
+               // modem reports out intermediate fix
+               // case 1: the reported fix is from injected wifi fix, e.g.: device is deep indoor,
+               //         use the injected wifi fix for E-911 once
+               // case 2: the reported fix is a combination of wifi fix and other technology,
+               //         if the accuracy exceeds E-911 threshold, use the injected wifi fix once
+               if (mStatus != LOC_SESS_SUCCESS) {
+                  LocPosTechMask otherMask = ~(LOC_POS_TECH_MASK_WIFI |
+                                               LOC_POS_TECH_MASK_INJECTED_COARSE_POSITION);
+                  // the reported fix is from injected wifi fix, e.g.: device is deep indoor
+                  if ((mTechMask & otherMask) == 0) {
+                     useCachedWifiFix = true;
+                  } else {
+                     if (!(gpsLoc.flags & LOC_GPS_LOCATION_HAS_ACCURACY) ||
+                          (gpsLoc.accuracy >= E_911_LOC_ACCURACY_THRESHOLD_IN_METERS)) {
+                        useCachedWifiFix = true;
+                     }
+                  }
+
+                  if (useCachedWifiFix) {
+                     // this fix has not yet used in E911 callflow
+                     if (false == mAdapter.mInjectedWifiFixUsed) {
+                        // copy the wifi fix into E-911 callflow
+                        mUlpLocation.gpsLocation = mAdapter.mInjectedWifiFix;
+                        mTechMask = LOC_POS_TECH_MASK_WIFI;
+                        mLocationExtended.flags &= ~GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA;
+                     } else {
+                        // this fix is already used in E-911 callflow and there is no new wifi fix
+                        // so mark session status as failure so we avoid duplicate reporting out
+                        // the same fix
+                        mStatus = LOC_SESS_FAILURE;
+                        mUlpLocation.gpsLocation = {};
+                     }
+                  }
+               }
+               // mark it used, so it will not be used again
+               mAdapter.mInjectedWifiFixUsed = true;
+
+               LOC_LOGd("E-911 case, useCachedWifiFix %d, fused fix to report out: "
+                        "sess status %d, tech mask 0x%x, flags 0x%x, lat %f, lon %f, accuracy %f, "
+                        "timestamp %" PRIu64 " msec",
+                        useCachedWifiFix, mStatus, mTechMask, mUlpLocation.gpsLocation.flags,
+                        mUlpLocation.gpsLocation.latitude, mUlpLocation.gpsLocation.longitude,
+                        mUlpLocation.gpsLocation.accuracy, mUlpLocation.gpsLocation.timestamp);
             }
 
             // save the association of GPS timestamp and qtimer tick cnt in PVT report
@@ -5424,10 +5513,10 @@ bool
 GnssAdapter::requestNiNotifyEvent(const GnssNiNotification &notify, const void* data,
                                   const LocInEmergency emergencyState)
 {
-    LOC_LOGi("notif_type: %d, timeout: %d, default_resp: %d"
+    LOC_LOGi("notif_type: %d, notify options %d, timeout: %d, default_resp: %d"
              "requestor_id: %s (encoding: %d) text: %s text (encoding: %d) extras: %s "
              "emergencyState = %d",
-             notify.type, notify.timeout, notify.timeoutResponse,
+             notify.type, notify.options, notify.timeout, notify.timeoutResponse,
              notify.requestor, notify.requestorEncoding,
              notify.message, notify.messageEncoding, notify.extras,
              emergencyState);
@@ -6564,6 +6653,9 @@ void GnssAdapter::odcpiTimerExpire()
         mOdcpiTimer.restart();
     } else {
         mInEmergency = false;
+        mInjectedWifiFix = {};
+        mInjectedWifiFixUsed = true;
+
         mOdcpiTimer.stop();
     }
 }
