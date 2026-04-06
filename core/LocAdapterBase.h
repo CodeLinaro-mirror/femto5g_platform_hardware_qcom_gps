@@ -169,7 +169,6 @@ public:
                                      LocPosTechMask loc_technology_mask);
     virtual void reportSvEvent(const GnssSvNotification& svNotify);
     virtual void reportDataEvent(const GnssDataNotification& dataNotify);
-    virtual void reportNmeaEvent(const char* nmea, size_t length);
     virtual void reportSvPolynomialEvent(GnssSvPolynomial &svPolynomial);
     virtual void reportSvEphemerisEvent(GnssSvEphemerisReport &svEphemeris);
     virtual void reportLocationSystemInfoEvent(const LocationSystemInfo& locationSystemInfo);

@@ -373,12 +373,6 @@ void LocApiBase::reportData(GnssDataNotification& dataNotify)
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportDataEvent(dataNotify));
 }
 
-void LocApiBase::reportNmea(const char* nmea, int length)
-{
-    // loop through adapters, and deliver to all adapters.
-    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportNmeaEvent(nmea, length));
-}
-
 void LocApiBase::reportLocationSystemInfo(const LocationSystemInfo& locationSystemInfo)
 {
     // loop through adapters, and deliver to all adapters.

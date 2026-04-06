@@ -164,7 +164,6 @@ public:
     void reportSv(GnssSvNotification& svNotify);
     void reportSvPolynomial(GnssSvPolynomial &svPolynomial);
     void reportSvEphemeris(GnssSvEphemerisReport &svEphemeris);
-    void reportNmea(const char* nmea, int length);
     void reportData(GnssDataNotification& dataNotify);
     void reportLocationSystemInfo(const LocationSystemInfo& locationSystemInfo);
     void reportDcMessage(const GnssDcReportInfo& dcReport);
