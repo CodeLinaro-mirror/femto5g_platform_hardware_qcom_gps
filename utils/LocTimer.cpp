@@ -92,19 +92,15 @@ public:
 
         timer->mIsRunning.store(true);
         mTimers[timer->mFd] = timer;
-
-        LOC_LOGd("registerTimer: timer name %s, timer-fd %d,timeout %d, "
-                 "total number of timers %d",
+        LOC_LOGd("timer name %s, timer-fd %d,timeout %dmsec, total number of timers %d",
                  timer->mName, timer->mFd, timeoutMs, mTimers.size());
-
         return true;
     }
 
     bool unregisterTimer(LocTimer* timer) {
         std::lock_guard<std::recursive_mutex> lock(mMutex);
 
-        LOC_LOGd("unregisterTimer: timer name %s, timer-fd %d, running %d, "
-                 "total number of timers %d",
+        LOC_LOGd("timer name %s, timer-fd %d, running %d, total number of timers %d",
                  timer->mName, timer->mFd, timer->mIsRunning.load(), mTimers.size());
         if (timer->mFd == -1 || !timer->mIsRunning.load()) return false;
 

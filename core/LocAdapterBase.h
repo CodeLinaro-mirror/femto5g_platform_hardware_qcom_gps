@@ -134,8 +134,8 @@ public:
         return mEvtMask;
     }
 
-    inline void sendMsg(const LocMsg* msg, uint32_t delayInMs = 0) const {
-        mMsgTask->sendMsg(msg, delayInMs);
+    inline void sendMsg(const LocMsg* msg) const {
+        mMsgTask->sendMsg(msg);
     }
 
     void updateEvtMask(LOC_API_ADAPTER_EVENT_MASK_T event, loc_registration_mask_status status);

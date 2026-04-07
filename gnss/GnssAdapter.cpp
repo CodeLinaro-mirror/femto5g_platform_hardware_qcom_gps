@@ -208,7 +208,8 @@ GnssAdapter::GnssAdapter() :
     mAndroidReportSpeOnly(true),
     mReportSpeOnly(true),
     mCachedSvNotify(nullptr),
-    mCachedPvtData{} {
+    mCachedPvtData{},
+    mFuturePvtReportTimer(nullptr) {
     LOC_LOGd("Constructor %p", this);
     mLocPositionMode.mode = LOC_POSITION_MODE_INVALID;
     memset(mGnssSvTypeConfigs, 0, sizeof(mGnssSvTypeConfigs));
@@ -3617,6 +3618,9 @@ void GnssAdapter::stopTracking(LocationAPI* client, uint32_t id) {
     delete mCachedSvNotify;
     mCachedSvNotify = nullptr;
     mCachedPvtData = {};
+    if (mFuturePvtReportTimer) {
+        mFuturePvtReportTimer->stop();
+    }
 
     mSPEAlreadyRunningAtHighestInterval = false;
 }
@@ -3788,6 +3792,157 @@ void GnssAdapter::computeVRPBasedLla(const UlpLocation& loc, GpsLocationExtended
     }
 }
 
+void MsgReportSPEPosition::proc() const {
+    if (mAdapter.mTimeBasedTrackingSessions.empty()) {
+        LOC_LOGD("MsgReportSPEPosition, no session on-going, "
+                 "throw away the SPE reports");
+        return;
+    }
+    // In E911-MSA case when Modem doesn't support concurrency, we will observe
+    // fix failures. So, in this we need to use the best available zpp fix from Modem.
+    if (mAdapter.mInEmergency && (LOC_SESS_FAILURE == mStatus)) {
+        memset(&mLocationExtended, 0, sizeof(mLocationExtended));
+        LOC_LOGd("E911-MSA case");
+
+        if (mAdapter.mLocApi->getBestAvailableZppFixSync(mUlpLocation.gpsLocation,
+                    mTechMask)) {
+            if ((mUlpLocation.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG) &&
+                (mUlpLocation.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ACCURACY)) {
+                if ((mUlpLocation.gpsLocation.accuracy <=
+                        E_911_LOC_ACCURACY_THRESHOLD_IN_METERS) &&
+                    (mTechMask &
+                        (LOC_POS_TECH_MASK_SATELLITE | LOC_POS_TECH_MASK_SENSORS))) {
+                    mStatus = LOC_SESS_SUCCESS;
+                }
+                else {
+                    mStatus = LOC_SESS_INTERMEDIATE;
+                }
+                if (-1 != mUlpLocation.gpsLocation.vertUncertainity) {
+                    mLocationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_VERT_UNC;
+                    mLocationExtended.vert_unc = mUlpLocation.gpsLocation.vertUncertainity;
+                }
+
+                // Consider ZPP fix from modem as SPE fix
+                mLocationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE;
+                mLocationExtended.locOutputEngType = LOC_OUTPUT_ENGINE_SPE;
+                mLocationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_MASK;
+                mLocationExtended.locOutputEngMask = STANDARD_POSITIONING_ENGINE;
+
+                LOC_LOGd("zpp loc flags: %u, latitude: %f, longitude: %f, hor acc: %f,"
+                         "altitude: %f, extended loc flags: %" PRIu64 ", vertUnc: %f,"
+                         "techMask: %u, timestamp: %" PRId64,
+                         mUlpLocation.gpsLocation.flags,
+                         mUlpLocation.gpsLocation.latitude,
+                         mUlpLocation.gpsLocation.longitude,
+                         mUlpLocation.gpsLocation.accuracy,
+                         mUlpLocation.gpsLocation.altitude,
+                         mLocationExtended.flags, mLocationExtended.vert_unc,
+                         mTechMask, mUlpLocation.gpsLocation.timestamp);
+            }
+            else {
+                mStatus = LOC_SESS_FAILURE;
+                LOC_LOGe("zpp fix doesn't have lat, long and accuracy fields");
+            }
+        }
+        else {
+            LOC_LOGe("Error getting best available zpp fix");
+        }
+    }
+
+    if (mAdapter.mInEmergency) {
+       bool useCachedWifiFix = false;
+       const LocGpsLocation& gpsLoc = mUlpLocation.gpsLocation;
+
+       LOC_LOGd("E-911 case, sess status %d, flags 0x%x, tech mask 0x%x, lat %f, "
+                "lon %f, accuracy %f",
+                mStatus, gpsLoc.flags, mTechMask, gpsLoc.latitude,
+                gpsLoc.longitude, gpsLoc.accuracy);
+
+       // modem reports out intermediate fix
+       // case 1: the reported fix is from injected wifi fix, e.g.: device is deep indoor,
+       //         use the injected wifi fix for E-911 once
+       // case 2: the reported fix is a combination of wifi fix and other technology,
+       //         if the accuracy exceeds E-911 threshold, use the injected wifi fix once
+       if (mStatus != LOC_SESS_SUCCESS) {
+          LocPosTechMask otherMask = ~(LOC_POS_TECH_MASK_WIFI |
+                                       LOC_POS_TECH_MASK_INJECTED_COARSE_POSITION);
+          // the reported fix is from injected wifi fix, e.g.: device is deep indoor
+          if ((mTechMask & otherMask) == 0) {
+             useCachedWifiFix = true;
+          } else {
+             if (!(gpsLoc.flags & LOC_GPS_LOCATION_HAS_ACCURACY) ||
+                  (gpsLoc.accuracy >= E_911_LOC_ACCURACY_THRESHOLD_IN_METERS)) {
+                useCachedWifiFix = true;
+             }
+          }
+
+          if (useCachedWifiFix) {
+             // this fix has not yet used in E911 callflow
+             if (false == mAdapter.mInjectedWifiFixUsed) {
+                // copy the wifi fix into E-911 callflow
+                mUlpLocation.gpsLocation = mAdapter.mInjectedWifiFix;
+                mTechMask = LOC_POS_TECH_MASK_WIFI;
+                mLocationExtended.flags &= ~GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA;
+             } else {
+                // this fix is already used in E-911 callflow and there is no new wifi fix
+                // so mark session status as failure so we avoid duplicate reporting out
+                // the same fix
+                mStatus = LOC_SESS_FAILURE;
+                mUlpLocation.gpsLocation = {};
+             }
+          }
+       }
+       // mark it used, so it will not be used again
+       mAdapter.mInjectedWifiFixUsed = true;
+
+       LOC_LOGd("E-911 case, useCachedWifiFix %d, fused fix to report out: "
+                "sess status %d, tech mask 0x%x, flags 0x%x, lat %f, lon %f, accuracy %f, "
+                "timestamp %" PRIu64 " msec",
+                useCachedWifiFix, mStatus, mTechMask, mUlpLocation.gpsLocation.flags,
+                mUlpLocation.gpsLocation.latitude, mUlpLocation.gpsLocation.longitude,
+                mUlpLocation.gpsLocation.accuracy, mUlpLocation.gpsLocation.timestamp);
+    }
+
+    // If the current multiplexed session is M5 and position report indicates failure,
+    // start a keep-warm retry timer (if not already running).
+    if ((LOC_SESS_FAILURE == mStatus) && mAdapter.isCurrentSessionKeepWarm()) {
+        LOC_LOGd("M5 session failed, setting keep-warm retry timer");
+        if (nullptr == mAdapter.mKeepWarmRetryTimer) {
+            mAdapter.mKeepWarmRetryTimer = new KeepWarmSessionRetryTimer(&mAdapter);
+        }
+        if (!mAdapter.mKeepWarmRetryTimer->isActive()) {
+            mAdapter.mKeepWarmRetryTimer->start();
+        }
+        return;
+    }
+
+    // save the association of GPS timestamp and qtimer tick cnt in PVT report
+    mAdapter.mPositionElapsedRealTimeCal
+            .saveGpsTimeAndQtimerPairInPvtReport(mLocationExtended, mStatus);
+    // obtain the VRP based latitude/longitude/altitude for SPE fix
+    mAdapter.computeVRPBasedLla(mUlpLocation,
+            mLocationExtended, mAdapter.mLocConfigInfo.leverArmConfigInfo);
+
+    if (GPS_LOCATION_DESIRED_FLAGS ==
+            (mUlpLocation.gpsLocation.flags & (GPS_LOCATION_DESIRED_FLAGS)) &&
+           ((int)mUlpLocation.gpsLocation.accuracy < 15000)) {
+        if (mAdapter.mLoadLocSlatePUNCModel && mAdapter.mLocGlinkProxy) {
+            LOC_LOGA("reportPositionEvent, inject location to slate");
+            mAdapter.mLocGlinkProxy->injectLocation(mUlpLocation.gpsLocation);
+        }
+    }
+
+    if (!mAdapter.reportSpeAsEnginePosition(mUlpLocation, mLocationExtended, mStatus)) {
+        mAdapter.reportPosition(mUlpLocation, mLocationExtended, mStatus, mTechMask);
+        mAdapter.reportPositionNmea(mUlpLocation, mLocationExtended, mStatus, mTechMask);
+    }
+    // if AFW register SPE only or Fused only but engine service disabled,
+    // pair SV with SPE PVT report
+    if (mAdapter.mReportSpeOnly || !mAdapter.isEngineServiceEnable()) {
+        mAdapter.processPvtSvReportPairing(mUlpLocation, mLocationExtended, mStatus);
+    }
+}
+
 void GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
         const GpsLocationExtended& locationExtended, enum loc_sess_status status,
         LocPosTechMask techMask) {
@@ -3797,175 +3952,6 @@ void GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
     LOC_LOGd("reportPositionEvent, eng type: %d, unpro %d, sess status %d",
              locationExtended.locOutputEngType, ulpLocation.unpropagatedPosition, status);
 
-    struct MsgReportSPEPosition : public LocMsg {
-        GnssAdapter& mAdapter;
-        mutable UlpLocation mUlpLocation;
-        mutable GpsLocationExtended mLocationExtended;
-        mutable enum loc_sess_status mStatus;
-        mutable LocPosTechMask mTechMask;
-
-        inline MsgReportSPEPosition(GnssAdapter& adapter,
-                                    const UlpLocation& ulpLocation,
-                                    const GpsLocationExtended& locationExtended,
-                                    enum loc_sess_status status,
-                                    LocPosTechMask techMask) :
-            LocMsg(),
-            mAdapter(adapter),
-            mUlpLocation(ulpLocation),
-            mLocationExtended(locationExtended),
-            mStatus(status),
-            mTechMask(techMask) {}
-        inline virtual void proc() const {
-            if (mAdapter.mTimeBasedTrackingSessions.empty()) {
-                LOC_LOGD("MsgReportSPEPosition, no session on-going, "
-                         "throw away the SPE reports");
-                return;
-            }
-            // In E911-MSA case when Modem doesn't support concurrency, we will observe
-            // fix failures. So, in this we need to use the best available zpp fix from Modem.
-            if (mAdapter.mInEmergency && (LOC_SESS_FAILURE == mStatus)) {
-                memset(&mLocationExtended, 0, sizeof(mLocationExtended));
-                LOC_LOGd("E911-MSA case");
-
-                if (mAdapter.mLocApi->getBestAvailableZppFixSync(mUlpLocation.gpsLocation,
-                            mTechMask)) {
-                    if ((mUlpLocation.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG) &&
-                        (mUlpLocation.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ACCURACY)) {
-                        if ((mUlpLocation.gpsLocation.accuracy <=
-                                E_911_LOC_ACCURACY_THRESHOLD_IN_METERS) &&
-                            (mTechMask &
-                                (LOC_POS_TECH_MASK_SATELLITE | LOC_POS_TECH_MASK_SENSORS))) {
-                            mStatus = LOC_SESS_SUCCESS;
-                        }
-                        else {
-                            mStatus = LOC_SESS_INTERMEDIATE;
-                        }
-                        if (-1 != mUlpLocation.gpsLocation.vertUncertainity) {
-                            mLocationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_VERT_UNC;
-                            mLocationExtended.vert_unc = mUlpLocation.gpsLocation.vertUncertainity;
-                        }
-
-                        // Consider ZPP fix from modem as SPE fix
-                        mLocationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE;
-                        mLocationExtended.locOutputEngType = LOC_OUTPUT_ENGINE_SPE;
-                        mLocationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_MASK;
-                        mLocationExtended.locOutputEngMask = STANDARD_POSITIONING_ENGINE;
-
-                        LOC_LOGd("zpp loc flags: %u, latitude: %f, longitude: %f, hor acc: %f,"
-                                 "altitude: %f, extended loc flags: %" PRIu64 ", vertUnc: %f,"
-                                 "techMask: %u, timestamp: %" PRId64,
-                                 mUlpLocation.gpsLocation.flags,
-                                 mUlpLocation.gpsLocation.latitude,
-                                 mUlpLocation.gpsLocation.longitude,
-                                 mUlpLocation.gpsLocation.accuracy,
-                                 mUlpLocation.gpsLocation.altitude,
-                                 mLocationExtended.flags, mLocationExtended.vert_unc,
-                                 mTechMask, mUlpLocation.gpsLocation.timestamp);
-                    }
-                    else {
-                        mStatus = LOC_SESS_FAILURE;
-                        LOC_LOGe("zpp fix doesn't have lat, long and accuracy fields");
-                    }
-                }
-                else {
-                    LOC_LOGe("Error getting best available zpp fix");
-                }
-            }
-
-            if (mAdapter.mInEmergency) {
-               bool useCachedWifiFix = false;
-               const LocGpsLocation& gpsLoc = mUlpLocation.gpsLocation;
-
-               LOC_LOGd("E-911 case, sess status %d, flags 0x%x, tech mask 0x%x, lat %f, "
-                        "lon %f, accuracy %f",
-                        mStatus, gpsLoc.flags, mTechMask, gpsLoc.latitude,
-                        gpsLoc.longitude, gpsLoc.accuracy);
-
-               // modem reports out intermediate fix
-               // case 1: the reported fix is from injected wifi fix, e.g.: device is deep indoor,
-               //         use the injected wifi fix for E-911 once
-               // case 2: the reported fix is a combination of wifi fix and other technology,
-               //         if the accuracy exceeds E-911 threshold, use the injected wifi fix once
-               if (mStatus != LOC_SESS_SUCCESS) {
-                  LocPosTechMask otherMask = ~(LOC_POS_TECH_MASK_WIFI |
-                                               LOC_POS_TECH_MASK_INJECTED_COARSE_POSITION);
-                  // the reported fix is from injected wifi fix, e.g.: device is deep indoor
-                  if ((mTechMask & otherMask) == 0) {
-                     useCachedWifiFix = true;
-                  } else {
-                     if (!(gpsLoc.flags & LOC_GPS_LOCATION_HAS_ACCURACY) ||
-                          (gpsLoc.accuracy >= E_911_LOC_ACCURACY_THRESHOLD_IN_METERS)) {
-                        useCachedWifiFix = true;
-                     }
-                  }
-
-                  if (useCachedWifiFix) {
-                     // this fix has not yet used in E911 callflow
-                     if (false == mAdapter.mInjectedWifiFixUsed) {
-                        // copy the wifi fix into E-911 callflow
-                        mUlpLocation.gpsLocation = mAdapter.mInjectedWifiFix;
-                        mTechMask = LOC_POS_TECH_MASK_WIFI;
-                        mLocationExtended.flags &= ~GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA;
-                     } else {
-                        // this fix is already used in E-911 callflow and there is no new wifi fix
-                        // so mark session status as failure so we avoid duplicate reporting out
-                        // the same fix
-                        mStatus = LOC_SESS_FAILURE;
-                        mUlpLocation.gpsLocation = {};
-                     }
-                  }
-               }
-               // mark it used, so it will not be used again
-               mAdapter.mInjectedWifiFixUsed = true;
-
-               LOC_LOGd("E-911 case, useCachedWifiFix %d, fused fix to report out: "
-                        "sess status %d, tech mask 0x%x, flags 0x%x, lat %f, lon %f, accuracy %f, "
-                        "timestamp %" PRIu64 " msec",
-                        useCachedWifiFix, mStatus, mTechMask, mUlpLocation.gpsLocation.flags,
-                        mUlpLocation.gpsLocation.latitude, mUlpLocation.gpsLocation.longitude,
-                        mUlpLocation.gpsLocation.accuracy, mUlpLocation.gpsLocation.timestamp);
-            }
-
-            // save the association of GPS timestamp and qtimer tick cnt in PVT report
-            mAdapter.mPositionElapsedRealTimeCal
-                    .saveGpsTimeAndQtimerPairInPvtReport(mLocationExtended, mStatus);
-            // obtain the VRP based latitude/longitude/altitude for SPE fix
-            mAdapter.computeVRPBasedLla(mUlpLocation,
-                    mLocationExtended, mAdapter.mLocConfigInfo.leverArmConfigInfo);
-
-            if (GPS_LOCATION_DESIRED_FLAGS ==
-                    (mUlpLocation.gpsLocation.flags & (GPS_LOCATION_DESIRED_FLAGS)) &&
-                   ((int)mUlpLocation.gpsLocation.accuracy < 15000)) {
-                if (mAdapter.mLoadLocSlatePUNCModel && mAdapter.mLocGlinkProxy) {
-                    LOC_LOGA("reportPositionEvent, inject location to slate");
-                    mAdapter.mLocGlinkProxy->injectLocation(mUlpLocation.gpsLocation);
-                }
-            }
-
-            if (!mAdapter.reportSpeAsEnginePosition(mUlpLocation, mLocationExtended, mStatus)) {
-                mAdapter.reportPosition(mUlpLocation, mLocationExtended, mStatus, mTechMask);
-                mAdapter.reportPositionNmea(mUlpLocation, mLocationExtended, mStatus, mTechMask);
-            }
-            // if AFW register SPE only or Fused only but engine service disabled,
-            // pair SV with SPE PVT report
-            if (mAdapter.mReportSpeOnly || !mAdapter.isEngineServiceEnable()) {
-                mAdapter.processPvtSvReportPairing(mUlpLocation, mLocationExtended, mStatus);
-            }
-
-            // If the current multiplexed session is M5 and position report indicates failure,
-            // start a keep-warm retry timer (if not already running).
-            if (LOC_SESS_FAILURE == mStatus && mAdapter.isCurrentSessionKeepWarm()) {
-                if (nullptr == mAdapter.mKeepWarmRetryTimer) {
-                    mAdapter.mKeepWarmRetryTimer = new KeepWarmSessionRetryTimer(&mAdapter);
-                }
-                if (!mAdapter.mKeepWarmRetryTimer->isActive()) {
-                    LOC_LOGd("M5 session failed, starting keep-warm retry timer");
-                    mAdapter.mKeepWarmRetryTimer->start();
-                }
-            }
-        }
-    };
-
     // some position engine requires the QMI order of PVT report and SV measurement
     // report to be preserved. So, send out both SV measurement report and PVT report
     // directly to engine hub
@@ -3973,30 +3959,48 @@ void GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
 
     // unpropagated report: is only for engine hub to consume and no need
     // to send out to the clients
-    if (!ulpLocation.unpropagatedPosition) {
-        uint64_t pvtReportTimeDelta = 0ULL;
+    if (ulpLocation.unpropagatedPosition) {
+        return;
+    }
 
-        if (locationExtended.isReportTimeAccurate()) {
-#define NSEC_IN_ONE_MSEC 1000000ULL
+    // flag to indicate whether we need to send out the SPE report right away
+    bool sendPvtNow = true;
+    do {
+        // report does not have accurate time, send out right away
+        if (!locationExtended.isReportTimeAccurate()) {
+            LOC_LOGd("report time not accurate");
+            break;
+        }
+        // locationExtended.systemTick contains the PVT applicable time,
+        // if it is in the past or present, report the pvt report right away
+        uint64_t hlosQtimerTick = getQTimerTickCount();
+        if (locationExtended.systemTick <= hlosQtimerTick) {
+            break;
+        }
+        // qtimer freq: 19,200,000 Hz, so
+        // so 1 tick equals 1000msec/19,200,000= 1/19200 ms
+        uint64_t pvtReportTimeDeltaMs =
+                (locationExtended.systemTick -  hlosQtimerTick)/19200;
 
-            uint64_t hlosQtimerTick = getQTimerTickCount();
-
-            // locationExtended.systemTick contains the PVT applicable time,
-            // if it is in the future, do not report it promptly
-            if (locationExtended.systemTick > hlosQtimerTick) {
-                uint64_t hlosQtimerNanos = qTimerTicksToNanos(double(hlosQtimerTick));
-                uint64_t gpsPvtApplicableNanos =
-                        qTimerTicksToNanos(double(locationExtended.systemTick));
-                pvtReportTimeDelta =
-                        (gpsPvtApplicableNanos - hlosQtimerNanos)/NSEC_IN_ONE_MSEC;
-            }
+        if (nullptr == mFuturePvtReportTimer) {
+            mFuturePvtReportTimer = new FuturePvtReportTimer(*this, this->mMsgTask);
+        }
+        if (nullptr == mFuturePvtReportTimer) {
+            LOC_LOGe("Can't create mFuturePvtReportTimer");
+            break;
         }
 
-        MsgReportSPEPosition* pLocMsg = new MsgReportSPEPosition(*this, ulpLocation,
-                locationExtended, status, techMask);
-        sendMsg((const LocMsg*)pLocMsg, (uint32_t)pvtReportTimeDelta);
+        mFuturePvtReportTimer->saveLastPVT(ulpLocation, locationExtended,
+                    status, techMask);
+        mFuturePvtReportTimer->start((int32_t)pvtReportTimeDeltaMs, false);
+        sendPvtNow = false;
+    } while (0);
+
+    if (sendPvtNow) {
+        sendMsg(new MsgReportSPEPosition(*this, ulpLocation, locationExtended, status, techMask));
     }
 }
+
 void GnssAdapter::reportPropogatedPuncEvent(LocGpsLocation location) {
     struct MsgReportPropogatedPuncEvent : public LocMsg {
         GnssAdapter& mAdapter;

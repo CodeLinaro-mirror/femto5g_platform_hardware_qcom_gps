@@ -35,18 +35,11 @@
 #ifndef LOC_MSG_TASK
 #define LOC_MSG_TASK
 
-#include <mutex>
-#include <list>
 #include <functional>
 #include <LocThread.h>
 #include <LocTimer.h>
 
-using std::list;
-using std::mutex;
-
 namespace loc_util {
-
-class MsgTimer;
 
 struct LocMsg {
     inline LocMsg() {}
@@ -56,28 +49,13 @@ struct LocMsg {
 };
 
 class MsgTask {
-    class MsgTimer : public LocTimer {
-        MsgTask& mMsgTask;
-        LocMsg* mMsg;
-    public:
-        inline MsgTimer(MsgTask& msgTask, const LocMsg* msg, uint32_t delayInMs) :
-                LocTimer("MsgTaskTimer"), mMsgTask(msgTask), mMsg((LocMsg*)msg) {
-            start(delayInMs);
-        }
-        virtual ~MsgTimer();
-        inline void detachMsg() { mMsg = nullptr; }
-        virtual void timeOutCallback() override;
-    };
-    friend class MsgTimer;
     const void* mQ;
     LocThread mThread;
-    mutable mutex mMutex;
-    mutable list<MsgTimer> mAllMsgTimers;
 public:
-    ~MsgTask();
+    ~MsgTask() = default;
     MsgTask(const char* threadName = NULL);
-    void sendMsg(const LocMsg* msg, uint32_t delayInMs = 0) const ;
-    void sendMsg(const std::function<void()> runnable, uint32_t delayInMs = 0) const;
+    void sendMsg(const LocMsg* msg) const ;
+    void sendMsg(const std::function<void()> runnable) const;
 };
 
 }
