@@ -443,8 +443,11 @@ void ContextBase::setEngineCapabilities(uint8_t *featureList, bool gnssMeasureme
         mGps_conf.AGPS_CONFIG_INJECT &=
                 !(isFeatureSupported(LOC_SUPPORTED_FEATURE_DSDA_CONFIGURATION));
 
-        /* */
-        if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_MEASUREMENTS_CORRECTION)) {
+        // Gen10 supports eQMI_LOC_SUPPORTED_FEATURE_BLUESKY_ENABLEMENT_V02
+        if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_BLUESKY_ENABLEMENT)) {
+            updateFeatureSupported(LOC_SUPPORTED_FEATURE_MEASUREMENTS_CORRECTION, true);
+        } else if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_MEASUREMENTS_CORRECTION)) {
+            //Gen9 and old modem support eQMI_LOC_SUPPORTED_FEATURE_ENV_AIDING_V02
             static uint8_t isSapModeKnown = 0;
 
             if (!isSapModeKnown) {
@@ -458,14 +461,7 @@ void ContextBase::setEngineCapabilities(uint8_t *featureList, bool gnssMeasureme
 
                 /* Disable this feature if SAP is not PREMIUM_ENV_AIDING in izat.conf */
                 if (strcmp(conf_feature_sap, "PREMIUM_ENV_AIDING") != 0) {
-                    uint8_t arrayIndex = LOC_SUPPORTED_FEATURE_MEASUREMENTS_CORRECTION >> 3;
-                    uint8_t bitPos = LOC_SUPPORTED_FEATURE_MEASUREMENTS_CORRECTION & 7;
-
-                    if (arrayIndex < MAX_FEATURE_LENGTH) {
-                        /* To disable the feature we need to reset the bit on the "bitPos"
-                           position, so shift a "1" to the left by "bitPos" */
-                        ContextBase::sFeaturesSupported[arrayIndex] &= ~(1 << bitPos);
-                    }
+                    updateFeatureSupported(LOC_SUPPORTED_FEATURE_MEASUREMENTS_CORRECTION, false);
                 }
             }
         }
@@ -474,13 +470,24 @@ void ContextBase::setEngineCapabilities(uint8_t *featureList, bool gnssMeasureme
 }
 
 
-bool ContextBase::isFeatureSupported(uint8_t featureVal)
-{
+bool ContextBase::isFeatureSupported(uint8_t featureVal) {
     uint8_t arrayIndex = featureVal >> 3;
     uint8_t bitPos = featureVal & 7;
 
     if (arrayIndex >= MAX_FEATURE_LENGTH) return false;
     return ((ContextBase::sFeaturesSupported[arrayIndex] >> bitPos ) & 0x1);
+}
+
+void ContextBase::updateFeatureSupported(uint8_t featureVal, bool enable) {
+    uint8_t arrayIndex = featureVal >> 3;
+    uint8_t bitPos = featureVal & 7;
+
+    if (arrayIndex >= MAX_FEATURE_LENGTH) return;
+    if (enable) {
+        ContextBase::sFeaturesSupported[arrayIndex] |= (1 << bitPos);
+    } else {
+        ContextBase::sFeaturesSupported[arrayIndex] &= ~(1 << bitPos);
+    }
 }
 
 bool ContextBase::gnssConstellationConfig() {
