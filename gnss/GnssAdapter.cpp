@@ -171,6 +171,7 @@ GnssAdapter::GnssAdapter() :
                    true, nullptr, true),
     mEngHubProxy(new EngineHubProxyBase()),
     mLocGlinkProxy(new LocGlinkBase()),
+    mTimeBasedTrackingRunning(false),
     mNHzNeeded(false),
     mSPEAlreadyRunningAtHighestInterval(false),
     mLocPositionMode(),
@@ -238,7 +239,6 @@ GnssAdapter::GnssAdapter() :
     mResponseTimer(this, (LocationError)0, (uint32_t)0),
     mIsNtnStatusValid(false),
     mNtnSignalTypeConfigMask(GNSS_SIGNAL_GPS_L1CA|GNSS_SIGNAL_GPS_L5),
-    mIsWakeLockActive(false),
 #ifdef _ANDROID_
     mWakeLockEnableTbfThreshold(10000)
 #else
@@ -3342,9 +3342,10 @@ GnssAdapter::handleEngineUpEvent()
                 }
             }
 
-            //Release wake lock when modem SSR or GNSS HAL process SSR
+            // When modem SSR, reset mTimeBasedTrackingRunning to indicate that
+            // no timer based tracking session is running and also release the wakelock
+            mAdapter.mTimeBasedTrackingRunning = false;
             locReleaseWakeLock();
-            mAdapter.mIsWakeLockActive = false;
 
             mAdapter.gnssSecondaryBandConfigUpdate();
             //Reset data connection when modem SSR
@@ -3745,7 +3746,11 @@ GnssAdapter::startTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t sessi
         }
         TrackingOptions priorOptions = multiplexedOptions;
         multiplexedOptions.multiplexWithForTimeBasedRequest(options);
-        if (!priorOptions.equalsInTimeBasedRequest(multiplexedOptions)) {
+        // Start time based tracking session when:
+        // 1: the tracking option has been updated
+        // 2: no tracking session running in modem
+        if (!priorOptions.equalsInTimeBasedRequest(multiplexedOptions) ||
+                (false == mTimeBasedTrackingRunning)) {
             startTimeBasedTracking(client, sessionId, multiplexedOptions);
             // need to wait for QMI callback
             reportToClientWithNoWait = false;
@@ -3756,19 +3761,17 @@ GnssAdapter::startTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t sessi
 }
 
 void GnssAdapter::acquireWakeLockBasedOnTBF(uint32_t tbfInMs) {
-    LOC_LOGd("DEBUG: mIsWakeLockActive: %d, minInterval: %d, "
-            "mWakeLockEnableTbfThreshold: %d",
-            mIsWakeLockActive, tbfInMs,
-            mWakeLockEnableTbfThreshold);
-    if (mIsWakeLockActive) {
+    LOC_LOGd("minInterval: %d, mWakeLockEnableTbfThreshold: %d",
+             tbfInMs, mWakeLockEnableTbfThreshold);
+
+    if (mWakeLockEnableTbfThreshold != 0) {
         if (tbfInMs > mWakeLockEnableTbfThreshold) {
             locReleaseWakeLock();
-            mIsWakeLockActive = false;
-        }
-    } else if (tbfInMs <= mWakeLockEnableTbfThreshold) {
-        int ret = locAcquireWakeLock();
-        if (ret >= 0) {
-            mIsWakeLockActive = true;
+        } else {
+            int ret = locAcquireWakeLock();
+            if (ret < 0) {
+                LOC_LOGe("failed to acquire wake lock, ret value %d", ret);
+            }
         }
     }
 }
@@ -3811,11 +3814,11 @@ GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId,
                           [this, client, sessionId, tempOptions] (LocationError err) {
                 if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
                     LOCATION_ERROR_SUCCESS != err) {
-                    eraseTrackingSession(client, sessionId);
+                    mTimeBasedTrackingRunning = false;
                     locReleaseWakeLock();
-                    mIsWakeLockActive = false;
                 } else {
                     checkUpdateDgnssNtrip(false);
+                    mTimeBasedTrackingRunning = true;
                     acquireWakeLockBasedOnTBF(tempOptions.minInterval);
                 }
 
@@ -3854,12 +3857,11 @@ GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
                           [this, client, sessionId, oldOptions, tempOptions] (LocationError err) {
                 if (ENGINE_LOCK_STATE_DISABLED != mLocApi->getEngineLockState() &&
                     LOCATION_ERROR_SUCCESS != err) {
-                    // restore the old LocationOptions
-                    saveTrackingSession(client, sessionId, oldOptions);
+                    mTimeBasedTrackingRunning = false;
                     //Release wakelock
                     locReleaseWakeLock();
-                    mIsWakeLockActive = false;
                 } else {
+                    mTimeBasedTrackingRunning = true;
                     acquireWakeLockBasedOnTBF(tempOptions.minInterval);
                 }
                 reportResponse(client, err, sessionId);
@@ -4030,9 +4032,10 @@ GnssAdapter::updateTrackingMultiplex(LocationAPI* client, uint32_t id,
         if (false == optionSetOnce) {
             // check whether client updates to the option or not
             bool sameOption = it->second.equalsInTimeBasedRequest(trackingOptions);
-            LOC_LOGd("same client, option same %d", sameOption);
-            if (false == sameOption) {
-                // restart time based tracking with the newly updated options
+            LOC_LOGd("same client, option same %d, session running %d",
+                     sameOption, mTimeBasedTrackingRunning);
+            if (false == sameOption || false == mTimeBasedTrackingRunning) {
+                // restart time based tracking regardless
                 updateTracking(client, id, trackingOptions, it->second);
                 // need to wait for QMI callback
                 reportToClientWithNoWait = false;
@@ -4041,7 +4044,8 @@ GnssAdapter::updateTrackingMultiplex(LocationAPI* client, uint32_t id,
             TrackingOptions priorOptions = multiplexedOptions;
             priorOptions.multiplexWithForTimeBasedRequest(it->second);
             multiplexedOptions.multiplexWithForTimeBasedRequest(trackingOptions);
-            if (false == priorOptions.equalsInTimeBasedRequest(multiplexedOptions)) {
+            if (false == priorOptions.equalsInTimeBasedRequest(multiplexedOptions) ||
+                    false == mTimeBasedTrackingRunning) {
                 // restart time based tracking with the newly updated options
                 updateTracking(client, id, multiplexedOptions, it->second);
                 // need to wait for QMI callback
@@ -4164,8 +4168,9 @@ GnssAdapter::stopTracking(LocationAPI* client, uint32_t id)
             new LocApiResponse(*getContext(),
                                [this, client, id] (LocationError err) {
         reportResponse(client, err, id);
+
+        mTimeBasedTrackingRunning = false;
         locReleaseWakeLock();
-        mIsWakeLockActive = false;
     }));
 
     if (isDgnssNmeaRequired()) {
@@ -5508,10 +5513,10 @@ bool
 GnssAdapter::requestNiNotifyEvent(const GnssNiNotification &notify, const void* data,
                                   const LocInEmergency emergencyState)
 {
-    LOC_LOGi("notif_type: %d, timeout: %d, default_resp: %d"
+    LOC_LOGi("notif_type: %d, notify options %d, timeout: %d, default_resp: %d"
              "requestor_id: %s (encoding: %d) text: %s text (encoding: %d) extras: %s "
              "emergencyState = %d",
-             notify.type, notify.timeout, notify.timeoutResponse,
+             notify.type, notify.options, notify.timeout, notify.timeoutResponse,
              notify.requestor, notify.requestorEncoding,
              notify.message, notify.messageEncoding, notify.extras,
              emergencyState);
