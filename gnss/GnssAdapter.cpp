@@ -531,9 +531,6 @@ void GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
     if (LOC_POS_TECH_MASK_PROPAGATED & locationExtended.tech_mask) {
         out.techMask |= LOCATION_TECHNOLOGY_PROPAGATED_BIT;
     }
-    if (LOC_POS_TECH_MASK_SBAS & locationExtended.tech_mask) {
-        out.techMask |= LOCATION_TECHNOLOGY_SBAS_BIT;
-    }
 
     out.qualityType = LOCATION_STANDALONE_QUALITY_TYPE;
     if (GPS_LOCATION_EXTENDED_HAS_NAV_SOLUTION_MASK & locationExtended.flags) {
@@ -552,6 +549,8 @@ void GnssAdapter::convertLocation(Location& out, const UlpLocation& ulpLocation,
             }
         } else if (LOC_NAV_MASK_DGNSS_CORRECTION & locationExtended.navSolutionMask) {
             out.qualityType = LOCATION_DGNSS_QUALITY_TYPE;
+        } else if (LOC_NAV_MASK_WOCS & locationExtended.navSolutionMask) {
+            out.techMask |= LOCATION_TECHNOLOGY_WOCS_BIT;
         }
     }
 
