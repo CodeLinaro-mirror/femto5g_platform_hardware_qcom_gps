@@ -7793,7 +7793,7 @@ uint32_t GnssAdapter::gnssInjectXtraUserConsentCommand(const bool xtraUserConsen
     struct MsgInjectXtraUserConsent : public LocMsg {
         GnssAdapter&       mAdapter;
         uint32_t           mSessionId;
-        const bool& mXtraUserConsent;
+        const bool         mXtraUserConsent;
 
         inline MsgInjectXtraUserConsent(GnssAdapter& adapter,
                                  uint32_t sessionId,
