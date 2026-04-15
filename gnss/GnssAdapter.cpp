@@ -6173,6 +6173,29 @@ bool GnssAdapter::reportQwesCapabilities(
     return true;
 }
 
+void GnssAdapter::reportSvResidualDataEvent(const GnssSvResidualReport& svResReport)
+{
+    //This report is from QMI
+    struct MsgReportSvResidualData : public LocMsg {
+        GnssAdapter& mAdapter;
+        const GnssSvResidualReport mSvResReport;
+
+        inline MsgReportSvResidualData(
+                GnssAdapter& adapter,
+                const GnssSvResidualReport& svResReport) :
+                LocMsg(),
+                mAdapter(adapter),
+                mSvResReport(svResReport) {
+        }
+
+        inline virtual void proc() const {
+            mAdapter.reportSvResidualData(mSvResReport);
+        }
+    };
+
+    sendMsg(new MsgReportSvResidualData(*this, svResReport));
+}
+
 bool GnssAdapter::reportSvResidualData(const GnssSvResidualReport &svResReport)
 {
     LOC_LOGi("numSvs %d", svResReport.numSvs);
