@@ -143,6 +143,65 @@ private:
     uint32_t mSessionID;
 };
 
+struct MsgReportSPEPosition : public LocMsg {
+    GnssAdapter& mAdapter;
+    mutable UlpLocation mUlpLocation;
+    mutable GpsLocationExtended mLocationExtended;
+    mutable enum loc_sess_status mStatus;
+    mutable LocPosTechMask mTechMask;
+
+    inline MsgReportSPEPosition(GnssAdapter& adapter,
+            const UlpLocation& ulpLocation,
+            const GpsLocationExtended& locationExtended,
+            enum loc_sess_status status,
+            LocPosTechMask techMask) :
+        LocMsg(),
+        mAdapter(adapter),
+        mUlpLocation(ulpLocation),
+        mLocationExtended(locationExtended),
+        mStatus(status),
+        mTechMask(techMask) {}
+    virtual void proc() const override;
+};
+
+class FuturePvtReportTimer : public LocTimer {
+public:
+    inline FuturePvtReportTimer(GnssAdapter& gnssAdapter, const MsgTask* msgTask) :
+        LocTimer("FuturePvtTimer"),
+        mAdapter(gnssAdapter),
+        mMsgTask(msgTask),
+        mUlpLocation{},
+        mLocationExtended{},
+        mStatus(LOC_SESS_FAILURE),
+        mTechMask(0) {}
+
+    inline void timeOutCallback() override {
+        if (nullptr == mMsgTask) {
+            return;
+        }
+        mMsgTask->sendMsg(new MsgReportSPEPosition(mAdapter, mUlpLocation,
+                mLocationExtended, mStatus, mTechMask));
+    }
+
+    inline void saveLastPVT(const UlpLocation& ulpLocation,
+            const GpsLocationExtended& locationExtended,
+            enum loc_sess_status status,
+            LocPosTechMask techMask) {
+        mUlpLocation = ulpLocation;
+        mLocationExtended = locationExtended;
+        mStatus = status;
+        mTechMask = techMask;
+    }
+
+private:
+    GnssAdapter& mAdapter;
+    const MsgTask* mMsgTask;
+    mutable UlpLocation mUlpLocation;
+    mutable GpsLocationExtended mLocationExtended;
+    enum loc_sess_status mStatus;
+    LocPosTechMask mTechMask;
+};
+
 enum PowerConnectState {
     POWER_CONNECT_UNKNOWN = -1,
     POWER_CONNECT_NO = 0,
@@ -205,7 +264,7 @@ typedef uint16_t  DGnssStateBitMask;
 #define DGNSS_STATE_NTRIP_SESSION_STARTED     0X04
 
 class GnssAdapter : public LocAdapterBase {
-
+    friend MsgReportSPEPosition;
     LocGlinkBase* mLocGlinkProxy;
     int mLoadLocSlatePUNCModel;
     /* ==== Engine Hub ===================================================================== */
@@ -244,6 +303,7 @@ class GnssAdapter : public LocAdapterBase {
     };
     CachedSvData *mCachedSvNotify;
     CachedPvtData mCachedPvtData;
+    FuturePvtReportTimer* mFuturePvtReportTimer;
 
     /* ==== CONTROL ======================================================================== */
     LocationControlCallbacks mControlCallbacks;

@@ -135,7 +135,7 @@ static void convertGnssSvStatus(const GnssSvNotification& in,
         LOC_LOGv("GnssSvInfo.elapsedRealtime.flags: 0x%08X"
              " GnssSvInfo.elapsedRealtime.timestampNs: %" PRId64", "
              " GnssSvInfo.elapsedRealtime.timeUncertaintyNs: %.2f, signal type constellation: %d, "
-             "carrierFrequencyHz: %d, svFlag: 0x%X",
+             "carrierFrequencyHz: %f, svFlag: 0x%X",
              out[i].elapsedRealtime->flags,
              out[i].elapsedRealtime->timestampNs,
              out[i].elapsedRealtime->timeUncertaintyNs, out[i].signalType->constellation,

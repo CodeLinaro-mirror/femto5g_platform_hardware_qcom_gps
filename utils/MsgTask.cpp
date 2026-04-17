@@ -36,13 +36,11 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define LOG_TAG "LocSvc_MsgTask"
 
 #include <unistd.h>
-#include <LocTimer.h>
 #include <MsgTask.h>
 #include <msg_q.h>
 #include <log_util.h>
 #include <loc_log.h>
 #include <loc_pla.h>
-#include <algorithm>
 
 namespace loc_util {
 
@@ -73,42 +71,16 @@ MsgTask::MsgTask(const char* threadName) :
     mThread.start(threadName, std::make_shared<MTRunnable>(mQ));
 }
 
-MsgTask::~MsgTask() {
-    mAllMsgTimers.clear();
-}
-
-MsgTask::MsgTimer::~MsgTimer() {
-    if (nullptr != mMsg) {
-        LocMsgDestroy(mMsg);
-    }
-}
-
-void MsgTask::MsgTimer::timeOutCallback() {
-    mMsgTask.sendMsg(mMsg);
-    std::lock_guard<mutex> lock(mMsgTask.mMutex);
-    auto it = std::find_if(mMsgTask.mAllMsgTimers.begin(), mMsgTask.mAllMsgTimers.end(),
-                           [this](const MsgTask::MsgTimer& other) { return &other == this; });
-    if (mMsgTask.mAllMsgTimers.end() != it) {
-        it->detachMsg();
-        mMsgTask.mAllMsgTimers.erase(it);
-    }
-}
-
-void MsgTask::sendMsg(const LocMsg* msg, uint32_t delayInMs) const {
+void MsgTask::sendMsg(const LocMsg* msg) const {
     if (msg) {
-        if (0 == delayInMs) {
-            msg_q_snd((void*)mQ, (void*)msg, LocMsgDestroy);
-        } else {
-            std::lock_guard<mutex> lock(mMutex);
-            mAllMsgTimers.emplace_front(*(MsgTask*)this, msg, delayInMs);
-        }
-     } else {
-        LOC_LOGe("msg is %p and this is %p",
-                 msg, this);
+        msg_q_snd((void*)mQ, (void*)msg, LocMsgDestroy);
+    } else {
+        LOC_LOGE("%s: msg is %p and this is %p",
+                __func__, msg, this);
     }
 }
 
-void MsgTask::sendMsg(const std::function<void()> runnable, uint32_t delayInMs) const {
+void MsgTask::sendMsg(const std::function<void()> runnable) const {
     struct RunMsg : public LocMsg {
         const std::function<void()> mRunnable;
     public:
@@ -116,7 +88,7 @@ void MsgTask::sendMsg(const std::function<void()> runnable, uint32_t delayInMs) 
         ~RunMsg() = default;
         inline virtual void proc() const override { mRunnable(); }
     };
-    sendMsg(new RunMsg(runnable), delayInMs);
+    sendMsg(new RunMsg(runnable));
 }
 
 void MTRunnable::interrupt() {
