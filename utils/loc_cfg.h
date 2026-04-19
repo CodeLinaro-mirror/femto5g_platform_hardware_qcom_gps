@@ -173,6 +173,7 @@ typedef struct {
     char                 args[LOC_PROCESS_MAX_NUM_ARGS][LOC_PROCESS_MAX_ARG_STR_LENGTH];
     char                 argumentString[LOC_MAX_PARAM_STRING];
     unsigned int         launch_trigger_mask;
+    char                 allowedCapabilities[LOC_MAX_PARAM_STRING];
 } loc_process_info_s_type;
 
 /*=============================================================================
