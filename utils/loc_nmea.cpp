@@ -714,12 +714,15 @@ static uint32_t loc_nmea_generate_GSA(const UlpLocation &location,
             pMarker += lengthTagBlock;
             lengthRemaining -= lengthTagBlock;
         }
-        if (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ALTITUDE) {
-            fixType = '3'; // 3D fix
-        } else if (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG) {
-            fixType = '2'; // 2D fix
+        if (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG) {
+            if ((location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ALTITUDE) &&
+                    (!locationExtended.altitudeAssumed)) {
+                fixType = '3'; // 3D fix
+            } else {
+                fixType = '2'; // 2D fix
+            }
         } else {
-            fixType = '1'; // no fix
+            fixType = '1'; //no fix
         }
 
         // Start printing the sentence
