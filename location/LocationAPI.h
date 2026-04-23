@@ -66,12 +66,21 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ILocationAPI.h"
 
+#ifdef FEATURE_AUTO_SESSION
+namespace loc_core {
+
+    class GnssAutoStartSessionClient;
+}
+#endif //FEATURE_AUTO_SESSION
 
 class LocationAPI : public ILocationAPI
 {
 private:
     LocationAPI();
     ~LocationAPI();
+#ifdef FEATURE_AUTO_SESSION
+    friend class loc_core::GnssAutoStartSessionClient;
+#endif //FEATURE_AUTO_SESSION
 
 public:
     /* creates an instance to LocationAPI object.

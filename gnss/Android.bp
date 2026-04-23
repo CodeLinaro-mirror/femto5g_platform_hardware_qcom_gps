@@ -13,6 +13,7 @@ cc_library_shared {
         "liblog",
         "libloc_core",
         "libgps.utils",
+        "liblocation_api",
     ],
 
     srcs: [
@@ -21,9 +22,11 @@ cc_library_shared {
         "Agps.cpp",
         "XtraSystemStatusObserver.cpp",
         "NativeAgpsHandler.cpp",
+        "GnssAutoStartSessionClient.cpp",
+        "GnssAutoStartSession.cpp",
     ],
 
-    cflags: ["-fno-short-enums"] + GNSS_CFLAGS,
+    cflags: ["-fno-short-enums"] + GNSS_CFLAGS + ["-DFEATURE_AUTO_SESSION"],
     header_libs: [
         "libgps.utils_headers",
         "libloc_core_headers",

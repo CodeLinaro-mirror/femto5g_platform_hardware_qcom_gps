@@ -80,6 +80,10 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <queue>
 #include <NativeAgpsHandler.h>
 #include <unordered_map>
+#include <memory>
+#ifdef FEATURE_AUTO_SESSION
+#include "GnssAutoStartSession.h"
+#endif //FEATURE_AUTO_SESSION
 
 #define MAX_URL_LEN 256
 #define NMEA_SENTENCE_MAX_LENGTH 200
@@ -96,6 +100,13 @@ class GnssAdapter;
 
 typedef std::map<LocationSessionKey, LocationOptions> LocationSessionMap;
 typedef std::map<LocationSessionKey, TrackingOptions> TrackingOptionsMap;
+
+#ifdef FEATURE_AUTO_SESSION
+// Forward declaration
+namespace loc_core {
+    class GnssAutoStartSession;
+}
+#endif //FEATURE_AUTO_SESSION
 
 class OdcpiTimer : public LocTimer {
 public:
@@ -375,7 +386,11 @@ class GnssAdapter : public LocAdapterBase {
 
     /* === NativeAgpsHandler ======================================================== */
     NativeAgpsHandler mNativeAgpsHandler;
-
+#ifdef FEATURE_AUTO_SESSION
+    /* === GnssAutoStartSession ======================================================== */
+    // Owned internally — not visible as an external LocationAPI client
+    std::unique_ptr<loc_core::GnssAutoStartSession> mAutoStartSession;
+#endif //FEATURE_AUTO_SESSION
     /* === Misc callback from QMI LOC API ============================================== */
     GnssEnergyConsumedCallback mGnssEnergyConsumedCb;
     std::function<void(bool)> mPowerStateCb;
@@ -851,7 +866,10 @@ public:
     inline bool isNMEAPrintEnabled() {
        return ((mContext != NULL) && (0 != mContext->mGps_conf.ENABLE_NMEA_PRINT));
     }
-
+#ifdef FEATURE_AUTO_SESSION
+    // Expose LocApiBase to GnssAutoStartSession for modem unlock/lock calls
+    inline LocApiBase* getLocApi() { return mLocApi; }
+#endif //FEATURE_AUTO_SESSION
     /*==== DGnss Ntrip Source ==========================================================*/
     void updateNTRIPGGAConsentCommand(bool consentAccepted) { mSendNmeaConsent = consentAccepted; }
     void enablePPENtripStreamCommand(const GnssNtripConnectionParams& params, bool enableRTKEngine);

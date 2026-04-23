@@ -104,7 +104,12 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define DGNSS_RANGE_UPDATE_TIME_10MIN_IN_SEC  600
 
-using namespace loc_core;
+#ifdef FEATURE_AUTO_SESSION
+//Forward Declaration
+namespace loc_core {
+    class GnssAutoStartSession;
+}
+#endif //FEATURE_AUTO_SESSION
 
 static int loadEngHubForExternalEngine = 0;
 static int sUseZppInDBH = 0;
@@ -194,6 +199,9 @@ GnssAdapter::GnssAdapter() :
     mEngServiceInfo{},
     mPowerOn(false),
     mNativeAgpsHandler(mSystemStatus->getOsObserver(), *this),
+#ifdef FEATURE_AUTO_SESSION
+    mAutoStartSession(std::make_unique<loc_core::GnssAutoStartSession>(*this)),
+#endif //FEATURE_AUTO_SESSION
     mGnssEnergyConsumedCb(nullptr),
     mPowerStateCb(nullptr),
     mSupportNfwControl(true),
@@ -258,6 +266,13 @@ GnssAdapter::GnssAdapter() :
     initEngHubProxyCommand();
     testLaunchQppeBringUp();
     mXtraObserver.init();
+
+#ifdef FEATURE_AUTO_SESSION
+    // Init GnssAutoStartSession during adapter initialization
+    if (mAutoStartSession->init()) {
+        LOC_LOGd("GnssAutoStartSession initialized successfully.");
+    }
+#endif //FEATURE_AUTO_SESSION
     // at last step, let us inform adapater base that we are done
     // with initialization, e.g.: ready to process handleEngineUpEvent
     doneInit();
@@ -3179,6 +3194,12 @@ GnssAdapter::handleEngineUpEvent()
                     mAdapter.restartSessions(true);
                 }
             }
+#ifdef FEATURE_AUTO_SESSION
+            // Start the GnssAutoStartSession once the GNSS Engine is UP
+            if (nullptr != mAdapter.mAutoStartSession) {
+                mAdapter.mAutoStartSession->startSession();
+            }
+#endif //FEATURE_AUTO_SESSION
         }
     };
 

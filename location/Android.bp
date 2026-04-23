@@ -20,7 +20,7 @@ cc_library_shared {
         "LocationAPIUtils.cpp",
     ],
 
-    cflags: ["-fno-short-enums"] + GNSS_CFLAGS,
+    cflags: ["-fno-short-enums"] + GNSS_CFLAGS + ["-DFEATURE_AUTO_SESSION"],
 
     header_libs: [
         "libloc_pla_headers",
