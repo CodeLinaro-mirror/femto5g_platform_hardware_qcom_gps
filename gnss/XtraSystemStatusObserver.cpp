@@ -150,16 +150,21 @@ XtraSystemStatusObserver::XtraSystemStatusObserver(GnssAdapter* adapter,
         mXtraSender(LocIpc::getLocIpcLocalSender(LOC_IPC_XTRA)),
         mDgnssSender(LocIpc::getLocIpcLocalSender(LOC_IPC_DGNSS)),
         mRegisterForXtraStatus(false),
-        mDelayLocTimer(*mXtraSender, *mDgnssSender) {
+        mDelayLocTimer(*mXtraSender, *mDgnssSender),
+        mIpcRecver(nullptr) {
     subscribe(true);
 }
 
 void XtraSystemStatusObserver::init() {
     locUtilWaitForDir(SOCKET_DIR_LOCATION);
-    auto recver = LocIpc::getLocIpcLocalRecver(
+    LOC_LOGd("XtraSystemStatusObserver::init");
+    mIpcRecver = LocIpc::getLocIpcLocalRecver(
             make_shared<XtraIpcListener>(mSystemStatusObsrvr, mMsgTask, *this),
             LOC_IPC_HAL);
-    mIpc.startNonBlockingListening(recver);
+    bool ret = mIpc.startNonBlockingListening(mIpcRecver);
+    if (!ret) {
+        LOC_LOGe("startNonBlockingListening failed!");
+    }
     mDelayLocTimer.start(100 /*.1 sec*/);
 }
 

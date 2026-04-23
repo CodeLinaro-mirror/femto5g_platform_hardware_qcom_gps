@@ -135,6 +135,7 @@ private:
     shared_ptr<LocIpcSender> mDgnssSender;
     string mNtripParamsString;
     bool mRegisterForXtraStatus;
+    unique_ptr<LocIpcRecver> mIpcRecver;
 
     class DelayLocTimer : public LocTimer {
         LocIpcSender& mXtraSender;
