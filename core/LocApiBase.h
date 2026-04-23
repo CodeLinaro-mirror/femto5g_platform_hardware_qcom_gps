@@ -176,7 +176,6 @@ public:
                         enum loc_sess_status status,
                         LocPosTechMask loc_technology_mask =
                                   LOC_POS_TECH_MASK_DEFAULT,
-                        GnssDataNotification* pDataNotify = nullptr,
                         int msInWeek = -1);
     void reportSv(GnssSvNotification& svNotify);
     void reportSvPolynomial(GnssSvPolynomial &svPolynomial);

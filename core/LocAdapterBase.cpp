@@ -95,7 +95,6 @@ void LocAdapterBase::
                         const GpsLocationExtended& locationExtended,
                         enum loc_sess_status status,
                         LocPosTechMask loc_technology_mask,
-                        GnssDataNotification* pDataNotify,
                         int msInWeek)
 {
     if (mLocAdapterProxyBase != NULL) {

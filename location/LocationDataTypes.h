@@ -1272,7 +1272,7 @@ struct TrackingOptions : LocationOptions {
     inline bool equalsInTimeBasedRequest(const TrackingOptions& other) const {
         return minInterval == other.minInterval && powerMode == other.powerMode &&
                qualityLevelAccepted == other.qualityLevelAccepted &&
-               preciseType == other.preciseType;
+               preciseType == other.preciseType && mode == other.mode;
     }
     inline uint32_t gcd(uint32_t a, uint32_t b) {
         while (b != 0) {
@@ -1282,8 +1282,7 @@ struct TrackingOptions : LocationOptions {
         }
         return a;
     }
-    inline bool multiplexWithForTimeBasedRequest(const TrackingOptions& other) {
-        bool updated = false;
+    inline void multiplexWithForTimeBasedRequest(const TrackingOptions& other) {
         uint32_t tbfNew = 0;
 
         if (other.powerMode == GNSS_POWER_MODE_M5 || powerMode == GNSS_POWER_MODE_M5) {
@@ -1295,16 +1294,18 @@ struct TrackingOptions : LocationOptions {
             tbfNew = MIN_GNSS_TRACKING_INTERVAL;
         }
         if (tbfNew != minInterval) {
-            updated = true;
             minInterval = tbfNew;
         }
 
+        // Mode MSA>MSB>STANDALONE
+        if (other.mode > mode) {
+            mode = other.mode;
+        }
+
         if (other.powerMode < powerMode) {
-            updated = true;
             powerMode = other.powerMode;
         }
         if (other.tbm < tbm) {
-            updated = true;
             tbm = other.tbm;
         }
         if (other.qualityLevelAccepted > qualityLevelAccepted) {
@@ -1316,7 +1317,6 @@ struct TrackingOptions : LocationOptions {
         if (other.correctionType > correctionType) {
             correctionType = other.correctionType;
         }
-        return updated;
     }
     inline void setLocationOptions(const LocationOptions& options) {
         size = sizeof(TrackingOptions);
@@ -1973,7 +1973,7 @@ struct GnssDataNotification {
     AgcStatus    agcStatusL5;                      // RF Automatic gain control status for L5 band.
     GnssSystemTimeStructType gpsSystemTime;        // GPS System time.
     uint64_t                 systemTickAtGpsTime;  // System Tick at GPS Time
-    uint32_t                 hwClkFreqCorrection;  // Hardware clock frequency correction
+    int32_t                  hwClkFreqCorrection;  // Hardware clock frequency correction
 };
 
 struct GnssMeasurementsAgc {

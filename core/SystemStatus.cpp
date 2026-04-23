@@ -1902,7 +1902,7 @@ bool SystemStatus::eventOptInStatus(bool userConsent)
 ******************************************************************************/
 bool SystemStatus::eventRegionStatus(bool region)
 {
-    SystemStatusENH s(region, ENHDataItem::FIELD_REGION);
+    SystemStatusENH s(region, ENHDataItem::FIELD_NON_EMBARGOED_REGION);
     mSysStatusObsvr.notify({&s.mDataItem});
     return true;
 }

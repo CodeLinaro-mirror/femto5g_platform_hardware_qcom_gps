@@ -323,7 +323,6 @@ void LocApiBase::reportPosition(UlpLocation& location,
                                 GpsLocationExtended& locationExtended,
                                 enum loc_sess_status status,
                                 LocPosTechMask loc_technology_mask,
-                                GnssDataNotification* pDataNotify,
                                 int msInWeek)
 {
     // print the location info before delivering
@@ -349,7 +348,7 @@ void LocApiBase::reportPosition(UlpLocation& location,
     TO_ALL_LOCADAPTERS(
         mLocAdapters[i]->reportPositionEvent(location, locationExtended,
                                              status, loc_technology_mask,
-                                             pDataNotify, msInWeek)
+                                             msInWeek)
     );
 }
 

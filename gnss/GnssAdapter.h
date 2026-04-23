@@ -649,7 +649,6 @@ public:
                                      const GpsLocationExtended& locationExtended,
                                      enum loc_sess_status status,
                                      LocPosTechMask techMask,
-                                     GnssDataNotification* pDataNotify = nullptr,
                                      int msInWeek = -1);
     void reportEnginePositionsEvent(unsigned int count,
                                     EngineLocationInfo* locationArr);

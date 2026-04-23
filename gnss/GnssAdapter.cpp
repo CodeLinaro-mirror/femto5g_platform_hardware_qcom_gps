@@ -4207,7 +4207,6 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
                                  const GpsLocationExtended& locationExtended,
                                  enum loc_sess_status status,
                                  LocPosTechMask techMask,
-                                 GnssDataNotification* pDataNotify,
                                  int msInWeek)
 {
     // this position is from QMI LOC API, then send report to engine hub
@@ -4223,7 +4222,6 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
         mutable GpsLocationExtended mLocationExtended;
         mutable enum loc_sess_status mStatus;
         mutable LocPosTechMask mTechMask;
-        mutable GnssDataNotification mDataNotify;
         int mMsInWeek;
 
         inline MsgReportSPEPosition(GnssAdapter& adapter,
@@ -4231,7 +4229,6 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
                                     const GpsLocationExtended& locationExtended,
                                     enum loc_sess_status status,
                                     LocPosTechMask techMask,
-                                    GnssDataNotification dataNotify,
                                     int msInWeek) :
             LocMsg(),
             mAdapter(adapter),
@@ -4424,6 +4421,9 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
             }
         }
 
+        MsgReportSPEPosition* pLocMsg = new MsgReportSPEPosition(*this, ulpLocation,
+                locationExtended, status, techMask, msInWeek);
+        sendMsg((const LocMsg*)pLocMsg, (uint32_t)pvtReportTimeDelta);
     }
 }
 void
@@ -5343,8 +5343,8 @@ static void* niThreadProc(void *args)
     clock_gettime(CLOCK_REALTIME, &present_time);
     expire_time.tv_sec  = present_time.tv_sec + pSession->respTimeLeft;
     expire_time.tv_nsec = present_time.tv_nsec;
-    LOC_LOGd("time out set for abs time %ld with delay %d sec",
-             (long)expire_time.tv_sec, pSession->respTimeLeft);
+    LOC_LOGd("time out set for abs time %" PRId64 " with delay %d sec",
+             (int64_t)expire_time.tv_sec, pSession->respTimeLeft);
 
     while (!pSession->respRecvd) {
         rc = pthread_cond_timedwait(&pSession->tCond,

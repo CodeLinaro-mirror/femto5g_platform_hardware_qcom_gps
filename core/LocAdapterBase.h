@@ -197,7 +197,6 @@ public:
                                      const GpsLocationExtended& locationExtended,
                                      enum loc_sess_status status,
                                      LocPosTechMask loc_technology_mask,
-                                     GnssDataNotification* pDataNotify = nullptr,
                                      int msInWeek = -1);
     virtual void reportSvEvent(const GnssSvNotification& svNotify);
     virtual void reportDataEvent(const GnssDataNotification& dataNotify, int msInWeek);
