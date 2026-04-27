@@ -294,6 +294,7 @@ class GnssAdapter : public LocAdapterBase {
     struct CachedPvtData {
         bool isValid;
         loc_sess_status status;
+        uint64_t apBootTimestamp;    // in ns
         uint64_t elapsedRealTime;    // in ns
         uint64_t elapsedRealTimeUnc; // in ns
         GnssLocationSvUsedInPosition gnssSvIdUsedInPosition;
@@ -769,8 +770,6 @@ public:
     void updateAndReportSv(GnssSvNotification& svNotify);
     void processPvtSvReportPairing(const UlpLocation& ulpLocation,
             const GpsLocationExtended& locationExtended, enum loc_sess_status sessionStatus);
-    void populateElapsedRealTime(GnssSvNotification& svNotify, uint64_t elapsedRealTime,
-            uint64_t elapsedRealTimeUnc);
     void saveGnssSvIdUsedInfo(const GpsLocationExtended& locationExtended);
     bool isFusedFix(const GpsLocationExtended& locationExtended) {
         return (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE) &&

@@ -246,6 +246,12 @@ uint64_t getBootTimeMilliSec()
     return (uint64_t)GET_MSEC_FROM_TS(curTs);
 }
 
+uint64_t getBootTimeNSec() {
+    struct timespec curTs = {};
+    clock_gettime(CLOCK_BOOTTIME, &curTs);
+    return ((uint64_t)curTs.tv_sec) * 1000000000 + (uint64_t)curTs.tv_nsec;
+}
+
 // Used for convert position/velocity from GSNS antenna based to VRP based
 void Matrix_MxV(float a[3][3],  float b[3], float c[3]) {
     int i, j;
