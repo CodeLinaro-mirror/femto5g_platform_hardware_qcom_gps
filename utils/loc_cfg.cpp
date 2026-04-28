@@ -27,10 +27,10 @@
  *
  */
 /*
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ */
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_utils_cfg"
@@ -65,6 +65,9 @@ static uint32_t TIMESTAMP = 0;
 static bool sVendorEnhanced = true;
 static uint32_t sLogBufferEnabled = 0;
 static uint32_t sQxdmLogEnabled = 0;
+#ifdef USE_GLIB
+static uint32_t sLogTidEnabled = 0;
+#endif
 
 /* Parameter spec table */
 static const loc_param_s_type loc_param_table[] =
@@ -73,6 +76,10 @@ static const loc_param_s_type loc_param_table[] =
     {"TIMESTAMP",               &TIMESTAMP,          NULL, 'n'},
     {"LOG_BUFFER_ENABLED",      &sLogBufferEnabled,  NULL, 'n'},
     {"QXDM_LOG",                &sQxdmLogEnabled,    NULL, 'n'},
+#ifdef USE_GLIB
+    {"LOG_TID",                 &sLogTidEnabled,     NULL, 'n'},
+#endif
+
 };
 static const int loc_param_num = sizeof(loc_param_table) / sizeof(loc_param_s_type);
 
@@ -445,6 +452,9 @@ void loc_read_conf_long(const char* conf_file_name, const loc_param_s_type confi
             loc_logger_init(DEBUG_LEVEL, TIMESTAMP, qxdmF3);
             log_buffer_init(sLogBufferEnabled);
             log_tag_level_map_init();
+#ifdef USE_GLIB
+            log_tid_init(sLogTidEnabled);
+#endif
         }
         fclose(conf_fp);
     }
