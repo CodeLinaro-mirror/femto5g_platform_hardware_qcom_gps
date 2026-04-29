@@ -114,6 +114,8 @@ struct Gnss : public BnGnss {
     // Callback for ODCPI request
     void odcpiRequestCb(const OdcpiRequestInfo& request);
     inline bool isGnssCbValid() {return mGnssCallback != nullptr; };
+protected:
+    binder_status_t dump(int fd, const char** args, uint32_t numArgs) override;
 private:
     GnssAPIClient* mApi = nullptr;
     shared_ptr<IGnssConfiguration> mGnssConfiguration = nullptr;

@@ -51,6 +51,9 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <NativeAgpsHandler.h>
 #include <unordered_map>
 #include <base_util/nvparam_mgr.h>
+#ifdef _ANDROID_
+#include <android/binder_ibinder.h>
+#endif
 
 #define MAX_URL_LEN 256
 #define ODCPI_EXPECTED_INJECTION_TIME_MS 10000
@@ -894,6 +897,7 @@ public:
     void disablePPENtripStreamCommand();
     void handleEnablePPENtrip(const GnssNtripConnectionParams& params, bool enableRTKEngine);
     void handleDisablePPENtrip();
+    binder_status_t dump(int fd, const char** args, uint32_t numArgs);
 #endif
     inline bool isDgnssNmeaRequired() { return mSendNmeaConsent &&
             mStartDgnssNtripParams.ntripParams.requiresNmeaLocation;}
@@ -906,7 +910,6 @@ public:
     LeverArmConfigInfo readVrpDataFromNvm();
     bool storeVrpData2Nvm(const LeverArmConfigInfo& configInfo);
 #endif
-
 };
 
 #endif //GNSS_ADAPTER_H

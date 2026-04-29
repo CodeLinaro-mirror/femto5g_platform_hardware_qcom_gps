@@ -6266,9 +6266,7 @@ void GnssAdapter::convertSatelliteInfo(std::vector<GnssDebugSatelliteInfo>& out,
 
     return;
 }
-#endif
 
-#ifdef _ANDROID_
 bool GnssAdapter::getDebugReport(GnssDebugReport& r) {
     SystemStatus* systemstatus = getSystemStatus();
     if (nullptr == systemstatus) {
@@ -8408,6 +8406,115 @@ void GnssAdapter::stopDgnssNtrip() {
         mXtraObserver.stopDgnssSource();
     }
 }
+
+#ifdef _ANDROID_
+binder_status_t GnssAdapter::dump(int fd, const char** args, uint32_t numArgs) {
+    (void)args;
+    (void)numArgs;
+    if (fd < 0) {
+        return STATUS_OK;
+    }
+
+    // All output is written directly to fd via dprintf to avoid
+    // accumulating a large heap-allocated string.
+
+    auto powerModeStr = [](GnssPowerMode pm) -> const char* {
+        switch (pm) {
+        case GNSS_POWER_MODE_M1: return "M1(IMPROVED_ACCURACY)";
+        case GNSS_POWER_MODE_M2: return "M2(NORMAL/DEFAULT)";
+        case GNSS_POWER_MODE_M3: return "M3(EASY)";
+        case GNSS_POWER_MODE_M4: return "M4(NO_POWER)";
+        case GNSS_POWER_MODE_M5: return "M5(KEEP_WARM)";
+        default:                 return "UNKNOWN";
+        }
+    };
+
+    auto engLockDesc = [](EngineLockState s) -> const char* {
+        switch (s) {
+        case ENGINE_LOCK_STATE_INVALID:  return "INVALID";
+        case ENGINE_LOCK_STATE_ENABLED:  return "ENABLED";
+        case ENGINE_LOCK_STATE_DISABLED: return "DISABLED";
+        default: return "UNKNOWN";
+        }
+    };
+
+    // Compute multiplexed power mode from active sessions
+    GnssPowerMode muxPowerMode = GNSS_POWER_MODE_DEFAULT;
+    if (!mTimeBasedTrackingSessions.empty()) {
+        bool first = true;
+        TrackingOptions muxOpts;
+        for (const auto& kv : mTimeBasedTrackingSessions) {
+            if (first) { muxOpts = kv.second; first = false; }
+            else { multiplexWithForTimeBasedRequest(muxOpts, kv.second); }
+        }
+        muxPowerMode = muxOpts.powerMode;
+    }
+
+    dprintf(fd, "\n=== GnssAdapter State ===\n");
+
+    // --- Tracking Sessions ---
+    dprintf(fd, "\n--- Tracking Sessions ---\n");
+    dprintf(fd, "  count=%zu  modem_session=%s\n",
+            mTimeBasedTrackingSessions.size(),
+            mTimeBasedTrackingRunning ? "ACTIVE" : "INACTIVE");
+    uint32_t idx = 0;
+    for (const auto& kv : mTimeBasedTrackingSessions) {
+        const TrackingOptions& opt = kv.second;
+        dprintf(fd, "  [%u]  id=%u  interval=%ums  mode=%s\n",
+                idx++, kv.first.id, opt.minInterval, powerModeStr(opt.powerMode));
+    }
+
+    // --- Engine & Lock ---
+    dprintf(fd, "\n--- Engine & Lock ---\n");
+    dprintf(fd, "  %-20s%s\n", "Engine Hub:",
+            mEngHubLoadSuccessful ? "LOADED" : "NOT_LOADED");
+
+    EngineLockState els = mLocApi->getEngineLockState();
+    dprintf(fd, "  %-20s%s  (state=%d)\n", "Engine Lock:",
+            engLockDesc(els), static_cast<int>(els));
+
+    uint32_t lock = ContextBase::mGps_conf.GPS_LOCK;
+    const char* lockDesc = "UNKNOWN";
+    if (lock == 0) {
+        lockDesc = "NONE(MO+NI enabled)";
+    } else if ((lock & GNSS_CONFIG_GPS_LOCK_MO) && (lock & GNSS_CONFIG_GPS_LOCK_NFW_ALL)) {
+        lockDesc = "MO_LOCKED NFW_LOCKED";
+    } else if (lock & GNSS_CONFIG_GPS_LOCK_MO) {
+        lockDesc = "MO_LOCKED";
+    } else if (lock & GNSS_CONFIG_GPS_LOCK_NFW_ALL) {
+        lockDesc = "NFW_LOCKED";
+    }
+    dprintf(fd, "  %-20s0x%X  (%s)\n", "GPS Lock:", lock, lockDesc);
+
+    // --- Session & Power ---
+    dprintf(fd, "\n--- Session & Power ---\n");
+    dprintf(fd, "  %-20s%s\n", "Session:", isInSession() ? "ACTIVE" : "IDLE");
+    dprintf(fd, "  %-20s%s  (multiplexed)\n", "Power Mode:", powerModeStr(muxPowerMode));
+
+    // --- Features ---
+    dprintf(fd, "\n--- Features ---\n");
+    char featureBuf[32] = {};
+    int featureLen = 0;
+    if (mPpFeatureStatusMask & DLP_FEATURE_ENABLED_BY_DEFAULT)
+        featureLen += snprintf(featureBuf + featureLen,
+                               sizeof(featureBuf) - featureLen, "DLP ");
+    if (mPpFeatureStatusMask & MLP_FEATURE_ENABLED_BY_DEFAULT)
+        featureLen += snprintf(featureBuf + featureLen,
+                               sizeof(featureBuf) - featureLen, "MLP ");
+    if (mPpFeatureStatusMask & WOCS_FEATURE_ENABLED_BY_DEFAULT)
+        featureLen += snprintf(featureBuf + featureLen,
+                               sizeof(featureBuf) - featureLen, "WOCS ");
+    dprintf(fd, "  %-20s0x%X  (%s)\n", "QPPE Status:",
+            mPpFeatureStatusMask, featureLen > 0 ? featureBuf : "none");
+
+    // --- Capabilities ---
+    dprintf(fd, "\n--- Capabilities ---\n");
+    dprintf(fd, "  %-20s0x%" PRIx64 "\n", "QMI EvtMask:", getEvtMask());
+    dprintf(fd, "  %-20s0x%" PRIx64 "\n", "Capabilities:", getCapabilities());
+
+    return STATUS_OK;
+}
+#endif
 
 void GnssAdapter::readPPENtripConfig() {
     static char NtripParamsString[LOC_MAX_PARAM_STRING];
