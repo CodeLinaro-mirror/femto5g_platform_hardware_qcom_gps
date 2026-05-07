@@ -392,7 +392,6 @@ void XtraSystemStatusObserver::startDgnssSource(const StartDgnssNtripParams& par
     }
     string s = ss.str();
 
-    LOC_LOGd("%s", s.data());
     LocIpc::send(*mDgnssSender, (const uint8_t*)s.data(), s.size());
     // make a local copy of the string for SSR
     mNtripParamsString.assign(std::move(s));
@@ -402,7 +401,6 @@ void XtraSystemStatusObserver::restartDgnssSource() {
     if (!mNtripParamsString.empty()) {
         LocIpc::send(*mDgnssSender,
             (const uint8_t*)mNtripParamsString.data(), mNtripParamsString.size());
-        LOC_LOGv("Xtra SSR %s", mNtripParamsString.data());
     }
 }
 
