@@ -189,12 +189,6 @@ GnssAdapter::GnssAdapter() :
     mAddressRequestCb(nullptr),
     mGnssCapabNotification{},
     m3GppSourceMask(QDGNSS_3GPP_SOURCE_UNKNOWN),
-#ifdef _ANDROID_
-    // android only use SPE to generate nmea
-    mNmeaReqEngTypeMask(LOC_REQ_ENGINE_SPE_BIT),
-#else
-    mNmeaReqEngTypeMask(LOC_REQ_ENGINE_FUSED_BIT),
-#endif
     mRlFeatureQwesEnabled(false),
     mResponseTimer(this, (LocationError)0, (uint32_t)0),
     mIsNtnStatusValid(false),
@@ -237,6 +231,18 @@ GnssAdapter::GnssAdapter() :
         {"ANDROID_REPORT_SPE_ONLY", &mAndroidReportSpeOnly, NULL, 'n'},
     };
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_param);
+#ifdef _ANDROID_
+    // Update mNmeaReqEngTypeMask based on ANDROID_REPORT_SPE_ONLY config:
+    // if ANDROID_REPORT_SPE_ONLY = true, use SPE engine for NMEA;
+    // if ANDROID_REPORT_SPE_ONLY = false, use Fused engine for NMEA.
+    if (mAndroidReportSpeOnly) {
+        mNmeaReqEngTypeMask = LOC_REQ_ENGINE_SPE_BIT;
+    } else {
+        mNmeaReqEngTypeMask = LOC_REQ_ENGINE_FUSED_BIT;
+    }
+#else
+    mNmeaReqEngTypeMask = LOC_REQ_ENGINE_FUSED_BIT;
+#endif
     GnssGeodeticDatumType nmea_datum_type =
             (DATUM_TYPE == 1) ? GEODETIC_TYPE_PZ_90 : GEODETIC_TYPE_WGS_84;
     loc_nmea_config_output_types(NMEA_TYPE_ALL, nmea_datum_type);
@@ -4211,7 +4217,7 @@ void GnssAdapter::reportPositionNmea(const UlpLocation& ulpLocation,
             loc_nmea_generate_pos(ulpLocation, locationExtended, mLocSystemInfo, generate_nmea,
                      nmeaArraystr, indexOfGGA, isTagBlockGroupingEnabled);
             nmeaGenerated = true;
-            if (false == isPreciseEnabled()) {
+            if (false == isEngineServiceEnable()) {
                 if (mNmeaReqEngTypeMask & LOC_REQ_ENGINE_FUSED_BIT) {
                     reportNmeaArray(nmeaArraystr, LOC_OUTPUT_ENGINE_FUSED, false);
                 }
@@ -4355,6 +4361,7 @@ bool GnssAdapter::reportEnginePositions(unsigned int count, const EngineLocation
         bool needReportEnginePositions = needReportEnginePosition();
         GnssLocationInfoNotification locationInfo[LOC_OUTPUT_ENGINE_COUNT] = {};
         memset(locationInfo, 0, sizeof(locationInfo));
+        bool generateNmea = true;
         for (unsigned int i = 0; i < count; i++) {
             const EngineLocationInfo* engLocation = (locationArr+i);
             // if it is fused/default location, call reportPosition maintain legacy behavior
@@ -4374,23 +4381,22 @@ bool GnssAdapter::reportEnginePositions(unsigned int count, const EngineLocation
                 fillElapsedRealTime(engLocation->locationExtended,
                                     locationInfo[i]);
             }
-
-            bool generateNmea = true;
 #ifdef _ANDROID_
             // On Android, NMEA should only come from SPE engine
-            if ((GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE & engLocation->locationExtended.flags) &&
-                (LOC_OUTPUT_ENGINE_SPE != engLocation->locationExtended.locOutputEngType)) {
+            if (mAndroidReportSpeOnly &&
+                (GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE & engLocation->locationExtended.flags)
+                && (LOC_OUTPUT_ENGINE_SPE != engLocation->locationExtended.locOutputEngType)) {
                 generateNmea = false;
             }
 #endif
-            if (generateNmea) {
-                reportPositionNmea(engLocation->location,
-                               engLocation->locationExtended,
-                               engLocation->sessionStatus,
-                               engLocation->location.tech_mask);
-            }
-        }
+       }
        const EngineLocationInfo* engLocation = locationArr;
+       if (generateNmea) {
+           reportPositionNmea(engLocation->location,
+                          engLocation->locationExtended,
+                          engLocation->sessionStatus,
+                          engLocation->location.tech_mask);
+       }
        if (needReportEnginePositions) {
            for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
                if ((nullptr != it->second.engineLocationsInfoCb) &&
@@ -5332,7 +5338,8 @@ bool GnssAdapter::reportQwesCapabilities(
             }
             //Set WOCS feature bit
             auto wocsIter = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_WOCS);
-            if (wocsIter != mFeatureMap.end() && wocsIter->second) {
+            if (wocsIter != mFeatureMap.end() && wocsIter->second &&
+                    ContextBase::mIzat_process_conf.engineServiceInfo.ppeEnabled) {
                 mAdapter.mPpFeatureStatusMask |= WOCS_FEATURE_ENABLED_BY_DEFAULT;
             }
 
@@ -5342,8 +5349,10 @@ bool GnssAdapter::reportQwesCapabilities(
             auto ppeInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_PPE);
             auto qfeInFeatureMap = mFeatureMap.find(LOCATION_QWES_FEATURE_TYPE_QDR3);
             if (ppeInFeatureMap != mFeatureMap.end() || qfeInFeatureMap != mFeatureMap.end()) {
-                if ((ppeInFeatureMap != mFeatureMap.end() && ppeInFeatureMap->second) ||
-                        (qfeInFeatureMap != mFeatureMap.end() && qfeInFeatureMap->second)) {
+                if (((ppeInFeatureMap != mFeatureMap.end() && ppeInFeatureMap->second) &&
+                           ContextBase::mIzat_process_conf.engineServiceInfo.ppeEnabled) ||
+                        ((qfeInFeatureMap != mFeatureMap.end() && qfeInFeatureMap->second) &&
+                         ContextBase::mIzat_process_conf.engineServiceInfo.dreIntEnabled)) {
                     // when DLP feature is enabled and the session is precise session, stop the
                     // current tracking session, and then restart the session to apply the updated
                     // configurations
