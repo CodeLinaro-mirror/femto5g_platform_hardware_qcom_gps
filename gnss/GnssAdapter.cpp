@@ -189,6 +189,7 @@ GnssAdapter::GnssAdapter() :
     mAddressRequestCb(nullptr),
     mGnssCapabNotification{},
     m3GppSourceMask(QDGNSS_3GPP_SOURCE_UNKNOWN),
+    mPreferredConstellation(GNSS_SV_TYPE_UNKNOWN),
     mRlFeatureQwesEnabled(false),
     mResponseTimer(this, (LocationError)0, (uint32_t)0),
     mIsNtnStatusValid(false),
@@ -2994,6 +2995,11 @@ void GnssAdapter::handleEngineUpEvent() {
             if (mAdapter.mIsNtnStatusValid) {
                 mAdapter.mLocApi->setNtnConfigSignalMask(mAdapter.mNtnSignalTypeConfigMask);
             }
+#ifdef _ANDROID_
+            if (mAdapter.mPreferredConstellation != GNSS_SV_TYPE_UNKNOWN) {
+                mAdapter.mLocApi->setPreferredConstellation(mAdapter.mPreferredConstellation);
+            }
+#endif
         }
     };
 
@@ -7749,6 +7755,7 @@ void GnssAdapter::setPreferredConstellationCommand(GnssSvType type) {
                 mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
             } else {
                 mApi.setPreferredConstellation(mType);
+                mAdapter.mPreferredConstellation = mType;
             }
         }
     };
