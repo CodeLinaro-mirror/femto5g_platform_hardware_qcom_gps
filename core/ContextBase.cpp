@@ -121,6 +121,7 @@ const loc_param_s_type ContextBase::mGps_conf_table[] =
   {"LPPE_UP_TECHNOLOGY",             &mGps_conf.LPPE_UP_TECHNOLOGY,             NULL, 'n'},
   {"SUPL_MODE",                      &mGps_conf.SUPL_MODE,                      NULL, 'n'},
   {"SUPL_ES",                        &mGps_conf.SUPL_ES,                        NULL, 'n'},
+  {"NMEA_PROVIDER",                  &mGps_conf.NMEA_PROVIDER,                  NULL, 'n'},
   {"NMEA_REPORT_RATE",               &mGps_conf.NMEA_REPORT_RATE,               NULL, 's'},
   {"CAPABILITIES",                   &mGps_conf.CAPABILITIES,                   NULL, 'n'},
   {"XTRA_SERVER_1",                  &mGps_conf.XTRA_SERVER_1,                  NULL, 's'},
@@ -168,6 +169,7 @@ void ContextBase::readConfig()
     if (!confReadDone) {
         confReadDone = true;
         /*Defaults for gps.conf*/
+        mGps_conf.NMEA_PROVIDER = 0;
 #ifdef FEATURE_AUTOMOTIVE
         mGps_conf.GPS_LOCK = GNSS_CONFIG_GPS_LOCK_MO_AND_NI & (~GNSS_CONFIG_GPS_LOCK_NFW_V2X);
 #else
