@@ -132,14 +132,15 @@ static void convertGnssSvStatus(const GnssSvNotification& in,
             out[i].elapsedRealtime->flags |= ElapsedRealtime::HAS_TIME_UNCERTAINTY_NS;
             out[i].elapsedRealtime->timeUncertaintyNs = in.gnssSvs[i].elapsedRealTimeUnc;
         }
-        LOC_LOGv("GnssSvInfo.elapsedRealtime.flags: 0x%08X"
-             " GnssSvInfo.elapsedRealtime.timestampNs: %" PRId64", "
-             " GnssSvInfo.elapsedRealtime.timeUncertaintyNs: %.2f, signal type constellation: %d, "
-             "carrierFrequencyHz: %f, svFlag: 0x%X",
-             out[i].elapsedRealtime->flags,
+        LOC_LOGv("constellation: %d, sv id: %d, flags: 0x%08X "
+             "svFlag: 0x%X, elapsedRealtimeNs: %" PRId64", "
+             "elapsedRealtimeUncNs: %.2f, "
+             "carrierFrequencyHz: %f",
+             out[i].signalType->constellation, out[i].svid,
+             out[i].elapsedRealtime->flags, out[i].svFlag,
              out[i].elapsedRealtime->timestampNs,
-             out[i].elapsedRealtime->timeUncertaintyNs, out[i].signalType->constellation,
-             out[i].signalType->carrierFrequencyHz, out[i].svFlag);
+             out[i].elapsedRealtime->timeUncertaintyNs,
+             out[i].signalType->carrierFrequencyHz);
     }
 }
 
@@ -169,6 +170,8 @@ GnssAPIClient::GnssAPIClient(const shared_ptr<IGnssCallback>& gpsCb) :
     mIsNlpActive(false),
     mSignalTypeCbExpected(false),
     mReportSpeOnly(true),
+    svRptElapsedRealTime(0),
+    cachedLocRpt{},
     mGnssCbIface(gpsCb) {
     const loc_param_s_type gps_conf_table[] =
     {
@@ -562,7 +565,8 @@ void GnssAPIClient::onTrackingCb(const Location& location) {
     bool isTracking = mTracking;
     gSharedMtx.unlock();
 
-    LOC_LOGd("]: (flags: %02x isTracking: %d)", location.flags, isTracking);
+    LOC_LOGd("location flags: %02x, isTracking: %d",
+             location.flags, isTracking);
 
     if (!isTracking) {
         return;
@@ -590,10 +594,15 @@ void GnssAPIClient::onTrackingCb(const Location& location) {
         LOC_LOGw("] No GNSS Interface ready for gnssLocationCb ");
     }
 
+    cachedLocRpt = {};
+
 }
 
 void GnssAPIClient::onGnssSvCb(const GnssSvNotification& gnssSvNotification) {
-    LOC_LOGd("]: (count: %u)", gnssSvNotification.count);
+    LOC_LOGd("sv count: %u, elapsed real timestamp %" PRIu64 ", cached loc rpt flag 0x%x",
+             gnssSvNotification.count, gnssSvNotification.gnssSvs[0].elapsedRealTime,
+             cachedLocRpt.flags);
+
     gSharedMtx.lock();
     auto gnssCbIface(mGnssCbIface);
     gSharedMtx.unlock();
@@ -605,6 +614,18 @@ void GnssAPIClient::onGnssSvCb(const GnssSvNotification& gnssSvNotification) {
         if (!r.isOk()) {
             LOC_LOGe("Error from gnssSvStatusCb");
         }
+
+        // record down the sv elapsed timestamp
+        if (gnssSvNotification.count > 0) {
+            svRptElapsedRealTime = gnssSvNotification.gnssSvs[0].elapsedRealTime;
+        } else {
+            svRptElapsedRealTime = 0;
+        }
+    }
+
+    // cached pvt report is valid
+    if (cachedLocRpt.flags) {
+        onTrackingCb(cachedLocRpt);
     }
 }
 
@@ -640,19 +661,41 @@ void GnssAPIClient::onEngineLocationsInfoCb(uint32_t count,
         return;
     }
     GnssLocationInfoNotification* locPtr = nullptr;
+    int rptIndex = -1;
 
     for (int i = 0; i < count; i++) {
         locPtr = engineLocationInfoNotification + i;
         if (nullptr == locPtr) return;
-        LOC_LOGv("pvt report[%d], output engine type %d, report spe %d",
+        LOC_LOGd("pvt report[%d], output engine type %d, report spe %d",
                  i, locPtr->locOutputEngType, mReportSpeOnly);
         if (mReportSpeOnly && (LOC_OUTPUT_ENGINE_SPE == locPtr->locOutputEngType)) {
-            onTrackingCb(locPtr->location);
+            rptIndex = i;
             break;
         } else if (!mReportSpeOnly &&
                    (LOC_OUTPUT_ENGINE_FUSED == locPtr->locOutputEngType)) {
-            onTrackingCb(locPtr->location);
+            rptIndex = i;
             break;
+        }
+    }
+
+    if (rptIndex != -1) {
+        locPtr = engineLocationInfoNotification + rptIndex;
+        LOC_LOGd("pvt report[%d], timestamp %" PRIu64 " msec, "
+                 "elapsed real time: pvt %" PRIu64 ", sv %" PRIu64 "",
+                 rptIndex, locPtr->location.timestamp,
+                 locPtr->location.elapsedRealTime, svRptElapsedRealTime);
+        if (mSvStatusEnabled && locPtr->location.timestamp % 1000 == 0) {
+            // report out the pvt report if sv report has been reported prior
+            if (svRptElapsedRealTime == locPtr->location.elapsedRealTime) {
+                onTrackingCb(locPtr->location);
+            } else {
+                // if sv report has not been reported earlier, cache pvt report
+                // we will wait for sv report to arrive, then report the cached
+                // pvt report after reporting out sv report
+                cachedLocRpt = locPtr->location;
+            }
+        } else {
+            onTrackingCb(locPtr->location);
         }
     }
 }
@@ -686,6 +729,8 @@ void GnssAPIClient::onStartTrackingCb(LocationError error) {
     auto gnssCbIface(mGnssCbIface);
     gSharedMtx.unlock();
 
+    svRptElapsedRealTime = 0;
+    cachedLocRpt = {};
     if (error == LOCATION_ERROR_SUCCESS) {
         if (gnssCbIface != nullptr) {
             auto r = gnssCbIface->gnssStatusCb(IGnssCallback::GnssStatusValue::ENGINE_ON);

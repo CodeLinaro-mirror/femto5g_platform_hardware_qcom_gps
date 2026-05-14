@@ -574,7 +574,7 @@ void GnssAdapter::fillElapsedRealTimeForMeas(GnssMeasurements& measurementSet) {
     int64_t elapsedTimeNs = -1;
     GnssMeasurementsNotification& gnssMeasNotification = measurementSet.gnssMeasNotification;
     gnssMeasNotification.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
-    gnssMeasNotification.clock.elapsedRealTime = getBootTimeMilliSec() * 1000000;
+    gnssMeasNotification.clock.elapsedRealTime = getBootTimeNSec();
     gnssMeasNotification.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
     gnssMeasNotification.clock.elapsedRealTimeUnc = RealtimeEstimator::getElapsedRealtimeUncNanos();
     if (!measurementSet.gnssSvMeasurementSet) {
@@ -638,7 +638,7 @@ void GnssAdapter::fillElapsedRealTime(const GpsLocationExtended& locationExtende
     }
 #ifndef FEATURE_AUTOMOTIVE
     bool needToUseCurrentBootTime = false;
-    uint64_t currentBootTimeNs = getBootTimeMilliSec() * 1000000;
+    uint64_t currentBootTimeNs = getBootTimeNSec();
     if (!(out.location.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT)) {
        needToUseCurrentBootTime = true;
        LOC_LOGw("can not calculate elapsed real time, set to current time");
@@ -2596,7 +2596,7 @@ void GnssAdapter::injectLocationCommand(double latitude, double longitude, float
                    mAdapter.mInjectedWifiFix.timestamp = (time_info_current.tv_sec)*1e3 +
                         (time_info_current.tv_nsec)/1e6;
                }
-               mAdapter.mInjectedWifiFix.elapsedRealTime = getBootTimeMilliSec() * 1000000;
+               mAdapter.mInjectedWifiFix.elapsedRealTime = getBootTimeNSec();
                // hard code this to 1 sec (E-911 FLP session has 1 second tbf)
                mAdapter.mInjectedWifiFix.elapsedRealTimeUnc = 1000000000;
 
@@ -3357,6 +3357,9 @@ void GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId
     // checkAndSetSPEToRunforNHz function
     TrackingOptions tempOptions(trackingOptions);
     if (!checkAndSetSPEToRunforNHz(tempOptions)) {
+        if (mFuturePvtReportTimer) {
+            mFuturePvtReportTimer->stop();
+        }
         mLocApi->startTimeBasedTracking(tempOptions, new LocApiResponse(*getContext(),
                           [this, client, sessionId, tempOptions] (LocationError err) {
                 if (LOCATION_ERROR_SUCCESS != err) {
@@ -3395,6 +3398,9 @@ void GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
     // checkAndSetSPEToRunforNHz function
     TrackingOptions tempOptions(updatedOptions);
     if (!checkAndSetSPEToRunforNHz(tempOptions)) {
+        if (mFuturePvtReportTimer) {
+            mFuturePvtReportTimer->stop();
+        }
         mLocApi->startTimeBasedTracking(tempOptions, new LocApiResponse(*getContext(),
                           [this, client, sessionId, oldOptions, tempOptions] (LocationError err) {
                 if (LOCATION_ERROR_SUCCESS != err) {
@@ -3630,9 +3636,6 @@ void GnssAdapter::stopTracking(LocationAPI* client, uint32_t id) {
     delete mCachedSvNotify;
     mCachedSvNotify = nullptr;
     mCachedPvtData = {};
-    if (mFuturePvtReportTimer) {
-        mFuturePvtReportTimer->stop();
-    }
 
     mSPEAlreadyRunningAtHighestInterval = false;
 }
@@ -3986,7 +3989,9 @@ void GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
         // locationExtended.systemTick contains the PVT applicable time,
         // if it is in the past or present, report the pvt report right away
         uint64_t hlosQtimerTick = getQTimerTickCount();
-        if (locationExtended.systemTick <= hlosQtimerTick) {
+        if (locationExtended.systemTick < hlosQtimerTick + 19200) {
+            LOC_LOGd("locationExtended.systemTick =%" PRIi64 " hlosQtimerTick =%" PRIi64,
+                    locationExtended.systemTick, hlosQtimerTick);
             break;
         }
         // qtimer freq: 19,200,000 Hz, so
@@ -4417,36 +4422,35 @@ bool GnssAdapter::reportEnginePositions(unsigned int count, const EngineLocation
 
 void GnssAdapter::processPvtSvReportPairing(const UlpLocation& ulpLocation,
         const GpsLocationExtended& locationExtended, enum loc_sess_status sessionStatus) {
-    GnssLocationInfoNotification locationInfo = {};
-    fillElapsedRealTime(locationExtended, locationInfo);
-
     if (!mSpeSvRegistered) {
         LOC_LOGd("no register for sv report");
         return;
     }
-    // always cache PVT report despite of session status or engine type
+
+    mCachedPvtData = {};
     mCachedPvtData.isValid = true;
     mCachedPvtData.status = sessionStatus;
-    if (locationInfo.location.flags & LOCATION_HAS_ELAPSED_REAL_TIME_BIT) {
+    mCachedPvtData.apBootTimestamp =
+        locationExtended.timeStamp.apTimeStamp.tv_sec * 1000000000ULL +
+        locationExtended.timeStamp.apTimeStamp.tv_nsec;
+    if ((sessionStatus == LOC_SESS_SUCCESS) &&
+            (locationExtended.gpsTime.gpsTimeOfWeekMs % 1000 == 0)) {
+        // only save sv used in fix info and elapsed real timestamp for
+        // final fix that has GPS integer second timestamp
+        GnssLocationInfoNotification locationInfo = {};
+        fillElapsedRealTime(locationExtended, locationInfo);
         mCachedPvtData.elapsedRealTime = locationInfo.location.elapsedRealTime;
         mCachedPvtData.elapsedRealTimeUnc = locationInfo.location.elapsedRealTimeUnc;
-    } else {
-        mCachedPvtData.elapsedRealTime = getBootTimeMilliSec() * 1000000;
-        mCachedPvtData.elapsedRealTimeUnc =
-                mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
-    }
-    if (sessionStatus == LOC_SESS_SUCCESS) {
         // final fix, cache GPS SV used in fix info too
         saveGnssSvIdUsedInfo(locationExtended);
     }
-    LOC_LOGd("mCachedPvtData cached always, mCachedSvNotify %p, flags: %x, status: %d "
-            "elapsed real time is %" PRIu64 " nSec", mCachedSvNotify, locationInfo.location.flags,
-            sessionStatus, mCachedPvtData.elapsedRealTime);
+
+    LOC_LOGd("mCachedPvtData cached, mCachedSvNotify %p, isValid: %d, status: %d, "
+             "apBootTimestamp: %" PRIu64 " ns, elapsed real time: %" PRIu64 " ns",
+             mCachedSvNotify, mCachedPvtData.isValid, mCachedPvtData.status,
+             mCachedPvtData.apBootTimestamp, mCachedPvtData.elapsedRealTime);
     // always report cached SV notification when there exists valid one
     if (mCachedSvNotify && mCachedSvNotify->isValid) {
-        // populate elapsed real time before report SV
-        populateElapsedRealTime(mCachedSvNotify->svNotify, mCachedPvtData.elapsedRealTime,
-                mCachedPvtData.elapsedRealTimeUnc);
         reportSv(mCachedSvNotify->svNotify);
         memset(mCachedSvNotify, 0, sizeof(CachedSvData));
         mCachedPvtData = {};
@@ -4461,15 +4465,6 @@ void GnssAdapter::saveGnssSvIdUsedInfo(const GpsLocationExtended& locationExtend
             mCachedPvtData.gnssMbSvIdUsedInPosAvail = true;
             mCachedPvtData.gnssMbSvIdUsedInPosition = locationExtended.gnss_mb_sv_used_ids;
         }
-    }
-}
-
-void GnssAdapter::populateElapsedRealTime(GnssSvNotification& svNotify, uint64_t elapsedRealTime,
-        uint64_t elapsedRealTimeUnc) {
-    for (int i = 0; i < svNotify.count; ++i) {
-        svNotify.gnssSvs[i].elapsedRealTime = elapsedRealTime;
-        svNotify.gnssSvs[i].elapsedRealTimeUnc = elapsedRealTimeUnc;
-        svNotify.gnssSvs[i].gnssSvOptionsMask |= GNSS_SV_OPTIONS_HAS_ELAPSED_REAL_TIME_BIT;
     }
 }
 
@@ -4493,7 +4488,7 @@ void GnssAdapter::reportSvEvent(const GnssSvNotification& svNotify) {
 void GnssAdapter::updateAndReportSv(GnssSvNotification& svNotify) {
     bool sendSvReport = false;
 
-    uint64_t curTimeNsec = getBootTimeMilliSec() * 1000000;
+    uint64_t curTimeNsec = getBootTimeNSec();
     do {
         LOC_LOGd("mSpePvtRegistered: %d, mCachedPvtData.isValid %d, mCachedSvNotify %p, "
                 "mCachedPvtData.gnssSvIdUsedInPosAvail: %d, elapsed real time is %" PRIu64
@@ -4504,8 +4499,8 @@ void GnssAdapter::updateAndReportSv(GnssSvNotification& svNotify) {
             sendSvReport = true;
             break;
         }
-        //If there is valid cached PVT report info within 30 msec, send out SV
-        if (mCachedPvtData.isValid && (curTimeNsec - mCachedPvtData.elapsedRealTime < 30000000)) {
+        //If there is valid cached PVT report info within 60 msec, send out SV
+        if (mCachedPvtData.isValid && (curTimeNsec - mCachedPvtData.apBootTimestamp < 60000000)) {
             sendSvReport = true;
         } else {
             // no valid cached PVT report, Cache SV report
@@ -4516,21 +4511,12 @@ void GnssAdapter::updateAndReportSv(GnssSvNotification& svNotify) {
                 mCachedSvNotify->svNotify = svNotify;
                 mCachedSvNotify->isValid = true;
             }
-            mCachedPvtData = {};
             sendSvReport = false;
         }
     } while (0);
 
     LOC_LOGd("needReportSv: %d", sendSvReport);
     if (sendSvReport) {
-        if (mCachedPvtData.isValid) {
-            // timestamping with pvt report time
-            populateElapsedRealTime(svNotify, mCachedPvtData.elapsedRealTime,
-                                    mCachedPvtData.elapsedRealTimeUnc);
-        } else {
-            populateElapsedRealTime(svNotify, curTimeNsec,
-                    mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos());
-        }
         reportSv(svNotify);
         mCachedPvtData = {};
         if (mCachedSvNotify) {
@@ -4550,145 +4536,164 @@ void GnssAdapter::reportSv(GnssSvNotification& svNotify) {
     bool gnssSvIdUsedInPosAvail = mCachedPvtData.gnssSvIdUsedInPosAvail;
     bool gnssMbSvIdUsedInPosAvail = mCachedPvtData.gnssMbSvIdUsedInPosAvail;
 
-    for (int i=0; i < numSv; i++) {
-        svUsedIdMask = 0;
-        gnssSvId = svNotify.gnssSvs[i].svId;
-        GnssSignalTypeMask signalTypeMask = svNotify.gnssSvs[i].gnssSignalTypeMask;
-        switch (svNotify.gnssSvs[i].type) {
+    if (gnssSvIdUsedInPosAvail) {
+        for (int i = 0; i < numSv; i++) {
+            svUsedIdMask = 0;
+            gnssSvId = svNotify.gnssSvs[i].svId;
+            GnssSignalTypeMask signalTypeMask = svNotify.gnssSvs[i].gnssSignalTypeMask;
+
+            switch (svNotify.gnssSvs[i].type) {
             case GNSS_SV_TYPE_GPS:
-                if (gnssSvIdUsedInPosAvail) {
-                    if (gnssMbSvIdUsedInPosAvail) {
-                        switch (signalTypeMask) {
-                        case GNSS_SIGNAL_GPS_L1CA:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.gps_l1ca_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_GPS_L1C:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.gps_l1c_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_GPS_L2:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.gps_l2_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_GPS_L5:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.gps_l5_sv_used_ids_mask;
-                            break;
-                        }
-                    } else {
-                        svUsedIdMask = gnssSvIdUsedInPosition.gpsSvUsedIdsMask;
+                if (gnssMbSvIdUsedInPosAvail) {
+                    switch (signalTypeMask) {
+                    case GNSS_SIGNAL_GPS_L1CA:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.gps_l1ca_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_GPS_L1C:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.gps_l1c_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_GPS_L2:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.gps_l2_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_GPS_L5:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.gps_l5_sv_used_ids_mask;
+                        break;
                     }
+                } else {
+                    svUsedIdMask = gnssSvIdUsedInPosition.gpsSvUsedIdsMask;
                 }
                 break;
+
             case GNSS_SV_TYPE_GLONASS:
-                if (gnssSvIdUsedInPosAvail) {
-                    if (gnssMbSvIdUsedInPosAvail) {
-                        switch (signalTypeMask) {
-                        case GNSS_SIGNAL_GLONASS_G1:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.glo_g1_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_GLONASS_G2:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.glo_g2_sv_used_ids_mask;
-                            break;
-                        }
-                    } else {
-                        svUsedIdMask = gnssSvIdUsedInPosition.gloSvUsedIdsMask;
+                if (gnssMbSvIdUsedInPosAvail) {
+                    switch (signalTypeMask) {
+                    case GNSS_SIGNAL_GLONASS_G1:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.glo_g1_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_GLONASS_G2:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.glo_g2_sv_used_ids_mask;
+                        break;
                     }
+                } else {
+                    svUsedIdMask = gnssSvIdUsedInPosition.gloSvUsedIdsMask;
                 }
+
                 // map the svid to respective constellation range 1..xx
-                // then repective constellation svUsedIdMask map correctly to svid
+                // then respective constellation svUsedIdMask map correctly to svid
                 gnssSvId = gnssSvId - GLO_SV_PRN_MIN + 1;
                 break;
+
             case GNSS_SV_TYPE_BEIDOU:
-                if (gnssSvIdUsedInPosAvail) {
-                    if (gnssMbSvIdUsedInPosAvail) {
-                        switch (signalTypeMask) {
-                        case GNSS_SIGNAL_BEIDOU_B1I:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.bds_b1i_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_BEIDOU_B1C:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.bds_b1c_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_BEIDOU_B2I:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.bds_b2i_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_BEIDOU_B2AI:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.bds_b2ai_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_BEIDOU_B2AQ:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.bds_b2aq_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_BEIDOU_B2BI:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.bds_b2bi_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_BEIDOU_B2BQ:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.bds_b2bq_sv_used_ids_mask;
-                            break;
-                        }
-                    } else {
-                        svUsedIdMask = gnssSvIdUsedInPosition.bdsSvUsedIdsMask;
+                if (gnssMbSvIdUsedInPosAvail) {
+                    switch (signalTypeMask) {
+                    case GNSS_SIGNAL_BEIDOU_B1I:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.bds_b1i_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_BEIDOU_B1C:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.bds_b1c_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_BEIDOU_B2I:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.bds_b2i_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_BEIDOU_B2AI:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.bds_b2ai_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_BEIDOU_B2AQ:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.bds_b2aq_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_BEIDOU_B2BI:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.bds_b2bi_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_BEIDOU_B2BQ:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.bds_b2bq_sv_used_ids_mask;
+                        break;
                     }
+                } else {
+                    svUsedIdMask = gnssSvIdUsedInPosition.bdsSvUsedIdsMask;
                 }
+
                 gnssSvId = gnssSvId - BDS_SV_PRN_MIN + 1;
                 break;
+
             case GNSS_SV_TYPE_GALILEO:
-                if (gnssSvIdUsedInPosAvail) {
-                    if (gnssMbSvIdUsedInPosAvail) {
-                        switch (signalTypeMask) {
-                        case GNSS_SIGNAL_GALILEO_E1:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.gal_e1_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_GALILEO_E5A:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.gal_e5a_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_GALILEO_E5B:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.gal_e5b_sv_used_ids_mask;
-                            break;
-                        }
-                    } else {
-                        svUsedIdMask = gnssSvIdUsedInPosition.galSvUsedIdsMask;
+                if (gnssMbSvIdUsedInPosAvail) {
+                    switch (signalTypeMask) {
+                    case GNSS_SIGNAL_GALILEO_E1:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.gal_e1_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_GALILEO_E5A:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.gal_e5a_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_GALILEO_E5B:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.gal_e5b_sv_used_ids_mask;
+                        break;
                     }
+                } else {
+                    svUsedIdMask = gnssSvIdUsedInPosition.galSvUsedIdsMask;
                 }
+
                 gnssSvId = gnssSvId - GAL_SV_PRN_MIN + 1;
                 break;
+
             case GNSS_SV_TYPE_QZSS:
-                if (gnssSvIdUsedInPosAvail) {
-                    if (gnssMbSvIdUsedInPosAvail) {
-                        switch (signalTypeMask) {
-                        case GNSS_SIGNAL_QZSS_L1CA:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.qzss_l1ca_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_QZSS_L1CB:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.qzss_l1cb_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_QZSS_L1S:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.qzss_l1s_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_QZSS_L2:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.qzss_l2_sv_used_ids_mask;
-                            break;
-                        case GNSS_SIGNAL_QZSS_L5:
-                            svUsedIdMask = gnssMbSvIdUsedInPosition.qzss_l5_sv_used_ids_mask;
-                            break;
-                        }
-                    } else {
-                        svUsedIdMask = gnssSvIdUsedInPosition.qzssSvUsedIdsMask;
+                if (gnssMbSvIdUsedInPosAvail) {
+                    switch (signalTypeMask) {
+                    case GNSS_SIGNAL_QZSS_L1CA:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.qzss_l1ca_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_QZSS_L1CB:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.qzss_l1cb_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_QZSS_L1S:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.qzss_l1s_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_QZSS_L2:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.qzss_l2_sv_used_ids_mask;
+                        break;
+                    case GNSS_SIGNAL_QZSS_L5:
+                        svUsedIdMask = gnssMbSvIdUsedInPosition.qzss_l5_sv_used_ids_mask;
+                        break;
                     }
+                } else {
+                    svUsedIdMask = gnssSvIdUsedInPosition.qzssSvUsedIdsMask;
                 }
+
                 gnssSvId = gnssSvId - QZSS_SV_PRN_MIN + 1;
                 break;
+
             case GNSS_SV_TYPE_NAVIC:
-                if (gnssSvIdUsedInPosAvail) {
-                    svUsedIdMask = gnssSvIdUsedInPosition.navicSvUsedIdsMask;
-                }
+                svUsedIdMask = gnssSvIdUsedInPosition.navicSvUsedIdsMask;
                 gnssSvId = gnssSvId - NAVIC_SV_PRN_MIN + 1;
                 break;
+
             default:
                 svUsedIdMask = 0;
                 break;
+            }
+
+            // If SV ID was used in previous position fix, then set USED_IN_FIX
+            // flag, else clear the USED_IN_FIX flag.
+            if (svFitsMask(svUsedIdMask, gnssSvId) && (svUsedIdMask & (1ULL << (gnssSvId - 1)))) {
+                svNotify.gnssSvs[i].gnssSvOptionsMask |= GNSS_SV_OPTIONS_USED_IN_FIX_BIT;
+            }
         }
-        // If SV ID was used in previous position fix, then set USED_IN_FIX
-        // flag, else clear the USED_IN_FIX flag.
-        if (svFitsMask(svUsedIdMask, gnssSvId) && (svUsedIdMask & (1ULL << (gnssSvId - 1)))) {
-            svNotify.gnssSvs[i].gnssSvOptionsMask |= GNSS_SV_OPTIONS_USED_IN_FIX_BIT;
-        }
+    }
+
+    // now populateElapsed real time
+    uint64_t elapsedRealTime = 0;
+    uint64_t elapsedRealTimeUnc = 0;
+    if (mCachedPvtData.isValid && mCachedPvtData.elapsedRealTime) {
+        elapsedRealTime = mCachedPvtData.elapsedRealTime;
+        elapsedRealTimeUnc = mCachedPvtData.elapsedRealTimeUnc;
+    } else {
+        elapsedRealTime = getBootTimeNSec();
+        elapsedRealTimeUnc = mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+    }
+
+    for (int i = 0; i < svNotify.count; ++i) {
+        svNotify.gnssSvs[i].elapsedRealTime = elapsedRealTime;
+        svNotify.gnssSvs[i].elapsedRealTimeUnc = elapsedRealTimeUnc;
+        svNotify.gnssSvs[i].gnssSvOptionsMask |= GNSS_SV_OPTIONS_HAS_ELAPSED_REAL_TIME_BIT;
     }
 
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
