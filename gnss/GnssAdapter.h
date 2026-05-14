@@ -459,6 +459,9 @@ class GnssAdapter : public LocAdapterBase {
     bool mIsNtnStatusValid;
     GnssSignalTypeMask mNtnSignalTypeConfigMask;
 
+    /*==== Preferred Constellation =====================================================*/
+    GnssSvType mPreferredConstellation;
+
     /*==== WakeLock acquire/release based on TBF ==================================*/
     uint32_t mWakeLockEnableTbfThreshold;
     void acquireWakeLockBasedOnTBF(uint32_t tbfInMs);
