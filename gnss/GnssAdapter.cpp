@@ -2969,6 +2969,7 @@ GnssAdapter::updatePowerConnectStateCommand(bool connected) {
             mAdapter.mPowerConnectState =
                     (mConnected == true)? POWER_CONNECT_YES : POWER_CONNECT_NO;
             mAdapter.mLocApi->updatePowerConnectState(mConnected);
+            mAdapter.mSystemStatus->updatePowerConnectState(mConnected);
         }
     };
 

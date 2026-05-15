@@ -1454,10 +1454,13 @@ SystemStatus::SystemStatus(const MsgTask* msgTask) :
     mCache.mGPSState.clear();
     mCache.mWifiHardwareState.clear();
     mCache.mNetworkInfo.clear();
+    mCache.mRilServiceInfo.clear();
     mCache.mRilCellInfo.clear();
+    mCache.mServiceStatus.clear();
     mCache.mModel.clear();
     mCache.mManufacturer.clear();
     mCache.mAssistedGps.clear();
+    mCache.mPowerConnectState.clear();
     mCache.mTimeZoneChange.clear();
     mCache.mTimeChange.clear();
     mCache.mWifiSupplicantStatus.clear();
@@ -1665,9 +1668,17 @@ bool SystemStatus::eventDataItemNotify(IDataItemCore* dataitem)
                         static_cast<NetworkInfoDataItem*>(dataitem))->mAllNetworkHandles));
             }
             break;
+        case RILSERVICEINFO_DATA_ITEM_ID:
+            ret = setIteminReport(mCache.mRilServiceInfo,
+                    SystemStatusServiceInfo(*(static_cast<RilServiceInfoDataItem*>(dataitem))));
+            break;
         case RILCELLINFO_DATA_ITEM_ID:
             ret = setIteminReport(mCache.mRilCellInfo,
                     SystemStatusRilCellInfo(*(static_cast<RilCellInfoDataItem*>(dataitem))));
+            break;
+        case SERVICESTATUS_DATA_ITEM_ID:
+            ret = setIteminReport(mCache.mServiceStatus,
+                    SystemStatusServiceStatus(*(static_cast<ServiceStatusDataItem*>(dataitem))));
             break;
         case MODEL_DATA_ITEM_ID:
             ret = setIteminReport(mCache.mModel,
@@ -1685,6 +1696,10 @@ bool SystemStatus::eventDataItemNotify(IDataItemCore* dataitem)
         case ASSISTED_GPS_DATA_ITEM_ID:
             ret = setIteminReport(mCache.mAssistedGps,
                     SystemStatusAssistedGps(*(static_cast<AssistedGpsDataItem*>(dataitem))));
+            break;
+        case POWER_CONNECTED_STATE_DATA_ITEM_ID:
+            ret = setIteminReport(mCache.mPowerConnectState, SystemStatusPowerConnectState(
+                        *(static_cast<PowerConnectStateDataItem*>(dataitem))));
             break;
         case TIMEZONE_CHANGE_DATA_ITEM_ID:
             ret = setIteminReport(mCache.mTimeZoneChange,
@@ -1783,10 +1798,13 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly,
         getIteminReport(report.mGPSState, mCache.mGPSState);
         getIteminReport(report.mWifiHardwareState, mCache.mWifiHardwareState);
         getIteminReport(report.mNetworkInfo, mCache.mNetworkInfo);
+        getIteminReport(report.mRilServiceInfo, mCache.mRilServiceInfo);
         getIteminReport(report.mRilCellInfo, mCache.mRilCellInfo);
+        getIteminReport(report.mServiceStatus, mCache.mServiceStatus);
         getIteminReport(report.mModel, mCache.mModel);
         getIteminReport(report.mManufacturer, mCache.mManufacturer);
         getIteminReport(report.mAssistedGps, mCache.mAssistedGps);
+        getIteminReport(report.mPowerConnectState, mCache.mPowerConnectState);
         getIteminReport(report.mTimeZoneChange, mCache.mTimeZoneChange);
         getIteminReport(report.mTimeChange, mCache.mTimeChange);
         getIteminReport(report.mWifiSupplicantStatus, mCache.mWifiSupplicantStatus);
@@ -1815,10 +1833,13 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly,
         report.mGPSState.clear();
         report.mWifiHardwareState.clear();
         report.mNetworkInfo.clear();
+        report.mRilServiceInfo.clear();
         report.mRilCellInfo.clear();
+        report.mServiceStatus.clear();
         report.mModel.clear();
         report.mManufacturer.clear();
         report.mAssistedGps.clear();
+        report.mPowerConnectState.clear();
         report.mTimeZoneChange.clear();
         report.mTimeChange.clear();
         report.mWifiSupplicantStatus.clear();
@@ -1886,6 +1907,20 @@ bool SystemStatus::eventConnectionStatus(bool connected, int8_t type,
                               (uint64_t) networkHandle, apn);
     mSysStatusObsvr.notify({&s.mDataItem});
 
+    return true;
+}
+
+/******************************************************************************
+@brief      API to update power connect state
+
+@param[In]  power connect status
+
+@return     true when successfully done
+******************************************************************************/
+bool SystemStatus::updatePowerConnectState(bool charging)
+{
+    SystemStatusPowerConnectState s(charging);
+    mSysStatusObsvr.notify({&s.mDataItem});
     return true;
 }
 
