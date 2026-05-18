@@ -1857,6 +1857,11 @@ LocationError GnssAdapter::gnssSvConfigUpdate() {
 
     if (newSvTypeConfig.enabledSvTypesMask == 0 && newSvTypeConfig.blacklistedSvTypesMask == 0) {
         mLocApi->resetConstellationControl();
+#ifdef _ANDROID_
+        if (mPreferredConstellation != GNSS_SV_TYPE_UNKNOWN) {
+            mLocApi->setPreferredConstellation(mPreferredConstellation);
+        }
+#endif
     } else {
        // if constellation disablement is not supported, and if constellation need to
        // disabled, we will need to do reset, so that constellation can be disabled,
@@ -1870,6 +1875,11 @@ LocationError GnssAdapter::gnssSvConfigUpdate() {
             GnssSvTypesMask newSvTypeEnabled = newSvTypeConfig.enabledSvTypesMask;
             if (currentSvTypeEnabled & (currentSvTypeEnabled ^ newSvTypeEnabled)) {
                 mLocApi->resetConstellationControl();
+#ifdef _ANDROID_
+            if (mPreferredConstellation != GNSS_SV_TYPE_UNKNOWN) {
+                mLocApi->setPreferredConstellation(mPreferredConstellation);
+            }
+#endif
             }
         }
         mLocApi->setConstellationControl(newSvTypeConfig);
