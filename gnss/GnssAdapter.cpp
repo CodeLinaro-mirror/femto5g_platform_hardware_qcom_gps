@@ -33,7 +33,7 @@
  */
 
 #define LOG_NDEBUG 0
-#define LOG_TAG "LocSvc_GnssAdapter"
+#define LOG_TAG "LocSvc_GnssAdapter_test"
 
 #include <inttypes.h>
 #include <sys/stat.h>
@@ -3947,14 +3947,15 @@ void MsgReportSPEPosition::proc() const {
         }
     }
 
-    if (!mAdapter.reportSpeAsEnginePosition(mUlpLocation, mLocationExtended, mStatus)) {
-        mAdapter.reportPosition(mUlpLocation, mLocationExtended, mStatus, mTechMask);
-        mAdapter.reportPositionNmea(mUlpLocation, mLocationExtended, mStatus, mTechMask);
-    }
     // if AFW register SPE only or Fused only but engine service disabled,
     // pair SV with SPE PVT report
     if (mAdapter.mReportSpeOnly || !mAdapter.isEngineServiceEnable()) {
         mAdapter.processPvtSvReportPairing(mUlpLocation, mLocationExtended, mStatus);
+    }
+
+    if (!mAdapter.reportSpeAsEnginePosition(mUlpLocation, mLocationExtended, mStatus)) {
+        mAdapter.reportPosition(mUlpLocation, mLocationExtended, mStatus, mTechMask);
+        mAdapter.reportPositionNmea(mUlpLocation, mLocationExtended, mStatus, mTechMask);
     }
 }
 
@@ -4070,7 +4071,6 @@ void GnssAdapter::reportEnginePositionsEvent(unsigned int count,
         }
         inline virtual void proc() const {
             LOC_LOGd("reportEnginePositionsEvent, mCount: %d", mCount);
-            mAdapter.reportEnginePositions(mCount, mEngLocInfo);
             if (!mAdapter.mReportSpeOnly) {
                 for (int i=0; i < mCount; ++i) {
                     const EngineLocationInfo* engLoc = (mEngLocInfo+i);
@@ -4084,6 +4084,7 @@ void GnssAdapter::reportEnginePositionsEvent(unsigned int count,
                     }
                 }
             }
+            mAdapter.reportEnginePositions(mCount, mEngLocInfo);
         }
     };
 
@@ -4433,10 +4434,8 @@ void GnssAdapter::processPvtSvReportPairing(const UlpLocation& ulpLocation,
     mCachedPvtData.apBootTimestamp =
         locationExtended.timeStamp.apTimeStamp.tv_sec * 1000000000ULL +
         locationExtended.timeStamp.apTimeStamp.tv_nsec;
-    if ((sessionStatus == LOC_SESS_SUCCESS) &&
-            (locationExtended.gpsTime.gpsTimeOfWeekMs % 1000 == 0)) {
-        // only save sv used in fix info and elapsed real timestamp for
-        // final fix that has GPS integer second timestamp
+    if (sessionStatus == LOC_SESS_SUCCESS) {
+        // only save sv used in fix info and elapsed real timestamp for final fix
         GnssLocationInfoNotification locationInfo = {};
         fillElapsedRealTime(locationExtended, locationInfo);
         mCachedPvtData.elapsedRealTime = locationInfo.location.elapsedRealTime;
