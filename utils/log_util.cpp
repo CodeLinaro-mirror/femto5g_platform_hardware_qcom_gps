@@ -247,6 +247,19 @@ ContextEntry LCA_CONTEXTS[] = {
 };
 const size_t LCA_CONTEXTS_COUNT = sizeof(LCA_CONTEXTS) / sizeof(LCA_CONTEXTS[0]);
 
+// LOCATION-IDL-SERVICE
+DLT_DECLARE_CONTEXT(ctxLocationIDLService);
+DLT_DECLARE_CONTEXT(ctxLocIDLPowerHandler);
+DLT_DECLARE_CONTEXT(ctxLocLcaIDLConverter);
+
+ContextEntry LOC_IDL_SERVICE_CONTEXTS[] = {
+    {ctxLocationIDLService, "IDLS", "LOC_IDL_SERVICE"},
+    {ctxLocIDLPowerHandler, "IDPH", "IDL_POWER_HANDLER"},
+    {ctxLocLcaIDLConverter, "LCAC", "LOC_IDL_LCA_CONV"},
+};
+const size_t LOC_IDL_SERVICE_CONTEXTS_COUNT =
+        sizeof(LOC_IDL_SERVICE_CONTEXTS) / sizeof(LOC_IDL_SERVICE_CONTEXTS[0]);
+
 void registerDltApp(const char* appName, const char* desp) {
     DLT_REGISTER_APP(appName, desp);
 }

@@ -326,6 +326,10 @@ extern const size_t LOC_LAUNCHER_CONTEXTS_COUNT;
 extern ContextEntry LCA_CONTEXTS[];
 extern const size_t LCA_CONTEXTS_COUNT;
 
+// LOC-IDL Service
+extern ContextEntry LOC_IDL_SERVICE_CONTEXTS[];
+extern const size_t LOC_IDL_SERVICE_CONTEXTS_COUNT;
+
 // ---------------- DLT section end ------------------
 
 #ifdef __cplusplus
