@@ -28,7 +28,7 @@
  */
 
 /*
- * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
@@ -547,17 +547,18 @@ void LocApiBase::requestLocation()
 }
 
 void LocApiBase::requestATL(int connHandle, LocAGpsType agps_type,
-                            LocApnTypeMask apn_type_mask, SubId sub_id)
+                            LocApnTypeMask apn_type_mask, SubId sub_id,
+                            uint32_t timeout)
 {
     // loop through adapters, and deliver to the first handling adapter.
     TO_1ST_HANDLING_LOCADAPTERS(
-            mLocAdapters[i]->requestATL(connHandle, agps_type, apn_type_mask, sub_id));
+            mLocAdapters[i]->requestATL(connHandle, agps_type, apn_type_mask, sub_id, timeout));
 }
 
-void LocApiBase::releaseATL(int connHandle)
+void LocApiBase::releaseATL(int connHandle, uint32_t timeout)
 {
     // loop through adapters, and deliver to the first handling adapter.
-    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->releaseATL(connHandle));
+    TO_1ST_HANDLING_LOCADAPTERS(mLocAdapters[i]->releaseATL(connHandle, timeout));
 }
 
 void LocApiBase::requestNiNotify(GnssNiNotification &notify, const void* data,
