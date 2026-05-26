@@ -1206,7 +1206,7 @@ void GnssAdapter::readConfigCommand() {
 
 void GnssAdapter::setSuplHostServer(const char* server, int port, LocServerType type) {
     if (ContextBase::mGps_conf.AGPS_CONFIG_INJECT) {
-        char serverUrl[MAX_URL_LEN] = {};
+        char serverUrl[LOC_MAX_PARAM_STRING] = {};
         int32_t length = -1;
         const char noHost[] = "NONE";
 
@@ -1222,9 +1222,11 @@ void GnssAdapter::setSuplHostServer(const char* server, int port, LocServerType 
         } else if (length >= 0) {
             if (LOC_AGPS_SUPL_SERVER == type) {
                 getServerUrl().assign(serverUrl);
-                strlcpy(ContextBase::mGps_conf.SUPL_HOST,
-                        (nullptr == server) ? serverUrl : server,
-                        LOC_MAX_PARAM_STRING);
+                if (serverUrl != nullptr) {
+                    strlcpy(ContextBase::mGps_conf.SUPL_HOST,
+                            (nullptr == server) ? serverUrl : server,
+                            sizeof(ContextBase::mGps_conf.SUPL_HOST));
+                }
                 ContextBase::mGps_conf.SUPL_PORT = port;
             } else {
                 if (strncasecmp(getMoServerUrl().c_str(), serverUrl, sizeof(serverUrl)) != 0) {
