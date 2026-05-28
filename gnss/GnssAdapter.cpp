@@ -33,7 +33,7 @@
  */
 
 #define LOG_NDEBUG 0
-#define LOG_TAG "LocSvc_GnssAdapter_test"
+#define LOG_TAG "LocSvc_GnssAdapter"
 
 #include <inttypes.h>
 #include <sys/stat.h>

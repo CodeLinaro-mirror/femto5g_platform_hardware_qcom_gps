@@ -292,7 +292,7 @@ void GnssMeasurementInterface::convertGnssSignalType(
 
     convertGnssConstellationType(in.svType, out.constellation);
     out.carrierFrequencyHz = in.carrierFrequencyHz;
-    convertGnssCodeType(in.codeType, out);
+    convertGnssCodeType(in.gnssSignalType, out);
 }
 
 void GnssMeasurementInterface::convertGnssConstellationType(
