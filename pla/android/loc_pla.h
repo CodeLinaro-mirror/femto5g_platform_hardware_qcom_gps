@@ -29,6 +29,14 @@
 #ifndef __LOC_PLA__
 #define __LOC_PLA__
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <stdarg.h>
+
 #ifdef __cplusplus
 #include <utils/SystemClock.h>
 #define uptimeMillis() android::uptimeMillis()
@@ -64,6 +72,9 @@ extern "C" {
 #define LOC_PATH_VPE_CONF_STR      "/vendor/etc/vpeglue.conf"
 #define LOC_PATH_QPPE_CONF_STR     "/vendor/etc/qppe.conf"
 
+#define MAX_COMMAND_STR_LEN (255)
+#define BOOT_KPI_FILE "/sys/kernel/boot_kpi/kpi_values"
+
 /*!
  * @brief Function for memory block copy
  *
@@ -88,7 +99,38 @@ static inline size_t memscpy (void *p_Dest, size_t q_DestSize, const void *p_Src
 /*API for boot kpi marker prints  */
 inline int loc_boot_kpi_marker(const char * pFmt, ...)
 {
-    return -1;
+    int result = 0;
+    char data[MAX_COMMAND_STR_LEN] = {};
+    char buf[MAX_COMMAND_STR_LEN] = {};
+
+    if (pFmt == NULL) {
+       return -1;
+    }
+
+    int fd = open(BOOT_KPI_FILE, O_WRONLY);
+    if (fd >= 0) {
+       va_list ap;
+       va_start(ap, pFmt);
+       int written = vsnprintf(&buf[0], sizeof(buf), pFmt, ap);
+       va_end(ap);
+       if ((written < 0) || (written >= ((int)sizeof(buf)))) {
+           result = -2;
+       } else {
+           snprintf(data, sizeof(data), "%s",buf);
+
+           /* Only allow marker text shorter than MARKER_STRING_WIDTH */
+           ssize_t bytes_written = write(fd,data, strlen(data));
+           if (bytes_written < 0) {
+               result = -4;
+           } else if (bytes_written != (ssize_t)written) {
+               result = -5;  // Partial write
+           }
+       }
+       close(fd);
+    } else {
+       result = -3;
+    }
+    return result;
 }
 
 #ifdef __cplusplus
