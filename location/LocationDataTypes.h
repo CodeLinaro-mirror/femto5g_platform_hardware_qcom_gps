@@ -893,6 +893,8 @@ enum GnssSignalTypeBits {
      GNSS_SIGNAL_NAVIC_L5 | GNSS_SIGNAL_BEIDOU_B2AQ | GNSS_SIGNAL_BEIDOU_B2BI |\
      GNSS_SIGNAL_BEIDOU_B2BQ | GNSS_SIGNAL_NAVIC_L1 | GNSS_SIGNAL_QZSS_L1CB)
 
+// This enum must match qmiLocGnssSignalTypeEnumT_v02 with offset -1
+// QMI values 1-23 map to HLOS values 0-22
 enum Gnss_LocSignalEnumType {
     GNSS_LOC_SIGNAL_TYPE_GPS_L1CA = 0,          /**<  GPS L1CA Signal  */
     GNSS_LOC_SIGNAL_TYPE_GPS_L1C = 1,           /**<  GPS L1C Signal  */
@@ -1170,6 +1172,10 @@ struct LocationOptions {
             qualityLevelAccepted(QUALITY_HIGH_ACCU_FIX_ONLY) {}
 };
 
+
+// This enum must match qmiLocPowerModeEnumT_v02 in location_service_v02.h
+// Values: M1=1 (Improved Accuracy), M2=2 (Normal), M3=3 (Background Power),
+//         M4=4 (Background Time), M5=5 (Background Keep Warm)
 enum GnssPowerMode {
     GNSS_POWER_MODE_M1 = 1,  /* Improved Accuracy Mode */
     GNSS_POWER_MODE_M2,      /* Normal Mode */
@@ -3560,6 +3566,9 @@ struct GnssCivicAddress {
     std::string url;
 };
 
+// This enum must match qmiLocPlatformPowerStateEnumT_v02 in location_service_v02.h
+// Values: UNKNOWN=0, SUSPEND=1, RESUME=2, SHUTDOWN=3,
+// DEEP_SLEEP_ENTRY=4, DEEP_SLEEP_EXIT=5
 enum PowerStateType {
     POWER_STATE_UNKNOWN = 0,
     POWER_STATE_SUSPEND = 1,
