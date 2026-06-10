@@ -359,10 +359,6 @@ typedef uint64_t LocationCapabilitiesMask;
 // This mask indicates wifi RTT positioning is
 // enabled by QWES license.
 #define   LOCATION_CAPABILITIES_QWES_WIFI_RTT_POSITIONING        (1ULL<<31)
-// This mask indicates wifi RSSI positioning is supported.
-#define   LOCATION_CAPABILITIES_WIFI_RSSI_POSITIONING                 (1ULL<<32)
-// This mask indicates wifi RTT positioning is supported.
-#define   LOCATION_CAPABILITIES_WIFI_RTT_POSITIONING                  (1ULL<<33)
 // support GNSS bands
 #define   LOCATION_CAPABILITIES_GNSS_BANDS_BIT                        (1ULL<<34)
 // This mask indicates modem 3GPP source is available.
@@ -457,14 +453,6 @@ enum LocationQwesFeatureTypes {
     LOCATION_QWES_FEATURE_TYPE_ROBUST_LOCATION               = 25,
     // Max value
     LOCATION_QWES_FEATURE_TYPE_MAX                           = 26
-};
-
-typedef uint64_t LocationHwCapabilitiesMask;
-enum LocationHwCapabilitiesBits {
-    // This indicates wifi HW has RSSI capability.
-    LOCATION_WIFI_CAPABILITY_RSSI = (1<<0),
-    // This indicates wifi HW has RTT capability.
-    LOCATION_WIFI_CAPABILITY_RTT  = (1<<1)
 };
 
 enum LocationTechnologyType {
@@ -1272,7 +1260,7 @@ struct TrackingOptions : LocationOptions {
     inline bool equalsInTimeBasedRequest(const TrackingOptions& other) const {
         return minInterval == other.minInterval && powerMode == other.powerMode &&
                qualityLevelAccepted == other.qualityLevelAccepted &&
-               preciseType == other.preciseType;
+               preciseType == other.preciseType && mode == other.mode;
     }
     inline uint32_t gcd(uint32_t a, uint32_t b) {
         while (b != 0) {
@@ -1282,8 +1270,7 @@ struct TrackingOptions : LocationOptions {
         }
         return a;
     }
-    inline bool multiplexWithForTimeBasedRequest(const TrackingOptions& other) {
-        bool updated = false;
+    inline void multiplexWithForTimeBasedRequest(const TrackingOptions& other) {
         uint32_t tbfNew = 0;
 
         if (other.powerMode == GNSS_POWER_MODE_M5 || powerMode == GNSS_POWER_MODE_M5) {
@@ -1295,16 +1282,18 @@ struct TrackingOptions : LocationOptions {
             tbfNew = MIN_GNSS_TRACKING_INTERVAL;
         }
         if (tbfNew != minInterval) {
-            updated = true;
             minInterval = tbfNew;
         }
 
+        // Mode MSA>MSB>STANDALONE
+        if (other.mode > mode) {
+            mode = other.mode;
+        }
+
         if (other.powerMode < powerMode) {
-            updated = true;
             powerMode = other.powerMode;
         }
         if (other.tbm < tbm) {
-            updated = true;
             tbm = other.tbm;
         }
         if (other.qualityLevelAccepted > qualityLevelAccepted) {
@@ -1316,7 +1305,6 @@ struct TrackingOptions : LocationOptions {
         if (other.correctionType > correctionType) {
             correctionType = other.correctionType;
         }
-        return updated;
     }
     inline void setLocationOptions(const LocationOptions& options) {
         size = sizeof(TrackingOptions);
