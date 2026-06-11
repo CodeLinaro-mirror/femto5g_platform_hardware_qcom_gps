@@ -6739,6 +6739,10 @@ bool GnssAdapter::requestATL(int connHandle, LocAGpsType agpsType,
 
     LOC_LOGi("GnssAdapter::requestATL handle=%d agpsType=0x%X apnTypeMask=0x%X subId=%d",
              connHandle, agpsType, apnTypeMask, subId);
+#ifdef OPENWRT_TARGET_SDX35
+    subId = static_cast<SubId>(LOC_DEFAULT_SUB);
+    LOC_LOGi("Update Sub Id to Default Sub %d", subId);
+#endif
 
     sendMsg( new AgpsMsgRequestATL( &mAgpsManager, connHandle, (AGpsExtType)agpsType,
                                     apnTypeMask, subId));
