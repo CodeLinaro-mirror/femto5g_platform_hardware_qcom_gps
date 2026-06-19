@@ -64,9 +64,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
  *  rate are not mulitples of each other */
 #define MIN_GNSS_TRACKING_INTERVAL (100)
 
-/** OEM DRE Data Blob size */
-#define LDT_LOC_OEM_DRE_DATA_BLOB_SIZE 4096
-
 enum LocationError {
     LOCATION_ERROR_SUCCESS = 0,
     LOCATION_ERROR_GENERAL_FAILURE,
@@ -256,7 +253,6 @@ typedef uint64_t GnssLocationInfoFlagMask;
 #define LDT_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT (1ULL<<39) // Age of Corrections
 #define LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT (1ULL<<40) // Leap Second Uncertainity
 #define LDT_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT  (1ULL<<41) // Valid reporting interval
-#define LDT_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT    (1ULL<<42) // Gnss Extended Data
 
 enum GeofenceBreachType {
     GEOFENCE_BREACH_ENTER = 0,
@@ -1573,10 +1569,6 @@ struct GnssLocationInfoNotification {
      *  requesting position reports.
      *  Unit - milli-seconds*/
     uint32_t posReportingInterval;
-    /** Must be set to # of elements in extendedData */
-    uint32_t extendedDataLen;
-    /**   Data blob payload  */
-    uint8_t extendedData[LDT_LOC_OEM_DRE_DATA_BLOB_SIZE];
 };
 
 // Indicate the API that is called to generate the location report
