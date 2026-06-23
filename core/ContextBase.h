@@ -363,6 +363,9 @@ public:
            }
        }
 
+       // Enable QWES NHz as default
+       sQwesFeatureMask |= LOCATION_CAPABILITIES_QWES_GNSS_NHZ;
+
        // Set CV2X basic when time freq and tunc is set
        // CV2X_BASIC  = LOCATION_QWES_FEATURE_TYPE_TIME_FREQUENCY &
        //       LOCATION_QWES_FEATURE_TYPE_TIME_UNCERTAINTY
