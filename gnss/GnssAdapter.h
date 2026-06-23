@@ -292,6 +292,11 @@ class GnssAdapter : public LocAdapterBase {
     /* === Misc callback from QMI LOC API ============================================== */
     GnssEnergyConsumedCallback mGnssEnergyConsumedCb;
 
+    // To keep track of Boot time of previous position report sent
+    uint64_t mPrevPosReportSentBootTimeMsec[LOC_OUTPUT_ENGINE_COUNT];
+    // To keep track of First final fix recieved
+    bool mFirstFixalFixReceived[LOC_OUTPUT_ENGINE_COUNT];
+
     /*==== CONVERSION ===================================================================*/
     static void convertOptions(LocPosMode& out, const TrackingOptions& trackingOptions);
     static void convertLocation(Location& out, const UlpLocation& ulpLocation,
@@ -616,6 +621,8 @@ public:
 
     /*==== DGnss Usable Report Flag ====================================================*/
     inline void setDGnssUsableFLag(bool dGnssNeedReport) { mDGnssNeedReport = dGnssNeedReport;}
+
+    bool filterPositionReport(const EngineLocationInfo& locationInfo);
 };
 
 #endif //GNSS_ADAPTER_H

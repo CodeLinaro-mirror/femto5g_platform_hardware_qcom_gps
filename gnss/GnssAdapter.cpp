@@ -91,6 +91,15 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define BILLION_NSEC (1000000000ULL)
 #define NMEA_MIN_THRESHOLD_MSEC (99)
 #define NMEA_MAX_THRESHOLD_MSEC (975)
+
+// Postion report Interval Gaurd band in msec
+#define POSITION_REPORT_GAURD_BAND (30)
+
+#ifndef MSEC_IN_ONE_SEC
+#define MSEC_IN_ONE_SEC 1000ULL
+#endif
+#define GET_MSEC_FROM_TS(ts) ((ts.tv_sec * MSEC_IN_ONE_SEC) + (ts.tv_nsec + 500000)/1000000)
+
 using namespace loc_core;
 
 /* Method to fetch status cb from loc_net_iface library */
@@ -4169,16 +4178,96 @@ GnssAdapter::reportLatencyInfoEvent(const GnssLatencyInfo& gnssLatencyInfo)
     };
     sendMsg(new MsgReportLatencyInfo(*this, gnssLatencyInfo));
 }
-
-void
-GnssAdapter::reportEnginePositions(unsigned int count,
-                                   const EngineLocationInfo* locationArr)
+uint64_t getBootTimeMilliSec()
 {
-    bool needReportEnginePositions = false;
+    struct timespec curTs = {};
+    clock_gettime(CLOCK_BOOTTIME, &curTs);
+    return (uint64_t)GET_MSEC_FROM_TS(curTs);
+}
+
+bool GnssAdapter::filterPositionReport(const EngineLocationInfo& locationInfo)
+{
+    const GpsLocationExtended& locationExtended = locationInfo.locationExtended;
+    LocOutputEngineType engType = locationExtended.locOutputEngType;
+    LocPosMode mOptions = getLocPositionMode();
+    uint32_t minInterval = mOptions.min_interval;
+    if (!minInterval || engType >= LOC_OUTPUT_ENGINE_COUNT) {
+        return false;
+    }
+
+    const uint64_t curBootTimeMsec = getBootTimeMilliSec();
+    const uint32_t lowerBound =
+        (minInterval > POSITION_REPORT_GAURD_BAND) ?
+        (minInterval - POSITION_REPORT_GAURD_BAND) : 0;
+
+    // If this is the first SUCCESS report for this engine, send it immediately.
+    if (!mFirstFixalFixReceived[engType]) {
+        if (locationInfo.sessionStatus == LOC_SESS_SUCCESS) {
+            mFirstFixalFixReceived[engType] = true;
+            mPrevPosReportSentBootTimeMsec[engType] = curBootTimeMsec;
+            return false; // do not filter
+        }
+    } else if (locationInfo.sessionStatus != LOC_SESS_SUCCESS) {
+        // We were in success before, but now back to intermediate/failure
+        mFirstFixalFixReceived[engType] = false;
+    }
+
+    // Intermediate fix: use boot time for filtering
+    if (locationInfo.sessionStatus == LOC_SESS_INTERMEDIATE) {
+        if ((mPrevPosReportSentBootTimeMsec[engType] == 0) ||
+            (curBootTimeMsec < mPrevPosReportSentBootTimeMsec[engType]) ||
+            ((curBootTimeMsec - mPrevPosReportSentBootTimeMsec[engType]) >= lowerBound)) {
+            mPrevPosReportSentBootTimeMsec[engType] = curBootTimeMsec;
+            return false; // do not filter
+        }
+        return true; // filter out
+    }
+
+    // Success fix: use GPS system time if available
+    if ((locationInfo.sessionStatus == LOC_SESS_SUCCESS) &&
+        locationExtended.gnssSystemTime.hasAccurateGpsTime()) {
+        const uint32_t systemMsec =
+            locationExtended.gnssSystemTime.u.gpsSystemTime.systemMsec;
+
+        if ((systemMsec % minInterval) == 0) {
+            mPrevPosReportSentBootTimeMsec[engType] = curBootTimeMsec;
+            return false; // do not filter
+        }
+        return true; // filter out
+    }
+
+    // Fallback: use boot time
+    if ((mPrevPosReportSentBootTimeMsec[engType] == 0) ||
+        (curBootTimeMsec < mPrevPosReportSentBootTimeMsec[engType]) ||
+        ((curBootTimeMsec - mPrevPosReportSentBootTimeMsec[engType]) >= lowerBound)) {
+        mPrevPosReportSentBootTimeMsec[engType] = curBootTimeMsec;
+        return false;
+    }
+
+    return true;
+}
+
+void GnssAdapter::reportEnginePositions(unsigned int count,
+                                        const EngineLocationInfo* locationArr)
+{
+    bool needReportEnginePositions = false, hasEngReportCb = false;
     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
         if (nullptr != it->second.engineLocationsInfoCb) {
-            needReportEnginePositions = true;
+            hasEngReportCb = true;
             break;
+        }
+    }
+    if (hasEngReportCb) {
+        const EngineLocationInfo* engLocationReport = &locationArr[0];
+        const GpsLocationExtended& locExt = engLocationReport->locationExtended;
+        bool hasBlobData = false, filterReport = false;
+        if (LOC_OUTPUT_ENGINE_SPE == locExt.locOutputEngType) {
+            hasBlobData = ((locExt.flags & GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA) != 0);
+        }
+        filterReport = filterPositionReport(*engLocationReport);
+        LOC_LOGd("filter %d hasblob %d", filterReport, hasBlobData);
+        if (!filterReport || hasBlobData) {
+            needReportEnginePositions = true;
         }
     }
 
@@ -4212,12 +4301,15 @@ GnssAdapter::reportEnginePositions(unsigned int count,
     if ((GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE & engLocation->locationExtended.flags) &&
         (LOC_OUTPUT_ENGINE_SPE == engLocation->locationExtended.locOutputEngType)) {
         mGnssLatencyInfo.hlosQtimer3 = getQTimerTickCount();
-        LOC_LOGv("SPE mGnssLatencyInfo.hlosQtimer3=%" PRIi64 " ", mGnssLatencyInfo.hlosQtimer3);
+        LOC_LOGv("SPE mGnssLatencyInfo.hlosQtimer3=%" PRIi64 " ",
+                 mGnssLatencyInfo.hlosQtimer3);
     }
+
     if ((GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE & engLocation->locationExtended.flags) &&
         (LOC_OUTPUT_ENGINE_PPE == engLocation->locationExtended.locOutputEngType)) {
         mGnssLatencyInfo.hlosQtimer4 = getQTimerTickCount();
-        LOC_LOGv("PPE mGnssLatencyInfo.hlosQtimer4=%" PRIi64 " ", mGnssLatencyInfo.hlosQtimer4);
+        LOC_LOGv("PPE mGnssLatencyInfo.hlosQtimer4=%" PRIi64 " ",
+                 mGnssLatencyInfo.hlosQtimer4);
     }
     if (needReportEnginePositions) {
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
@@ -4228,7 +4320,6 @@ GnssAdapter::reportEnginePositions(unsigned int count,
         }
     }
 }
-
 void
 GnssAdapter::reportSvEvent(const GnssSvNotification& svNotify)
 {
