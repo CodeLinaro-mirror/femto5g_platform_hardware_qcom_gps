@@ -199,16 +199,11 @@ GnssAdapter::GnssAdapter() :
     mGnssCapabNotification{},
     mAppHash(""),
     m3GppSourceMask(QDGNSS_3GPP_SOURCE_UNKNOWN),
-#ifdef _ANDROID_
-    // android only use SPE to generate nmea
-    mNmeaReqEngTypeMask(LOC_REQ_ENGINE_SPE_BIT),
-#else
-    mNmeaReqEngTypeMask(LOC_REQ_ENGINE_FUSED_BIT),
-#endif
     mRlFeatureQwesEnabled(false),
     mResponseTimer(this, (LocationError)0, (uint32_t)0),
     mIsNtnStatusValid(false),
     mNtnSignalTypeConfigMask(GNSS_SIGNAL_GPS_L1CA|GNSS_SIGNAL_GPS_L5),
+    mAndroidReportSpeOnly(true),
     mIsWakeLockActive(false),
 #ifdef _ANDROID_
     mWakeLockEnableTbfThreshold(10000)
@@ -250,8 +245,21 @@ GnssAdapter::GnssAdapter() :
     const loc_param_s_type nmea_conf_params[] = {
         {"DATUM_TYPE", &DATUM_TYPE, NULL, 'n'},
         {"WAKE_LOCK_ENABLE_TBF_THRESHOLD", &mWakeLockEnableTbfThreshold, NULL, 'n'},
+        {"ANDROID_REPORT_SPE_ONLY", &mAndroidReportSpeOnly, NULL, 'n'},
     };
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, nmea_conf_params);
+#ifdef _ANDROID_
+    // Update mNmeaReqEngTypeMask based on ANDROID_REPORT_SPE_ONLY config:
+    // if ANDROID_REPORT_SPE_ONLY = true, use SPE engine for NMEA;
+    // if ANDROID_REPORT_SPE_ONLY = false, use Fused engine for NMEA.
+    if (mAndroidReportSpeOnly) {
+        mNmeaReqEngTypeMask = LOC_REQ_ENGINE_SPE_BIT;
+    } else {
+        mNmeaReqEngTypeMask = LOC_REQ_ENGINE_FUSED_BIT;
+    }
+#else
+    mNmeaReqEngTypeMask = LOC_REQ_ENGINE_FUSED_BIT;
+#endif
     GnssGeodeticDatumType nmea_datum_type =
             (DATUM_TYPE == 1) ? GEODETIC_TYPE_PZ_90 : GEODETIC_TYPE_WGS_84;
     loc_nmea_config_output_types(NMEA_TYPE_ALL, nmea_datum_type);
@@ -4776,6 +4784,7 @@ GnssAdapter::reportEnginePositions(unsigned int count,
         bool needReportEnginePositions = needReportEnginePosition();
         GnssLocationInfoNotification locationInfo[LOC_OUTPUT_ENGINE_COUNT] = {};
         memset(locationInfo, 0, sizeof(locationInfo));
+        bool generateNmea = true;
         for (unsigned int i = 0; i < count; i++) {
             const EngineLocationInfo* engLocation = (locationArr+i);
             // if it is fused/default location, call reportPosition maintain legacy behavior
@@ -4797,23 +4806,22 @@ GnssAdapter::reportEnginePositions(unsigned int count,
                 fillElapsedRealTime(engLocation->locationExtended,
                                     locationInfo[i]);
             }
-            bool generateNmea = true;
 #ifdef _ANDROID_
             // On Android, NMEA should only come from SPE engine
-            if ((GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE & engLocation->locationExtended.flags) &&
-                (LOC_OUTPUT_ENGINE_SPE != engLocation->locationExtended.locOutputEngType)) {
+            if (mAndroidReportSpeOnly &&
+                (GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE & engLocation->locationExtended.flags)
+                && (LOC_OUTPUT_ENGINE_SPE != engLocation->locationExtended.locOutputEngType)) {
                 generateNmea = false;
             }
 #endif
-            if (generateNmea) {
-                reportPositionNmea(engLocation->location,
-                               engLocation->locationExtended,
-                               engLocation->sessionStatus,
-                               engLocation->location.tech_mask);
-            }
-
        }
        const EngineLocationInfo* engLocation = locationArr;
+       if (generateNmea) {
+           reportPositionNmea(engLocation->location,
+                          engLocation->locationExtended,
+                          engLocation->sessionStatus,
+                          engLocation->location.tech_mask);
+       }
        if (needReportEnginePositions) {
            for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
                if ((nullptr != it->second.engineLocationsInfoCb) &&
