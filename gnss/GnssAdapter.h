@@ -407,6 +407,7 @@ class GnssAdapter : public LocAdapterBase {
     bool mIsNtnStatusValid;
     GnssSignalTypeMask mNtnSignalTypeConfigMask;
 
+    bool mAndroidReportSpeOnly;
     /*==== WakeLock acquire/release based on TBF ==================================*/
     bool mIsWakeLockActive;
     uint32_t mWakeLockEnableTbfThreshold;
