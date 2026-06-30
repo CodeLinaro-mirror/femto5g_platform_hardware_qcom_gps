@@ -85,6 +85,7 @@ struct GnssInterface {
     void (*updateSystemPowerState)(PowerStateType systemPowerState);
     uint32_t (*gnssRegisterXtraStatusUpdate)(bool registerUpdate);
     uint32_t (*configureUserConsentForXtra) (const bool xtraUserConsent);
+    void (*setDebugSessionStatus)(bool debugSessionStatus);
 
 #ifdef USE_GLIB
     // Only LE
