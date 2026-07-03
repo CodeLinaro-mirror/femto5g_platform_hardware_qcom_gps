@@ -59,6 +59,11 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #ifndef GPS_EXTENDED_C_H
 #define GPS_EXTENDED_C_H
@@ -942,6 +947,7 @@ enum loc_api_adapter_event_index {
     LOC_API_ADAPTER_REQUEST_ASSISTANCE_TIME,           // NTP time download request
     LOC_API_ADAPTER_GNSS_BANDS_SUPPORTED,              // GNSS bands supported
     LOC_API_ADAPTER_NTN_CONFIG_UPDATE,                 // NTN config update
+    LOC_API_ADAPTER_FDCL_SERVICE_REQ,                  // FDCL service request
     LOC_API_ADAPTER_EVENT_MAX
 };
 
@@ -991,6 +997,8 @@ enum loc_api_adapter_event_index {
         (1ULL<<LOC_API_ADAPTER_GNSS_BANDS_SUPPORTED)
 #define LOC_API_ADAPTER_BIT_NTN_CONFIG_UPDATE \
         (1ULL<<LOC_API_ADAPTER_NTN_CONFIG_UPDATE)
+#define LOC_API_ADAPTER_BIT_FDCL_SERVICE_REQ \
+        (1ULL<<LOC_API_ADAPTER_FDCL_SERVICE_REQ)
 
 typedef uint64_t LOC_API_ADAPTER_EVENT_MASK_T;
 
