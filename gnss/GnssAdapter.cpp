@@ -1050,7 +1050,7 @@ void
 GnssAdapter::setSuplHostServer(const char* server, int port, LocServerType type)
 {
     if (ContextBase::mGps_conf.AGPS_CONFIG_INJECT) {
-        char serverUrl[MAX_URL_LEN] = {};
+        char serverUrl[LOC_MAX_PARAM_STRING] = {};
         int32_t length = -1;
         const char noHost[] = "NONE";
 
@@ -1060,10 +1060,14 @@ GnssAdapter::setSuplHostServer(const char* server, int port, LocServerType type)
             length = 0;
         } else if (port > 0) {
             length = snprintf(serverUrl, sizeof(serverUrl), "%s:%u", server, port);
+            if (length >= (int32_t)sizeof(serverUrl)) {
+                LOC_LOGe("serverUrl truncated, original length=%d", length);
+                length = -1; // treat as invalid to avoid using a truncated URL
+            }
         }
         if (LOC_AGPS_SUPL_SERVER != type && LOC_AGPS_MO_SUPL_SERVER != type) {
             LOC_LOGe("Invalid type=%d", type);
-        } else if (length >= 0) {
+        } else if (length > 0) {
             if (LOC_AGPS_SUPL_SERVER == type) {
                 getServerUrl().assign(serverUrl);
                 size_t copiedLen = strlcpy(ContextBase::mGps_conf.SUPL_HOST,

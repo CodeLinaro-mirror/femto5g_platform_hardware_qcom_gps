@@ -393,8 +393,9 @@ GeofenceAdapter::removeGeofencesCommand(LocationAPI* client, size_t count, uint3
                 LOC_LOGE("%s]: new failed to allocate errs", __func__);
                 return;
             }
+            memset(errs, 0, sizeof(LocationError) * mCount);
+
             for (size_t i=0; i < mCount; ++i) {
-                errs[i] = LOCATION_ERROR_GENERAL_FAILURE;
                 mApi.addToCallQueue(new LocApiResponse(*mAdapter.getContext(),
                         [&mAdapter = mAdapter, mCount = mCount, mClient = mClient, mIds = mIds,
                         &mApi = mApi, errs, i] (LocationError err ) {
@@ -471,6 +472,7 @@ GeofenceAdapter::pauseGeofencesCommand(LocationAPI* client, size_t count, uint32
                 LOC_LOGE("%s]: new failed to allocate errs", __func__);
                 return;
             }
+            memset(errs, 0, sizeof(LocationError) * mCount);
             for (size_t i=0; i < mCount; ++i) {
                 mApi.addToCallQueue(new LocApiResponse(*mAdapter.getContext(),
                         [&mAdapter = mAdapter, mCount = mCount, mClient = mClient, mIds = mIds,
