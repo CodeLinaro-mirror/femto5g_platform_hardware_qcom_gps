@@ -850,6 +850,7 @@ void LocApiBase::getBlacklistSv()
 DEFAULT_IMPL()
 
 void LocApiBase::setConstellationControl(const GnssSvTypeConfig& /*config*/,
+                                         bool, /*send Reset*/
                                          LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
