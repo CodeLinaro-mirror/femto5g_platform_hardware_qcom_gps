@@ -22,6 +22,35 @@ namespace implementation {
 #define GNSS_DEBUG_UNKNOWN_UTC_TIME_UNC_MIN    (999) // 999 ns
 #define GNSS_DEBUG_UNKNOWN_UTC_TIME_UNC_MAX    (1.57783680E17) // 5 years in ns
 #define GNSS_DEBUG_UNKNOWN_FREQ_UNC_NS_PER_SEC (2.0e5)  // ppm
+
+// This function converts QZSS sv id of L1CB to Android format
+static void convertQzssL1CBSvidToAndroid(uint16_t svId, int& out) {
+    out = 0;
+
+    switch (svId) {
+    case 196:
+        out = 203;
+        break;
+    case 197:
+        out = 204;
+        break;
+    case 198:
+        out = 198;
+        break;
+    case 200:
+        out = 205;
+        break;
+    case 201:
+        out = 206;
+        break;
+    case 202:
+        out = 202;
+        break;
+    default:
+        break;
+    }
+}
+
 GnssDebug::GnssDebug(Gnss* gnss) : mGnss(gnss) {}
   GnssDebug::~GnssDebug() {}
 
@@ -137,12 +166,25 @@ GnssDebug::GnssDebug(Gnss* gnss) : mGnss(gnss) {}
             reports.mSatelliteInfo[i].serverPredictionAgeSeconds;
 
         s_array.push_back(s);
+
+        if (s.constellation == GnssConstellationType::QZSS) {
+            convertQzssL1CBSvidToAndroid(reports.mSatelliteInfo[i].svid, s.svid);
+            if (s.svid != 0) {
+                LOC_LOGd("system %d, id %d, eph type %d, eph source %d, eph heath %d, "
+                 "age %f, server prediction available %d, age %f",
+                 s.constellation, s.svid, s.ephemerisType, s.ephemerisSource,
+                 s.ephemerisHealth, s.ephemerisAgeSeconds,
+                 s.serverPredictionIsAvailable, s.serverPredictionAgeSeconds);
+                 // this SV has L1CB signal support, append an entry to it
+                 s_array.push_back(s);
+            }
+        }
     }
     data.satelliteDataArray = s_array;
 
-        *_aidl_return = data;
-      return ScopedAStatus::ok();
-  }
+    *_aidl_return = data;
+    return ScopedAStatus::ok();
+}
 }
 }  // namespace aidl
 }  // namespace gnss
