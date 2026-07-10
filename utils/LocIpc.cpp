@@ -51,6 +51,7 @@ namespace loc_util {
 #endif
 #define LOG_TAG "LocSvc_LocIpc"
 #define LOC_IPC_MAX_PAYLOAD_SIZE (5 * 1024 * 1024)  /* 5 MB sanity cap on reassembled payload */
+#define MAX_REASSEMBLY_ENTRIES 16
 
 #define SOCK_OP_AND_LOG(buf, length, opable, rtv, exe)  \
     if (nullptr == (buf) || 0 == (length)) { \
