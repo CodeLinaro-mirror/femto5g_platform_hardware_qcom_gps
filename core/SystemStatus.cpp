@@ -168,6 +168,12 @@ public:
 };
 
 SystemStatusPQWM1::SystemStatusPQWM1(const GnssEngineDebugDataInfo& info) {
+    // Default init when jammerInd is empty (KW fix)
+    mJammerGps = 0;
+    mJammerGlo = 0;
+    mJammerBds = 0;
+    mJammerGal = 0;
+
     mGpsWeek = info.gpsWeek;
     mGpsTowMs = info.gpsTowMs;
     mTimeValid = info.timeValid;

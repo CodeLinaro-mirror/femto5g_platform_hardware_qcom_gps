@@ -95,6 +95,7 @@ static uint32_t TIMESTAMP = 0;
 static bool sVendorEnhanced = true;
 static uint32_t sLogBufferEnabled = 0;
 static uint32_t sQxdmLogEnabled = 0;
+static uint32_t sDltLogEnabled = 0;
 
 /* Parameter spec table */
 static const loc_param_s_type loc_param_table[] =
@@ -103,6 +104,7 @@ static const loc_param_s_type loc_param_table[] =
     {"TIMESTAMP",               &TIMESTAMP,          NULL, 'n'},
     {"LOG_BUFFER_ENABLED",      &sLogBufferEnabled,  NULL, 'n'},
     {"QXDM_LOG",                &sQxdmLogEnabled,    NULL, 'n'},
+    {"LOC_ENABLE_DLT_LOG",      &sDltLogEnabled,     NULL, 'n'},
 };
 static const int loc_param_num = sizeof(loc_param_table) / sizeof(loc_param_s_type);
 
@@ -482,6 +484,9 @@ void loc_read_conf_long(const char* conf_file_name, const loc_param_s_type confi
             /* Initialize logging mechanism with parsed data */
             loc_logger_init(DEBUG_LEVEL, TIMESTAMP, qxdmF3);
             log_buffer_init(sLogBufferEnabled);
+#ifdef LOC_USE_DLT
+            loc_dlt_log_init(sDltLogEnabled);
+#endif
             log_tag_level_map_init();
         }
         fclose(conf_fp);

@@ -47,7 +47,8 @@ libgps_utils_la_c_sources = \
         LogBuffer.cpp \
         MsgTask.cpp \
         loc_misc_utils.cpp \
-        loc_nmea.cpp
+        loc_nmea.cpp \
+        log_util.cpp
 
 library_includedir = $(pkgincludedir)
 
@@ -66,6 +67,7 @@ libgps_utils_la_CPPFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS)
 endif
 
 libgps_utils_la_LIBADD = $(CUTILS_LIBS) -ldl
+
 
 #Create and Install libraries
 lib_LTLIBRARIES = libgps_utils.la

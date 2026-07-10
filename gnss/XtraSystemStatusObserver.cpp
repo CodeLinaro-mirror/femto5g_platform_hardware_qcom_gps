@@ -326,7 +326,7 @@ bool XtraSystemStatusObserver::updatePowerState(const PowerStateType powerState)
         return true;
     }
 
-    int32_t pState;
+    int32_t pState = 0;
     switch (mPowerState) {
         case POWER_STATE_UNKNOWN:
             pState = 0;
