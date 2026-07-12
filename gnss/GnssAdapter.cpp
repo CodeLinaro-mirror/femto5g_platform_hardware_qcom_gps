@@ -6173,6 +6173,29 @@ bool GnssAdapter::reportQwesCapabilities(
     return true;
 }
 
+void GnssAdapter::reportSvResidualDataEvent(const GnssSvResidualReport& svResReport)
+{
+    //This report is from QMI
+    struct MsgReportSvResidualData : public LocMsg {
+        GnssAdapter& mAdapter;
+        const GnssSvResidualReport mSvResReport;
+
+        inline MsgReportSvResidualData(
+                GnssAdapter& adapter,
+                const GnssSvResidualReport& svResReport) :
+                LocMsg(),
+                mAdapter(adapter),
+                mSvResReport(svResReport) {
+        }
+
+        inline virtual void proc() const {
+            mAdapter.reportSvResidualData(mSvResReport);
+        }
+    };
+
+    sendMsg(new MsgReportSvResidualData(*this, svResReport));
+}
+
 bool GnssAdapter::reportSvResidualData(const GnssSvResidualReport &svResReport)
 {
     LOC_LOGi("numSvs %d", svResReport.numSvs);
@@ -7454,7 +7477,13 @@ void GnssAdapter::gnssUpdateSvConfig(
 
         // if the constellation config is valid, issue request to modem
         // to enable/disable constellation
-        mLocApi->setConstellationControl(currentSvTypeConfig);
+        if ((GNSS_SV_TYPES_MASK_BDS_BIT == currentEnabledMask)
+                && (newEnabledMask != GNSS_SV_TYPES_MASK_BDS_BIT)) {
+            LOC_LOGd("Previously BDS only mode.. need to reset !!");
+            mLocApi->setConstellationControl(constellationEnablementConfig, true);
+        } else {
+            mLocApi->setConstellationControl(constellationEnablementConfig);
+        }
     } else if (constellationEnablementConfig.size == 0) {
         // when the size is not set, meaning reset to modem default
         mLocApi->resetConstellationControl();

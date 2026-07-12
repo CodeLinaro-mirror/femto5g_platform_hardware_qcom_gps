@@ -368,6 +368,12 @@ void LocApiBase::handleEngineDownEvent()
     TO_ALL_LOCADAPTERS(mLocAdapters[i]->handleEngineDownEvent());
 }
 
+void LocApiBase::reportSvResidualData(const GnssSvResidualReport &svResidualReport)
+{
+    // loop through adapters, and deliver to all adapters.
+    TO_ALL_LOCADAPTERS(mLocAdapters[i]->reportSvResidualDataEvent(svResidualReport));
+}
+
 void LocApiBase::reportPosition(UlpLocation& location,
                                 GpsLocationExtended& locationExtended,
                                 enum loc_sess_status status,
@@ -844,6 +850,7 @@ void LocApiBase::getBlacklistSv()
 DEFAULT_IMPL()
 
 void LocApiBase::setConstellationControl(const GnssSvTypeConfig& /*config*/,
+                                         bool, /*send Reset*/
                                          LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 

@@ -229,6 +229,9 @@ void LocAdapterBase::reportGnssConfigEvent(uint32_t,  /* session id*/
             const GnssConfig& /*gnssConfig*/)
 DEFAULT_IMPL()
 
+void LocAdapterBase::reportSvResidualDataEvent(const GnssSvResidualReport& /*request*/ )
+DEFAULT_IMPL()
+
 bool LocAdapterBase::
     requestOdcpiEvent(OdcpiRequestInfo& /*request*/)
 DEFAULT_IMPL(false)
