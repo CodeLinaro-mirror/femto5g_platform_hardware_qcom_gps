@@ -709,7 +709,11 @@ void LocApiBase::setMeasurementCorrections(
 DEFAULT_IMPL()
 
 bool LocApiBase::
-   getBestAvailableZppFixSync(LocGpsLocation &zppLoc, LocPosTechMask &tech_mask, float* vertUnc)
+   getWwanFixSync(LocGpsLocation &/*wwanLoc*/)
+DEFAULT_IMPL(false)
+
+bool LocApiBase::getBestAvailableZppFixSync(
+        LocGpsLocation &/*zppLoc*/, LocPosTechMask &/*tech_mask*/, float* /*vertUnc*/)
 DEFAULT_IMPL(false)
 
 LocationError LocApiBase::
