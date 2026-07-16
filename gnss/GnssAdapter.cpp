@@ -8064,7 +8064,7 @@ void GnssAdapter::reportGnssAntennaInformation(AntennaInfoCallback* cb) {
     GnssAntennaInformation gnssAntennaInfo;
 
     for (uint32_t i = 0; i < ContextBase::getAntennaInfoVectorSize(); i++) {
-        double carrierFrequencyMHz;
+        double carrierFrequencyMHz = 0.0;
         char pcOffsetStr[LOC_MAX_PARAM_STRING];
         uint32_t numberOfRows = 0;
         uint32_t numberOfColumns = 0;
