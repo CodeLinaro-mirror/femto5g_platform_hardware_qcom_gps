@@ -115,10 +115,7 @@ void multiplexWithForTimeBasedRequest(TrackingOptions& current, const TrackingOp
     if (tbfNew != current.minInterval) {
         current.minInterval = tbfNew;
     }
-    // Mode MSA>MSB>STANDALONE
-    if (other.mode > current.mode) {
-        current.mode = other.mode;
-    }
+
     if (other.powerMode < current.powerMode) {
         current.powerMode = other.powerMode;
     }
@@ -153,6 +150,7 @@ GnssAdapter::GnssAdapter() :
     mGnssSeconaryBandConfig(),
     mLocConfigInfo{},
     mAgpsManager(mMsgTask),
+    mSuplMode(GNSS_SUPL_MODE_UNKNOWN),
     mQDgnssListenerHDL(nullptr),
     mCdfwInterface(nullptr),
     mDGnssNeedReport(false),
@@ -408,22 +406,6 @@ void GnssAdapter::setControlCallbacksCommand(LocationControlCallbacks& controlCa
     };
 
     sendMsg(new MsgSetControlCallbacks(*this, controlCallbacks));
-}
-
-void GnssAdapter::convertOptions(LocPosMode& out, const TrackingOptions& trackingOptions) {
-    switch (trackingOptions.mode) {
-    case GNSS_SUPL_MODE_MSB:
-        out.mode = LOC_POSITION_MODE_MS_BASED;
-        break;
-    case GNSS_SUPL_MODE_MSA:
-        out.mode = LOC_POSITION_MODE_MS_ASSISTED;
-        break;
-    default:
-        out.mode = LOC_POSITION_MODE_STANDALONE;
-        break;
-    }
-    out.min_interval = trackingOptions.minInterval;
-    out.timeBetweenMeasurements = trackingOptions.tbm;
 }
 
 bool GnssAdapter::checkAndSetSPEToRunforNHz(TrackingOptions & out) {
@@ -1229,6 +1211,27 @@ void GnssAdapter::setSuplHostServer(const char* server, int port, LocServerType 
     }
 }
 
+void GnssAdapter::setSuplMode() {
+    GnssSuplMode suplMode = GNSS_SUPL_MODE_STANDALONE;
+    if (mInEmergency) {
+        suplMode = GNSS_SUPL_MODE_STANDALONE;
+    }
+#ifdef USE_GLIB
+    else if ((ContextBase::mGps_conf.SUPL_MODE & GNSS_SUPL_MODE_MSB) != 0) {
+#else
+    else if (isAssistedGpsEnabled() &&
+            (ContextBase::mGps_conf.SUPL_MODE & GNSS_SUPL_MODE_MSB) != 0) {
+#endif
+        suplMode = GNSS_SUPL_MODE_MSB;
+    }
+
+    LOC_LOGd("suplMode: %d, mSuplMode: %d", suplMode, mSuplMode);
+    if (suplMode != mSuplMode) {
+        mSuplMode = suplMode;
+        mLocApi->setOperationMode(mSuplMode);
+    }
+}
+
 void GnssAdapter::setConfig() {
     LOC_LOGd();
 
@@ -1243,6 +1246,8 @@ void GnssAdapter::setConfig() {
     setSuplHostServer(ContextBase::mGps_conf.MO_SUPL_HOST,
                       ContextBase::mGps_conf.MO_SUPL_PORT,
                       LOC_AGPS_MO_SUPL_SERVER);
+    mSuplMode = GNSS_SUPL_MODE_UNKNOWN;
+    setSuplMode();
 
     std::string moServerUrl = getMoServerUrl();
     std::string serverUrl = getServerUrl();
@@ -2958,6 +2963,7 @@ void GnssAdapter::handleEngineUpEvent() {
         virtual void proc() const {
             mAdapter.setEngineCapabilitiesKnown(true);
             mAdapter.broadcastCapabilities(mAdapter.getCapabilities());
+
             // must be called only after capabilities are known
             mAdapter.setConfig();
             mAdapter.setPreciseSessionConfig(mAdapter.mPreciseType);
@@ -3164,9 +3170,9 @@ void GnssAdapter::reportResponse(size_t count, LocationError* errs, uint32_t* id
 
 uint32_t GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& options) {
     uint32_t sessionId = generateSessionId();
-    LOC_LOGi("client %p id %u minInterval %u mode %u powermode %u tbm %u",
-             client, sessionId, options.minInterval, options.mode,
-             options.powerMode, options.tbm);
+    LOC_LOGi("client %p id %u minInterval %u powermode %u tbm %u",
+            client, sessionId, options.minInterval,
+            options.powerMode, options.tbm);
 
     struct MsgStartTracking : public LocMsg {
         GnssAdapter& mAdapter;
@@ -3202,23 +3208,10 @@ uint32_t GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOp
                     mOptions.powerMode = GNSS_POWER_MODE_M2;
                 }
 
-                // In emergency: force request SUPL mode as standalone
-                // Non emergency: Update request SUPL mode if not specified
-                if (mAdapter.mInEmergency) {
-                    mOptions.mode = GNSS_SUPL_MODE_STANDALONE;
-                } else if (mOptions.mode == GNSS_SUPL_MODE_UNKNOWN) {
-                    if (mAdapter.isAssistedGpsEnabled() &&
-                            (ContextBase::mGps_conf.SUPL_MODE & GNSS_SUPL_MODE_MSB) != 0) {
-                        mOptions.mode = GNSS_SUPL_MODE_MSB;
-                    } else {
-                        mOptions.mode = GNSS_SUPL_MODE_STANDALONE;
-                    }
-                    LOC_LOGd("Updated UNKNOWN SUPL mode to %d", mOptions.mode);
-                }
-                LOC_LOGd("Updated min Interval: %u, emergency: %d mode: %u, "
+                LOC_LOGd("Updated min Interval: %u, emergency: %d "
                         "agps : %d, SUPL_MODE: %d",
                         mOptions.minInterval, mAdapter.mInEmergency,
-                        mOptions.mode, mAdapter.isAssistedGpsEnabled(),
+                        mAdapter.isAssistedGpsEnabled(),
                         ContextBase::mGps_conf.SUPL_MODE);
 
                 // On LE/OWRT, when PPE or DRE is enabled, set precise type to RTK
@@ -3339,13 +3332,13 @@ void GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId
         reportResponse(client, LOCATION_ERROR_NOT_SUPPORTED, sessionId);
         return;
     }
-    LOC_LOGi("minInterval %u mode %u powermode %u tbm %u "
+    LOC_LOGi("minInterval %u powermode %u tbm %u "
              "preciseType %u corrtionType %u",
             trackingOptions.minInterval,
-            trackingOptions.mode, trackingOptions.powerMode, trackingOptions.tbm,
+            trackingOptions.powerMode, trackingOptions.tbm,
             trackingOptions.preciseType, trackingOptions.correctionType);
     LocPosMode locPosMode = {};
-    convertOptions(locPosMode, trackingOptions);
+    locPosMode.min_interval = trackingOptions.minInterval;
     // save position mode parameters
     setLocPositionMode(locPosMode);
     mPreciseType = trackingOptions.preciseType;
@@ -3387,14 +3380,14 @@ void GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
         return;
     }
 
-    LOC_LOGi("session id %d, minInterval %u mode %u powermode %u tbm %u "
+    LOC_LOGi("session id %d, minInterval %u powermode %u tbm %u "
              "preciseType %u corrtionType %u",
              sessionId, updatedOptions.minInterval,
-             updatedOptions.mode, updatedOptions.powerMode, updatedOptions.tbm,
+             updatedOptions.powerMode, updatedOptions.tbm,
              updatedOptions.preciseType, updatedOptions.correctionType);
 
     LocPosMode locPosMode = {};
-    convertOptions(locPosMode, updatedOptions);
+    locPosMode.min_interval = updatedOptions.minInterval;
     // save position mode parameters
     setLocPositionMode(locPosMode);
 
@@ -3427,8 +3420,7 @@ void GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
 
 void GnssAdapter::updateTrackingOptionsCommand(LocationAPI* client, uint32_t id,
         const TrackingOptions& options) {
-    LOC_LOGd("client %p id %u minInterval %u mode %u",
-             client, id, options.minInterval, options.mode);
+    LOC_LOGd("client %p id %u minInterval %u", client, id, options.minInterval);
 
     struct MsgUpdateTracking : public LocMsg {
         GnssAdapter& mAdapter;
@@ -5241,6 +5233,7 @@ void GnssAdapter::requestOdcpi(const OdcpiRequestInfo& request) {
         // extending the odcpi session past 30 seconds if needed
         if (ODCPI_REQUEST_TYPE_START == request.type) {
             mInEmergency = request.isEmergencyMode;
+            setSuplMode();
             if (!(mOdcpiStateMask & ODCPI_REQ_ACTIVE)  && false == mOdcpiTimer.isActive()) {
                 fireOdcpiRequest(request);
                 mOdcpiStateMask |= ODCPI_REQ_ACTIVE;
@@ -5611,6 +5604,7 @@ void GnssAdapter::odcpiTimerExpire() {
         mOdcpiTimer.restart();
     } else {
         mInEmergency = false;
+        setSuplMode();
         mInjectedWifiFix = {};
         mInjectedWifiFixUsed = true;
 

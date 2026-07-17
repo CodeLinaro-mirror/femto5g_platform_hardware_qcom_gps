@@ -325,6 +325,7 @@ class GnssAdapter : public LocAdapterBase {
     /* ==== AGPS =========================================================================== */
     // This must be initialized via initAgps()
     AgpsManager mAgpsManager;
+    GnssSuplMode mSuplMode;
     void initAgps(const AgpsCbInfo& cbInfo);
 
     /* ==== NFW =========================================================================== */
@@ -401,7 +402,6 @@ class GnssAdapter : public LocAdapterBase {
     GnssEnergyConsumedCallback mGnssEnergyConsumedCb;
 
     /*==== CONVERSION ===================================================================*/
-    static void convertOptions(LocPosMode& out, const TrackingOptions& trackingOptions);
     static void convertLocation(Location& out, const UlpLocation& ulpLocation,
                                 const GpsLocationExtended& locationExtended,
                                 loc_sess_status status);
@@ -592,6 +592,7 @@ public:
     bool gnssSetSvTypeConfig(const GnssSvTypeConfig& config, GnssSvTypeConfigSource source);
     GnssSvTypeConfig gnssCombineSvTypeConfigs();
     void setConfig();
+    void setSuplMode();
     void gnssSecondaryBandConfigUpdate(LocApiResponse* locApiResponse= nullptr);
 #ifdef _ANDROID_
     uint32_t getNfwControlBits(const std::vector<std::string>& enabledNfws);

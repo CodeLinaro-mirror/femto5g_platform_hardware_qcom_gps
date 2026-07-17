@@ -123,7 +123,11 @@ void ContextBase::readConfig()
            {"LPPE_CP_TECHNOLOGY",             &mGps_conf.LPPE_CP_TECHNOLOGY,            NULL, 'n'},
            {"LPPE_UP_TECHNOLOGY",             &mGps_conf.LPPE_UP_TECHNOLOGY,            NULL, 'n'},
            {"SUPL_VER",                       &mGps_conf.SUPL_VER,                      NULL, 'n'},
+#ifdef USE_GLIB
+           {"POSITION_MODE",                  &mGps_conf.SUPL_MODE,                     NULL, 'n'},
+#else
            {"SUPL_MODE",                      &mGps_conf.SUPL_MODE,                     NULL, 'n'},
+#endif
            {"SUPL_HOST",                      &mGps_conf.SUPL_HOST,                     NULL, 's'},
            {"SUPL_PORT",                      &mGps_conf.SUPL_PORT,                     NULL, 'n'},
            {"MO_SUPL_HOST",                   &mGps_conf.MO_SUPL_HOST,                  NULL, 's' },

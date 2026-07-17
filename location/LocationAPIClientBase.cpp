@@ -414,7 +414,6 @@ uint32_t LocationAPIClientBase::locAPIStartSession(
 
                 // Populate location option values
                 batchOptions.minInterval = options.minInterval;
-                batchOptions.mode = options.mode;
 
                 batchingSession = mLocationAPI->startBatching(batchOptions);
                 LOC_LOGI("%s:%d] start new session: %d", __FUNCTION__, __LINE__, batchingSession);

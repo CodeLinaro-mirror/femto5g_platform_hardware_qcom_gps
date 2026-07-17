@@ -268,7 +268,6 @@ void GnssAPIClient::updateCallbacksByAccuracy(uint32_t preferredAccuracyMeters) 
 void GnssAPIClient::initLocationOptions() {
     // set default LocationOptions.
     mTrackingOptions.minInterval = 1000;
-    mTrackingOptions.mode = GNSS_SUPL_MODE_STANDALONE;
 }
 
 bool GnssAPIClient::gnssStart() {
@@ -329,16 +328,6 @@ bool GnssAPIClient::gnssSetPositionMode(IGnss::GnssPositionMode mode,
         // the caller should take the responsibility to stop the session.
         // For MSA, we always treat it as SINGLE mode.
         mTrackingOptions.minInterval = SINGLE_SHOT_MIN_TRACKING_INTERVAL_MSEC;
-    }
-    if (mode == IGnss::GnssPositionMode::STANDALONE)
-        mTrackingOptions.mode = GNSS_SUPL_MODE_STANDALONE;
-    else if (mode == IGnss::GnssPositionMode::MS_BASED)
-        mTrackingOptions.mode = GNSS_SUPL_MODE_MSB;
-    else if (mode ==  IGnss::GnssPositionMode::MS_ASSISTED)
-        mTrackingOptions.mode = GNSS_SUPL_MODE_MSA;
-    else {
-        LOC_LOGd("]: invalid GnssPositionMode: %d", (int)mode);
-        retVal = false;
     }
     mTrackingOptions.powerMode = powerMode;
     mTrackingOptions.tbm = timeBetweenMeasurement;
