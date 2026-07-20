@@ -346,27 +346,32 @@ bool fill_conf_entry(const ConfPair& pair, const loc_param_s_type config_table[]
                }
             }
             break;
-         case 'n':
-            if ((strlen(pair.value) >= 3) && (pair.value[0] == '0') &&
-                   (pair.value[1] == 'x' || pair.value[1] == 'X')) {
-               // hex
-               *((int *)config_entry->param_ptr) = (int) strtol(&pair.value[2], (char**) NULL, 16);
-            } else {
-                *((int *)config_entry->param_ptr) = atoi(pair.value); /* dec */
+        case 'n':
+            if (pair.value) {
+                if ((strlen(pair.value) >= 3) && (pair.value[0] == '0') &&
+                       (pair.value[1] == 'x' || pair.value[1] == 'X')) {
+                   // hex
+                   *((int *)config_entry->param_ptr) =
+                       (int) strtol(&pair.value[2], (char**) NULL, 16);
+                } else {
+                    *((int *)config_entry->param_ptr) = atoi(pair.value); /* dec */
+                }
+                entry_filled = true;
             }
-            entry_filled = true;
             break;
-         case 'f':
-             *((double *)config_entry->param_ptr) = (double) atof(pair.value);
-             entry_filled = true;
-             break;
+        case 'f':
+            if (pair.value) {
+                *((double *)config_entry->param_ptr) = (double) atof(pair.value);
+                 entry_filled = true;
+                 break;
+            }
           default:
-              LOC_LOGe("PARAM %s parameter type must be n, f, or s",
-                       config_entry->param_name);
+            LOC_LOGe("PARAM %s parameter type must be n, f, or s", config_entry->param_name);
              break;
       }
-      LOC_LOGd("param %s %s type: %d",
-               config_entry->param_name, pair.value, config_entry->param_type);
+      LOC_LOGd("param %s %s type: %d, entry filled %d",
+         config_entry->param_name, pair.value ? pair.value : "(null)",
+         config_entry->param_type, entry_filled);
    }
    return entry_filled;
 }

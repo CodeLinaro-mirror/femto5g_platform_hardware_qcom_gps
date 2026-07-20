@@ -27,6 +27,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define LOG_TAG "GnssAidl"
 #define LOG_NDEBUG 0
 
+#include <android/binder_ibinder.h>
 #include "Gnss.h"
 #include <log_util.h>
 #include "ContextBase.h"
@@ -135,6 +136,22 @@ Gnss::~Gnss() {
     if (mApi != nullptr)
         mApi->destroy();
     sGnss = nullptr;
+}
+
+binder_status_t Gnss::dump(int fd, const char** args, uint32_t numArgs) {
+    LOC_LOGd("Gnss::dump called, fd=%d", fd);
+
+    if (fd < 0) {
+        return STATUS_OK;
+    }
+
+    // Delegate directly to GnssAdapter::dump via the GnssInterface function pointer.
+    const GnssInterface* gnssInterface = getGnssInterfaceFromLibGnss();
+    if (gnssInterface != nullptr && gnssInterface->dump != nullptr) {
+        return gnssInterface->dump(fd, args, numArgs);
+    }
+
+    return STATUS_OK;
 }
 
 void Gnss::handleAidlClientSsr() {

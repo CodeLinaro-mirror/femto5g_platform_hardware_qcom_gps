@@ -173,6 +173,8 @@ typedef struct {
 } UlpLocation;
 
 typedef int16_t AGpsBearerType;
+// These values must match qmiLocServerPDNEnumT_v02 in location_service_v02.h
+// Values: INVALID=0, IPV4=1, IPV6=2, IPV4V6=3
 #define AGPS_APN_BEARER_INVALID     0
 #define AGPS_APN_BEARER_IPV4        1
 #define AGPS_APN_BEARER_IPV6        2
@@ -359,8 +361,6 @@ typedef uint64_t GpsLocationExtendedFlags;
 #define GPS_LOCATION_EXTENDED_HAS_LEAP_SECONDS_UNC               0x1000000000000000
 /** GpsLocationExtended has valid current reporting interval */
 #define GPS_LOCATION_EXTENDED_HAS_REPORT_INTERVAL                0x2000000000000000
-/** GpsLocationExtended has extendedData payload. */
-#define GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA                  0x4000000000000000
 
 typedef uint32_t LocNavSolutionMask;
 /* Bitmask to specify whether SBAS ionospheric correction is used  */
@@ -1592,6 +1592,8 @@ typedef void (*LocAgpsCloseResultCb)(bool isSuccess, AGpsExtType agpsType, void*
 // every client can get the notification that hal daemon has restarted.
 #define LOC_INTAPI_NAME_PREFIX         LOC_CLIENT_NAME_PREFIX "_intapi"
 
+// This enum must match qmiLocEngineLockStateEnumT_v02 in location_service_v02.h
+// Values: ENABLED=1, DISABLED=2
 typedef enum {
   ENGINE_LOCK_STATE_INVALID = 0,
   ENGINE_LOCK_STATE_ENABLED = 1,  /**<  Location engine is enabled.  */

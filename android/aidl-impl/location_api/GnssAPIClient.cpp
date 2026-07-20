@@ -107,6 +107,7 @@ static void convertGnssSvStatus(const GnssSvNotification& in,
         out[i].carrierFrequencyHz = in.gnssSvs[i].carrierFrequencyHz;
         out[i].svFlag = static_cast<int>(IGnssCallback::GnssSvFlags::NONE);
         out[i].signalType.emplace();
+        out[i].elapsedRealtime.emplace();
         if (in.gnssSvs[i].gnssSvOptionsMask & GNSS_SV_OPTIONS_HAS_EPHEMER_BIT)
             out[i].svFlag |= (int)IGnssCallback::GnssSvFlags::HAS_EPHEMERIS_DATA;
         if (in.gnssSvs[i].gnssSvOptionsMask & GNSS_SV_OPTIONS_HAS_ALMANAC_BIT)
@@ -126,20 +127,20 @@ static void convertGnssSvStatus(const GnssSvNotification& in,
             convertGnssCodeType(in.gnssSvs[i].gnssSignalTypeMask, *(out[i].signalType));
         }
         if (in.gnssSvs[i].gnssSvOptionsMask & GNSS_SV_OPTIONS_HAS_ELAPSED_REAL_TIME_BIT) {
-            out[i].elapsedRealtime.emplace();
             out[i].elapsedRealtime->flags |= ElapsedRealtime::HAS_TIMESTAMP_NS;
             out[i].elapsedRealtime->timestampNs = in.gnssSvs[i].elapsedRealTime;
             out[i].elapsedRealtime->flags |= ElapsedRealtime::HAS_TIME_UNCERTAINTY_NS;
             out[i].elapsedRealtime->timeUncertaintyNs = in.gnssSvs[i].elapsedRealTimeUnc;
         }
-        LOC_LOGv("GnssSvInfo.elapsedRealtime.flags: 0x%08X"
-             " GnssSvInfo.elapsedRealtime.timestampNs: %" PRId64", "
-             " GnssSvInfo.elapsedRealtime.timeUncertaintyNs: %.2f, signal type constellation: %d, "
-             "carrierFrequencyHz: %f, svFlag: 0x%X",
-             out[i].elapsedRealtime->flags,
+        LOC_LOGv("constellation: %d, sv id: %d, flags: 0x%08X "
+             "svFlag: 0x%X, elapsedRealtimeNs: %" PRId64", "
+             "elapsedRealtimeUncNs: %.2f, "
+             "carrierFrequencyHz: %f",
+             out[i].signalType->constellation, out[i].svid,
+             out[i].elapsedRealtime->flags, out[i].svFlag,
              out[i].elapsedRealtime->timestampNs,
-             out[i].elapsedRealtime->timeUncertaintyNs, out[i].signalType->constellation,
-             out[i].signalType->carrierFrequencyHz, out[i].svFlag);
+             out[i].elapsedRealtime->timeUncertaintyNs,
+             out[i].signalType->carrierFrequencyHz);
     }
 }
 
@@ -562,7 +563,8 @@ void GnssAPIClient::onTrackingCb(const Location& location) {
     bool isTracking = mTracking;
     gSharedMtx.unlock();
 
-    LOC_LOGd("]: (flags: %02x isTracking: %d)", location.flags, isTracking);
+    LOC_LOGd("location flags: %02x, isTracking: %d",
+             location.flags, isTracking);
 
     if (!isTracking) {
         return;
@@ -589,11 +591,12 @@ void GnssAPIClient::onTrackingCb(const Location& location) {
     } else {
         LOC_LOGw("] No GNSS Interface ready for gnssLocationCb ");
     }
-
 }
 
 void GnssAPIClient::onGnssSvCb(const GnssSvNotification& gnssSvNotification) {
-    LOC_LOGd("]: (count: %u)", gnssSvNotification.count);
+    LOC_LOGd("sv count: %u, elapsed real timestamp %" PRIu64 "",
+             gnssSvNotification.count, gnssSvNotification.gnssSvs[0].elapsedRealTime);
+
     gSharedMtx.lock();
     auto gnssCbIface(mGnssCbIface);
     gSharedMtx.unlock();
@@ -634,7 +637,8 @@ void GnssAPIClient::onGnssNmeaCb(const GnssNmeaNotification& gnssNmeaNotificatio
 }
 
 void GnssAPIClient::onEngineLocationsInfoCb(uint32_t count,
-            GnssLocationInfoNotification* engineLocationInfoNotification) {
+        GnssLocationInfoNotification* engineLocationInfoNotification) {
+
     if (nullptr == engineLocationInfoNotification) {
         LOC_LOGe("engineLocationInfoNotification is nullptr");
         return;

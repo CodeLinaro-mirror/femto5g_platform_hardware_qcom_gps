@@ -85,6 +85,7 @@ struct GnssInterface {
     void (*updateSystemPowerState)(PowerStateType systemPowerState);
     uint32_t (*gnssRegisterXtraStatusUpdate)(bool registerUpdate);
     uint32_t (*configureUserConsentForXtra) (const bool xtraUserConsent);
+    void (*setDebugSessionStatus)(bool debugSessionStatus);
 
 #ifdef USE_GLIB
     // Only LE
@@ -132,6 +133,7 @@ struct GnssInterface {
     void (*setNtnConfigSignalMask)(GnssSignalTypeMask gpsSignalTypeConfigMask);
     void (*injectSuplCert)(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
     void (*setPreferredConstellation)(GnssSvType type);
+    int32_t (*dump)(int fd, const char** args, uint32_t numArgs);
 #endif // USE_GLIB
 };
 

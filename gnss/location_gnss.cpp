@@ -28,10 +28,11 @@
  */
 
 /*
-Changes from Qualcomm Technologies, Inc. are provided under the following license:
-Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
-SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #include "GnssAdapter.h"
 #include "location_interface.h"
 
@@ -76,6 +77,7 @@ static uint32_t configOsnmaEnablement(bool enable);
 static uint32_t getXtraStatus();
 static uint32_t registerXtraStatusUpdate(bool registerUpdate);
 static uint32_t configureUserConsentForXtra(const bool xtraUserConsent);
+static void setDebugSessionStatus(bool debugSessionStatus);
 
 #ifdef USE_GLIB
 static uint32_t setConstrainedTunc (bool enable, float tuncConstraint,
@@ -121,7 +123,8 @@ static void getNtnConfigSignalMask();
 static void setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask);
 static void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData);
 static void setPreferredConstellation(GnssSvType type);
-#endif // USE_GLIB
+static int32_t dump(int fd, const char** args, uint32_t numArgs);
+#endif
 
 static const GnssInterface gGnssInterface = {
     // Both LE and Android
@@ -152,6 +155,7 @@ static const GnssInterface gGnssInterface = {
     updateSystemPowerState,
     registerXtraStatusUpdate,
     configureUserConsentForXtra,
+    setDebugSessionStatus,
 #ifdef USE_GLIB
     // Only LE
     setConstrainedTunc,
@@ -194,6 +198,7 @@ static const GnssInterface gGnssInterface = {
     setNtnConfigSignalMask,
     injectSuplCert,
     setPreferredConstellation,
+    dump,
 #endif // USE_GLIB
 };
 
@@ -409,6 +414,12 @@ static uint32_t configOsnmaEnablement(bool enable) {
         return gGnssAdapter->configOsnmaEnablementCommand(enable);
     } else {
         return 0;
+    }
+}
+
+static void setDebugSessionStatus(bool debugSessionStatus) {
+    if (NULL != gGnssAdapter) {
+        gGnssAdapter->setDebugSessionStatusCommand(debugSessionStatus);
     }
 }
 
@@ -696,5 +707,12 @@ static void setPreferredConstellation(GnssSvType type) {
     if (NULL != gGnssAdapter) {
         gGnssAdapter->setPreferredConstellationCommand(type);
     }
+}
+
+static int32_t dump(int fd, const char** args, uint32_t numArgs) {
+    if (NULL != gGnssAdapter) {
+        return gGnssAdapter->dump(fd, args, numArgs);
+    }
+    return 0;
 }
 #endif // USE_GLIB

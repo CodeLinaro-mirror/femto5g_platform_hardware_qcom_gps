@@ -29,8 +29,7 @@
 #******************************************************************************
 
 # Changes from Qualcomm Innovation Center are provided under the following license:
-
-# Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+# Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 
 clone: 1
@@ -123,3 +122,4 @@ process_vm_readv: 1
 sched_getaffinity: 1
 sched_get_priority_min: 1
 sched_get_priority_max: 1
+shutdown: 1

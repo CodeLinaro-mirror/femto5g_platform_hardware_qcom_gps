@@ -134,10 +134,6 @@ void LocAdapterBase::
 DEFAULT_IMPL()
 
 void LocAdapterBase::
-    reportNmeaEvent(const char* /*nmea*/, size_t /*length*/)
-DEFAULT_IMPL()
-
-void LocAdapterBase::
     reportDataEvent(const GnssDataNotification& /*dataNotify*/)
 DEFAULT_IMPL()
 

@@ -51,6 +51,9 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <NativeAgpsHandler.h>
 #include <unordered_map>
 #include <base_util/nvparam_mgr.h>
+#ifdef _ANDROID_
+#include <android/binder_ibinder.h>
+#endif
 
 #define MAX_URL_LEN 256
 #define ODCPI_EXPECTED_INJECTION_TIME_MS 10000
@@ -294,6 +297,7 @@ class GnssAdapter : public LocAdapterBase {
     struct CachedPvtData {
         bool isValid;
         loc_sess_status status;
+        uint64_t apBootTimestamp;    // in ns
         uint64_t elapsedRealTime;    // in ns
         uint64_t elapsedRealTimeUnc; // in ns
         GnssLocationSvUsedInPosition gnssSvIdUsedInPosition;
@@ -383,6 +387,7 @@ class GnssAdapter : public LocAdapterBase {
     std::vector<GnssSvIdSource> mBlacklistedSvIds;
     PowerStateType mSystemPowerState;
     PowerConnectState mPowerConnectState;
+    bool mInDebugDataSession;
 
     /* === Misc ===================================================================== */
     bool mPowerOn;
@@ -458,6 +463,9 @@ class GnssAdapter : public LocAdapterBase {
     /*==== 3rd party NTN status ========================================================*/
     bool mIsNtnStatusValid;
     GnssSignalTypeMask mNtnSignalTypeConfigMask;
+
+    /*==== Preferred Constellation =====================================================*/
+    GnssSvType mPreferredConstellation;
 
     /*==== WakeLock acquire/release based on TBF ==================================*/
     uint32_t mWakeLockEnableTbfThreshold;
@@ -769,8 +777,6 @@ public:
     void updateAndReportSv(GnssSvNotification& svNotify);
     void processPvtSvReportPairing(const UlpLocation& ulpLocation,
             const GpsLocationExtended& locationExtended, enum loc_sess_status sessionStatus);
-    void populateElapsedRealTime(GnssSvNotification& svNotify, uint64_t elapsedRealTime,
-            uint64_t elapsedRealTimeUnc);
     void saveGnssSvIdUsedInfo(const GpsLocationExtended& locationExtended);
     bool isFusedFix(const GpsLocationExtended& locationExtended) {
         return (locationExtended.flags & GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE) &&
@@ -892,6 +898,7 @@ public:
     void disablePPENtripStreamCommand();
     void handleEnablePPENtrip(const GnssNtripConnectionParams& params, bool enableRTKEngine);
     void handleDisablePPENtrip();
+    binder_status_t dump(int fd, const char** args, uint32_t numArgs);
 #endif
     inline bool isDgnssNmeaRequired() { return mSendNmeaConsent &&
             mStartDgnssNtripParams.ntripParams.requiresNmeaLocation;}
@@ -905,6 +912,8 @@ public:
     bool storeVrpData2Nvm(const LeverArmConfigInfo& configInfo);
 #endif
 
+    // Debug Report init/deinit calls from LocAidl
+    void setDebugSessionStatusCommand(bool debugSessionStatus);
 };
 
 #endif //GNSS_ADAPTER_H

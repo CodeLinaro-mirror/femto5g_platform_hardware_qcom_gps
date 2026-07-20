@@ -183,6 +183,10 @@ LocTimer::~LocTimer() {
 }
 
 bool LocTimer::start(uint32_t timeoutMs, bool wakeOnExpire) {
+    if (0 == timeoutMs) {
+        LOC_LOGd("0 msec timeoutMs!");
+        return false;
+    }
     if (wakeOnExpire == true) {
        LOC_LOGd("alarm based timer %s not supported, will use soft timer",
                 mName);

@@ -217,6 +217,30 @@ ScopedAStatus GnssConfiguration::setBlocklist(const vector<BlocklistedSource>& s
     return mGnss->updateConfiguration(config);
 }
 
+void convertQzssSvidFromAndroid(uint16_t svId, GnssSvId& out) {
+    out = svId;
+
+    switch (svId) {
+    case 203:
+        out = 196;
+        break;
+    case 204:
+        out = 197;
+        break;
+    case 205:
+        out = 200;
+        break;
+    case 206:
+        out = 201;
+        break;
+    default:
+        break;
+    }
+
+    LOC_LOGa("blocklist qzss sv id, in %d, out %d",
+             svId, out);
+}
+
 bool GnssConfiguration::setBlocklistedSource(GnssSvIdSource& copyToSource,
         const BlocklistedSource& copyFromSource) {
 
@@ -240,8 +264,9 @@ bool GnssConfiguration::setBlocklistedSource(GnssSvIdSource& copyToSource,
         break;
     case GnssConstellationType::QZSS:
         copyToSource.constellation = GNSS_SV_TYPE_QZSS;
-        // QZSS SV id is already sent within 183-206 per GnssSvInfo::svId
-        // so svIdOffset should remain 0.
+        // For L1CB,  need to convert to GNSS HAL range
+        // L1CBa does not need conversion, other signal type we do not support yet
+        convertQzssSvidFromAndroid(copyFromSource.svid, copyToSource.svId);
         break;
     case GnssConstellationType::BEIDOU:
         copyToSource.constellation = GNSS_SV_TYPE_BEIDOU;

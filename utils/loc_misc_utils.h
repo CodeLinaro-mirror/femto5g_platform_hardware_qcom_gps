@@ -191,6 +191,23 @@ SIDE EFFECTS
 ===========================================================================*/
 uint64_t getBootTimeMilliSec();
 
+/*===========================================================================
+FUNCTION getBootTimeNSec
+
+DESCRIPTION
+   This function is used to get boot time in nanoseconds.
+
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+    uint64_t boot time in nanoseconds
+
+SIDE EFFECTS
+   N/A
+===========================================================================*/
+uint64_t getBootTimeNSec();
+
 #ifdef __cplusplus
 }
 #endif

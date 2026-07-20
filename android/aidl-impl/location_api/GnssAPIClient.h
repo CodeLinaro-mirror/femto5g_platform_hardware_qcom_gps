@@ -113,6 +113,8 @@ private:
     bool mIsNlpActive;
     bool mSignalTypeCbExpected;
     bool mReportSpeOnly;
+    uint64_t svRptElapsedRealTime;
+    Location cachedLocRpt;
     shared_ptr<IGnssCallback> mGnssCbIface = nullptr;
 };
 
