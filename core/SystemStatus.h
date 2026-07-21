@@ -261,7 +261,7 @@ public:
     uint32_t  mGloXtraValid;
     uint64_t  mBdsXtraValid;
     uint64_t  mGalXtraValid;
-    uint8_t   mQzssXtraValid;
+    uint32_t  mQzssXtraValid;
     uint32_t  mNavicXtraValid;
     inline SystemStatusXtra() :
         mXtraValidMask(0),
@@ -289,19 +289,19 @@ public:
     uint32_t  mGloUnknownMask;
     uint64_t  mBdsUnknownMask;
     uint64_t  mGalUnknownMask;
-    uint8_t   mQzssUnknownMask;
+    uint32_t  mQzssUnknownMask;
     uint32_t  mNavicUnknownMask;
     uint32_t  mGpsGoodMask;
     uint32_t  mGloGoodMask;
     uint64_t  mBdsGoodMask;
     uint64_t  mGalGoodMask;
-    uint8_t   mQzssGoodMask;
+    uint32_t  mQzssGoodMask;
     uint32_t  mNavicGoodMask;
     uint32_t  mGpsBadMask;
     uint32_t  mGloBadMask;
     uint64_t  mBdsBadMask;
     uint64_t  mGalBadMask;
-    uint8_t   mQzssBadMask;
+    uint32_t  mQzssBadMask;
     uint32_t  mNavicBadMask;
     inline SystemStatusSvHealth() :
         mGpsUnknownMask(0),
