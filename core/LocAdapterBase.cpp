@@ -159,7 +159,6 @@ reportGnssMeasurementsEvent(const GnssMeasurements& /*gnssMeasurements*/,
                                    int /*msInWeek*/)
 DEFAULT_IMPL()
 
-
 void LocAdapterBase::reportGnssSvIdConfigEvent(const GnssSvIdConfig& /*config*/)
 DEFAULT_IMPL()
 

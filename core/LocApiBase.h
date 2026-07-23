@@ -262,6 +262,7 @@ public:
     virtual void setMeasurementCorrections(
             const GnssMeasurementCorrections& gnssMeasurementCorrections);
 
+    virtual bool getWwanFixSync(LocGpsLocation &wwanLoc);
     virtual bool getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
             LocPosTechMask &tech_mask, float* vertUnc = nullptr);
     virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);

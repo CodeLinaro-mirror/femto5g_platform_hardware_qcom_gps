@@ -62,6 +62,9 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/** Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ *  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ *  SPDX-License-Identifier: BSD-3-Clause-Clear */
 
 #ifndef __LOC_IPC__
 #define __LOC_IPC__
@@ -147,12 +150,9 @@ public:
     static unique_ptr<LocIpcRecver>
             getLocIpcInetTcpRecver(const shared_ptr<ILocIpcListener>& listener,
                                    const char* serverName, int32_t port);
-    inline static unique_ptr<LocIpcRecver>
+    static unique_ptr<LocIpcRecver>
             getLocIpcQrtrRecver(const shared_ptr<ILocIpcListener>& listener,
-                                int service, int instance) {
-        const shared_ptr<LocIpcQrtrWatcher> qrtrWatcher = nullptr;
-        return getLocIpcQrtrRecver(listener, service, instance, qrtrWatcher);
-    }
+                                int service, int instance);
     static unique_ptr<LocIpcRecver>
             getLocIpcQrtrRecver(const shared_ptr<ILocIpcListener>& listener,
                                 int service, int instance,
