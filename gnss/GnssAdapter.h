@@ -373,7 +373,7 @@ class GnssAdapter : public LocAdapterBase {
     std::function<void(const Location&)> mAddressRequestCb;
 
     /* ==== DELETEAIDINGDATA =============================================================== */
-    int64_t mLastDeleteAidingDataTime;
+    uint64_t mLastDeleteAidingDataTime;
 
     /* === SystemStatus ===================================================================== */
     SystemStatus* mSystemStatus;

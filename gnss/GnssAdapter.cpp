@@ -2443,24 +2443,18 @@ GnssSvTypeConfig GnssAdapter::gnssCombineSvTypeConfigs() {
 }
 
 void GnssAdapter::deleteAidingData(const GnssAidingData &data, uint32_t sessionId) {
-    struct timespec bootDeleteAidingDataTime = {};
-    int64_t bootDeleteTimeMs;
-    if (clock_gettime(CLOCK_BOOTTIME, &bootDeleteAidingDataTime) == 0) {
-        bootDeleteTimeMs = (int64_t)bootDeleteAidingDataTime.tv_sec * 1000;
-        int64_t diffTimeBFirSecDelete = bootDeleteTimeMs - mLastDeleteAidingDataTime;
-        if (diffTimeBFirSecDelete > DELETE_AIDING_DATA_EXPECTED_TIME_MS) {
-            mLocApi->deleteAidingData(data, new LocApiResponse(*getContext(),
+    uint64_t bootDeleteTimeMs = getBootTimeMilliSec() ;
+    uint64_t diffTimeBFirSecDelete = bootDeleteTimeMs - mLastDeleteAidingDataTime;
+
+    LOC_LOGw("request received at %" PRIu64 " msec, delta %" PRIu64 " msec",
+             bootDeleteTimeMs, diffTimeBFirSecDelete);
+    if (diffTimeBFirSecDelete > DELETE_AIDING_DATA_EXPECTED_TIME_MS) {
+        mLocApi->deleteAidingData(data, new LocApiResponse(*getContext(),
                     [this, sessionId] (LocationError err) {
                         reportResponse(err, sessionId);
                     }));
-            mLastDeleteAidingDataTime = bootDeleteTimeMs;
-        } else {
-            LOC_LOGw("Two delete aiding data in less than %d ms, ignore second one",
-                    DELETE_AIDING_DATA_EXPECTED_TIME_MS);
-            reportResponse(LOCATION_ERROR_GENERAL_FAILURE, sessionId);
-        }
+        mLastDeleteAidingDataTime = bootDeleteTimeMs;
     } else {
-        LOC_LOGe("clock_gettime failed");
         reportResponse(LOCATION_ERROR_GENERAL_FAILURE, sessionId);
     }
 }
@@ -3345,7 +3339,7 @@ void GnssAdapter::startTimeBasedTracking(LocationAPI* client, uint32_t sessionId
         reportResponse(client, LOCATION_ERROR_NOT_SUPPORTED, sessionId);
         return;
     }
-    LOC_LOGd("minInterval %u mode %u powermode %u tbm %u "
+    LOC_LOGi("minInterval %u mode %u powermode %u tbm %u "
              "preciseType %u corrtionType %u",
             trackingOptions.minInterval,
             trackingOptions.mode, trackingOptions.powerMode, trackingOptions.tbm,
@@ -3392,6 +3386,13 @@ void GnssAdapter::updateTracking(LocationAPI* client, uint32_t sessionId,
         reportResponse(client, LOCATION_ERROR_NOT_SUPPORTED, sessionId);
         return;
     }
+
+    LOC_LOGi("session id %d, minInterval %u mode %u powermode %u tbm %u "
+             "preciseType %u corrtionType %u",
+             sessionId, updatedOptions.minInterval,
+             updatedOptions.mode, updatedOptions.powerMode, updatedOptions.tbm,
+             updatedOptions.preciseType, updatedOptions.correctionType);
+
     LocPosMode locPosMode = {};
     convertOptions(locPosMode, updatedOptions);
     // save position mode parameters
@@ -3642,6 +3643,10 @@ void GnssAdapter::stopTracking(LocationAPI* client, uint32_t id) {
     mCachedSvNotify = nullptr;
     mCachedPvtData = {};
 
+    if (mFuturePvtReportTimer) {
+        mFuturePvtReportTimer->stop();
+    }
+
     mSPEAlreadyRunningAtHighestInterval = false;
 }
 
@@ -3818,6 +3823,16 @@ void MsgReportSPEPosition::proc() const {
                  "throw away the SPE reports");
         return;
     }
+
+    uint64_t bootTimeMs = getBootTimeMilliSec();
+    LOC_LOGI("MsgReportSPEPosition::proc at bootimestamp  %" PRIu64 " ms",
+             bootTimeMs);
+    if (bootTimeMs < (mAdapter.mLastDeleteAidingDataTime + 1000)) {
+        LOC_LOGW("position report received within 1000 milli-second of "
+                 "aiding data deletion, discard");
+        return;
+    }
+
     // In E911-MSA case when Modem doesn't support concurrency, we will observe
     // fix failures. So, in this we need to use the best available zpp fix from Modem.
     if (mAdapter.mInEmergency && (LOC_SESS_FAILURE == mStatus)) {
