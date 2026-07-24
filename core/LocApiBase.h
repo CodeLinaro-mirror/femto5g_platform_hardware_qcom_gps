@@ -262,6 +262,7 @@ public:
     void reportCompletedTrips(uint32_t accumulated_distance);
     void handleBatchStatusEvent(BatchingStatus batchStatus);
     void reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask);
+    void reportSvResidualData(const GnssSvResidualReport &svResidualReport);
 
     // downward calls
     virtual void* getSibling();
@@ -316,6 +317,7 @@ public:
                                 LocApiResponse *adapterResponse=nullptr);
     virtual void getBlacklistSv();
     virtual void setConstellationControl(const GnssSvTypeConfig& config,
+                                         bool sendReset=false,
                                          LocApiResponse *adapterResponse=nullptr);
     virtual void getConstellationControl();
     virtual void resetConstellationControl(LocApiResponse *adapterResponse=nullptr);
@@ -399,7 +401,6 @@ public:
     }
 
     virtual void setTribandState(bool enabled);
-
     virtual void configPrecisePositioning(uint32_t featureId, bool enable,
             std::string appHash, LocApiResponse* adapterResponse=nullptr);
     virtual void configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* merkleTree,

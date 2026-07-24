@@ -1218,6 +1218,7 @@ GnssAdapter::readConfigCommand()
 void
 GnssAdapter::setSuplHostServer(const char* server, int port, LocServerType type)
 {
+
     if (ContextBase::mGps_conf.AGPS_CONFIG_INJECT) {
         char serverUrl[MAX_URL_LEN] = {};
         int32_t length = -1;
@@ -3418,7 +3419,7 @@ GnssAdapter::hasCallbacksToStartTracking(LocationAPI* client)
                 it->second.gnssNHzMeasurementsCb || it->second.gnssDataCb ||
                 it->second.gnssSvCb || it->second.gnssNmeaCb || it->second.gnssDcReportCb ||
                 it->second.engineNmeaCb || it->second.gnssSignalTypesCb ||
-                it->second.svEphemerisCb) {
+                it->second.svEphemerisCb || it->second.svResidualDataCb) {
             allowed = true;
         } else {
             LOC_LOGi("missing right callback to start tracking")
@@ -6172,6 +6173,41 @@ bool GnssAdapter::reportQwesCapabilities(
     return true;
 }
 
+void GnssAdapter::reportSvResidualDataEvent(const GnssSvResidualReport& svResReport)
+{
+    //This report is from QMI
+    struct MsgReportSvResidualData : public LocMsg {
+        GnssAdapter& mAdapter;
+        const GnssSvResidualReport mSvResReport;
+
+        inline MsgReportSvResidualData(
+                GnssAdapter& adapter,
+                const GnssSvResidualReport& svResReport) :
+                LocMsg(),
+                mAdapter(adapter),
+                mSvResReport(svResReport) {
+        }
+
+        inline virtual void proc() const {
+            mAdapter.reportSvResidualData(mSvResReport);
+        }
+    };
+
+    sendMsg(new MsgReportSvResidualData(*this, svResReport));
+}
+
+bool GnssAdapter::reportSvResidualData(const GnssSvResidualReport &svResReport)
+{
+    LOC_LOGi("numSvs %d", svResReport.numSvs);
+     for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
+
+        if (nullptr != it->second.svResidualDataCb) {
+            it->second.svResidualDataCb(svResReport);
+        }
+    }
+    return true;
+}
+
 void GnssAdapter::initOdcpiCommand(const odcpiRequestCallback& callback,
                                    OdcpiPrioritytype priority,
                                    OdcpiCallbackTypeMask typeMask)
@@ -7441,7 +7477,13 @@ void GnssAdapter::gnssUpdateSvConfig(
 
         // if the constellation config is valid, issue request to modem
         // to enable/disable constellation
-        mLocApi->setConstellationControl(currentSvTypeConfig);
+        if ((GNSS_SV_TYPES_MASK_BDS_BIT == currentEnabledMask)
+                && (newEnabledMask != GNSS_SV_TYPES_MASK_BDS_BIT)) {
+            LOC_LOGd("Previously BDS only mode.. need to reset !!");
+            mLocApi->setConstellationControl(constellationEnablementConfig, true);
+        } else {
+            mLocApi->setConstellationControl(constellationEnablementConfig);
+        }
     } else if (constellationEnablementConfig.size == 0) {
         // when the size is not set, meaning reset to modem default
         mLocApi->resetConstellationControl();
@@ -7740,6 +7782,7 @@ bool GnssAdapter::measCorrSetCorrectionsCommand(const GnssMeasurementCorrections
                 }
             }
             char mapDataTestMode[LOC_MAX_PARAM_STRING];
+            memset(mapDataTestMode, 0, sizeof(mapDataTestMode));
             loc_param_s_type izatMapDataTable[] =
             {
                 { "MAP_DATA_TEST_MODE", &mapDataTestMode, NULL, 's' },
@@ -7947,12 +7990,18 @@ uint32_t GnssAdapter::configEngineRunStateCommand(
             mEngState(engState) {}
         inline virtual void proc() const {
             LocationError err = LOCATION_ERROR_NOT_SUPPORTED;
-            // Currently, only DR engine supports pause/resume request
-            if ((mEngType == DEAD_RECKONING_ENGINE) &&
-                (mAdapter.mEngServiceInfo.dreIntEnabled == true)) {
+            // Only DR and PPE engines supports pause/resume request
+            if (((mEngType == DEAD_RECKONING_ENGINE) &&
+                (mAdapter.mEngServiceInfo.dreIntEnabled == true)) ||
+                ((mEngType == PRECISE_POSITIONING_ENGINE) &&
+                (mAdapter.mEngServiceInfo.ppeEnabled == true))) {
                 if (true == mAdapter.mEngHubProxy->configEngineRunState(mEngType, mEngState)) {
                     err = LOCATION_ERROR_SUCCESS;
                 }
+            } else {
+                LOC_LOGe("Not supported for EngType %d (%d, %d)", mEngType,
+                        mAdapter.mEngServiceInfo.dreIntEnabled,
+                        mAdapter.mEngServiceInfo.ppeEnabled);
             }
             if (LOC_ENGINE_RUN_STATE_PAUSE_RETAIN == mEngState ||
                     LOC_ENGINE_RUN_STATE_PAUSE == mEngState) {
@@ -8291,7 +8340,7 @@ uint32_t GnssAdapter::configMerkleTreeCommand(const char * merkleTreeConfigBuffe
                 mAdapter.reportResponse(LOCATION_ERROR_INVALID_PARAMETER, mSessionId);
                 LOC_LOGE("MsgConfigMerkleTreeParams: Merkle tree config file parse failed");
                 if (treeParam != nullptr) {
-                    delete treeParam;
+                    delete[] treeParam;
                 }
                 return;
             }
@@ -8309,7 +8358,7 @@ uint32_t GnssAdapter::configMerkleTreeCommand(const char * merkleTreeConfigBuffe
                         mAdapter.reportResponse(err, mSessionId);
                         // clean treeParam when response for the last public key reports
                         if (treeParam != nullptr) {
-                            delete treeParam;
+                            delete[] treeParam;
                             treeParam = nullptr;
                         }
                     });
@@ -8317,7 +8366,7 @@ uint32_t GnssAdapter::configMerkleTreeCommand(const char * merkleTreeConfigBuffe
                         LOC_LOGE("MsgConfigMerkleTreeParams: memory alloc failed");
                         mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
                         if (treeParam != nullptr) {
-                            delete treeParam;
+                            delete[] treeParam;
                             treeParam = nullptr;
                         }
                     } else {
@@ -8327,7 +8376,7 @@ uint32_t GnssAdapter::configMerkleTreeCommand(const char * merkleTreeConfigBuffe
                     mAdapter.reportResponse(err, mSessionId);
                     // clean treeParam after response for the only injection reports
                     if (treeParam != nullptr) {
-                        delete treeParam;
+                        delete[] treeParam;
                         treeParam = nullptr;
                     }
                 }
@@ -8336,7 +8385,7 @@ uint32_t GnssAdapter::configMerkleTreeCommand(const char * merkleTreeConfigBuffe
                 LOC_LOGE("MsgConfigMerkleTreeParams: memory alloc failed");
                 mAdapter.reportResponse(LOCATION_ERROR_GENERAL_FAILURE, mSessionId);
                 if (treeParam != nullptr) {
-                    delete treeParam;
+                    delete[] treeParam;
                     treeParam = nullptr;
                 }
             } else {
@@ -8580,6 +8629,10 @@ GnssAdapter::initEngHubProxy() {
             handleQesdkQwesStatusFromEHub(featureMap);
             reportQwesCapabilities(featureMap);
         };
+        GnssAdapterSvResidualReportCb svResidualReportCb =
+            [this] (const GnssSvResidualReport &svResReport) {
+            reportSvResidualData(svResReport);
+        };
 
         getEngHubProxyFn* getter = (getEngHubProxyFn*) dlsym(handle, "getEngHubProxy");
         if (getter != nullptr) {
@@ -8588,7 +8641,8 @@ GnssAdapter::initEngHubProxy() {
             EngineHubProxyBase* hubProxy = (*getter) (mMsgTask, mSystemStatus->getOsObserver(),
                       mEngServiceInfo, reportPositionEventCb, reqAidingDataCb,
                       updateNHzRequirementCb, updateQwesFeatureStatusCb,
-                      [ this ] { return isEngineServiceEnable(); });
+                      [ this ] { return isEngineServiceEnable(); },
+                      svResidualReportCb);
             if (hubProxy != nullptr) {
                 mEngHubProxy = hubProxy;
                 mEngHubLoadSuccessful = true;

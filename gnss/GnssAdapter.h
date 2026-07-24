@@ -718,7 +718,7 @@ public:
     void reportPdnTypeFromWds(int pdnType, AGpsExtType agpsType, std::string apnName,
             AGpsBearerType bearerType);
     void reportXtraMpDisabledEvent();
-
+    virtual void reportSvResidualDataEvent(const GnssSvResidualReport &svResReport);
     /* ======== UTILITIES ================================================================= */
     bool needReportForAllClients(const UlpLocation& ulpLocation,
             enum loc_sess_status status, LocPosTechMask techMask);
@@ -763,6 +763,7 @@ public:
     void invokeGnssEnergyConsumedCallback(uint64_t energyConsumedSinceFirstBoot);
     void saveGnssEnergyConsumedCallback(GnssEnergyConsumedCallback energyConsumedCb);
     void reportLocationSystemInfo(const LocationSystemInfo & locationSystemInfo);
+    bool reportSvResidualData(const GnssSvResidualReport &svResReport);
     inline void reportNfwNotification(const GnssNfwNotification& notification) {
         if (NULL != mControlCallbacks.nfwStatusCb) {
             mControlCallbacks.nfwStatusCb(notification);

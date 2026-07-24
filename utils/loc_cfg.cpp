@@ -95,6 +95,7 @@ static uint32_t TIMESTAMP = 0;
 static bool sVendorEnhanced = true;
 static uint32_t sLogBufferEnabled = 0;
 static uint32_t sQxdmLogEnabled = 0;
+static uint32_t sDltLogEnabled = 0;
 
 /* Parameter spec table */
 static const loc_param_s_type loc_param_table[] =
@@ -103,6 +104,7 @@ static const loc_param_s_type loc_param_table[] =
     {"TIMESTAMP",               &TIMESTAMP,          NULL, 'n'},
     {"LOG_BUFFER_ENABLED",      &sLogBufferEnabled,  NULL, 'n'},
     {"QXDM_LOG",                &sQxdmLogEnabled,    NULL, 'n'},
+    {"LOC_ENABLE_DLT_LOG",      &sDltLogEnabled,     NULL, 'n'},
 };
 static const int loc_param_num = sizeof(loc_param_table) / sizeof(loc_param_s_type);
 
@@ -482,6 +484,9 @@ void loc_read_conf_long(const char* conf_file_name, const loc_param_s_type confi
             /* Initialize logging mechanism with parsed data */
             loc_logger_init(DEBUG_LEVEL, TIMESTAMP, qxdmF3);
             log_buffer_init(sLogBufferEnabled);
+#ifdef LOC_USE_DLT
+            loc_dlt_log_init(sDltLogEnabled);
+#endif
             log_tag_level_map_init();
         }
         fclose(conf_fp);
@@ -541,6 +546,7 @@ typedef struct {
     char auto_platform[LOC_MAX_PARAM_STRING];
     unsigned int vendor_enhanced_process;
     unsigned int launch_trigger_mask;
+    char proc_caps[LOC_MAX_PARAM_STRING];
 } loc_launcher_conf;
 
 /* process configuration parameters */
@@ -575,7 +581,8 @@ static const loc_param_s_type loc_process_conf_parameter_table[] = {
     {"LOW_RAM_TARGETS",            &conf.low_ram_targets,          NULL, 's'},
     {"HARDWARE_TYPE",              &conf.auto_platform,            NULL, 's'},
     {"VENDOR_ENHANCED_PROCESS",    &conf.vendor_enhanced_process,  NULL, 'n'},
-    {"LAUNCH_TRIGGER_MASK",       &conf.launch_trigger_mask,     NULL, 'n'},
+    {"LAUNCH_TRIGGER_MASK",        &conf.launch_trigger_mask,      NULL, 'n'},
+    {"PROCESS_CAPS",               &conf.proc_caps,                NULL, 's'},
 };
 
 /*===========================================================================
@@ -792,6 +799,8 @@ int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_p
         child_proc[j].proc_status = DISABLED;
         memset(child_proc[j].group_list, 0, sizeof(child_proc[j].group_list));
         config_mask=0;
+        conf.proc_caps[0] = '\0';
+        child_proc[j].allowedCapabilities[0] = '\0';
         if(loc_read_conf_r(conf_fp, loc_process_conf_parameter_table,
                            sizeof(loc_process_conf_parameter_table)/sizeof(loc_process_conf_parameter_table[0]))) {
             LOC_LOGE("%s:%d]: Unable to read conf file. Failing\n", __func__, __LINE__);
@@ -830,6 +839,13 @@ int loc_read_process_conf(const char* conf_file_name, uint32_t * process_count_p
         else if (strcmp(conf.proc_status, "ENABLED") == 0) {
             LOC_LOGD("%s:%d]: Process %s is enabled in conf file",
                      __func__, __LINE__, conf.proc_name);
+        }
+
+        /** Copy allowed capabilites for a process */
+        if ('\0' != conf.proc_caps[0]) {
+            LOC_LOGd("Process %s Supported caps %s.", conf.proc_name, conf.proc_caps);
+            strlcpy(child_proc[j].allowedCapabilities, conf.proc_caps,
+                        sizeof(child_proc[j].allowedCapabilities));
         }
 
         //Since strlcpy copies length-1 characters, we add 1 to name_length

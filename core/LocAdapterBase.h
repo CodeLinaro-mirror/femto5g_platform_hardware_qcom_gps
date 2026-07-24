@@ -266,6 +266,7 @@ public:
                              removeClientCompleteCallback rmClientCb);
     void requestCapabilitiesCommand(LocationAPI* client);
 
+    virtual void reportSvResidualDataEvent(const GnssSvResidualReport &svResidualReport);
     virtual void reportLatencyInfoEvent(const GnssLatencyInfo& gnssLatencyInfo);
     virtual void handleEngineLockStatusEvent(EngineLockState engineLockState);
     virtual void reportEngDebugDataInfoEvent(GnssEngineDebugDataInfo& gnssEngineDebugDataInfo);
