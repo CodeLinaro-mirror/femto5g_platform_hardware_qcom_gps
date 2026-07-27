@@ -3330,6 +3330,13 @@ GnssAdapter::suspendSessions()
 {
     LOC_LOGi(":enter");
 
+    // A keep-warm retry must not restart tracking while sessions are suspended.
+    // This also marks an already-posted timer expiry as cancelled.
+    if (nullptr != mKeepWarmRetryTimer && mKeepWarmRetryTimer->isActive()) {
+        LOC_LOGd("Stopping keep-warm retry timer while suspending sessions");
+        mKeepWarmRetryTimer->stop();
+    }
+
     if (!mTimeBasedTrackingSessions.empty()) {
         stopTracking();
     }
@@ -4648,6 +4655,18 @@ GnssAdapter::reportEnginePositionsEvent(unsigned int count,
 }
 
 bool GnssAdapter::needReportForClient(LocationAPI* client, enum loc_sess_status status) {
+    // A client whose own last-requested power mode for its time-based tracking
+    // session is M5 (keep warm) must never receive a position report, even if
+    // the combined/multiplexed session is effectively running more aggressively
+    // because of another client's request.
+    if (client != nullptr) {
+        for (auto it = mTimeBasedTrackingSessions.begin();
+                it != mTimeBasedTrackingSessions.end(); ++it) {
+            if (it->first.client == client && it->second.powerMode == GNSS_POWER_MODE_M5) {
+                return false;
+            }
+        }
+    }
     if (LOC_SESS_SUCCESS == status || (client == nullptr && LOC_SESS_INTERMEDIATE == status &&
                 mDistanceBasedTrackingSessions.size() > 0)) {
         return true;
@@ -6488,6 +6507,14 @@ void GnssAdapter::keepWarmRetryTimerExpireEvent() {
                 LocMsg(), mAdapter(adapter) {}
         inline virtual void proc() const {
             LOC_LOGd("Keep-warm retry timer expired");
+            // The timer callback may have posted this message immediately before
+            // suspendSessions() stopped the timer. Honor that cancellation and do
+            // not let the stale message restart a session after suspend/resume.
+            if (nullptr == mAdapter.mKeepWarmRetryTimer ||
+                    !mAdapter.mKeepWarmRetryTimer->isActive()) {
+                LOC_LOGd("Keep-warm retry timer expiry cancelled, skip retry");
+                return;
+            }
             mAdapter.mKeepWarmRetryTimer->stop();
             // Only retry if there are active sessions and the multiplexed mode is still M5
             if (!mAdapter.mTimeBasedTrackingSessions.empty() &&
