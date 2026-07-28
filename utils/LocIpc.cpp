@@ -468,6 +468,10 @@ shared_ptr<LocIpcSender> LocIpc::getLocIpcQrtrSender(int service, int instance) 
     return (nullptr == creator) ? nullptr : creator(service, instance);
 }
 unique_ptr<LocIpcRecver> LocIpc::getLocIpcQrtrRecver(const shared_ptr<ILocIpcListener>& listener,
+                                                     int service, int instance) {
+    return getLocIpcQrtrRecver(listener, service, instance, nullptr);
+}
+unique_ptr<LocIpcRecver> LocIpc::getLocIpcQrtrRecver(const shared_ptr<ILocIpcListener>& listener,
                                                      int service, int instance,
                                                      const shared_ptr<LocIpcQrtrWatcher>& watcher) {
     typedef unique_ptr<LocIpcRecver> (*creator_t)(const shared_ptr<ILocIpcListener>&, int, int,
