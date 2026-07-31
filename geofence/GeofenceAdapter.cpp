@@ -397,7 +397,8 @@ GeofenceAdapter::removeGeofencesCommand(LocationAPI* client, size_t count, uint3
                 mApi.addToCallQueue(new LocApiResponse(*mAdapter.getContext(),
                         [&mAdapter = mAdapter, mCount = mCount, mClient = mClient, mIds = mIds,
                         &mApi = mApi, errs, i] (LocationError err ) {
-                    uint32_t hwId = 0;
+                    // Initialize to sentinel value to avoid null pointer warning
+                    uint32_t hwId = UINT32_MAX;
                     errs[i] = mAdapter.getHwIdFromClient(mClient, mIds[i], hwId);
                     if (LOCATION_ERROR_SUCCESS == errs[i]) {
                         mApi.removeGeofence(hwId, mIds[i],
@@ -474,7 +475,8 @@ GeofenceAdapter::pauseGeofencesCommand(LocationAPI* client, size_t count, uint32
                 mApi.addToCallQueue(new LocApiResponse(*mAdapter.getContext(),
                         [&mAdapter = mAdapter, mCount = mCount, mClient = mClient, mIds = mIds,
                         &mApi = mApi, errs, i] (LocationError err ) {
-                    uint32_t hwId = 0;
+                     // Initialize to sentinel value to avoid null pointer warning
+                    uint32_t hwId = UINT32_MAX;
                     errs[i] = mAdapter.getHwIdFromClient(mClient, mIds[i], hwId);
                     if (LOCATION_ERROR_SUCCESS == errs[i]) {
                         mApi.pauseGeofence(hwId, mIds[i], new LocApiResponse(*mAdapter.getContext(),
@@ -549,7 +551,8 @@ GeofenceAdapter::resumeGeofencesCommand(LocationAPI* client, size_t count, uint3
                 mApi.addToCallQueue(new LocApiResponse(*mAdapter.getContext(),
                         [&mAdapter = mAdapter, mCount = mCount, mClient = mClient, mIds = mIds,
                         &mApi = mApi, errs, i] (LocationError err ) {
-                    uint32_t hwId = 0;
+                     // Initialize to sentinel value to avoid null pointer warning
+                    uint32_t hwId = UINT32_MAX;
                     errs[i] = mAdapter.getHwIdFromClient(mClient, mIds[i], hwId);
                     if (LOCATION_ERROR_SUCCESS == errs[i]) {
                         mApi.resumeGeofence(hwId, mIds[i],
@@ -632,7 +635,8 @@ GeofenceAdapter::modifyGeofencesCommand(LocationAPI* client, size_t count, uint3
                     mApi.addToCallQueue(new LocApiResponse(*mAdapter.getContext(),
                             [&mAdapter = mAdapter, mCount = mCount, mClient = mClient, mIds = mIds,
                             &mApi = mApi, mOptions = mOptions, errs, i] (LocationError err ) {
-                        uint32_t hwId = 0;
+                         // Initialize to sentinel value to avoid null pointer warning
+                        uint32_t hwId = UINT32_MAX;
                         errs[i] = mAdapter.getHwIdFromClient(mClient, mIds[i], hwId);
                         if (LOCATION_ERROR_SUCCESS == errs[i]) {
                             mApi.modifyGeofence(hwId, mIds[i], mOptions[i],
