@@ -113,12 +113,9 @@ public:
     static unique_ptr<LocIpcRecver>
             getLocIpcInetUdpRecver(const shared_ptr<ILocIpcListener>& listener,
                                  const char* serverName, int32_t port);
-    inline static unique_ptr<LocIpcRecver>
+    static unique_ptr<LocIpcRecver>
             getLocIpcQrtrRecver(const shared_ptr<ILocIpcListener>& listener,
-                                int service, int instance) {
-        const shared_ptr<LocIpcQrtrWatcher> qrtrWatcher = nullptr;
-        return getLocIpcQrtrRecver(listener, service, instance, qrtrWatcher);
-    }
+                                int service, int instance);
     static unique_ptr<LocIpcRecver>
             getLocIpcQrtrRecver(const shared_ptr<ILocIpcListener>& listener,
                                 int service, int instance,
