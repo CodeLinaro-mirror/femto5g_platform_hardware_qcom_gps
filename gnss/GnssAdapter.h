@@ -233,6 +233,7 @@ class GnssAdapter : public LocAdapterBase {
 
     /* ==== TRACKING ======================================================================= */
     TrackingOptionsMap mTimeBasedTrackingSessions;
+    LocationSessionMap mDistanceBasedTrackingSessions;
     LocPosMode mLocPositionMode;
     PreciseType mPreciseType;
     CorrectionType mCorrectionType;
@@ -330,7 +331,6 @@ class GnssAdapter : public LocAdapterBase {
 
     /* === Misc ===================================================================== */
     BlockCPIInfo mBlockCPIInfo;
-    bool mPowerOn;
     bool mEngHubLoadSuccessful;
     RealtimeEstimator mPositionElapsedRealTimeCal;
 
@@ -449,7 +449,8 @@ public:
     /* ======== RESPONSES ================================================================== */
     void reportResponse(LocationAPI* client, LocationError err, uint32_t sessionId);
     /* ======== UTILITIES ================================================================== */
-    bool isValidTrackingSession(LocationAPI* client, uint32_t sessionId);
+    bool isTimeBasedTrackingSession(LocationAPI* client, uint32_t sessionId);
+    bool isDistanceBasedTrackingSession(LocationAPI* client, uint32_t sessionId);
     bool hasCallbacksToStartTracking(LocationAPI* client);
     void saveTrackingSession(LocationAPI* client, uint32_t sessionId,
                              const TrackingOptions& trackingOptions);
@@ -459,6 +460,7 @@ public:
     LocPosMode& getLocPositionMode() { return mLocPositionMode; }
 
     void reStartTimeBasedTracking();
+    void reStartDistanceBasedTracking();
 
     bool startTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t sessionId,
                                          const TrackingOptions& trackingOptions);
@@ -606,7 +608,8 @@ public:
     LocationControlCallbacks& getControlCallbacks() { return mControlCallbacks; }
     void setAfwControlId(uint32_t id) { mAfwControlId = id; }
     uint32_t getAfwControlId() { return mAfwControlId; }
-    virtual bool isInSession() { return !mTimeBasedTrackingSessions.empty(); }
+    virtual bool isInSession() { return !mTimeBasedTrackingSessions.empty() ||
+                                        !mDistanceBasedTrackingSessions.empty(); }
     bool isPreciseSession() { return isInSession() && (mPreciseType != PRECISE_TYPE_UNKNOWN); }
     uint32_t getFgTrackingSessionCount();
     void initDefaultAgps();
