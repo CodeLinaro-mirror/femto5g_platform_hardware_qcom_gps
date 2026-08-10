@@ -161,6 +161,7 @@ typedef struct loc_sv_cache_info_s
     float hdop;
     float pdop;
     float vdop;
+    uint32_t qzss_l1cb_count;
 } loc_sv_cache_info;
 
 static GnssNmeaTypesMask mEnabledNmeaTypes = NMEA_TYPE_ALL;
@@ -504,6 +505,9 @@ static loc_nmea_sv_meta* loc_nmea_sv_meta_init(loc_nmea_sv_meta& sv_meta,
                     break;
                 case GNSS_SIGNAL_QZSS_L5:
                     sv_meta.svCount = sv_cache_info.qzss_l5_count;
+                    break;
+                case GNSS_SIGNAL_QZSS_L1CB:
+                    sv_meta.svCount = sv_cache_info.qzss_l1cb_count;
                     break;
             }
             break;
@@ -2232,6 +2236,8 @@ void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
                 sv_cache_info.qzss_l5_count++;
             } else if (GNSS_SIGNAL_QZSS_L2 == svNotify.gnssSvs[svOffset].gnssSignalTypeMask) {
                 sv_cache_info.qzss_l2_count++;
+            } else if (GNSS_SIGNAL_QZSS_L1CB == svNotify.gnssSvs[svOffset].gnssSignalTypeMask) {
+                sv_cache_info.qzss_l1cb_count++;
             } else {
                 // GNSS_SIGNAL_QZSS_L1CA or default
                 // If no signal type in report, it means default L1
@@ -2358,6 +2364,12 @@ void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
         loc_nmea_generate_GSV(svNotify, sentence, sizeof(sentence),
                 loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_QZSS,
                 GNSS_SIGNAL_QZSS_L2, false), nmeaArraystr);
+        // -----------------------------
+        // ------$GQGSV (QZSS):L1CB-----
+        // -----------------------------
+        loc_nmea_generate_GSV(svNotify, sentence, sizeof(sentence),
+                loc_nmea_sv_meta_init(sv_meta, sv_cache_info, GNSS_SV_TYPE_QZSS,
+                GNSS_SIGNAL_QZSS_L1CB, false), nmeaArraystr);
     }
 
     if (mEnabledNmeaTypes & NMEA_TYPE_GBGSV) {
