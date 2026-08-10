@@ -182,7 +182,6 @@ GnssAdapter::GnssAdapter() :
     mBlockCPIInfo{},
     mEsStatusCb(nullptr),
     mEngHubLoadSuccessful(false),
-    mPowerOn(false),
     mNativeAgpsHandler(mSystemStatus->getOsObserver(), *this),
     mGnssEnergyConsumedCb(nullptr),
     mSupportNfwControl(true),
@@ -3033,6 +3032,24 @@ GnssAdapter::stopClientSessions(LocationAPI* client, bool eraseSession)
         if (eraseSession)
             eraseTrackingSession(key.client, key.id);
     }
+
+    /* Distance-based Tracking */
+    for (auto it = mDistanceBasedTrackingSessions.begin();
+              it != mDistanceBasedTrackingSessions.end(); /* no increment here*/) {
+        if (client == it->first.client) {
+            mLocApi->stopDistanceBasedTracking(it->first.id, new LocApiResponse(*getContext(),
+                          [this, client, id=it->first.id, eraseSession] (LocationError err) {
+                    if (LOCATION_ERROR_SUCCESS == err) {
+                        if (eraseSession)
+                            eraseTrackingSession(client, id);
+                    }
+                }
+            ));
+        }
+        ++it; // safe: eraseTrackingSession is called inside a LocApiResponse callback, which is
+              // posted via mContext.sendMsg() and runs only after this message completes.
+    }
+
 }
 
 void
@@ -3287,6 +3304,7 @@ GnssAdapter::restartSessions(bool modemSSR)
     mSPEAlreadyRunningAtHighestInterval = false;
 
     checkAndRestartSPESession();
+    reStartDistanceBasedTracking();
 }
 
 void GnssAdapter::checkAndRestartSPESession()
@@ -3295,6 +3313,14 @@ void GnssAdapter::checkAndRestartSPESession()
     mSPEAlreadyRunningAtHighestInterval = false;
 
     reStartTimeBasedTracking();
+}
+
+void GnssAdapter::reStartDistanceBasedTracking()
+{
+    for (auto it = mDistanceBasedTrackingSessions.begin();
+        it != mDistanceBasedTrackingSessions.end(); ++it) {
+        mLocApi->startDistanceBasedTracking(it->first.id, it->second, nullptr);
+    }
 }
 
 // suspend all on-going sessions
@@ -3306,11 +3332,25 @@ GnssAdapter::suspendSessions()
     if (!mTimeBasedTrackingSessions.empty()) {
         stopTracking();
     }
+
+    for (auto it = mDistanceBasedTrackingSessions.begin();
+        it != mDistanceBasedTrackingSessions.end(); ++it) {
+        mLocApi->stopDistanceBasedTracking(it->first.id, nullptr);
+    }
 }
 
-bool GnssAdapter::isValidTrackingSession(LocationAPI* client, uint32_t sessionId) {
+bool
+GnssAdapter::isTimeBasedTrackingSession(LocationAPI* client, uint32_t sessionId)
+{
     LocationSessionKey key(client, sessionId);
     return (mTimeBasedTrackingSessions.find(key) != mTimeBasedTrackingSessions.end());
+}
+
+bool
+GnssAdapter::isDistanceBasedTrackingSession(LocationAPI* client, uint32_t sessionId)
+{
+    LocationSessionKey key(client, sessionId);
+    return (mDistanceBasedTrackingSessions.find(key) != mDistanceBasedTrackingSessions.end());
 }
 
 bool
@@ -3341,9 +3381,13 @@ GnssAdapter::saveTrackingSession(LocationAPI* client, uint32_t sessionId,
 {
     if (nullptr != client) {
         LocationSessionKey key(client, sessionId);
-        mTimeBasedTrackingSessions[key] = options;
-        if (getFgTrackingSessionCount() > 0) {
-            configRobustLocation();
+        if (options.minDistance > 0) {
+            mDistanceBasedTrackingSessions[key] = options;
+        } else {
+            mTimeBasedTrackingSessions[key] = options;
+            if (getFgTrackingSessionCount() > 0) {
+                configRobustLocation();
+            }
         }
         // notify SystemStatus the engine tracking status
         getSystemStatus()->eventSetTracking(isInSession(), true);
@@ -3360,6 +3404,11 @@ GnssAdapter::eraseTrackingSession(LocationAPI* client, uint32_t sessionId)
             mTimeBasedTrackingSessions.erase(it);
             if (getFgTrackingSessionCount() == 0) {
                 configRobustLocation();
+            }
+        } else {
+            auto itr = mDistanceBasedTrackingSessions.find(key);
+            if (itr != mDistanceBasedTrackingSessions.end()) {
+                mDistanceBasedTrackingSessions.erase(itr);
             }
         }
         getSystemStatus()->eventSetTracking(isInSession(), true);
@@ -3466,6 +3515,11 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
             mSessionId(sessionId),
             mOptions(options) {}
         inline virtual void proc() const {
+            // distance based tracking will need to know engine capabilities before it can start
+            if (!mAdapter.isEngineCapabilitiesKnown() && mOptions.minDistance > 0) {
+                mAdapter.mPendingMsgs.push_back(new MsgStartTracking(*this));
+                return;
+            }
             LocationError err = LOCATION_ERROR_SUCCESS;
             if (!mAdapter.hasCallbacksToStartTracking(mClient)) {
                 err = LOCATION_ERROR_CALLBACK_MISSING;
@@ -3514,16 +3568,31 @@ GnssAdapter::startTrackingCommand(LocationAPI* client, const TrackingOptions& op
                         ContextBase::mIzat_process_conf.engineServiceInfo.dreIntEnabled,
                         mOptions.preciseType);
 
-                // Api doesn't support multiple clients for time based tracking, so mutiplex
-                bool reportToClientWithNoWait =
-                    mAdapter.startTimeBasedTrackingMultiplex(mClient, mSessionId, mOptions);
-                mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
-                mAdapter.setTribandState();
-                mAdapter.setPreciseSessionConfig(mOptions.preciseType);
-                mAdapter.notifyPreciseLocation();
+                if (mOptions.minDistance > 0) {
+                    mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
+                    mApi.startDistanceBasedTracking(mSessionId, mOptions,
+                            new LocApiResponse(*mAdapter.getContext(),
+                            [&mAdapter = mAdapter, mSessionId = mSessionId, mClient = mClient,
+                            &mApi = mApi]
+                            (LocationError err) {
+                        if (ENGINE_LOCK_STATE_DISABLED != mApi.getEngineLockState() &&
+                            LOCATION_ERROR_SUCCESS != err) {
+                            mAdapter.eraseTrackingSession(mClient, mSessionId);
+                        }
+                        mAdapter.reportResponse(mClient, err, mSessionId);
+                    }));
+                } else {
+                    // Api doesn't support multiple clients for time based tracking, so mutiplex
+                    bool reportToClientWithNoWait =
+                        mAdapter.startTimeBasedTrackingMultiplex(mClient, mSessionId, mOptions);
+                    mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
+                    mAdapter.setTribandState();
+                    mAdapter.setPreciseSessionConfig(mOptions.preciseType);
+                    mAdapter.notifyPreciseLocation();
 
-                if (reportToClientWithNoWait) {
-                    mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
+                    if (reportToClientWithNoWait) {
+                        mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
+                    }
                 }
             }
         }
@@ -3727,14 +3796,17 @@ GnssAdapter::updateTrackingOptionsCommand(LocationAPI* client, uint32_t id,
             mSessionId(sessionId),
             mOptions(options) {}
         inline virtual void proc() const {
-            LocationError err = LOCATION_ERROR_SUCCESS;
-            bool isValidSession = mAdapter.isValidTrackingSession(mClient, mSessionId);
-            LOC_LOGd("isValidSession %d ",  isValidSession);
-            if (!isValidSession) {
-                mAdapter.reportResponse(mClient, LOCATION_ERROR_ID_UNKNOWN, mSessionId);
+            // distance based tracking will need to know engine capabilities before it can start
+            if (!mAdapter.isEngineCapabilitiesKnown() && mOptions.minDistance > 0) {
+                mAdapter.mPendingMsgs.push_back(new MsgUpdateTracking(*this));
                 return;
             }
-            if (0 == mOptions.size) {
+            LocationError err = LOCATION_ERROR_SUCCESS;
+            bool isTimeBased = mAdapter.isTimeBasedTrackingSession(mClient, mSessionId);
+            bool isDistanceBased = mAdapter.isDistanceBasedTrackingSession(mClient, mSessionId);
+            if (!isTimeBased && !isDistanceBased) {
+                err = LOCATION_ERROR_ID_UNKNOWN;
+            } else if (0 == mOptions.size) {
                 err = LOCATION_ERROR_INVALID_PARAMETER;
             }
             if (LOCATION_ERROR_SUCCESS != err) {
@@ -3752,13 +3824,68 @@ GnssAdapter::updateTrackingOptionsCommand(LocationAPI* client, uint32_t id,
                 LOC_LOGd("Updated min Interval: %d", mOptions.minInterval);
 
                 // Now update session as required
-                // Api doesn't support multiple clients for time based tracking, so mutiplex
-                bool reportToClientWithNoWait =
-                        mAdapter.updateTrackingMultiplex(mClient, mSessionId, mOptions);
-                mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
+                if (isTimeBased && mOptions.minDistance > 0) {
+                    // switch from time based to distance based
+                    // Api doesn't support multiple clients for time based tracking, so mutiplex
+                    bool reportToClientWithNoWait =
+                        mAdapter.stopTimeBasedTrackingMultiplex(mClient, mSessionId);
+                    // erases the time based Session
+                    mAdapter.eraseTrackingSession(mClient, mSessionId);
+                    if (reportToClientWithNoWait) {
+                        mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
+                    }
+                    // saves as distance based Session
+                    mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
+                    mApi.startDistanceBasedTracking(mSessionId, mOptions,
+                            new LocApiResponse(*mAdapter.getContext(),
+                                        [] (LocationError /*err*/) {}));
+                } else if (isDistanceBased && mOptions.minDistance == 0) {
+                    // switch from distance based to time based
+                    mAdapter.eraseTrackingSession(mClient, mSessionId);
+                    mApi.stopDistanceBasedTracking(mSessionId, new LocApiResponse(
+                            *mAdapter.getContext(),
+                            [&mAdapter = mAdapter, mSessionId = mSessionId, mOptions = mOptions,
+                            mClient = mClient] (LocationError /*err*/) {
+                        // Api doesn't support multiple clients for time based tracking,
+                        // so mutiplex
+                        bool reportToClientWithNoWait =
+                                mAdapter.startTimeBasedTrackingMultiplex(mClient, mSessionId,
+                                                                         mOptions);
+                        mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
 
-                if (reportToClientWithNoWait) {
-                    mAdapter.reportResponse(mClient, err, mSessionId);
+                        if (reportToClientWithNoWait) {
+                            mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
+                        }
+                    }));
+                } else if (isTimeBased) {
+                    // update time based tracking
+                    // Api doesn't support multiple clients for time based tracking, so mutiplex
+                    bool reportToClientWithNoWait =
+                            mAdapter.updateTrackingMultiplex(mClient, mSessionId, mOptions);
+                    mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
+
+                    if (reportToClientWithNoWait) {
+                        mAdapter.reportResponse(mClient, err, mSessionId);
+                    }
+                } else if (isDistanceBased) {
+                    // restart distance based tracking
+                    mApi.stopDistanceBasedTracking(mSessionId, new LocApiResponse(
+                            *mAdapter.getContext(),
+                            [&mAdapter = mAdapter, mSessionId = mSessionId, mOptions = mOptions,
+                            mClient = mClient, &mApi = mApi] (LocationError err) {
+                        if (LOCATION_ERROR_SUCCESS == err) {
+                            mApi.startDistanceBasedTracking(mSessionId, mOptions,
+                                    new LocApiResponse(*mAdapter.getContext(),
+                                    [&mAdapter, mClient, mSessionId, mOptions, &mApi = mApi]
+                                    (LocationError err) {
+                                if (ENGINE_LOCK_STATE_DISABLED == mApi.getEngineLockState() ||
+                                    LOCATION_ERROR_SUCCESS == err) {
+                                    mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
+                                }
+                                mAdapter.reportResponse(mClient, err, mSessionId);
+                            }));
+                        }
+                    }));
                 }
             }
         }
@@ -3842,28 +3969,42 @@ GnssAdapter::stopTrackingCommand(LocationAPI* client, uint32_t id)
             mClient(client),
             mSessionId(sessionId) {}
         inline virtual void proc() const {
-            bool isValidSession = mAdapter.isValidTrackingSession(mClient, mSessionId);
-            LOC_LOGd("isValidSession %d ",  isValidSession);
-            if (!isValidSession) {
-                mAdapter.reportResponse(mClient, LOCATION_ERROR_ID_UNKNOWN, mSessionId);
-                return;
-            }
-            // find the session it is going to stop
-            LocationSessionKey key(mClient, mSessionId);
-            auto it = mAdapter.mTimeBasedTrackingSessions.find(key);
-            if (it != mAdapter.mTimeBasedTrackingSessions.end()) {
-                mPreciseType = (it->second).preciseType;
-            }
-            // Api doesn't support multiple clients for time based tracking, so mutiplex
-            bool reportToClientWithNoWait =
-                    mAdapter.stopTimeBasedTrackingMultiplex(mClient, mSessionId);
-            mAdapter.eraseTrackingSession(mClient, mSessionId);
-            mAdapter.setTribandState();
-            mAdapter.setPreciseSessionConfig(mPreciseType);
-            mAdapter.notifyPreciseLocation();
+            bool isTimeBased = mAdapter.isTimeBasedTrackingSession(mClient, mSessionId);
+            bool isDistanceBased = mAdapter.isDistanceBasedTrackingSession(mClient, mSessionId);
+            if (isTimeBased || isDistanceBased) {
+                if (isTimeBased) {
+                    // find the session it is going to stop
+                    LocationSessionKey key(mClient, mSessionId);
+                    auto it = mAdapter.mTimeBasedTrackingSessions.find(key);
+                    if (it != mAdapter.mTimeBasedTrackingSessions.end()) {
+                        mPreciseType = (it->second).preciseType;
+                    }
+                    // Api doesn't support multiple clients for time based tracking, so mutiplex
+                    bool reportToClientWithNoWait =
+                        mAdapter.stopTimeBasedTrackingMultiplex(mClient, mSessionId);
+                    mAdapter.eraseTrackingSession(mClient, mSessionId);
+                    mAdapter.setTribandState();
+                    mAdapter.setPreciseSessionConfig(mPreciseType);
+                    mAdapter.notifyPreciseLocation();
 
-            if (reportToClientWithNoWait) {
-                mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
+                    if (reportToClientWithNoWait) {
+                        mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
+                    }
+                } else if (isDistanceBased) {
+                    mApi.stopDistanceBasedTracking(mSessionId, new LocApiResponse(
+                            *mAdapter.getContext(),
+                            [&mAdapter = mAdapter, mSessionId = mSessionId, mClient = mClient,
+                            &mApi = mApi]
+                            (LocationError err) {
+                        if (ENGINE_LOCK_STATE_DISABLED == mApi.getEngineLockState() ||
+                            LOCATION_ERROR_SUCCESS == err) {
+                            mAdapter.eraseTrackingSession(mClient, mSessionId);
+                        }
+                        mAdapter.reportResponse(mClient, err, mSessionId);
+                    }));
+                }
+            } else {
+                mAdapter.reportResponse(mClient, LOCATION_ERROR_ID_UNKNOWN, mSessionId);
             }
         }
     };
@@ -4247,7 +4388,7 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
             mTechMask(techMask),
             mMsInWeek(msInWeek) {}
         inline virtual void proc() const {
-            if (mAdapter.mTimeBasedTrackingSessions.empty()) {
+            if (!mAdapter.isInSession()) {
                 LOC_LOGD("MsgReportSPEPosition, no session on-going, "
                          "throw away the SPE reports");
                 return;
@@ -4495,8 +4636,17 @@ GnssAdapter::reportEnginePositionsEvent(unsigned int count,
 }
 
 bool GnssAdapter::needReportForClient(LocationAPI* client, enum loc_sess_status status) {
-    if (LOC_SESS_SUCCESS == status) {
+    if (LOC_SESS_SUCCESS == status || (client == nullptr && LOC_SESS_INTERMEDIATE == status &&
+                mDistanceBasedTrackingSessions.size() > 0)) {
         return true;
+    }
+    if (status != LOC_SESS_FAILURE) {
+        for (auto it = mDistanceBasedTrackingSessions.begin();
+                it != mDistanceBasedTrackingSessions.end(); ++it) {
+            if (it->first.client == client) { // Always report intermediate fixes to dbt clients
+                return true;
+            }
+        }
     }
     for (auto it = mTimeBasedTrackingSessions.begin();
             it != mTimeBasedTrackingSessions.end(); ++it) {
@@ -6612,6 +6762,11 @@ bool GnssAdapter::requestATL(int connHandle, LocAGpsType agpsType,
             mAgpsManager->requestATL(mConnHandle, mAgpsType, mApnTypeMask, mSubId, mTimeout);
         }
     };
+
+#ifdef OPENWRT_TARGET_SDX35
+    subId = static_cast<SubId>(LOC_DEFAULT_SUB);
+    LOC_LOGi("Update Sub Id to Default Sub %d", subId);
+#endif
 
     sendMsg( new AgpsMsgRequestATL( &mAgpsManager, connHandle, (AGpsExtType)agpsType,
                                     apnTypeMask, subId, timeout));

@@ -159,7 +159,6 @@ reportGnssMeasurementsEvent(const GnssMeasurements& /*gnssMeasurements*/,
                                    int /*msInWeek*/)
 DEFAULT_IMPL()
 
-
 void LocAdapterBase::reportGnssSvIdConfigEvent(const GnssSvIdConfig& /*config*/)
 DEFAULT_IMPL()
 
@@ -250,6 +249,7 @@ LocAdapterBase::getCapabilities()
         // time based tracking always supported
         mask |= LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT;
         mask |= LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT;
+        mask |= LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT;
         // geofence always supported
         mask |= LOCATION_CAPABILITIES_GEOFENCE_BIT;
         if (ContextBase::gnssConstellationConfig()) {
