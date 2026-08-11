@@ -4655,16 +4655,24 @@ GnssAdapter::reportEnginePositionsEvent(unsigned int count,
 }
 
 bool GnssAdapter::needReportForClient(LocationAPI* client, enum loc_sess_status status) {
-    // A client whose own last-requested power mode for its time-based tracking
-    // session is M5 (keep warm) must never receive a position report, even if
-    // the combined/multiplexed session is effectively running more aggressively
-    // because of another client's request.
+    // An M5-only time-based tracking client must never receive a position report.
+    // Android shares one LocationAPI instance across multiple logical sessions,
+    // so do not suppress reports when that instance also has a non-M5 session.
     if (client != nullptr) {
+        bool isM5Only = false;
         for (auto it = mTimeBasedTrackingSessions.begin();
                 it != mTimeBasedTrackingSessions.end(); ++it) {
-            if (it->first.client == client && it->second.powerMode == GNSS_POWER_MODE_M5) {
-                return false;
+            if (it->first.client == client) {
+                if (it->second.powerMode != GNSS_POWER_MODE_M5) {
+                    // Any non-M5 session is enough to keep reports enabled
+                    isM5Only = false;
+                    break;
+                }
+                isM5Only = true;
             }
+        }
+        if (isM5Only) {
+            return false;
         }
     }
     if (LOC_SESS_SUCCESS == status || (client == nullptr && LOC_SESS_INTERMEDIATE == status &&
