@@ -1214,7 +1214,7 @@ GnssAdapter::setSuplHostServer(const char* server, int port, LocServerType type)
             if (LOC_AGPS_SUPL_SERVER == type) {
                 getServerUrl().assign(serverUrl);
                 strlcpy(ContextBase::mGps_conf.SUPL_HOST,
-                        (nullptr == server) ? serverUrl : server,
+                        (nullptr != server) ? server : serverUrl,
                         LOC_MAX_PARAM_STRING);
                 ContextBase::mGps_conf.SUPL_PORT = port;
             } else {
@@ -7841,7 +7841,7 @@ bool GnssAdapter::openMeasCorrCommand(const measCorrSetCapabilitiesCallback setC
         }
 }
 
-bool GnssAdapter::measCorrSetCorrectionsCommand(const GnssMeasurementCorrections gnssMeasCorr) {
+bool GnssAdapter::measCorrSetCorrectionsCommand(const GnssMeasurementCorrections& gnssMeasCorr) {
     LOC_LOGi("GnssAdapter::measCorrSetCorrectionsCommand");
 
     /* Message to set Measurement Corrections */
@@ -7851,7 +7851,7 @@ bool GnssAdapter::measCorrSetCorrectionsCommand(const GnssMeasurementCorrections
         LocApiBase& mApi;
 
         inline MsgSetCorrectionsMeasCorr(
-            const GnssMeasurementCorrections gnssMeasCorr,
+            const GnssMeasurementCorrections& gnssMeasCorr,
             GnssAdapter& adapter,
             LocApiBase& api) :
             LocMsg(),
@@ -8699,7 +8699,9 @@ GnssAdapter::initEngHubProxy() {
         // callback function for engine hub to request for complete aiding data
         GnssAdapterReqAidingDataCb reqAidingDataCb =
             [this] (const GnssAidingDataSvMask& svDataMask) {
-            mLocApi->requestForAidingData(svDataMask);
+            if (nullptr != mLocApi) {
+                mLocApi->requestForAidingData(svDataMask);
+            }
         };
 
         GnssAdapterUpdateNHzRequirementCb updateNHzRequirementCb =
