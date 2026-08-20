@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -93,8 +93,14 @@ IDataItemCore* DataItemsFactoryProxy::createNewDataItem(IDataItemCore* dataItem)
     case NETWORKINFO_DATA_ITEM_ID:
         mydi = new NetworkInfoDataItem(*((NetworkInfoDataItem*)dataItem));
         break;
+    case SERVICESTATUS_DATA_ITEM_ID:
+       mydi = new ServiceStatusDataItem(*((ServiceStatusDataItem*)dataItem));
+        break;
     case RILCELLINFO_DATA_ITEM_ID:
         mydi = new RilCellInfoDataItem(*((RilCellInfoDataItem*)dataItem));
+        break;
+    case RILSERVICEINFO_DATA_ITEM_ID:
+        mydi = new RilServiceInfoDataItem(*((RilServiceInfoDataItem*)dataItem));
         break;
     case MODEL_DATA_ITEM_ID:
         mydi = new ModelDataItem(*((ModelDataItem*)dataItem));
@@ -108,6 +114,9 @@ IDataItemCore* DataItemsFactoryProxy::createNewDataItem(IDataItemCore* dataItem)
     case ASSISTED_GPS_DATA_ITEM_ID:
         mydi = new AssistedGpsDataItem(*((AssistedGpsDataItem*)dataItem));
         break;
+    case POWER_CONNECTED_STATE_DATA_ITEM_ID:
+        mydi = new PowerConnectStateDataItem(*((PowerConnectStateDataItem*)dataItem));
+        break;
     case TIMEZONE_CHANGE_DATA_ITEM_ID:
         mydi = new TimeZoneChangeDataItem(*((TimeZoneChangeDataItem*)dataItem));
         break;
@@ -119,6 +128,9 @@ IDataItemCore* DataItemsFactoryProxy::createNewDataItem(IDataItemCore* dataItem)
         break;
     case MCCMNC_DATA_ITEM_ID:
         mydi = new MccmncDataItem(*((MccmncDataItem*)dataItem));
+        break;
+    case BATTERY_LEVEL_DATA_ITEM_ID:
+        mydi = new BatteryLevelDataItem(*((BatteryLevelDataItem*)dataItem));
         break;
     case PRECISE_LOCATION_ENABLED_DATA_ITEM_ID:
         mydi = new PreciseLocationEnabledDataItem(*((PreciseLocationEnabledDataItem*)dataItem));
