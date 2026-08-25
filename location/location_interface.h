@@ -164,6 +164,7 @@ struct GnssInterface {
     uint32_t (*configMerkleTree) (const char * merkleTreeConfigBuffer, int bufferLength);
     uint32_t (*configOsnmaEnablement) (bool enable);
     void (*updateMccMnc)(std::string& mccmncCountry);
+    uint32_t (*getNavMsgAuthStatus) (GnssSvType svType);
 };
 
 struct BatchingInterface {
