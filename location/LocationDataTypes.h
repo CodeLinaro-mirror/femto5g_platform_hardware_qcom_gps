@@ -615,6 +615,7 @@ enum GnssConfigFlagsBits {
     GNSS_CONFIG_FLAGS_MIN_SV_ELEVATION_BIT                 = (1<<14),
     GNSS_CONFIG_FLAGS_CONSTELLATION_SECONDARY_BAND_BIT     = (1<<15),
     GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT                      = (1<<16),
+    GNSS_CONFIG_FLAGS_NAV_MSG_AUTH_STATUS_BIT              = (1<<17),
 };
 
 enum GnssNiEncodingType {
@@ -2477,7 +2478,56 @@ struct XtraStatus {
     }
 };
 
-struct GnssConfig {
+/** Galileo OSNMA public key provisioning / verification state. */
+typedef uint32_t GalOsnmaPublicKeyStatusMask;
+enum GalOsnmaPublicKeyStatusBits {
+    /** The public key is installed on the device. When no bits are
+     *  set, the public key is not installed. */
+    GAL_OSNMA_PUBLIC_KEY_PROVISIONED = (1u << 0),
+    /** The public key has been verified against the Merkle tree. */
+    GAL_OSNMA_PUBLIC_KEY_VERIFIED    = (1u << 1),
+};
+
+/** Specify which fields of GalOsnmaStatus carry a value. A field
+ *  whose bit is clear was not reported by the modem and must be
+ *  ignored rather than read as zero. */
+typedef uint32_t GalOsnmaStatusValidityMask;
+enum GalOsnmaStatusValidityBits {
+    GAL_OSNMA_STATUS_FEATURE_ENABLED_VALID         = (1u << 0),
+    GAL_OSNMA_STATUS_MERKLE_TREE_PROVISIONED_VALID = (1u << 1),
+    GAL_OSNMA_STATUS_PUBLIC_KEY_STATUS_VALID       = (1u << 2),
+    GAL_OSNMA_STATUS_GAL_WEEK_VALID                = (1u << 3),
+    GAL_OSNMA_STATUS_GAL_SEC_OF_WEEK_VALID         = (1u << 4),
+    GAL_OSNMA_STATUS_NAV_DATA_AUTH_PASSED_VALID    = (1u << 5),
+    GAL_OSNMA_STATUS_NAV_DATA_AUTH_FAILED_VALID    = (1u << 6),
+};
+
+/** Galileo OSNMA navigation message authentication status. Mirrors
+ *  the public location_integration::GalOsnmaStatus; carried inside
+ *  GnssConfig and across the IPC message layer. */
+struct GalOsnmaStatus {
+    GalOsnmaStatusValidityMask  validityMask;
+    bool                        featureEnabled;
+    bool                        merkleTreeProvisioned;
+    GalOsnmaPublicKeyStatusMask publicKeyStatusMask;
+    uint16_t                    galWeek;
+    uint32_t                    galSecOfWeek;
+    uint64_t                    navDataAuthPassedMask;
+    uint64_t                    navDataAuthFailedMask;
+};
+
+/** Navigation message authentication status report. The constellation
+ *  selects the valid member of navMsgAuthInfo, following the
+ *  discriminated-union convention used by GnssSvEphemerisReport. */
+struct NavMsgAuthStatus {
+    GnssSvType constellation;
+    union {
+        /** Valid when constellation is GNSS_SV_TYPE_GALILEO. */
+        GalOsnmaStatus galOsnmaStatus;
+    } navMsgAuthInfo;
+};
+
+struct GnssConfig{
     uint32_t size;  // set to sizeof(GnssConfig)
     GnssConfigFlagsMask flags; // bitwise OR of GnssConfigFlagsBits to mark which params are valid
     GnssConfigGpsLock gpsLock;
@@ -2497,6 +2547,7 @@ struct GnssConfig {
     uint8_t minSvElevation;
     GnssSvTypeConfig secondaryBandConfig;
     XtraStatus xtraStatus;
+    NavMsgAuthStatus navMsgAuthStatus;
 
     inline bool equals(const GnssConfig& config) {
         if (flags == config.flags &&

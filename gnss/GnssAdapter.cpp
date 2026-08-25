@@ -7633,6 +7633,51 @@ GnssAdapter::gnssGetSecondaryBandConfigCommand() {
     return sessionId;
 }
 
+// Query the navigation message authentication status (Galileo OSNMA) from
+// the modem. The result is packed into a GnssConfig and reported up via
+// LocApiBase::reportGnssConfig(), reusing the config-query report path.
+void
+GnssAdapter::getNavMsgAuthStatus(GnssSvType svType, uint32_t sessionId) {
+
+    LocApiResponse* locApiResponse = new LocApiResponse(*getContext(),
+            [this, sessionId] (LocationError err) {
+            reportResponse(err, sessionId);});
+    if (!locApiResponse) {
+        LOC_LOGe("memory alloc failed");
+    }
+
+    mLocApi->getNavMsgAuthStatus(svType, sessionId, locApiResponse);
+}
+
+uint32_t
+GnssAdapter::getNavMsgAuthStatusCommand(GnssSvType svType) {
+
+    // generated session id will be none-zero
+    uint32_t sessionId = generateSessionId();
+    LOC_LOGd("session id %u, svType %d", sessionId, (int)svType);
+
+    struct MsgGetNavMsgAuthStatus : public LocMsg {
+        GnssAdapter& mAdapter;
+        GnssSvType   mSvType;
+        uint32_t     mSessionId;
+        inline MsgGetNavMsgAuthStatus(GnssAdapter& adapter,
+                              GnssSvType svType,
+                              uint32_t sessionId) :
+            LocMsg(),
+            mAdapter(adapter),
+            mSvType(svType),
+            mSessionId(sessionId) {}
+        inline virtual void proc() const {
+            mAdapter.getNavMsgAuthStatus(mSvType, mSessionId);
+        }
+    };
+
+    if (sessionId != 0) {
+        sendMsg(new MsgGetNavMsgAuthStatus(*this, svType, sessionId));
+    }
+    return sessionId;
+}
+
 void
 GnssAdapter::configLeverArm(uint32_t sessionId,
                             const LeverArmConfigInfo& configInfo) {

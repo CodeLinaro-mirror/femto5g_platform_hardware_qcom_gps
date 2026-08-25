@@ -837,7 +837,6 @@ public:
         @param
         GnssMapMatchedData: structure to store MMF data fields
                         <br/>
-
         @return
         A session id that will be returned in responseCallback to
         match command with response.
@@ -857,6 +856,17 @@ public:
         match command with response.
     */
     virtual uint32_t configureUserConsentForXtra(const bool xtraUserConsent) = 0;
+   /** @brief
+        Query the navigation message authentication status (e.g. Galileo
+        OSNMA) for one constellation. The result is delivered via the
+        gnssConfigCallback registered with LocationControlAPI.
+        @param
+        svType - Constellation to query.
+        @return
+        A session id that will be returned in responseCallback to
+        match command with response.
+    */
+    virtual uint32_t getNavMsgAuthStatus(GnssSvType svType) = 0;
 };
 
 #endif /* ILOCATIONAPI_H */
