@@ -502,8 +502,25 @@ public:
             mDataItem.mAllTypes |= allTypes;
             for (uint8_t i = 0; i < MAX_NETWORK_HANDLES; ++i) {
                 if (mDataItem.mNetworkHandle ==
+                        mDataItem.mAllNetworkHandles[i].networkHandle &&
+                        mDataItem.mAllNetworkHandles[i].networkType ==
+                        (loc_core::NetworkType) mDataItem.mType) {
+                    LOC_LOGd("network handle and type duplicate detected, not updating");
+                    break;
+                }
+
+                if (mDataItem.mNetworkHandle ==
                         mDataItem.mAllNetworkHandles[i].networkHandle) {
-                    LOC_LOGD("collate duplicate detected, not updating");
+                    NetworkType oldType = mDataItem.mAllNetworkHandles[i].networkType;
+                    NetworkType newType = (loc_core::NetworkType) mDataItem.mType;
+                    LOC_LOGd("update type for known network handle: %u -> %u",
+                            oldType, newType);
+                    mDataItem.mAllNetworkHandles[i].networkType = newType;
+                    if (oldType != newType && oldType < TYPE_UNKNOWN) {
+                        mDataItem.mAllTypes &= ~(1ULL << oldType);
+                        LOC_LOGd("cleared old type %u, mAllTypes:%" PRIx64,
+                                oldType, mDataItem.mAllTypes);
+                    }
                     break;
                 }
                 if (NETWORK_HANDLE_UNKNOWN ==
