@@ -3391,6 +3391,7 @@ GnssAdapter::saveTrackingSession(LocationAPI* client, uint32_t sessionId,
         LocationSessionKey key(client, sessionId);
         if (options.minDistance > 0) {
             mDistanceBasedTrackingSessions[key] = options;
+            configRobustLocation();
         } else {
             mTimeBasedTrackingSessions[key] = options;
             if (getFgTrackingSessionCount() > 0) {
@@ -3417,6 +3418,7 @@ GnssAdapter::eraseTrackingSession(LocationAPI* client, uint32_t sessionId)
             auto itr = mDistanceBasedTrackingSessions.find(key);
             if (itr != mDistanceBasedTrackingSessions.end()) {
                 mDistanceBasedTrackingSessions.erase(itr);
+                configRobustLocation();
             }
         }
         getSystemStatus()->eventSetTracking(isInSession(), true);
@@ -8029,7 +8031,7 @@ void GnssAdapter::configRobustLocation() {
     bool enableFor911 = false;
 
     if (mRlFeatureQwesEnabled) {
-        if (!mTimeBasedTrackingSessions.empty()) {
+        if (isInSession()) {
             enable = mLocConfigInfo.robustLocationConfigInfo.enable;
             enableFor911 = mLocConfigInfo.robustLocationConfigInfo.enableFor911;
         } else {
