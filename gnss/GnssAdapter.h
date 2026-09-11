@@ -566,7 +566,7 @@ public:
     uint32_t configLeverArmCommand(const LeverArmConfigInfo& configInfo);
     uint32_t configRobustLocationCommand(bool enable, bool enableForE911);
     bool openMeasCorrCommand(const measCorrSetCapabilitiesCallback setCapabilitiesCb);
-    bool measCorrSetCorrectionsCommand(const GnssMeasurementCorrections gnssMeasCorr);
+    bool measCorrSetCorrectionsCommand(const GnssMeasurementCorrections& gnssMeasCorr);
     inline void closeMeasCorrCommand() { mIsMeasCorrInterfaceOpen = false; }
     uint32_t getAntennaeInfoCommand(AntennaInfoCallback* antennaInfoCallback);
     uint32_t configMinGpsWeekCommand(uint16_t minGpsWeek);
