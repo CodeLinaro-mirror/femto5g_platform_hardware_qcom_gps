@@ -28,9 +28,9 @@
  */
 
  /*
- Changes from Qualcomm Innovation Center are provided under the following license:
- Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
- SPDX-License-Identifier: BSD-3-Clause-Clear
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #ifndef LOC_API_BASE_H
@@ -52,6 +52,9 @@ using std::string;
 using namespace loc_util;
 
 namespace loc_core {
+
+#define ATL_OPEN_DEFAULT_TIMEOUT_MSEC   15000
+#define ATL_CLOSE_DEFAULT_TIMEOUT_MSEC   5000
 
 class ContextBase;
 struct LocApiResponse;
@@ -196,8 +199,9 @@ public:
     void requestTime();
     void requestLocation();
     void requestATL(int connHandle, LocAGpsType agps_type,
-                    LocApnTypeMask apn_type_mask, SubId sub_id=DEFAULT_SUB);
-    void releaseATL(int connHandle);
+                    LocApnTypeMask apn_type_mask, SubId sub_id=DEFAULT_SUB,
+                    uint32_t timeout=ATL_OPEN_DEFAULT_TIMEOUT_MSEC);
+    void releaseATL(int connHandle, uint32_t timeout=ATL_CLOSE_DEFAULT_TIMEOUT_MSEC);
     void requestNiNotify(GnssNiNotification &notify, const void* data,
                          const LocInEmergency emergencyState);
     void reportGnssMeasurements(GnssMeasurements& gnssMeasurements, int msInWeek);
