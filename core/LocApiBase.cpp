@@ -520,6 +520,9 @@ void LocApiBase::
     setTime(LocGpsUtcTime /*time*/, int64_t /*timeReference*/, int /*uncertainty*/)
 DEFAULT_IMPL()
 
+void LocApiBase::setOperationMode(GnssSuplMode mode)
+DEFAULT_IMPL()
+
 void LocApiBase::
    atlOpenStatus(int /*handle*/, int /*is_succ*/, char* /*apn*/, uint32_t /*apnLen*/,
                  AGpsBearerType /*bear*/, LocAGpsType /*agpsType*/,

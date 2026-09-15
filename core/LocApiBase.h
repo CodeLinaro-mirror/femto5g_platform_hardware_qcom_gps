@@ -209,6 +209,7 @@ public:
     virtual void injectPosition(const Location& location, bool onDemandCpi);
     virtual void injectPositionAndCivicAddress(const Location& location,
                                                const GnssCivicAddress& addr);
+    virtual void setOperationMode(GnssSuplMode mode);
     virtual void setTime(LocGpsUtcTime time, int64_t timeReference, int uncertainty);
     virtual void atlOpenStatus(int handle, int is_succ, char* apn, uint32_t apnLen,
             AGpsBearerType bear, LocAGpsType agpsType, LocApnTypeMask mask);

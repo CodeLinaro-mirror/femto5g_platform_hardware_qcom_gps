@@ -24,14 +24,10 @@ namespace implementation {
 using ::aidl::android::hardware::gnss::IGnssBatching;
 using ::aidl::android::hardware::gnss::IGnssBatchingCallback;
 
-static void convertBatchOption(const IGnssBatching::Options& in, LocationOptions& out,
-        LocationCapabilitiesMask mask);
-
 BatchingAPIClient::BatchingAPIClient(const shared_ptr<IGnssBatchingCallback>& callback) :
     LocationAPIClientBase(),
     mGnssBatchingCbIface(nullptr),
-    mDefaultId(UINT_MAX),
-    mLocationCapabilitiesMask(0) {
+    mDefaultId(UINT_MAX) {
     LOC_LOGd("]: (%p)", &callback);
     gnssUpdateCallbacks(callback);
 }
@@ -75,8 +71,8 @@ int BatchingAPIClient::startSession(const IGnssBatching::Options& opts) {
     LOC_LOGd("]: (%lld %d)",
             static_cast<long long>(opts.periodNanos), static_cast<uint8_t>(opts.flags));
     int retVal = -1;
-    LocationOptions options;
-    convertBatchOption(opts, options, mLocationCapabilitiesMask);
+    LocationOptions options = {};
+    options.minInterval = (uint32_t)(opts.periodNanos / 1000000L);
     uint32_t mode = 0;
     if (opts.flags == static_cast<uint8_t>(IGnssBatching::WAKEUP_ON_FIFO_FULL)) {
         mode = SESSION_MODE_ON_FULL;
@@ -91,8 +87,8 @@ int BatchingAPIClient::updateSessionOptions(const IGnssBatching::Options& opts) 
     LOC_LOGd("]: (%lld %d)",
             static_cast<long long>(opts.periodNanos), static_cast<uint8_t>(opts.flags));
     int retVal = -1;
-    LocationOptions options;
-    convertBatchOption(opts, options, mLocationCapabilitiesMask);
+    LocationOptions options = {};
+    options.minInterval = (uint32_t)(opts.periodNanos / 1000000L);
 
     uint32_t mode = 0;
     if (opts.flags == static_cast<uint8_t>(IGnssBatching::WAKEUP_ON_FIFO_FULL)) {
@@ -136,11 +132,6 @@ void BatchingAPIClient::flushBatchedLocations() {
         ::std::thread thd(&BatchingAPIClient::onBatchingCb, this, 0, nullptr, opt);
         thd.detach();
     }
-}
-
-void BatchingAPIClient::onCapabilitiesCb(LocationCapabilitiesMask capabilitiesMask) {
-    LOC_LOGd("]: (0x%" PRIx64 ")", capabilitiesMask);
-    mLocationCapabilitiesMask = capabilitiesMask;
 }
 
 void BatchingAPIClient::onBatchingCb(size_t count, Location* location,
@@ -194,17 +185,6 @@ void BatchingAPIClient::onBatchingCb(size_t count, Location* location,
     } else {
         gSharedMtx.unlock();
     }
-}
-
-static void convertBatchOption(const IGnssBatching::Options& in, LocationOptions& out,
-        LocationCapabilitiesMask mask) {
-    memset(&out, 0, sizeof(LocationOptions));
-    out.minInterval = (uint32_t)(in.periodNanos / 1000000L);
-    out.mode = GNSS_SUPL_MODE_STANDALONE;
-    if (mask & LOCATION_CAPABILITIES_GNSS_MSA)
-        out.mode = GNSS_SUPL_MODE_MSA;
-    if (mask & LOCATION_CAPABILITIES_GNSS_MSB)
-        out.mode = GNSS_SUPL_MODE_MSB;
 }
 
 }  // namespace implementation

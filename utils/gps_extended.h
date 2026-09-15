@@ -317,7 +317,7 @@ typedef struct {
     /**<   Specifies the Galileo SV mask.
       - SV ID mapping: SV 301 maps to bit 0. */
 
-    uint8_t qzssXtraMask;
+    uint32_t qzssXtraMask;
     /**<   Specifies the QZSS SV mask.
       - SV ID mapping: SV 193 maps to bit 0 */
 
@@ -341,7 +341,7 @@ typedef struct {
     /**<   Specifies the Galileo SV mask.
       - SV ID mapping: SV 301 maps to bit 0. */
 
-    uint8_t qzssEphMask;
+    uint32_t qzssEphMask;
     /**<   Specifies the QZSS SV mask.
       - SV ID mapping: SV 193 maps to bit 0 */
 
@@ -365,7 +365,7 @@ typedef struct {
     /**<   Specifies the Galileo SV mask.
       - SV ID mapping: SV 301 maps to bit 0. */
 
-    uint8_t qzssHealthUnknownMask;
+    uint32_t qzssHealthUnknownMask;
     /**<   Specifies the QZSS SV mask.
       - SV ID mapping: SV 193 maps to bit 0 */
 
@@ -389,7 +389,7 @@ typedef struct {
     /**<   Specifies the Galileo SV mask.
       - SV ID mapping: SV 301 maps to bit 0. */
 
-    uint8_t qzssHealthGoodMask;
+    uint32_t qzssHealthGoodMask;
     /**<   Specifies the QZSS SV mask.
       - SV ID mapping: SV 193 maps to bit 0 */
 
@@ -413,7 +413,7 @@ typedef struct {
     /**<   Specifies the Galileo SV mask.
       - SV ID mapping: SV 301 maps to bit 0. */
 
-    uint8_t qzssHealthBadMask;
+    uint32_t qzssHealthBadMask;
     /**<   Specifies the QZSS SV mask.
       - SV ID mapping: SV 193 maps to bit 0 */
 

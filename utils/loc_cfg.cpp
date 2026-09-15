@@ -363,8 +363,8 @@ bool fill_conf_entry(const ConfPair& pair, const loc_param_s_type config_table[]
             if (pair.value) {
                 *((double *)config_entry->param_ptr) = (double) atof(pair.value);
                  entry_filled = true;
-                 break;
             }
+            break;
           default:
             LOC_LOGe("PARAM %s parameter type must be n, f, or s", config_entry->param_name);
              break;

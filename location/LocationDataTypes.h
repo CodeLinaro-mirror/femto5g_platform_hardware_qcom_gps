@@ -1155,7 +1155,6 @@ enum FixQualityLevel {
 
 struct LocationOptions {
     uint32_t minInterval; // in milliseconds
-    GnssSuplMode mode;    // Standalone/MS-Based/MS-Assisted
     // behavior when this field is 0:
     //  if engine hub is running, this will be fused fix,
     //  if engine hub is not running, this will be SPE fix
@@ -1163,7 +1162,7 @@ struct LocationOptions {
     FixQualityLevel qualityLevelAccepted; /* Send through position reports with which accuracy. */
 
     inline LocationOptions() :
-            minInterval(0), mode(GNSS_SUPL_MODE_STANDALONE),
+            minInterval(0),
             locReqEngTypeMask((LocReqEngineTypeMask)0),
             qualityLevelAccepted(QUALITY_HIGH_ACCU_FIX_ONLY) {}
 };
@@ -1220,11 +1219,10 @@ struct TrackingOptions : LocationOptions {
     inline bool equalsInTimeBasedRequest(const TrackingOptions& other) const {
         return minInterval == other.minInterval && powerMode == other.powerMode &&
                qualityLevelAccepted == other.qualityLevelAccepted &&
-               preciseType == other.preciseType && mode == other.mode;
+               preciseType == other.preciseType;
     }
     inline void setLocationOptions(const LocationOptions& options) {
         minInterval = options.minInterval;
-        mode = options.mode;
         locReqEngTypeMask = options.locReqEngTypeMask;
         qualityLevelAccepted = options.qualityLevelAccepted;
     }
@@ -1239,7 +1237,6 @@ struct BatchingOptions : LocationOptions {
             LocationOptions(options), batchingMode(BATCHING_MODE_ROUTINE) {}
     inline void setLocationOptions(const LocationOptions& options) {
         minInterval = options.minInterval;
-        mode = options.mode;
     }
 };
 

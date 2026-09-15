@@ -31,10 +31,7 @@ public:
     void getBatchedLocation(int last_n_locations);
     void flushBatchedLocations();
 
-    inline LocationCapabilitiesMask getCapabilities() { return mLocationCapabilitiesMask; }
-
     // callbacks
-    void onCapabilitiesCb(LocationCapabilitiesMask capabilitiesMask) final;
     void onBatchingCb(size_t count, Location* location, const BatchingOptions& batchOptions) final;
 
 private:
@@ -43,7 +40,6 @@ private:
     void setCallbacks();
     shared_ptr<IGnssBatchingCallback> mGnssBatchingCbIface;
     uint32_t mDefaultId;
-    LocationCapabilitiesMask mLocationCapabilitiesMask;
     volatile BATCHING_STATE mState = STOPPED;
 
     std::vector<Location> mBatchedLocationInCache;

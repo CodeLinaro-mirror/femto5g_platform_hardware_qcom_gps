@@ -249,9 +249,9 @@ uint32_t
 BatchingAdapter::startBatchingCommand(
         LocationAPI* client, const BatchingOptions& batchOptions) {
     uint32_t sessionId = generateSessionId();
-    LOC_LOGD("%s]: client %p id %u minInterval %u mode %u Batching Mode %d",
+    LOC_LOGD("%s]: client %p id %u minInterval %u Batching Mode %d",
              __func__, client, sessionId, batchOptions.minInterval,
-             batchOptions.mode,batchOptions.batchingMode);
+             batchOptions.batchingMode);
 
     struct MsgStartBatching : public LocMsg {
         BatchingAdapter& mAdapter;
@@ -334,9 +334,8 @@ BatchingAdapter::startBatching(LocationAPI* client, uint32_t sessionId,
 void
 BatchingAdapter::updateBatchingOptionsCommand(LocationAPI* client, uint32_t id,
         const BatchingOptions& batchOptions) {
-    LOC_LOGD("%s]: client %p id %u minInterval %u mode %u batchMode %u",
+    LOC_LOGD("%s]: client %p id %u minInterval %u batchMode %u",
              __func__, client, id, batchOptions.minInterval,
-             batchOptions.mode,
              batchOptions.batchingMode);
 
     struct MsgUpdateBatching : public LocMsg {

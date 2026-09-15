@@ -71,6 +71,7 @@ void NativeAgpsHandler::notify(const unordered_set<const IDataItemCore*>& dlist)
                 const AssistedGpsDataItem* agpsInfo = static_cast<const AssistedGpsDataItem*>(each);
                 mAssistedGpsEnabled = agpsInfo->mIsEnabled;
                 LOC_LOGd("Assisted GPS Enabled: %d", mAssistedGpsEnabled);
+                mAdapter.setSuplMode();
                 break;
             }
             default:
@@ -81,7 +82,8 @@ void NativeAgpsHandler::notify(const unordered_set<const IDataItemCore*>& dlist)
 
 NativeAgpsHandler* NativeAgpsHandler::sLocalHandle = nullptr;
 NativeAgpsHandler::NativeAgpsHandler(SystemStatusOsObserver* sysStatObs, GnssAdapter& adapter) :
-        mSystemStatusObsrvr(sysStatObs), mConnected(false), mAdapter(adapter) {
+        mSystemStatusObsrvr(sysStatObs), mConnected(false), mAdapter(adapter),
+        mAssistedGpsEnabled(false) {
     sLocalHandle = this;
     unordered_set<DataItemId> subItemIdList = {NETWORKINFO_DATA_ITEM_ID, ASSISTED_GPS_DATA_ITEM_ID};
     mSystemStatusObsrvr->subscribe(subItemIdList, this);
