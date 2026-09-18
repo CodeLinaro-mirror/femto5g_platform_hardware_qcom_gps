@@ -93,7 +93,7 @@ inline int64_t sysTimeMillis(int clock)
 }
 
 inline int64_t uptimeMillis() {
-    return sysTimeMillis(CLOCK_MONOTONIC);
+    return sysTimeMillis(CLOCK_BOOTTIME);
 }
 inline int64_t elapsedRealtime() {
     return sysTimeMillis(CLOCK_BOOTTIME);
