@@ -28,7 +28,7 @@
  */
 
 /*
- * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
@@ -566,7 +566,7 @@ public:
     uint32_t configLeverArmCommand(const LeverArmConfigInfo& configInfo);
     uint32_t configRobustLocationCommand(bool enable, bool enableForE911);
     bool openMeasCorrCommand(const measCorrSetCapabilitiesCallback setCapabilitiesCb);
-    bool measCorrSetCorrectionsCommand(const GnssMeasurementCorrections gnssMeasCorr);
+    bool measCorrSetCorrectionsCommand(const GnssMeasurementCorrections& gnssMeasCorr);
     inline void closeMeasCorrCommand() { mIsMeasCorrInterfaceOpen = false; }
     uint32_t getAntennaeInfoCommand(AntennaInfoCallback* antennaInfoCallback);
     uint32_t configMinGpsWeekCommand(uint16_t minGpsWeek);
@@ -669,9 +669,8 @@ public:
     virtual void reportSignalTypeCapabilities(const GnssCapabNotification& gnssCapabNotification);
 
     virtual bool requestATL(int connHandle, LocAGpsType agps_type,
-                            LocApnTypeMask apn_type_mask,
-                            SubId sub_id=DEFAULT_SUB);
-    virtual bool releaseATL(int connHandle);
+                            LocApnTypeMask apn_type_mask, SubId sub_id, uint32_t timeout);
+    virtual bool releaseATL(int connHandle, uint32_t timeout);
     virtual bool requestOdcpiEvent(OdcpiRequestInfo& request);
     virtual bool reportDeleteAidingDataEvent(GnssAidingData& aidingData);
     virtual bool reportKlobucharIonoModelEvent(GnssKlobucharIonoModel& ionoModel);
