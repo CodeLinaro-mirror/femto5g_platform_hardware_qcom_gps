@@ -204,6 +204,7 @@ GnssAdapter::GnssAdapter() :
     mIsNtnStatusValid(false),
     mNtnSignalTypeConfigMask(GNSS_SIGNAL_GPS_L1CA|GNSS_SIGNAL_GPS_L5),
     mAndroidReportSpeOnly(true),
+    mOdcpiCtrlEnabled(false),
     mIsWakeLockActive(false),
 #ifdef _ANDROID_
     mWakeLockEnableTbfThreshold(10000)
@@ -242,12 +243,16 @@ GnssAdapter::GnssAdapter() :
     // init default nmea setting based on gps.conf
     // init default nmea setting and wake lock TBF threshold based on gps.conf
     uint32_t DATUM_TYPE = 0;
+    uint32_t odcpiCtrlEnabled = 0;
     const loc_param_s_type nmea_conf_params[] = {
         {"DATUM_TYPE", &DATUM_TYPE, NULL, 'n'},
         {"WAKE_LOCK_ENABLE_TBF_THRESHOLD", &mWakeLockEnableTbfThreshold, NULL, 'n'},
         {"ANDROID_REPORT_SPE_ONLY", &mAndroidReportSpeOnly, NULL, 'n'},
+        {"ODCPI_NETWORK_CTRL_ENABLED", &odcpiCtrlEnabled, NULL, 'n'},
     };
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, nmea_conf_params);
+    mOdcpiCtrlEnabled = (0 != odcpiCtrlEnabled);
+    LOC_LOGd("mOdcpiCtrlEnabled: %d", mOdcpiCtrlEnabled);
 #ifdef _ANDROID_
     // Update mNmeaReqEngTypeMask based on ANDROID_REPORT_SPE_ONLY config:
     // if ANDROID_REPORT_SPE_ONLY = true, use SPE engine for NMEA;
@@ -6349,6 +6354,16 @@ void GnssAdapter::deRegisterOdcpiCommand(OdcpiPrioritytype priority,
 }
 
 void GnssAdapter::fireOdcpiRequest(const OdcpiRequestInfo& request) {
+    // Without any network connection a non-emergency ODCPI request cannot be
+    // served. Emergency requests are always forwarded regardless of network
+    // availability;
+    // STOP requests are not blocked to avoid session leak for non-GMS case.
+    // For GMS case, STOP requests will never reach framework.
+    if (mOdcpiCtrlEnabled && ODCPI_REQUEST_TYPE_START == request.type &&
+            !request.isEmergencyMode && !isNetworkConnected()) {
+        LOC_LOGw("No network connection, drop non-emergency ODCPI request");
+        return;
+    }
     if (request.isEmergencyMode) {
         mControlCallbacks.odcpiReqCb(request);
     } else {
