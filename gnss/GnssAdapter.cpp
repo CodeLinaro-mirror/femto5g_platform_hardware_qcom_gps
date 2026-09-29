@@ -3029,9 +3029,12 @@ GnssAdapter::stopClientSessions(LocationAPI* client, bool eraseSession)
         }
     }
     for (auto key : vTimeBasedTrackingClient) {
+        PreciseType previousPreciseType = mPreciseType;
         stopTimeBasedTrackingMultiplex(key.client, key.id);
         if (eraseSession)
             eraseTrackingSession(key.client, key.id);
+        setPreciseSessionConfig(previousPreciseType);
+        notifyPreciseLocation();
     }
 
     /* Distance-based Tracking */
@@ -3329,6 +3332,13 @@ void
 GnssAdapter::suspendSessions()
 {
     LOC_LOGi(":enter");
+
+    // A keep-warm retry must not restart tracking while sessions are suspended.
+    // This also marks an already-posted timer expiry as cancelled.
+    if (nullptr != mKeepWarmRetryTimer && mKeepWarmRetryTimer->isActive()) {
+        LOC_LOGd("Stopping keep-warm retry timer while suspending sessions");
+        mKeepWarmRetryTimer->stop();
+    }
 
     if (!mTimeBasedTrackingSessions.empty()) {
         stopTracking();
@@ -3648,6 +3658,10 @@ GnssAdapter::startTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t sessi
         }
         TrackingOptions priorOptions = multiplexedOptions;
         multiplexedOptions.multiplexWithForTimeBasedRequest(options);
+
+        mPreciseType = multiplexedOptions.preciseType;
+        mCorrectionType = multiplexedOptions.correctionType;
+
         if (!priorOptions.equalsInTimeBasedRequest(multiplexedOptions)) {
             startTimeBasedTracking(client, sessionId, multiplexedOptions);
             // need to wait for QMI callback
@@ -3927,6 +3941,8 @@ GnssAdapter::updateTrackingMultiplex(LocationAPI* client, uint32_t id,
             // check whether client updates to the option or not
             bool sameOption = it->second.equalsInTimeBasedRequest(trackingOptions);
             LOC_LOGd("same client, option same %d", sameOption);
+            mPreciseType = trackingOptions.preciseType;
+            mCorrectionType = trackingOptions.correctionType;
             if (false == sameOption) {
                 // restart time based tracking with the newly updated options
                 updateTracking(client, id, trackingOptions, it->second);
@@ -3937,6 +3953,8 @@ GnssAdapter::updateTrackingMultiplex(LocationAPI* client, uint32_t id,
             TrackingOptions priorOptions = multiplexedOptions;
             priorOptions.multiplexWithForTimeBasedRequest(it->second);
             multiplexedOptions.multiplexWithForTimeBasedRequest(trackingOptions);
+            mPreciseType = multiplexedOptions.preciseType;
+            mCorrectionType = multiplexedOptions.correctionType;
             if (false == priorOptions.equalsInTimeBasedRequest(multiplexedOptions)) {
                 // restart time based tracking with the newly updated options
                 updateTracking(client, id, multiplexedOptions, it->second);
@@ -3959,7 +3977,6 @@ GnssAdapter::stopTrackingCommand(LocationAPI* client, uint32_t id)
         LocApiBase& mApi;
         LocationAPI* mClient;
         uint32_t mSessionId;
-        mutable PreciseType mPreciseType;
         inline MsgStopTracking(GnssAdapter& adapter,
                                LocApiBase& api,
                                LocationAPI* client,
@@ -3974,18 +3991,13 @@ GnssAdapter::stopTrackingCommand(LocationAPI* client, uint32_t id)
             bool isDistanceBased = mAdapter.isDistanceBasedTrackingSession(mClient, mSessionId);
             if (isTimeBased || isDistanceBased) {
                 if (isTimeBased) {
-                    // find the session it is going to stop
-                    LocationSessionKey key(mClient, mSessionId);
-                    auto it = mAdapter.mTimeBasedTrackingSessions.find(key);
-                    if (it != mAdapter.mTimeBasedTrackingSessions.end()) {
-                        mPreciseType = (it->second).preciseType;
-                    }
                     // Api doesn't support multiple clients for time based tracking, so mutiplex
+                    PreciseType previousPreciseType = mAdapter.mPreciseType;
                     bool reportToClientWithNoWait =
                         mAdapter.stopTimeBasedTrackingMultiplex(mClient, mSessionId);
                     mAdapter.eraseTrackingSession(mClient, mSessionId);
                     mAdapter.setTribandState();
-                    mAdapter.setPreciseSessionConfig(mPreciseType);
+                    mAdapter.setPreciseSessionConfig(previousPreciseType);
                     mAdapter.notifyPreciseLocation();
 
                     if (reportToClientWithNoWait) {
@@ -4020,6 +4032,8 @@ GnssAdapter::stopTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t id)
 
     if (1 == mTimeBasedTrackingSessions.size()) {
         stopTracking(client, id);
+        mPreciseType = PRECISE_TYPE_UNKNOWN;
+        mCorrectionType = CORRECTION_TYPE_DEFAULT;
         // need to wait for QMI callback
         reportToClientWithNoWait = false;
     } else {
@@ -4044,6 +4058,9 @@ GnssAdapter::stopTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t id)
             }
             TrackingOptions priorOptions = multiplexedOptions;
             priorOptions.multiplexWithForTimeBasedRequest(it->second);
+
+            mPreciseType = multiplexedOptions.preciseType;
+            mCorrectionType = multiplexedOptions.correctionType;
 
             if (!priorOptions.equalsInTimeBasedRequest(multiplexedOptions)) {
                 // restart time based tracking with the newly updated options
@@ -4648,6 +4665,26 @@ GnssAdapter::reportEnginePositionsEvent(unsigned int count,
 }
 
 bool GnssAdapter::needReportForClient(LocationAPI* client, enum loc_sess_status status) {
+    // An M5-only time-based tracking client must never receive a position report.
+    // Android shares one LocationAPI instance across multiple logical sessions,
+    // so do not suppress reports when that instance also has a non-M5 session.
+    if (client != nullptr) {
+        bool isM5Only = false;
+        for (auto it = mTimeBasedTrackingSessions.begin();
+                it != mTimeBasedTrackingSessions.end(); ++it) {
+            if (it->first.client == client) {
+                if (it->second.powerMode != GNSS_POWER_MODE_M5) {
+                    // Any non-M5 session is enough to keep reports enabled
+                    isM5Only = false;
+                    break;
+                }
+                isM5Only = true;
+            }
+        }
+        if (isM5Only) {
+            return false;
+        }
+    }
     if (LOC_SESS_SUCCESS == status || (client == nullptr && LOC_SESS_INTERMEDIATE == status &&
                 mDistanceBasedTrackingSessions.size() > 0)) {
         return true;
@@ -6488,6 +6525,14 @@ void GnssAdapter::keepWarmRetryTimerExpireEvent() {
                 LocMsg(), mAdapter(adapter) {}
         inline virtual void proc() const {
             LOC_LOGd("Keep-warm retry timer expired");
+            // The timer callback may have posted this message immediately before
+            // suspendSessions() stopped the timer. Honor that cancellation and do
+            // not let the stale message restart a session after suspend/resume.
+            if (nullptr == mAdapter.mKeepWarmRetryTimer ||
+                    !mAdapter.mKeepWarmRetryTimer->isActive()) {
+                LOC_LOGd("Keep-warm retry timer expiry cancelled, skip retry");
+                return;
+            }
             mAdapter.mKeepWarmRetryTimer->stop();
             // Only retry if there are active sessions and the multiplexed mode is still M5
             if (!mAdapter.mTimeBasedTrackingSessions.empty() &&
