@@ -52,6 +52,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #define MSEC_IN_ONE_WEEK      604800000ULL
 #define UTC_GPS_OFFSET_MSECS  315964800000ULL
 #define MAX_TAG_BLOCK_GROUP_CODE  (99999)
+#define MIN_SV_THRESHOLD      3
 
 // GNSS system id according to NMEA spec
 #define SYSTEM_ID_GPS          1
@@ -671,6 +672,7 @@ static uint32_t loc_nmea_generate_GSA(const UlpLocation &location,
     const char* talker = sv_meta_p->talker;
     uint32_t svIdOffset = sv_meta_p->svIdOffset;
     uint64_t mask = sv_meta_p->mask;
+    uint32_t totalSvUsedInFix = sv_meta_p->totalSvUsedCount;
 
     // for non-glo, sv id need to start at 0 in GSA sentence
     if (!(sv_meta_p->svTypeMask & (1 << GNSS_SV_TYPE_GLONASS))) {
@@ -707,7 +709,7 @@ static uint32_t loc_nmea_generate_GSA(const UlpLocation &location,
         }
         if (location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG) {
             if ((location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_ALTITUDE) &&
-                    (!locationExtended.altitudeAssumed)) {
+                    (MIN_SV_THRESHOLD < totalSvUsedInFix)) {
                 fixType = '3'; // 3D fix
             } else {
                 fixType = '2'; // 2D fix
