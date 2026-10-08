@@ -139,14 +139,16 @@ private:
 
     class DelayLocTimer : public LocTimer {
         LocIpcSender& mXtraSender;
-        LocIpcSender& mDgnssSender;
+        shared_ptr<LocIpcSender> mDgnssSender;
     public:
-        DelayLocTimer(LocIpcSender& xtraSender, LocIpcSender& dgnssSender) :
+        DelayLocTimer(LocIpcSender& xtraSender, shared_ptr<LocIpcSender> dgnssSender) :
                 LocTimer("Xtra-DelayLocTimer"),
                 mXtraSender(xtraSender), mDgnssSender(dgnssSender) {}
         void timeOutCallback() override {
             LocIpc::send(mXtraSender, (const uint8_t*)"halinit", sizeof("halinit"));
-            LocIpc::send(mDgnssSender, (const uint8_t*)"halinit", sizeof("halinit"));
+            if (nullptr != mDgnssSender) {
+                LocIpc::send(*mDgnssSender, (const uint8_t*)"halinit", sizeof("halinit"));
+            }
         }
     } mDelayLocTimer;
 };
