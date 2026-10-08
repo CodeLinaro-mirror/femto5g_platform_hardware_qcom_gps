@@ -3422,10 +3422,10 @@ GnssAdapter::hasCallbacksToStartTracking(LocationAPI* client)
                 it->second.svEphemerisCb || it->second.svResidualDataCb) {
             allowed = true;
         } else {
-            LOC_LOGi("missing right callback to start tracking")
+            LOC_LOGi("missing right callback to start tracking");
         }
     } else {
-        LOC_LOGi("client %p not found", client)
+        LOC_LOGi("client %p not found", client);
     }
     return allowed;
 }
