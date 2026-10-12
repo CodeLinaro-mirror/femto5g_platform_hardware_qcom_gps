@@ -138,7 +138,6 @@ typedef struct loc_logger_s
   unsigned long  TIMESTAMP;
   bool           LOG_BUFFER_ENABLE;
   QxdmF3         QXDMF3;
-  bool           LOC_ENABLE_DLT_LOG;
 } loc_logger_s_type;
 
 
@@ -167,6 +166,8 @@ extern const char EXIT_ERROR_TAG[];
 #define BUILD_TYPE_PROP_USERDEBUG 2
 #define BUILD_TYPE_PROP_INVALID 3
 extern int build_type_prop;
+
+#define LOC_LOG_MAX_BUF 1024
 
 /*=============================================================================
  *
@@ -205,10 +206,6 @@ inline static void log_buffer_init(bool enabled) {
     loc_logger.LOG_BUFFER_ENABLE = enabled;
 }
 
-inline static void loc_dlt_log_init(bool dltEnabled) {
-    loc_logger.LOC_ENABLE_DLT_LOG = dltEnabled;
-}
-
 extern void log_tag_level_map_init();
 extern int get_tag_log_level(const char* tag);
 extern char* get_timestamp(char* str, unsigned long buf_size);
@@ -238,69 +235,53 @@ extern void log_buffer_insert(char *str, unsigned long buf_size, int level);
     }                                                                                         \
 }
 
-#define IF_LOC_DLT_LOG_ENABLE if (loc_logger.LOC_ENABLE_DLT_LOG)
-
-// Ensure a reasonable buffer if not set elsewhere
-#ifndef DLT_MAX_BUF
-#define DLT_MAX_BUF 1024
+#ifdef LOC_USE_CLOG
+#include <clog.h>
+#include <clog_ids.h>
 #endif
 
-#if defined(LOC_USE_DLT)
+#ifdef LOC_USE_DLT
 #include <dlt/dlt.h>
 #include <dlt/dlt_user_macros.h>
 #include <dlt/dlt_user.h>
 #include <dlt/dlt_types.h>
+#endif
 
-// Map your numeric level (0..5) to DLT levels.
-// Tune this mapping if your numeric levels differ.
-static inline DltLogLevelType loc_level_to_dlt(int level) {
-    switch (level) {
-        case 0: return DLT_LOG_ERROR;   // Error
-        case 1: return DLT_LOG_WARN;    // Warn
-        case 2: return DLT_LOG_INFO;    // Info
-        case 3: return DLT_LOG_DEBUG;   // Debug
-        case 4: return DLT_LOG_VERBOSE; // Verbose/Trace
-        case 5: return DLT_LOG_VERBOSE; // Verbose/Trace
-        default: return DLT_LOG_INFO;
-    }
-}
+#if defined(LOC_USE_CLOG)
 
-#define LOG_DLT_PRINT(level, format, x...)                                \
-do {                                                                      \
-    IF_LOC_DLT_LOG_ENABLE {                                               \
-        DltContext* dltCtx = getDltContextForTag(LOG_TAG);                \
-        if (dltCtx) {                                                     \
-            DltLogLevelType dltLvl = loc_level_to_dlt((int)(level));      \
-            if (DLT_IS_LOG_LEVEL_ENABLED(*dltCtx, dltLvl)) {              \
-                char buf[DLT_MAX_BUF];                                    \
-                memset(buf, 0, sizeof(buf));                              \
-                /* Format once; safe truncate on overflow */              \
-                snprintf(buf, sizeof(buf), format, ##x);                  \
-                DLT_LOG_STRING(*dltCtx, dltLvl, buf);                     \
-            }                                                             \
-        }                                                                 \
-    }                                                                     \
-} while (0)
+#define LOC_LOG_BACKEND_SELECTED_CLOG 1
+#elif defined(LOC_USE_DLT)
+#define LOC_LOG_BACKEND_SELECTED_DLT 1
+#else
+#define LOC_LOG_BACKEND_SELECTED_LEGACY 1
+#endif
+
+typedef struct {
+#if defined(LOC_USE_DLT)
+    DltContext dltContext;
+#endif
+
+    const char* contextId;
+    const char* description;
+
+#if defined(LOC_USE_CLOG)
+    clog_context_id_t clogContextId;
+    clog_context_t clogContext;
+    int clogRegistered;
+#endif
+} ContextEntry;
+
+#if defined(LOC_USE_CLOG) || defined(LOC_USE_DLT)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// ---------------- DLT section start ----------------
-typedef struct ContextEntry {
-    DltContext ctx;
-    char ctxid[5];
-    //string desc;
-    const char* desc;
-} ContextEntry;
-
-extern void registerDltApp(const char* appName, const char* desp);
-extern void registerDltContexts(ContextEntry* entries, size_t count);
-extern void deregisterDltContexts(ContextEntry* entries, size_t count);
-extern void deregisterDltApp(void);
-extern DltContext* getDltContextForTag(const char* tagOrDesc);
-
-// Expose DLT context array and count
+extern int locRegisterLogApp(const char* appId, const char* appDescription);
+extern void locUnregisterLogApp(void);
+extern void locRegisterLogContexts( ContextEntry* entries, size_t count);
+extern void locUnregisterLogContexts(ContextEntry* entries, size_t count);
+extern ContextEntry* locGetLogContext(const char* tagOrDesc);
 
 // Location hal daemon
 extern ContextEntry LHD_CONTEXTS[];
@@ -330,15 +311,11 @@ extern const size_t LCA_CONTEXTS_COUNT;
 extern ContextEntry LOC_IDL_SERVICE_CONTEXTS[];
 extern const size_t LOC_IDL_SERVICE_CONTEXTS_COUNT;
 
-// ---------------- DLT section end ------------------
-
 #ifdef __cplusplus
 }
 #endif
-#else
-#define LOG_DLT_PRINT(level, format, x...)
-#endif // LOC_USE_DLT
 
+#endif
 #define MSG_QXDM_LOW    0
 #define MSG_QXDM_MED    1
 #define MSG_QXDM_HIGH   2
@@ -346,8 +323,6 @@ extern const size_t LOC_IDL_SERVICE_CONTEXTS_COUNT;
 
 #define MAX_QXDM_STRING     1024
 #define IF_QXDM_LOG_ENABLE if (loc_logger.QXDMF3)
-
-#ifndef DEBUG_DMN_LOC_API
 
 /* LOGGING MACROS */
 /*loc_logger.DEBUG_LEVEL is initialized to 0xff in loc_cfg.cpp
@@ -366,6 +341,7 @@ extern const size_t LOC_IDL_SERVICE_CONTEXTS_COUNT;
  *         If this tag isn't found in map, set local debug level as global loc_logger.DEBUG_LEVEL;
  *    2.2, If not the first time, use its LOCAL_LOG_LEVEL as the debug level of this tag.
 */
+
 static int LOCAL_LOG_LEVEL = -1;
 #define IF_LOC_LOG(x) \
     if (((LOCAL_LOG_LEVEL == -1 && (LOCAL_LOG_LEVEL = get_tag_log_level(LOG_TAG)) >= x) ||\
@@ -378,147 +354,189 @@ static int LOCAL_LOG_LEVEL = -1;
 #define IF_LOC_LOGV IF_LOC_LOG(5)
 #define IF_LOC_LOGA IF_LOC_LOG(6)
 
-#define LOC_LOGE(...)                                                   \
-    LOG_DLT_PRINT(0, __VA_ARGS__);                                      \
-    IF_LOC_LOGE {                                                       \
-        ALOGE(__VA_ARGS__);                                             \
-        INSERT_BUFFER(LOG_NDEBUG, 0, __VA_ARGS__);                      \
-        IF_QXDM_LOG_ENABLE {                                            \
-            char buf[MAX_QXDM_STRING];                                  \
-            snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
-            loc_logger.QXDMF3(MSG_QXDM_ERROR, buf);                     \
-        }                                                               \
+
+#ifndef DEBUG_DMN_LOC_API
+    #define LOC_INSERT_BUFFER(level, format, x...) \
+        INSERT_BUFFER(LOG_NDEBUG, level, format, ##x)
+#else
+    #define LOC_INSERT_BUFFER(level, format, x...)
+#endif
+
+
+#if defined(LOC_USE_CLOG)
+
+static inline clog_level_t locLevelToClog(int level)
+{
+    switch (level) {
+        case 0:
+            return CLOG_LEVEL_FATAL;
+
+        case 1:
+            return CLOG_LEVEL_ERROR;
+
+        case 2:
+            return CLOG_LEVEL_WARN;
+
+        case 3:
+            return CLOG_LEVEL_INFO;
+
+        case 4:
+            return CLOG_LEVEL_DEBUG;
+
+        case 5:
+            return CLOG_LEVEL_VERBOSE;
+
+        default:
+            return CLOG_LEVEL_INFO;
     }
+}
 
-#define LOC_LOGW(...)                                                   \
-    LOG_DLT_PRINT(1, __VA_ARGS__);                                      \
-    IF_LOC_LOGW {                                                       \
-        ALOGW(__VA_ARGS__);                                             \
-        INSERT_BUFFER(LOG_NDEBUG, 1, __VA_ARGS__);                      \
-        IF_QXDM_LOG_ENABLE {                                            \
-            char buf[MAX_QXDM_STRING];                                  \
-            snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
-            loc_logger.QXDMF3(MSG_QXDM_ERROR, buf);                     \
-        }                                                               \
+
+#define LOC_LOG_BACKEND_PRINT(level, format, x...)                    \
+    do {                                                              \
+        ContextEntry* contextEntry = locGetLogContext(LOG_TAG);       \
+        if ((contextEntry != NULL) &&                                 \
+            (contextEntry->clogRegistered != 0) &&                    \
+            (contextEntry->clogContext != 0)) {                       \
+            char locLogBuf[LOC_LOG_MAX_BUF];                          \
+            /* Format once; safe truncate on overflow */              \
+            snprintf(locLogBuf, sizeof(locLogBuf), format, ##x);      \
+            CLOG_LOG(contextEntry->clogContext, locLevelToClog((int)(level)), "%s", locLogBuf); \
+        }                                                             \
+    } while (0)
+
+#elif defined(LOC_USE_DLT)
+
+static inline DltLogLevelType locLevelToDlt(int level)
+{
+    switch (level) {
+        case 0:
+            return DLT_LOG_FATAL;
+
+        case 1:
+            return DLT_LOG_ERROR;
+
+        case 2:
+            return DLT_LOG_WARN;
+
+        case 3:
+            return DLT_LOG_INFO;
+
+        case 4:
+            return DLT_LOG_DEBUG;
+
+        case 5:
+            return DLT_LOG_VERBOSE;
+
+        default:
+            return DLT_LOG_INFO;
     }
+}
 
-#define LOC_LOGI(...)                                                   \
-    LOG_DLT_PRINT(2, __VA_ARGS__);                                      \
-    IF_LOC_LOGI {                                                       \
-        ALOGI(__VA_ARGS__);                                             \
-        INSERT_BUFFER(LOG_NDEBUG, 2, __VA_ARGS__);                      \
-        IF_QXDM_LOG_ENABLE {                                            \
-            char buf[MAX_QXDM_STRING];                                  \
-            snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
-            loc_logger.QXDMF3(MSG_QXDM_HIGH, buf);                      \
-        }                                                               \
-    }
+#define LOC_LOG_BACKEND_PRINT(level, format, x...)                         \
+    do {                                                                   \
+        ContextEntry* contextEntry = locGetLogContext(LOG_TAG);            \
+        if (contextEntry != NULL) {                                        \
+            DltLogLevelType dltLevel =                                     \
+                locLevelToDlt((int)(level));                               \
+                                                                           \
+            if (DLT_IS_LOG_LEVEL_ENABLED(                                  \
+                    contextEntry->dltContext, dltLevel)) {                 \
+                char dltBuffer[LOC_LOG_MAX_BUF] = {0};                     \
+                                                                           \
+                snprintf(dltBuffer, sizeof(dltBuffer),                     \
+                         format, ##x);                                     \
+                                                                           \
+                DLT_LOG(                                                   \
+                    contextEntry->dltContext,                              \
+                    dltLevel,                                              \
+                    DLT_STRING(dltBuffer));                                \
+            }                                                              \
+        }                                                                  \
+    } while (0)
 
-#define LOC_LOGD(...)                                                   \
-    LOG_DLT_PRINT(3, __VA_ARGS__);                                      \
-    IF_LOC_LOGD {                                                       \
-        ALOGD(__VA_ARGS__);                                             \
-        INSERT_BUFFER(LOG_NDEBUG, 3, __VA_ARGS__);                      \
-        IF_QXDM_LOG_ENABLE {                                            \
-            char buf[MAX_QXDM_STRING];                                  \
-            snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
-            loc_logger.QXDMF3(MSG_QXDM_MED, buf);                       \
-        }                                                               \
-    }
+#else
 
-#define LOC_LOGV(...)                                                   \
-    LOG_DLT_PRINT(4, __VA_ARGS__);                                      \
-    IF_LOC_LOGV {                                                       \
-        ALOGV(__VA_ARGS__);                                             \
-        INSERT_BUFFER(LOG_NDEBUG, 4, __VA_ARGS__);                      \
-        IF_QXDM_LOG_ENABLE {                                            \
-            char buf[MAX_QXDM_STRING];                                  \
-            snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
-            loc_logger.QXDMF3(MSG_QXDM_LOW, buf);                       \
-        }                                                               \
-    }
+#define LOC_LOG_BACKEND_PRINT(level, format, x...) \
+do {                                                               \
+    switch(level) {                                                \
+        case 0:                                                    \
+            IF_LOC_LOGE {                                          \
+                ALOGE(format, ##x);                                \
+                LOC_INSERT_BUFFER(level, format, ##x);             \
+                IF_QXDM_LOG_ENABLE {                               \
+                    char buf[MAX_QXDM_STRING];                     \
+                    snprintf(buf, sizeof(buf), format, ##x);       \
+                    loc_logger.QXDMF3(MSG_QXDM_ERROR, buf);        \
+                }                                                  \
+            }                                                      \
+            break;                                                 \
+        case 1:                                                    \
+            IF_LOC_LOGW {                                          \
+                ALOGW(format, ##x);                                \
+                LOC_INSERT_BUFFER(level, format, ##x);             \
+                IF_QXDM_LOG_ENABLE {                               \
+                    char buf[MAX_QXDM_STRING];                     \
+                    snprintf(buf, sizeof(buf), format, ##x);       \
+                    loc_logger.QXDMF3(MSG_QXDM_ERROR, buf);        \
+                }                                                  \
+            }                                                      \
+            break;                                                 \
+        case 2:                                                    \
+            IF_LOC_LOGI{                                           \
+                ALOGI(format, ##x);                                \
+                LOC_INSERT_BUFFER(level, format, ##x);             \
+                IF_QXDM_LOG_ENABLE {                               \
+                    char buf[MAX_QXDM_STRING];                     \
+                    snprintf(buf, sizeof(buf), format, ##x);       \
+                    loc_logger.QXDMF3(MSG_QXDM_HIGH, buf);         \
+                }                                                  \
+            }                                                      \
+            break;                                                 \
+        case 3:                                                    \
+            IF_LOC_LOGD{                                           \
+                ALOGD(format, ##x);                                \
+                LOC_INSERT_BUFFER(level, format, ##x);             \
+                IF_QXDM_LOG_ENABLE {                               \
+                    char buf[MAX_QXDM_STRING];                     \
+                    snprintf(buf, sizeof(buf), format, ##x);       \
+                    loc_logger.QXDMF3(MSG_QXDM_MED, buf);          \
+                }                                                  \
+            }                                                      \
+            break;                                                 \
+        case 4:                                                    \
+            IF_LOC_LOGV {                                          \
+                ALOGV(format, ##x);                                \
+                LOC_INSERT_BUFFER(level, format, ##x);             \
+                IF_QXDM_LOG_ENABLE {                               \
+                    char buf[MAX_QXDM_STRING];                     \
+                    snprintf(buf, sizeof(buf), format, ##x);       \
+                    loc_logger.QXDMF3(MSG_QXDM_LOW, buf);          \
+                }                                                  \
+            }                                                      \
+            break;                                                 \
+        case 5:                                                    \
+            IF_LOC_LOGA {                                          \
+                ALOGV(format, ##x);                                \
+                LOC_INSERT_BUFFER(level, format, ##x);             \
+                IF_QXDM_LOG_ENABLE {                               \
+                    char buf[MAX_QXDM_STRING];                     \
+                    snprintf(buf, sizeof(buf), format, ##x);       \
+                    loc_logger.QXDMF3(MSG_QXDM_LOW, buf);          \
+                }                                                  \
+            }                                                      \
+            break;                                                 \
+    }                                                              \
+                                                                   \
+} while (0)
+#endif
 
-#define LOC_LOGA(...)                                                   \
-    LOG_DLT_PRINT(5, __VA_ARGS__);                                      \
-    IF_LOC_LOGA {                                                       \
-        ALOGV(__VA_ARGS__);                                             \
-        INSERT_BUFFER(LOG_NDEBUG, 5, __VA_ARGS__);                      \
-        IF_QXDM_LOG_ENABLE {                                            \
-            char buf[MAX_QXDM_STRING];                                  \
-            snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
-            loc_logger.QXDMF3(MSG_QXDM_LOW, buf);                       \
-        }                                                               \
-    }
-
-#else /* DEBUG_DMN_LOC_API */
-
-#define LOC_LOGE(...)                                                   \
-    LOG_DLT_PRINT(0, __VA_ARGS__);                                      \
-    IF_LOC_LOGE {                                                       \
-        ALOGE(__VA_ARGS__);                                             \
-        IF_QXDM_LOG_ENABLE {                                            \
-            char buf[MAX_QXDM_STRING];                                  \
-            snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
-            loc_logger.QXDMF3(MSG_QXDM_ERROR, buf);                     \
-        }                                                               \
-    }
-
-#define LOC_LOGW(...)                                                   \
-    LOG_DLT_PRINT(1, __VA_ARGS__);                                      \
-    IF_LOC_LOGW {                                                       \
-        ALOGW(__VA_ARGS__);                                             \
-        IF_QXDM_LOG_ENABLE {                                            \
-            char buf[MAX_QXDM_STRING];                                  \
-            snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
-            loc_logger.QXDMF3(MSG_QXDM_ERROR, buf);                     \
-        }                                                               \
-    }
-
-#define LOC_LOGI(...)                                                   \
-    LOG_DLT_PRINT(2, __VA_ARGS__);                                      \
-    IF_LOC_LOGI {                                                       \
-        ALOGI(__VA_ARGS__);                                             \
-        IF_QXDM_LOG_ENABLE {                                            \
-            char buf[MAX_QXDM_STRING];                                  \
-            snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
-            loc_logger.QXDMF3(MSG_QXDM_HIGH, buf);                      \
-        }                                                               \
-    }
-
-#define LOC_LOGD(...)                                                   \
-    LOG_DLT_PRINT(3, __VA_ARGS__);                                      \
-    IF_LOC_LOGD {                                                       \
-        ALOGD(__VA_ARGS__);                                             \
-        IF_QXDM_LOG_ENABLE {                                            \
-            char buf[MAX_QXDM_STRING];                                  \
-            snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
-            loc_logger.QXDMF3(MSG_QXDM_MED, buf);                       \
-        }                                                               \
-    }
-
-#define LOC_LOGV(...)                                                   \
-    LOG_DLT_PRINT(4, __VA_ARGS__);                                      \
-    IF_LOC_LOGV {                                                       \
-        ALOGV(__VA_ARGS__);                                             \
-        IF_QXDM_LOG_ENABLE {                                            \
-            char buf[MAX_QXDM_STRING];                                  \
-            snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
-            loc_logger.QXDMF3(MSG_QXDM_LOW, buf);                       \
-        }                                                               \
-    }
-
-#define LOC_LOGA(...)                                                   \
-    LOG_DLT_PRINT(5, __VA_ARGS__);                                      \
-    IF_LOC_LOGA {                                                       \
-        ALOGV(__VA_ARGS__);                                             \
-        IF_QXDM_LOG_ENABLE {                                            \
-            char buf[MAX_QXDM_STRING];                                  \
-            snprintf(buf, MAX_QXDM_STRING, __VA_ARGS__);                \
-            loc_logger.QXDMF3(MSG_QXDM_LOW, buf);                       \
-        }                                                               \
-    }
-
-#endif /* DEBUG_DMN_LOC_API */
+#define LOC_LOGE(...) LOC_LOG_BACKEND_PRINT(0, __VA_ARGS__)
+#define LOC_LOGW(...) LOC_LOG_BACKEND_PRINT(1, __VA_ARGS__)
+#define LOC_LOGI(...) LOC_LOG_BACKEND_PRINT(2, __VA_ARGS__)
+#define LOC_LOGD(...) LOC_LOG_BACKEND_PRINT(3, __VA_ARGS__)
+#define LOC_LOGV(...) LOC_LOG_BACKEND_PRINT(4, __VA_ARGS__)
+#define LOC_LOGA(...) LOC_LOG_BACKEND_PRINT(5, __VA_ARGS__)
 
 /*=============================================================================
  *

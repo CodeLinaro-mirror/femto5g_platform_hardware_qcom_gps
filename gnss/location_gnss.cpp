@@ -155,6 +155,7 @@ static uint32_t configEngineIntegrityRisk(PositioningEngineMask engType, uint32_
 static uint32_t configXtraParams(bool enable, const XtraConfigParams& configParams);
 static uint32_t configMerkleTree(const char * merkleTreeConfigBuffer, int bufferLength);
 static uint32_t configOsnmaEnablement(bool enable);
+static uint32_t getNavMsgAuthStatus(GnssSvType svType);
 static uint32_t getXtraStatus();
 static uint32_t registerXtraStatusUpdate(bool registerUpdate);
 static void configPrecisePositioning(uint32_t featureId, bool enable, std::string appHash);
@@ -235,6 +236,7 @@ static const GnssInterface gGnssInterface = {
     configOsnmaEnablement,
     gnssInjectMmfData,
     configureUserConsentForXtra,
+    getNavMsgAuthStatus,
 };
 
 #ifndef DEBUG_X86
@@ -801,6 +803,14 @@ static uint32_t configOsnmaEnablement(bool enable) {
 #else
         return 1;
 #endif
+    } else {
+        return 0;
+    }
+}
+
+static uint32_t getNavMsgAuthStatus(GnssSvType svType) {
+    if (NULL != gGnssAdapter) {
+        return gGnssAdapter->getNavMsgAuthStatusCommand(svType);
     } else {
         return 0;
     }

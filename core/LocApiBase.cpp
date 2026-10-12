@@ -1028,6 +1028,10 @@ DEFAULT_IMPL()
 void LocApiBase::configOsnmaEnablement(bool /*enable*/, LocApiResponse* /*adapterResponse*/)
 DEFAULT_IMPL()
 
+void LocApiBase::getNavMsgAuthStatus(GnssSvType /*svType*/, uint32_t /*sessionId*/,
+            LocApiResponse* /*adapterResponse*/)
+DEFAULT_IMPL()
+
 int64_t RealtimeEstimator::getElapsedRealtimeEstimateNanos(int64_t curDataTimeNanos,
             bool isCurDataTimeTrustable, int64_t tbfNanos) {
     //The algorithm works follow below steps:
