@@ -28,9 +28,9 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2024, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -662,7 +662,10 @@ void AgpsManager::createAgpsStateMachines(const AgpsCbInfo& cbInfo) {
         LOC_LOGd("cbInfo.cbPriority=%d mCbPriority=%d", cbInfo.cbPriority, mCbPriority);
         if (cbInfo.cbPriority > mCbPriority) {
             mCbPriority = cbInfo.cbPriority;
-            mAgnssNif->registerFrameworkStatusCallback((agnssStatusIpV4Callback)cbInfo.statusV4Cb);
+            if (mAgnssNif != NULL) {
+                mAgnssNif->registerFrameworkStatusCallback(
+                        (agnssStatusIpV4Callback)cbInfo.statusV4Cb);
+            }
         }
     }
 }

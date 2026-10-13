@@ -182,6 +182,11 @@ SystemStatusPQWM1::SystemStatusPQWM1(const GnssEngineDebugDataInfo& info) {
         mJammerGlo = info.jammerInd[GNSS_LOC_SIGNAL_TYPE_GLONASS_G1];
         mJammerBds = info.jammerInd[GNSS_LOC_SIGNAL_TYPE_BEIDOU_B1_I];
         mJammerGal = info.jammerInd[GNSS_LOC_SIGNAL_TYPE_GALILEO_E1_C];
+    } else {
+        mJammerGps = 0;
+        mJammerGlo = 0;
+        mJammerBds = 0;
+        mJammerGal = 0;
     }
     mLeapSeconds = info.leapSecondInfo.leapSec;
     mLeapSecUnc = info.leapSecondInfo.leapSecUnc;
@@ -1932,7 +1937,7 @@ bool SystemStatus::eventOptInStatus(bool userConsent)
 ******************************************************************************/
 bool SystemStatus::eventRegionStatus(bool region)
 {
-    SystemStatusENH s(region, ENHDataItem::FIELD_REGION);
+    SystemStatusENH s(region, ENHDataItem::FIELD_NON_EMBARGOED_REGION);
     mSysStatusObsvr.notify({&s.mDataItem});
     return true;
 }
