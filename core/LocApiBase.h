@@ -406,6 +406,8 @@ public:
     virtual void configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* merkleTree,
             LocApiResponse* adapterResponse=nullptr);
     virtual void configOsnmaEnablement(bool enable, LocApiResponse* adapterResponse=nullptr);
+    virtual void getNavMsgAuthStatus(GnssSvType svType, uint32_t sessionId,
+            LocApiResponse* adapterResponse=nullptr);
 };
 
 class RealtimeEstimator {

@@ -840,6 +840,7 @@ public:
         match command with response.
     */
     virtual uint32_t configureUserConsentForXtra(const bool xtraUserConsent) override;
+    virtual uint32_t getNavMsgAuthStatus(GnssSvType svType) override;
 };
 
 #endif /* LOCATIONAPI_H */

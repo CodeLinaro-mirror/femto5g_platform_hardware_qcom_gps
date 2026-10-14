@@ -165,6 +165,7 @@ struct GnssInterface {
     uint32_t (*configOsnmaEnablement) (bool enable);
     uint32_t (*gnssInjectMmfData) (const GnssMapMatchedData& data);
     uint32_t (*configureUserConsentForXtra) (const bool xtraUserConsent);
+    uint32_t (*getNavMsgAuthStatus) (GnssSvType svType);
 };
 
 struct BatchingInterface {

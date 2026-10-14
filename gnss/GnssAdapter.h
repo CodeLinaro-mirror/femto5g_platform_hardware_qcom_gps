@@ -519,6 +519,7 @@ public:
     void gnssUpdateSecondaryBandConfig(
         uint32_t sessionId, const GnssSvTypeConfig& secondaryBandConfig);
     void gnssGetSecondaryBandConfig(uint32_t sessionId);
+    void getNavMsgAuthStatus(GnssSvType svType, uint32_t sessionId);
     void resetSvConfig(uint32_t sessionId);
     void configLeverArm(uint32_t sessionId, const LeverArmConfigInfo& configInfo);
     void configRobustLocation(uint32_t sessionId, bool enable, bool enableForE911);
@@ -593,6 +594,7 @@ public:
     uint32_t gnssUpdateSecondaryBandConfigCommand(
                                        const GnssSvTypeConfig& secondaryBandConfig);
     uint32_t gnssGetSecondaryBandConfigCommand();
+    uint32_t getNavMsgAuthStatusCommand(GnssSvType svType);
     uint32_t configLeverArmCommand(const LeverArmConfigInfo& configInfo);
     uint32_t configRobustLocationCommand(bool enable, bool enableForE911);
     bool openMeasCorrCommand(const measCorrSetCapabilitiesCallback setCapabilitiesCb);
