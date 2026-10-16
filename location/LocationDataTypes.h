@@ -2486,6 +2486,8 @@ enum GalOsnmaPublicKeyStatusBits {
     GAL_OSNMA_PUBLIC_KEY_PROVISIONED = (1u << 0),
     /** The public key has been verified against the Merkle tree. */
     GAL_OSNMA_PUBLIC_KEY_VERIFIED    = (1u << 1),
+    /** The Galileo active public-key ID is available. */
+    GAL_OSNMA_ACTIVE_PUBLIC_KEY_ID_AVAILABLE   = (1u << 2),
 };
 
 /** Specify which fields of GalOsnmaStatus carry a value. A field
