@@ -10,11 +10,14 @@
 #include "log_util.h"
 #include <loc_misc_utils.h>
 
-#ifdef USE_GLIB
+#ifdef FEATURE_AUTOMOTIVE
+#define LIB_XML_NAME "libxml2.so.16"
+#elif defined (USE_GLIB)
 #define LIB_XML_NAME "libxml2.so.2"
 #else
 #define LIB_XML_NAME "libxml2.so"
 #endif
+
 #define ECDSA_KEY_LENGTH 67
 #define HASH_FUNC_LENGTH 16
 #define PK_TYPE_LENGTH   32

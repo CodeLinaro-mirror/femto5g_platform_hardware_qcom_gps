@@ -148,9 +148,10 @@ XtraSystemStatusObserver::XtraSystemStatusObserver(GnssAdapter* adapter,
         mReqStatusReceived(false),
         mIsConnectivityStatusKnown(false),
         mXtraSender(LocIpc::getLocIpcLocalSender(LOC_IPC_XTRA)),
-        mDgnssSender(LocIpc::getLocIpcLocalSender(LOC_IPC_DGNSS)),
+        mDgnssSender(ContextBase::mIzat_process_conf.eDgnssDaemonEnabled ?
+                LocIpc::getLocIpcLocalSender(LOC_IPC_DGNSS) : nullptr),
         mRegisterForXtraStatus(false),
-        mDelayLocTimer(*mXtraSender, *mDgnssSender),
+        mDelayLocTimer(*mXtraSender, mDgnssSender),
         mIpcRecver(nullptr) {
     subscribe(true);
 }
@@ -216,7 +217,9 @@ bool XtraSystemStatusObserver::updateConnections(uint64_t allConnections,
             << networkHandleStr << endl
             << (mRoaming ? 1 : 0);
     string s = ss.str();
-    LocIpc::send(*mDgnssSender, (const uint8_t*)s.data(), s.size());
+    if (nullptr != mDgnssSender) {
+        LocIpc::send(*mDgnssSender, (const uint8_t*)s.data(), s.size());
+    }
     return ( LocIpc::send(*mXtraSender, (const uint8_t*)s.data(), s.size()));
 }
 
@@ -317,11 +320,16 @@ inline bool XtraSystemStatusObserver::onStatusRequested(int32_t statusUpdated) {
             << mMccmnc << endl << mIsConnectivityStatusKnown;
 
     string s = ss.str();
-    LocIpc::send(*mDgnssSender, (const uint8_t*)s.data(), s.size());
+    if (nullptr != mDgnssSender) {
+        LocIpc::send(*mDgnssSender, (const uint8_t*)s.data(), s.size());
+    }
     return ( LocIpc::send(*mXtraSender, (const uint8_t*)s.data(), s.size()) );
 }
 
 void XtraSystemStatusObserver::startDgnssSource(const StartDgnssNtripParams& params) {
+    if (nullptr == mDgnssSender) {
+        return;
+    }
     stringstream ss;
     const GnssNtripConnectionParams* ntripParams = &(params.ntripParams);
 
@@ -340,26 +348,38 @@ void XtraSystemStatusObserver::startDgnssSource(const StartDgnssNtripParams& par
 
     LocIpc::send(*mDgnssSender, (const uint8_t*)s.data(), s.size());
     // make a local copy of the string for SSR
+    // Only cache when the DGNSS daemon is enabled; otherwise the daemon
+    // was never started so caching the params would be wasteful/misleading.
     mNtripParamsString.assign(std::move(s));
 }
 
 void XtraSystemStatusObserver::restartDgnssSource() {
-    if (!mNtripParamsString.empty()) {
+    if (!mNtripParamsString.empty() && nullptr != mDgnssSender) {
         LocIpc::send(*mDgnssSender,
             (const uint8_t*)mNtripParamsString.data(), mNtripParamsString.size());
     }
 }
 
 void XtraSystemStatusObserver::stopDgnssSource() {
-    LOC_LOGv();
+    if (nullptr == mDgnssSender) {
+        return;
+    } else {
+        LOC_LOGv();
+        const char s[] = "stopDgnssSource";
+        bool sent = LocIpc::send(*mDgnssSender, (const uint8_t*)s, strlen(s));
+        if (!sent) {
+            LOC_LOGe("Failed to send stopDgnssSource to DGNSS daemon");
+        }
+    }
+    // Clear params only after attempting to send stop
     mNtripParamsString.clear();
-
-    const char s[] = "stopDgnssSource";
-    LocIpc::send(*mDgnssSender, (const uint8_t*)s, strlen(s));
 }
 
 void XtraSystemStatusObserver::updateNmeaToDgnssServer(const string& nmea)
 {
+    if (nullptr == mDgnssSender) {
+        return;
+    }
     stringstream ss;
     ss <<  "updateDgnssServerNmea" << endl;
     ss << nmea.data() << endl;

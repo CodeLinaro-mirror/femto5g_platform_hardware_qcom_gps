@@ -2787,9 +2787,11 @@ void GnssAdapter::stopClientSessions(LocationAPI* client, bool eraseSession) {
         }
     }
     for (auto key : vTimeBasedTrackingClient) {
+        PreciseType previousPreciseType = mPreciseType;
         stopTimeBasedTrackingMultiplex(key.client, key.id);
         if (eraseSession)
             eraseTrackingSession(key.client, key.id);
+        setPreciseSessionConfig(previousPreciseType);
     }
 }
 
@@ -3289,6 +3291,10 @@ bool GnssAdapter::startTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t 
         // Start time based tracking session when:
         // 1: the tracking option has been updated
         // 2: no tracking session running in modem
+
+        mPreciseType = multiplexedOptions.preciseType;
+        mCorrectionType = multiplexedOptions.correctionType;
+
         if (!priorOptions.equalsInTimeBasedRequest(multiplexedOptions) ||
                 (false == mTimeBasedTrackingRunning)) {
             startTimeBasedTracking(client, sessionId, multiplexedOptions);
@@ -3507,6 +3513,8 @@ bool GnssAdapter::updateTrackingMultiplex(LocationAPI* client, uint32_t id,
             bool sameOption = it->second.equalsInTimeBasedRequest(trackingOptions);
             LOC_LOGd("same client, option same %d, session running %d",
                      sameOption, mTimeBasedTrackingRunning);
+            mPreciseType = trackingOptions.preciseType;
+            mCorrectionType = trackingOptions.correctionType;
             if (false == sameOption || false == mTimeBasedTrackingRunning) {
                 // restart time based tracking regardless
                 updateTracking(client, id, trackingOptions, it->second);
@@ -3517,6 +3525,8 @@ bool GnssAdapter::updateTrackingMultiplex(LocationAPI* client, uint32_t id,
             TrackingOptions priorOptions = multiplexedOptions;
             multiplexWithForTimeBasedRequest(priorOptions, it->second);
             multiplexWithForTimeBasedRequest(multiplexedOptions, trackingOptions);
+            mPreciseType = multiplexedOptions.preciseType;
+            mCorrectionType = multiplexedOptions.correctionType;
             if (false == priorOptions.equalsInTimeBasedRequest(multiplexedOptions) ||
                     false == mTimeBasedTrackingRunning) {
                 // restart time based tracking with the newly updated options
@@ -3538,7 +3548,6 @@ void GnssAdapter::stopTrackingCommand(LocationAPI* client, uint32_t id) {
         LocApiBase& mApi;
         LocationAPI* mClient;
         uint32_t mSessionId;
-        mutable PreciseType mPreciseType;
         inline MsgStopTracking(GnssAdapter& adapter,
                                LocApiBase& api,
                                LocationAPI* client,
@@ -3555,17 +3564,12 @@ void GnssAdapter::stopTrackingCommand(LocationAPI* client, uint32_t id) {
                 mAdapter.reportResponse(mClient, LOCATION_ERROR_ID_UNKNOWN, mSessionId);
                 return;
             }
-            // find the session it is going to stop
-            LocationSessionKey key(mClient, mSessionId);
-            auto it = mAdapter.mTimeBasedTrackingSessions.find(key);
-            if (it != mAdapter.mTimeBasedTrackingSessions.end()) {
-                mPreciseType = (it->second).preciseType;
-            }
             // Api doesn't support multiple clients for time based tracking, so mutiplex
+            PreciseType previousPreciseType = mAdapter.mPreciseType;
             bool reportToClientWithNoWait =
                     mAdapter.stopTimeBasedTrackingMultiplex(mClient, mSessionId);
             mAdapter.eraseTrackingSession(mClient, mSessionId);
-            mAdapter.setPreciseSessionConfig(mPreciseType);
+            mAdapter.setPreciseSessionConfig(previousPreciseType);
 
             if (reportToClientWithNoWait) {
                 mAdapter.reportResponse(mClient, LOCATION_ERROR_SUCCESS, mSessionId);
@@ -3581,6 +3585,8 @@ bool GnssAdapter::stopTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t i
 
     if (1 == mTimeBasedTrackingSessions.size()) {
         stopTracking(client, id);
+        mPreciseType = PRECISE_TYPE_UNKNOWN;
+        mCorrectionType = CORRECTION_TYPE_DEFAULT;
         // need to wait for QMI callback
         reportToClientWithNoWait = false;
     } else {
@@ -3605,6 +3611,9 @@ bool GnssAdapter::stopTimeBasedTrackingMultiplex(LocationAPI* client, uint32_t i
             }
             TrackingOptions priorOptions = multiplexedOptions;
             multiplexWithForTimeBasedRequest(priorOptions, it->second);
+
+            mPreciseType = multiplexedOptions.preciseType;
+            mCorrectionType = multiplexedOptions.correctionType;
 
             if (!priorOptions.equalsInTimeBasedRequest(multiplexedOptions)) {
                 // restart time based tracking with the newly updated options
