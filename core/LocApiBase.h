@@ -213,6 +213,10 @@ public:
     void geofenceBreach(size_t count, uint32_t* hwIds, Location& location,
             GeofenceBreachType breachType, uint64_t timestamp);
     void geofenceStatus(GeofenceStatusAvailable available);
+    void reportDBTPosition(UlpLocation &location,
+                           GpsLocationExtended &locationExtended,
+                           enum loc_sess_status status,
+                           LocPosTechMask loc_technology_mask);
     void reportLocations(Location* locations, size_t count, BatchingMode batchingMode);
     void handleBatchStatusEvent(BatchingStatus batchStatus);
     void reportModemGnssQesdkFeatureStatus(const ModemGnssQesdkFeatureMask& mask);
@@ -262,6 +266,7 @@ public:
     virtual void setMeasurementCorrections(
             const GnssMeasurementCorrections& gnssMeasurementCorrections);
 
+    virtual bool getWwanFixSync(LocGpsLocation &wwanLoc);
     virtual bool getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
             LocPosTechMask &tech_mask, float* vertUnc = nullptr);
     virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);
@@ -294,6 +299,10 @@ public:
     virtual void startTimeBasedTracking(const TrackingOptions& options,
              LocApiResponse* adapterResponse);
     virtual void stopTimeBasedTracking(LocApiResponse* adapterResponse);
+    virtual void startDistanceBasedTracking(uint32_t sessionId, const LocationOptions& options,
+             LocApiResponse* adapterResponse);
+    virtual void stopDistanceBasedTracking(uint32_t sessionId,
+             LocApiResponse* adapterResponse = nullptr);
     virtual void startBatching(uint32_t sessionId, const LocationOptions& options,
             uint32_t accuracy, uint32_t timeout, LocApiResponse* adapterResponse);
     virtual void stopBatching(uint32_t sessionId, LocApiResponse* adapterResponse);
