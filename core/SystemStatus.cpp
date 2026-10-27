@@ -137,7 +137,11 @@ public:
     SystemStatusPQWM1() = default;
 };
 
-SystemStatusPQWM1::SystemStatusPQWM1(const GnssEngineDebugDataInfo& info) {
+SystemStatusPQWM1::SystemStatusPQWM1(const GnssEngineDebugDataInfo& info) :
+    mJammerGps(0),
+    mJammerGlo(0),
+    mJammerGal(0),
+    mJammerBds(0) {
     mGpsWeek = info.gpsWeek;
     mGpsTowMs = info.gpsTowMs;
     mTimeValid = info.timeValid;
@@ -147,11 +151,12 @@ SystemStatusPQWM1::SystemStatusPQWM1(const GnssEngineDebugDataInfo& info) {
     mClockFreqBiasUnc = info.clkFreqUnc;
     mXoState = info.xoState;
     mRecErrorRecovery = info.rcvrErrRecovery;
-    if (info.jammerInd.size() > 0) {
+    // Check against the largest signal index used below before accessing jammerInd.
+    if (info.jammerInd.size() > GNSS_LOC_SIGNAL_TYPE_BEIDOU_B1_I) {
         mJammerGps = info.jammerInd[GNSS_LOC_SIGNAL_TYPE_GPS_L1CA];
         mJammerGlo = info.jammerInd[GNSS_LOC_SIGNAL_TYPE_GLONASS_G1];
-        mJammerBds = info.jammerInd[GNSS_LOC_SIGNAL_TYPE_BEIDOU_B1_I];
         mJammerGal = info.jammerInd[GNSS_LOC_SIGNAL_TYPE_GALILEO_E1_C];
+        mJammerBds = info.jammerInd[GNSS_LOC_SIGNAL_TYPE_BEIDOU_B1_I];
     }
     mLeapSeconds = info.leapSecondInfo.leapSec;
     mLeapSecUnc = info.leapSecondInfo.leapSecUnc;
@@ -2037,4 +2042,3 @@ bool SystemStatus::eventWwanAppInfo(int32_t pid,
 }
 
 } // namespace loc_core
-

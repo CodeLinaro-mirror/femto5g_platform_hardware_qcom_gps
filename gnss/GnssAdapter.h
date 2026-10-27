@@ -435,6 +435,9 @@ class GnssAdapter : public LocAdapterBase {
     GnssSignalTypeMask mNtnSignalTypeConfigMask;
 
     bool mAndroidReportSpeOnly;
+    /*==== Network based control of non-emergency ODCPI requests ==================*/
+    // when set, non-emergency ODCPI START requests are dropped if no network is up
+    bool mOdcpiCtrlEnabled;
     /*==== WakeLock acquire/release based on TBF ==================================*/
     bool mIsWakeLockActive;
     uint32_t mWakeLockEnableTbfThreshold;
@@ -452,6 +455,7 @@ protected:
     inline void setNmeaReportRateConfig();
     halResponseTimer mResponseTimer;
     inline bool isAssistedGpsEnabled() { return mNativeAgpsHandler.isAssistedGpsEnabled(); }
+    inline bool isNetworkConnected() { return mNativeAgpsHandler.isNetworkConnected(); }
 
 public:
     GnssAdapter();
