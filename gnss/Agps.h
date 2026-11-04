@@ -28,39 +28,9 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef AGPS_H
@@ -102,7 +72,8 @@ typedef enum {
     AGPS_EVENT_UNSUBSCRIBE,
     AGPS_EVENT_GRANTED,
     AGPS_EVENT_RELEASED,
-    AGPS_EVENT_DENIED
+    AGPS_EVENT_DENIED,
+    AGPS_EVENT_TIMEOUT,
 } AgpsEvent;
 
 /* Notification Types sent to subscribers */
@@ -123,6 +94,38 @@ typedef enum {
 class AgpsSubscriber;
 class AgpsManager;
 class AgpsStateMachine;
+
+class AtlTimer : public LocTimer {
+
+public:
+    AtlTimer(AgpsManager* agpsManager) :
+            LocTimer(), mAgpsManager(agpsManager), mActive(false) {}
+
+    inline void start(uint32_t timeout) {
+        mActive = true;
+        LocTimer::start(timeout, false);
+    }
+    inline void stop() {
+        mActive = false;
+        LocTimer::stop();
+    }
+    inline void restart(uint32_t timeout) {
+        if (mActive) {
+            stop();
+        }
+        start(timeout);
+    }
+    inline bool isActive() {
+        return mActive;
+    }
+
+private:
+    // Override
+    virtual void timeOutCallback() override;
+    AgpsManager* mAgpsManager;
+    bool mActive;
+};
+
 
 /* SUBSCRIBER
  * Each Subscriber instance corresponds to one AGPS request,
@@ -176,6 +179,9 @@ protected:
     AgpsState mState;
 
     agnssStatusIpV4Callback     mFrameworkStatusV4Cb;
+
+    AtlTimer mAtlTimer;
+
 private:
     /* AGPS Type for this state machine
        LOC_AGPS_TYPE_ANY           0
@@ -190,6 +196,7 @@ private:
     char* mAPN;
     unsigned int mAPNLen;
     AGpsBearerType mBearer;
+    uint32_t mAtlTimeoutMsec;
 
 public:
     /* CONSTRUCTOR */
@@ -197,8 +204,10 @@ public:
         mFrameworkStatusV4Cb(NULL),
         mAgpsManager(agpsManager), mSubscriberList(),
         mCurrentSubscriber(NULL), mState(AGPS_STATE_RELEASED),
+        mAtlTimer(agpsManager),
         mAgpsType(agpsType), mAPN(NULL), mAPNLen(0),
-        mBearer(AGPS_APN_BEARER_INVALID) {};
+        mBearer(AGPS_APN_BEARER_INVALID),
+        mAtlTimeoutMsec(5000){};
 
     virtual ~AgpsStateMachine() { if(NULL != mAPN) delete[] mAPN; };
 
@@ -216,6 +225,14 @@ public:
     inline AGpsExtType getType() const { return mAgpsType; }
     inline void setCurrentSubscriber(AgpsSubscriber* subscriber)
     { mCurrentSubscriber = subscriber; }
+
+    inline AtlTimer* getAtlTimerInstance(){ return &mAtlTimer; }
+    inline void stopAtlTimer() {
+       if (mAtlTimer.isActive()) {
+           mAtlTimer.stop();
+       }
+    }
+    inline void setAtlTimeoutValue(uint32_t timeout) {mAtlTimeoutMsec = timeout; }
 
     inline void registerFrameworkStatusCallback(agnssStatusIpV4Callback frameworkStatusV4Cb) {
         mFrameworkStatusV4Cb = frameworkStatusV4Cb;
@@ -253,6 +270,7 @@ private:
     void processAgpsEventGranted();
     void processAgpsEventReleased();
     void processAgpsEventDenied();
+    void processAgpsEventTimeout();
 
     /* Clone the passed in subscriber and add to the subscriber list
      * if not already present */
@@ -279,10 +297,10 @@ class AgpsManager {
     friend class AgpsStateMachine;
 public:
     /* CONSTRUCTOR */
-    AgpsManager():
+    AgpsManager(const MsgTask* msgTask):
         mAtlOpenStatusCb(), mAtlCloseStatusCb(),
         mAgnssNif(NULL), mInternetNif(NULL),
-        mCbPriority(AGPS_CB_PRIORITY_NONE)/*, mDsNif(NULL)*/ {}
+        mCbPriority(AGPS_CB_PRIORITY_NONE), mMsgTask(msgTask) {}
 
     /* Register callbacks */
     inline void registerATLCallbacks(AgpsAtlOpenStatusCb  atlOpenStatusCb,
@@ -300,16 +318,20 @@ public:
 
     /* Process incoming ATL requests */
     void requestATL(int connHandle, AGpsExtType agpsType,
-                    LocApnTypeMask apnTypeMask, SubId subId);
-    void releaseATL(int connHandle);
+                    LocApnTypeMask apnTypeMask, SubId subId, uint32_t timeout);
+    void releaseATL(int connHandle, uint32_t timeout);
     /* Process incoming framework data call events */
     void reportAtlOpenSuccess(AGpsExtType agpsType, char* apnName, int apnLen,
             AGpsBearerType bearerType);
     void reportAtlOpenFailed(AGpsExtType agpsType);
     void reportAtlClosed(AGpsExtType agpsType);
 
+    void handleAtlTimeout();
+
     /* Handle Modem SSR */
     void handleModemSSR();
+    AtlTimer* getAtlTimerInstance();
+    void atlTimerExpiredEvent();
 
 protected:
 
@@ -317,37 +339,20 @@ protected:
     AgpsAtlCloseStatusCb  mAtlCloseStatusCb;
     AgpsStateMachine*   mAgnssNif;
     AgpsStateMachine*   mInternetNif;
+    const MsgTask*   mMsgTask;
 private:
     /* Fetch state machine for handling request ATL call */
     AgpsStateMachine* getAgpsStateMachine(AGpsExtType agpsType);
     AgpsCbPriority mCbPriority;
-};
-
-/* Request SUPL/INTERNET/SUPL_ES ATL
- * This LocMsg is defined in this header since it has to be used from more
- * than one place, other Agps LocMsg are restricted to GnssAdapter and
- * declared inline */
-struct AgpsMsgRequestATL: public LocMsg {
-
-    AgpsManager* mAgpsManager;
-    int mConnHandle;
-    AGpsExtType mAgpsType;
-    LocApnTypeMask mApnTypeMask;
-    SubId mSubId;
-
-    inline AgpsMsgRequestATL(AgpsManager* agpsManager, int connHandle,
-            AGpsExtType agpsType, LocApnTypeMask apnTypeMask,
-            SubId subId) :
-            LocMsg(), mAgpsManager(agpsManager), mConnHandle(connHandle),
-            mAgpsType(agpsType), mApnTypeMask(apnTypeMask), mSubId(subId){
-
-        LOC_LOGV("AgpsMsgRequestATL");
-    }
-
-    inline virtual void proc() const {
-
-        LOC_LOGV("AgpsMsgRequestATL::proc()");
-        mAgpsManager->requestATL(mConnHandle, mAgpsType, mApnTypeMask, mSubId);
+    inline void processAltTimerExpiredEvent() {
+        AtlTimer* atlTimer = getAtlTimerInstance();
+        if (atlTimer != NULL) {
+            if (atlTimer->isActive())
+            {
+                handleAtlTimeout();
+                atlTimer->stop();
+            }
+        }
     }
 };
 
