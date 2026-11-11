@@ -22,3 +22,7 @@
 
 gettid: 1
 sigaltstack: 1
+fdatasync: 1
+uname: 1
+getrlimit: 1
+setpriority: 1
